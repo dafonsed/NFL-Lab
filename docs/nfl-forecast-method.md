@@ -1,6 +1,6 @@
 # NFL workload candidate and prediction record
 
-The original `independent-v1` scores, weights, opportunity calculations and default ordering in `lib/model.mjs` are unchanged. `workload-v1` is an experimental second analysis, never a replacement for a missing sportsbook line.
+The `independent-v1` scoring weights in `lib/model.mjs` remain the baseline. `workload-injury-v3` adds an explicit teammate-absence workload scenario; it recalculates supported ratings with the same weights and reorders the board by the resulting score. The original score and historical box scores are retained. Forecasts never substitute for missing sportsbook lines.
 
 ## What it calculates
 
@@ -16,7 +16,7 @@ Over and under are separate comparisons to the actual posted total. Equal outcom
 
 No clear lean is returned for fewer than five appearances, a sample including another team, no current-season appearance, a 30% change in carries/targets/attempts between the latest two and preceding three games, a 15-point change in snap share, stale inputs, insufficient comparable errors, missing/final/in-play/older-than-two-hour lines, reported injury concerns, unavailable availability checks, or neither side reaching the threshold. These are conservative research exclusions, not new original-model weights.
 
-Availability comes from ESPN's anonymous NFL injury feed, joined by the roster's ESPN athlete ID. Source and check time are retained. No injury listing is **not** a confirmed active status or a full-workload guarantee. Current injury reports are not applied to historical games. Injury information flags uncertainty; it does not fabricate redistributed opportunities.
+Availability comes from ESPN's anonymous NFL injury feed, joined by the roster's ESPN athlete ID. Source and check time are retained. No injury listing is **not** a confirmed active status or a full-workload guarantee. Current injury reports are not applied to historical games. Confirmed absences can now trigger the experimental teammate workload allocation described in `docs/context-and-paper.md`. Questionable status alone does not transfer workload.
 
 ## Reproducible historical evaluation
 
@@ -30,7 +30,7 @@ The historical dataset uses today's corrected weekly stats and evaluates players
 
 Vercel uses a **private Blob store**, with separate production and preview prefixes. Local development uses `data-independent/predictions`; it does not write into the production archive. Credentials remain server-side. No third-party analytics app is a data source.
 
-The first available pregame snapshot per NFL week, market and UTC day is immutable. A snapshot is written only when at least one upcoming player has a fresh, matched pregame line. All upcoming players on that board are included so missing lines and exclusions remain visible. Records include the source receipts, statistical sample, availability check, original score/projection/version, candidate projection/probabilities/reasons/version/artifact, average comparison, exact book/line/source/hash/quote time, actual capture time and scheduled kickoff. Writes explicitly reject overwrite; concurrent local writes publish a complete file atomically. Refreshes do not rewrite saved forecasts.
+The first available pregame snapshot per NFL week, model version, market and UTC day is immutable. A new model version appends a separate snapshot without replacing the prior version. A snapshot is written only when at least one upcoming player has a fresh, matched pregame line. All upcoming players on that board are included so missing lines and exclusions remain visible. Records include the source receipts, statistical sample, availability check, original score/projection/version, candidate projection/probabilities/reasons/version/artifact, average comparison, exact book/line/source/hash/quote time, actual capture time and scheduled kickoff. Writes explicitly reject overwrite; concurrent local writes publish a complete file atomically. Refreshes do not rewrite saved forecasts.
 
 Forecasts only qualify while **both** the schedule and matched public event are still pregame, their kickoff times agree within 15 minutes, and the quote is no more than two hours old. Historical reconstructions cannot be backfilled as pregame records. Capture is bounded to upcoming games within seven days. If Blob is unavailable the board remains usable, but reports that the prediction was not saved.
 

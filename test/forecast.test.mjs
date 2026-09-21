@@ -107,3 +107,11 @@ test('export version survives cold-instance fetch times but detects changed resu
  const a=await store.performance(2026,1,bundle);bundle.datasets[0].meta.fetchedAt='second';const b=await store.performance(2026,1,bundle);assert.equal(a.archiveVersion,b.archiveVersion);
  bundle.datasets[0].meta.sha256='corrected';const c=await store.performance(2026,1,bundle);assert.notEqual(a.archiveVersion,c.archiveVersion);
 });
+
+test('new model versions append alongside prior daily snapshots and preserve the original rating comparison',async t=>{
+ const store=await temporaryStore(t),b=board(),legacyKey=store.prefix(2026,1)+'rush_yds/2026-09-13.json';
+ const legacy={schema:1,createdAt:new Date(now-60000).toISOString(),candidateVersion:'workload-context-v2',records:[]};await store.append(legacyKey,legacy);
+ b.players[0].baseRating={score:70,projected:39,tdProb:null};b.players[0].modelScore=82;b.players[0].forecast.teammateImpact={applied:true,rating:{before:70,after:82,delta:12}};
+ await store.capture(b,[game],artifact);const batches=await store.batches(2026,1);assert.equal(batches.length,2);assert.deepEqual(await store.read(legacyKey),legacy);
+ const current=batches.find(x=>x.candidateVersion==='workload-injury-v3');assert.equal(current.records[0].original.score,70);assert.equal(current.records[0].adjustedRating.after,82);assert.equal(current.records[0].forecast.teammateImpact.rating.before,70);
+});
