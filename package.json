@@ -17,9 +17,11 @@
     "test": "node --test test/*.test.mjs",
     "sync": "node scripts/sync.mjs",
     "check": "node --check server.mjs && node --check lib/source.mjs && node --check public/app.js",
-    "audit": "node scripts/audit-independent.mjs"
+    "audit": "node scripts/audit-independent.mjs",
+    "audit:props": "node scripts/audit-props.mjs"
   },
   "dependencies": {
+    "cheerio": "^1.2.0",
     "csv-parse": "^7.0.2"
   }
 }

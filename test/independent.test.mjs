@@ -27,6 +27,18 @@ test('automatic week remains through Monday and advances Tuesday',()=>{const {sc
 test('January belongs to the prior NFL season and playoffs are selectable',()=>{const games=[{season:'2026',week:'19',game_type:'WC',gameday:'2027-01-09'}];assert.deepEqual(chooseCurrent(games,new Date('2027-01-08')),{season:2026,week:19});});
 test('UTC Tuesday during Monday Night Football stays in the current week',()=>{assert.equal(chooseCurrent(fixture().schedule,new Date('2026-09-22T01:00:00Z')).week,2);assert.equal(chooseCurrent(fixture().schedule,new Date('2026-09-22T09:59:00Z')).week,2);assert.equal(chooseCurrent(fixture().schedule,new Date('2026-09-22T10:00:00Z')).week,3);});
 test('current-week results cannot enter the sample',()=>{const p=boardFixture()[0];assert.equal(p.details.sample.length,2);assert.equal(p.details.stats.touches_pg,18);assert.equal(p.details.cheat_code.td_debt.actual,1);assert.ok(p.details.sample.every(g=>g.gameId!=='2026_02_B_A'));});
+test('new rushing and receiving markets separate historical inputs from selected-week results',()=>{
+ const f=fixture();f.weekly.forEach((r,i)=>r.receiving_yards=String([20,60,500][i]));
+ for(const [market,projected,actual] of [['rush_attempts',15,90],['rec_yds',40,500],['rush_rec_yds',110,1499]]){
+  const p=boardFixture({market,weekly:f.weekly})[0];assert.equal(p.projected,projected);assert.equal(p.result.actual,actual);assert.equal(p.details.sample.length,2);assert.equal(p.debt,null);assert.equal(p.dueSignal,false);
+ }
+});
+test('new passing markets use prior attempts, completions and interceptions without selected-week leakage',()=>{
+ const f=fixture();f.weekly.forEach((r,i)=>Object.assign(r,{position:'QB',attempts:String([20,40,90][i]),completions:String([12,28,80][i]),passing_interceptions:String([0,2,9][i])}));
+ for(const [market,projected,actual] of [['pass_attempts',30,90],['pass_completions',20,80],['pass_interceptions',1,9]]){
+  const p=boardFixture({market,weekly:f.weekly,rosters:[{...f.roster,position:'QB'}]})[0];assert.equal(p.projected,projected);assert.equal(p.result.actual,actual);assert.ok(p.modelScore>=0&&p.modelScore<=100);assert.equal(p.details.stats.attempts_pg,30);
+ }
+});
 test('uncompleted games cannot enter a future-week sample',()=>{const f=fixture();const ps=boardFixture({week:3,pbp:f.pbp.filter(p=>!(p.game_id==='2026_02_B_A'&&p.desc==='END GAME'))});assert.equal(ps[0].details.sample.length,2);});
 test('future rosters cannot retroactively change the selected team',()=>{const f=fixture();const ps=boardFixture({rosters:[f.roster,{...f.roster,week:'3',team:'C'}]});assert.equal(ps[0].team,'A');});
 test('inactive players and teams on bye do not get invented matchups',()=>{const f=fixture();assert.equal(boardFixture({rosters:[{...f.roster,status:'RES'}]}).length,0);assert.equal(boardFixture({rosters:[{...f.roster,team:'C'}]}).length,0);});
