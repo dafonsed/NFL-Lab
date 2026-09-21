@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { project, priorSample, forecast, distribution, lineProbabilities, roleFlags } from '../lib/forecast.mjs';
-import { PredictionStore, freshQuote, kickoffTime, summarize } from '../lib/predictions.mjs';
+import { PredictionStore, freshQuote, kickoffTime, summarize, performancePage } from '../lib/predictions.mjs';
 import { AvailabilityStore } from '../lib/availability.mjs';
 
 const now=Date.parse('2026-09-13T15:00:00Z'),kickoff='2026-09-13T17:00:00Z';
@@ -94,4 +94,11 @@ test('probability comparisons use the same cohort, exclude pushes and include no
 test('availability joins ESPN IDs and never applies current injury reports to old games',async()=>{
  const store=new AvailabilityStore({now:()=>now,fetcher:async()=>new Response(JSON.stringify({injuries:[{injuries:[{status:'Out',date:'2026-09-13',athlete:{id:'123'}}]}]}))});const feed=await store.load();
  assert.equal(store.forPlayer(feed,'123',true).concern,true);assert.equal(store.forPlayer(feed,'123',false).status,'historical_unavailable');assert.equal(store.forPlayer(feed,null,true).status,'unavailable');assert.equal(store.forPlayer(feed,'456',true).status,'No injury listing');
+});
+test('large weekly archives paginate without truncating totals or mixing an updated export',()=>{
+ const report={archiveVersion:'v1',summary:{records:2500},sourceReceipts:[{url:'source'}],rows:Array.from({length:2500},(_,i)=>({id:i,market:i%2?'rec':'rush_yds'}))};
+ const first=performancePage(report);assert.equal(first.rows.length,100);assert.equal(first.pagination.total,2500);assert.equal(first.pagination.nextOffset,100);assert.equal(first.summary.records,2500);
+ const next=performancePage(report,{offset:100});assert.equal(next.rows[0].id,100);assert.equal(next.pagination.previousOffset,0);
+ const filtered=performancePage(report,{market:'rec',offset:1200});assert.equal(filtered.rows.length,50);assert.equal(filtered.pagination.total,1250);assert.equal(filtered.pagination.nextOffset,null);assert.deepEqual(filtered.sourceReceipts,report.sourceReceipts);
+ assert.throws(()=>performancePage(report,{offset:-1}),{status:400});assert.throws(()=>performancePage(report,{market:'invalid'}),{status:400});assert.throws(()=>performancePage(report,{archiveVersion:'v0'}),{status:409});
 });

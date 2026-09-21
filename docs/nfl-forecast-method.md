@@ -46,4 +46,5 @@ The performance page reports all eligible records, exclusions, pending/missing/D
 - `npm test` exercises leakage prevention, push handling, source failures, injury joins, immutable/concurrent writes, kickoff cutoffs, frozen-line grading and paired evaluation.
 - `npm run check` validates server and browser JavaScript.
 - `/performance` shows the live archive and separate historical evidence. JSON export includes the complete selected week's records and receipts.
+- The table loads 100 records at a time and filters by market on the server. Export retrieves every page for the selected week/market; it stops if the archive or result-source version changes during export. Pages include frozen-input receipts and the current result-source receipts. Large weekly archives never require one oversized serverless response.
 - The scheduled endpoint requires the configured bearer secret. The public performance endpoint is read-only. Browser credentials and private user notes are never included in snapshots.
