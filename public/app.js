@@ -19,7 +19,7 @@ function readLocal(key, fallback) { try { return JSON.parse(localStorage.getItem
 function saveLocal(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { toast('Browser storage is unavailable. Changes last for this session.'); } }
 const savedValue = readLocal('nfl-saved', []);
 const noteValue = readLocal('nfl-notes', {});
-const state = { view:'games', market:'any_td', season:null, week:null, data:null, catalog:null, search:'', position:'', team:'', sort:'source', due:false, savedOnly:false, saved:new Set(Array.isArray(savedValue)?savedValue:[]), notes:noteValue && typeof noteValue==='object' ? noteValue : {}, expanded:new Set(), expandedGames:new Set(), compare:new Set(), auto:readLocal('nfl-auto',true)!==false, loading:false, error:null };
+const state = { view:'games', market:'any_td', season:null, week:null, data:null, catalog:null, search:'', position:'', matchup:'', sort:'source', due:false, savedOnly:false, saved:new Set(Array.isArray(savedValue)?savedValue:[]), notes:noteValue && typeof noteValue==='object' ? noteValue : {}, expanded:new Set(), expandedGames:new Set(), compare:new Set(), auto:readLocal('nfl-auto',true)!==false, loading:false, error:null };
 let requestId = 0, controller, toastTimer, lastAutoCheck = Date.now();
 function readUrl() { const q = new URLSearchParams(location.search); state.view = views[q.get('view')] ? q.get('view') : 'games'; state.market = marketLabels[q.get('market')] ? q.get('market') : 'any_td'; state.season = q.has('season') ? Number(q.get('season')) : null; state.week = q.has('week') ? Number(q.get('week')) : null; }
 function makeUrl(changes={}) { const next = {...state,...changes}, q = new URLSearchParams({view:next.view,market:next.market}); if (next.season!==null) { q.set('season',next.season);q.set('week',next.week); } return '/?'+q; }
@@ -60,8 +60,10 @@ function renderChrome() {
   const props=d?.props;$('#prop-status').hidden=!props||['metrics','edge'].includes(state.view);if(props)$('#prop-status').innerHTML=`<div><span class="live-mark"></span><strong>FanDuel first</strong><span>${props.withLine} posted lines · ${props.fanDuel} FanDuel</span><span class="prop-region">Arizona preference · public US listings</span></div><button data-action="prop-info">${props.stale?'Saved lines · source issue':'Line sources & results'} ↗</button>`;
   for(const id of ['summary','research-controls','results-heading','markets'])$('#'+id).hidden=state.view==='metrics'||state.view==='edge'&&id!=='results-heading';
   $('#due-filter').setAttribute('aria-pressed',String(state.due));$('#saved-filter').setAttribute('aria-pressed',String(state.savedOnly));
-  const teams=[...new Set((d?.players||[]).map(p=>p.team))].sort();$('#team').innerHTML='<option value="">All teams</option>'+teams.map(t=>`<option ${state.team===t?'selected':''}>${esc(t)}</option>`).join('');
-  if(state.team&&!teams.includes(state.team)&&d){state.team='';$('#team').value='';}
+  const games=d?.lines||[];
+  if(d&&state.matchup&&!games.some(g=>g.gameId===state.matchup))state.matchup='';
+  $('#matchup').innerHTML='<option value="">All matchups</option>'+games.map(g=>`<option value="${esc(g.gameId)}" ${state.matchup===g.gameId?'selected':''}>${esc(g.away)} @ ${esc(g.home)} · ${esc(g.date)}</option>`).join('');
+  $('#matchup').disabled=!d;
 }
 const isDue=p=>p.dueSignal===true;
 const signatureCount=p=>Object.values(p.signatures||{}).reduce((n,t)=>n+(Array.isArray(t)?t.length:0),0);
@@ -71,7 +73,7 @@ function renderSummary() {
   $('#summary').innerHTML=items.map(([name,val,note],i)=>`<div class="summary-card ${i===3?'highlight':''}"><div class="label">${name}</div><div class="summary-value">${val}${i===3&&top?'<small>/ 100</small>':''}</div><div class="summary-note">${esc(note)}</div></div>`).join('');
 }
 function filteredPlayers() {
-  const q=state.search.trim().toLowerCase();let ps=(state.data?.players||[]).filter(p=>(!q||`${p.player} ${p.team} ${p.opponent} ${p.reason}`.toLowerCase().includes(q))&&(!state.position||p.position===state.position)&&(!state.team||p.team===state.team)&&(!state.due||isDue(p))&&(!state.savedOnly||state.saved.has(p.playerId)));
+  const q=state.search.trim().toLowerCase();let ps=(state.data?.players||[]).filter(p=>(!q||`${p.player} ${p.team} ${p.opponent} ${p.reason}`.toLowerCase().includes(q))&&(!state.position||p.position===state.position)&&(!state.matchup||p.gameId===state.matchup)&&(!state.due||isDue(p))&&(!state.savedOnly||state.saved.has(p.playerId)));
   if(state.sort==='score')ps.sort((a,b)=>b.modelScore-a.modelScore);if(state.sort==='debt')ps.sort((a,b)=>(b.debt??-Infinity)-(a.debt??-Infinity));if(state.sort==='probability')ps.sort((a,b)=>(b.tdProb??-Infinity)-(a.tdProb??-Infinity));if(state.sort==='name')ps.sort((a,b)=>a.player.localeCompare(b.player));return ps;
 }
 function avatar(p){return `<img class="avatar" src="${safeImage(p.headshot)}" alt="" loading="lazy" referrerpolicy="no-referrer">`;}
@@ -114,7 +116,7 @@ function renderContent() {
   const ps=filteredPlayers();$('#results-count').textContent=`${ps.length} / ${d.players.length} PLAYERS · ${esc(marketLabels[state.market].toUpperCase())}`;
   $('#results-title').textContent=state.view==='games'?'Weekly matchups':state.view==='viper'?'Opportunity watch':state.view==='edge'?'Game line movement':'Player rankings';
   if(d.pending){content.innerHTML=`<div class="empty"><div class="empty-icon">◷</div><h2>Week ${d.current.week} is on deck</h2><p>${esc(d.notes[0])}</p><button class="button primary" data-action="latest">Open current week</button></div>`;return;}
-  if(!ps.length){const emptySource=!d.players.length;content.innerHTML=`<div class="empty"><div class="empty-icon">${state.view==='edge'?'⌁':'⌕'}</div><h2>${emptySource?(state.view==='edge'?'Waiting for the odds feed':'No eligible players for this board'):'No players match your filters'}</h2><p>${emptySource?esc(d.notes.filter(n=>!n.includes('Early boards')).join(' ')||'There are no eligible players with prior completed games for this selection.'):'Try a different name, team, or position, or clear your filters.'}</p>${emptySource?`<a class="source-link" href="${esc(d.sourceUrl)}" target="_blank" rel="noreferrer">View nflverse data ↗</a>`:'<button class="button" data-action="clear-filters">Clear filters</button>'}</div>${d.extra?.length?`<details class="detail-panel"><summary>Additional published board data</summary><pre class="extra-source">${esc(JSON.stringify(d.extra,null,2))}</pre></details>`:''}`;return;}
+  if(!ps.length){const emptySource=!d.players.length;content.innerHTML=`<div class="empty"><div class="empty-icon">${state.view==='edge'?'⌁':'⌕'}</div><h2>${emptySource?(state.view==='edge'?'Waiting for the odds feed':'No eligible players for this board'):'No players match your filters'}</h2><p>${emptySource?esc(d.notes.filter(n=>!n.includes('Early boards')).join(' ')||'There are no eligible players with prior completed games for this selection.'):'Try a different name, matchup, or position, or clear your filters.'}</p>${emptySource?`<a class="source-link" href="${esc(d.sourceUrl)}" target="_blank" rel="noreferrer">View nflverse data ↗</a>`:'<button class="button" data-action="clear-filters">Clear filters</button>'}</div>${d.extra?.length?`<details class="detail-panel"><summary>Additional published board data</summary><pre class="extra-source">${esc(JSON.stringify(d.extra,null,2))}</pre></details>`:''}`;return;}
   if(state.view==='games'){
     const groups=new Map();for(const p of ps){const teams=p.opponent?[p.team,p.opponent].sort():[p.team,'Unassigned'];const key=teams.join('-');if(!groups.has(key))groups.set(key,{key,teams,players:[]});groups.get(key).players.push(p);}
     const gameNote='';
@@ -162,7 +164,7 @@ document.addEventListener('click',async e=>{
   const game=e.target.closest('[data-game]');if(game){const key=game.dataset.game;state.expandedGames.has(key)?state.expandedGames.delete(key):state.expandedGames.add(key);renderContent();return;}
   const compare=e.target.closest('[data-compare]');if(compare){const id=compare.dataset.compare;if(state.compare.has(id))state.compare.delete(id);else if(state.compare.size<3)state.compare.add(id);else{toast('Choose up to 3 players to compare.');return;}refreshRow(id);renderCompareTray();return;}
   const action=e.target.closest('[data-action]')?.dataset.action;
-  if(action==='prop-info')propDialog();if(action==='refresh')await load(true);if(action==='latest')await navigate({season:null,week:null});if(action==='clear-filters'){Object.assign(state,{search:'',position:'',team:'',sort:'source',due:false,savedOnly:false});$('#search').value='';$('#position').value='';$('#sort').value='source';render();}
+  if(action==='prop-info')propDialog();if(action==='refresh')await load(true);if(action==='latest')await navigate({season:null,week:null});if(action==='clear-filters'){Object.assign(state,{search:'',position:'',matchup:'',sort:'source',due:false,savedOnly:false});$('#search').value='';$('#position').value='';$('#sort').value='source';render();}
   if(action==='compare')compareDialog();if(action==='clear-compare'){const ids=[...state.compare];state.compare.clear();ids.forEach(refreshRow);renderCompareTray();}
   if(action==='dialog-refresh'){$('#dialog').close();await load(true);}if(action==='export-csv')exportBoard('csv');if(action==='export-json')exportBoard('json');
 });
@@ -170,7 +172,7 @@ document.addEventListener('input',e=>{if(e.target.matches('[data-note]')){state.
 document.addEventListener('change',e=>{if(e.target.id==='more-markets'&&e.target.value){navigate({market:e.target.value});}if(e.target.id==='auto-refresh'){state.auto=e.target.checked;saveLocal('nfl-auto',state.auto);}});
 document.addEventListener('submit',e=>{if(e.target.id==='week-form'){e.preventDefault();const data=new FormData(e.target);$('#dialog').close();navigate({season:Number(data.get('season')),week:Number(data.get('week'))});}});
 $('#search').addEventListener('input',e=>{state.search=e.target.value;renderContent();});
-for(const key of ['position','team','sort'])$('#'+key).addEventListener('change',e=>{state[key]=e.target.value;renderContent();});
+for(const key of ['position','matchup','sort'])$('#'+key).addEventListener('change',e=>{state[key]=e.target.value;renderContent();});
 $('#due-filter').addEventListener('click',()=>{state.due=!state.due;$('#due-filter').setAttribute('aria-pressed',String(state.due));renderContent();});
 $('#saved-filter').addEventListener('click',()=>{state.savedOnly=!state.savedOnly;$('#saved-filter').setAttribute('aria-pressed',String(state.savedOnly));renderContent();});
 $('#week-select').addEventListener('change',e=>{const v=e.target.value;const [season,week]=v.split('-').map(Number);navigate(v==='latest'?{season:null,week:null}:{season,week});});
