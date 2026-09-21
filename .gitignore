@@ -1,0 +1,11 @@
+.research/
+data/
+data-independent/
+reports/*.json
+reports/espn/
+logs/
+node_modules/
+.env
+.env.*
+!.env.example
+*.log

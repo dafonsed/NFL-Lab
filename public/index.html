@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0911">
+  <meta name="description" content="Your personal NFL analytics workspace. Independent NFL rankings, matchup research and transparent player metrics, refreshed every week.">
+  <title>NFL LAB · NFL Analytics</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to analytics</a>
+  <header class="topbar">
+    <a href="/" class="brand" aria-label="NFL LAB NFL home"><img src="/favicon.svg" alt="" width="40" height="40"><span>NFL<span class="brand-light">LAB</span><small>THE GAME. DECODED.</small></span></a>
+    <nav id="navigation" aria-label="Main navigation"></nav>
+    <button id="status-button" class="connection" title="View data source and sync status"><span class="dot"></span><span id="connection-label">Connecting</span></button>
+  </header>
+  <main id="main" tabindex="-1">
+    <div class="page-heading"><div><div class="eyebrow"><span class="mini-ball">✧</span> YOUR WEEKLY ADVANTAGE</div><h1 id="page-title">Game Vault<span class="accent">.</span></h1><p id="page-description">The matchups. The roles. The numbers behind every player.</p></div><div class="heading-actions"><button class="button subtle" id="export-button" aria-label="Export this board">↓ <span>Export</span></button><button class="button primary" id="refresh-button" aria-label="Refresh player data">↻ <span>Refresh data</span></button></div></div>
+    <section class="season-bar" aria-label="Season and week"><div class="season-label"><span class="live-mark"></span><strong id="season-label">NFL SEASON</strong><span class="separator">/</span><span id="week-label">Discovering weeks</span></div><div class="week-controls"><label for="week-select" class="sr-only">NFL week</label><select id="week-select"><option value="latest">Latest week · automatic</option></select><button class="icon-button" id="custom-week" title="Choose any season and week" aria-label="Choose any season and week">⌗</button></div></section>
+    <nav class="market-tabs" id="markets" aria-label="Prop markets"></nav>
+    <div id="notice" role="status"></div>
+    <section id="summary" class="summary-grid" aria-label="Weekly overview"></section>
+    <section id="research-controls" class="research-controls" aria-label="Player filters">
+      <div class="searchbox"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search players or teams…" aria-label="Search players or teams" autocomplete="off"><kbd>/</kbd></div>
+      <label class="sr-only" for="position">Position</label><select id="position"><option value="">All positions</option><option>QB</option><option>RB</option><option>WR</option><option>TE</option><option>FB</option></select>
+      <label class="sr-only" for="team">Team</label><select id="team"><option value="">All teams</option></select>
+      <label class="sr-only" for="sort">Sort players</label><select id="sort"><option value="source">Model ranking</option><option value="score">Highest score</option><option value="debt">Highest debt</option><option value="probability">TD probability</option><option value="name">Player name</option></select>
+      <button id="due-filter" class="filter-chip" aria-pressed="false">↗ Due only</button><button id="saved-filter" class="filter-chip" aria-pressed="false">☆ Saved</button>
+    </section>
+    <div class="results-heading" id="results-heading"><h2 id="results-title">Weekly matchups</h2><span id="results-count"></span></div>
+    <section id="content" aria-live="polite" aria-busy="true"><div class="loading"><div class="loader"></div><h2>Loading the latest board</h2><p>Loading independent NFL datasets…</p></div></section>
+    <footer><span>NFL LAB NFL <span class="muted">/ Personal workspace</span></span><span id="footer-status">nflverse data · Local calculations</span><button id="about-button">Data & methodology ↗</button></footer>
+  </main>
+  <div id="compare-tray" class="compare-tray" hidden></div>
+  <dialog id="dialog"><div id="dialog-content"></div><button id="close-dialog" class="dialog-close" aria-label="Close dialog">×</button></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <noscript>This app needs JavaScript to load player analytics. Enable JavaScript and reload.</noscript>
+</body>
+</html>
