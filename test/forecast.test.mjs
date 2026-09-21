@@ -102,3 +102,8 @@ test('large weekly archives paginate without truncating totals or mixing an upda
  const filtered=performancePage(report,{market:'rec',offset:1200});assert.equal(filtered.rows.length,50);assert.equal(filtered.pagination.total,1250);assert.equal(filtered.pagination.nextOffset,null);assert.deepEqual(filtered.sourceReceipts,report.sourceReceipts);
  assert.throws(()=>performancePage(report,{offset:-1}),{status:400});assert.throws(()=>performancePage(report,{market:'invalid'}),{status:400});assert.throws(()=>performancePage(report,{archiveVersion:'v0'}),{status:409});
 });
+test('export version survives cold-instance fetch times but detects changed result data',async t=>{
+ const store=await temporaryStore(t),bundle={games:new Map(),datasets:[{type:'weekly',year:2026,meta:{sha256:'same',available:true,fetchedAt:'first'}}]};
+ const a=await store.performance(2026,1,bundle);bundle.datasets[0].meta.fetchedAt='second';const b=await store.performance(2026,1,bundle);assert.equal(a.archiveVersion,b.archiveVersion);
+ bundle.datasets[0].meta.sha256='corrected';const c=await store.performance(2026,1,bundle);assert.notEqual(a.archiveVersion,c.archiveVersion);
+});
