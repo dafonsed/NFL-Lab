@@ -16,9 +16,10 @@
     "dev": "node --watch server.mjs",
     "test": "node --test test/*.test.mjs",
     "sync": "node scripts/sync.mjs",
-    "check": "node --check server.mjs && node --check lib/source.mjs && node --check public/app.js",
+    "check": "node --check server.mjs && node --check lib/source.mjs && node --check public/app.js && node --check public/mlb.js && node --check lib/mlb/source.mjs && node --check lib/mlb/props.mjs && node --check lib/mlb/provider.mjs && node --check lib/mlb/model.mjs && node --check lib/mlb/markets.mjs",
     "audit": "node scripts/audit-independent.mjs",
-    "audit:props": "node scripts/audit-props.mjs"
+    "audit:props": "node scripts/audit-props.mjs",
+    "audit:mlb": "node scripts/audit-mlb.mjs"
   },
   "dependencies": {
     "cheerio": "^1.2.0",

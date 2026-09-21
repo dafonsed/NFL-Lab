@@ -1,0 +1,98 @@
+.mlb-app .topbar { gap: 22px; }
+.mlb-app .date-controls { display: flex; align-items: center; gap: 7px; }
+.date-controls input { padding: 6px 10px; font-size: 12px; }
+.date-controls .button { padding: 6px 12px; }
+#date-label { color: var(--accent); font-size: 11px; }
+.market-picker { display: grid; grid-template-columns: 70px minmax(0,1fr); align-items: start; gap: 8px; padding: 16px 0 0; }
+.market-label { padding-top: 10px; color: #8d7c9f; font: 10px var(--mono); letter-spacing: 1.3px; }
+.market-picker nav { display: flex; flex-wrap: wrap; gap: 5px; }
+.market-picker button { padding: 7px 12px; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); font-size: 11px; }
+.market-picker button:hover { border-color: #a977dc70; color: var(--text); }
+.market-picker button.active { color: #e9d7ff; background: linear-gradient(110deg,#995bea35,#63309728); border-color: #ad77f377; box-shadow: 0 0 22px #9854ea12; }
+.line-source { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border: 1px solid #49305e; border-radius: 10px; background: linear-gradient(100deg,#23152d,#14101b); color: #b7a8c8; font-size: 11px; }
+.line-source strong { color: #dec4ff; }
+.line-source a { border-bottom: 1px solid #b388e977; white-space: nowrap; }
+.side-toggle { display: flex; padding: 3px; background: #0c0911; border: 1px solid var(--line); border-radius: 8px; }
+.side-toggle button { padding: 6px 12px; border-radius: 5px; color: var(--muted); font-size: 11px; }
+.side-toggle [aria-pressed="true"] { color: #ead8ff; background: #51316f; }
+.board-caption { font-size: 11px; margin: -9px 0 17px; }
+.mlb-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
+.mlb-card { position: relative; min-width: 0; border: 1px solid #382747; border-radius: 14px; background: radial-gradient(ellipse at 100% 0,#66368a14,transparent 60%),linear-gradient(150deg,#191220,#110e18); overflow: hidden; transition: border-color .2s,box-shadow .2s; }
+.mlb-card:hover { border-color: #8357a877; box-shadow: 0 8px 34px #0003,0 0 25px #a263db0a; }
+.mlb-card-top { display: flex; gap: 12px; align-items: center; padding: 19px 19px 0; }
+.mlb-avatar { width: 50px; height: 50px; flex-shrink: 0; object-fit: cover; object-position: top; border-radius: 12px; background: radial-gradient(circle at 50% 60%,#50315d,#25172d); border: 1px solid #51365f; }
+.mlb-name { flex: 1; min-width: 0; }
+.mlb-name h3 { font-size: 16px; font-weight: 650; line-height: 1.3; }
+.mlb-name h3 button { text-align: left; padding: 0; }
+.mlb-name h3 button:hover { color: var(--accent); }
+.mlb-meta { font-size: 10px; color: #9e8aae; margin-top: 4px; }
+.mlb-save { align-self: flex-start; color: #95809f; font-size: 21px; padding: 0; }
+.mlb-save[aria-pressed="true"] { color: #d6b3ff; }
+.mlb-reason { font-size: 11px; line-height: 1.75; padding: 11px 19px 0; color: #ad9ebd; min-height: 88px; }
+.mlb-rating-line { display: grid; grid-template-columns: 1fr 1fr; margin: 14px 19px 0; border: 1px solid #58386b66; border-radius: 10px; background: #1e1429; overflow: hidden; }
+.mlb-rating-line>div { padding: 11px 14px; }
+.mlb-rating-line>div+div { border-left: 1px solid #58386b66; background: #24173099; }
+.mlb-kicker { display: block; text-transform: uppercase; letter-spacing: 1px; font: 9px var(--mono); color: #af92c5; margin-bottom: 5px; }
+.mlb-big { font-size: 28px; line-height: 1.1; color: #d6b4ff; font-weight: 600; letter-spacing: -1px; }
+.mlb-big small { font-size: 12px; color: #937ea4; font-weight: 400; letter-spacing: 0; }
+.mlb-line-number { color: #f1e3ff; }
+.mlb-line-number.unposted { font-size: 17px; line-height: 1.85; color: #96829f; letter-spacing: 0; }
+.mlb-sub { font-size: 9px; color: #aa96ba; margin-top: 5px; }
+.mlb-metrics { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; padding: 17px 19px 11px; }
+.mlb-metric { min-width: 0; }
+.mlb-metric strong { font: 16px var(--mono); color: #e4d5ef; display: block; }
+.mlb-metric span { font-size: 9px; color: #9885a8; display: block; margin-top: 4px; }
+.mlb-chart-wrap { padding: 0 19px 14px; }
+.mlb-chart-label { display: flex; justify-content: space-between; font-size: 9px; color: #897499; margin-bottom: 7px; }
+.mlb-spark { height: 37px; display: flex; align-items: flex-end; gap: 4px; }
+.mlb-spark span { flex: 1; min-width: 0; border-radius: 3px 3px 1px 1px; background: #664282; border: 1px solid #81549d88; }
+.mlb-spark span.cleared { background: linear-gradient(#c38bea,#8e4bc1); border-color: #c38bea88; }
+.mlb-status-line { display: flex; justify-content: space-between; gap: 7px; flex-wrap: wrap; padding: 0 19px 13px; font-size: 9px; color: #9685a7; }
+.mlb-status-line .confirmed { color: #adceb7; }
+.mlb-result { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 19px; background: #ffffff03; border-top: 1px solid #32223e; font-size: 10px; }
+.mlb-result strong { font-weight: 600; }
+.mlb-result.hit { color: #c7ebd0; background: #8fc5a010; }
+.mlb-result.miss { color: #edb4c6; background: #e97b9710; }
+.mlb-card-actions { display: flex; justify-content: space-between; padding: 11px 19px; border-top: 1px solid #32223e; color: #b99dce; font-size: 10px; }
+.mlb-card-actions button { padding: 0; color: inherit; }
+.mlb-card-actions button:hover,.mlb-card-actions a:hover { color: #ead5ff; }
+.mlb-card-actions [aria-pressed="true"] { color: #edddff; }
+.mlb-empty { padding: 65px 24px; border: 1px dashed #56396c; background: #17101e; border-radius: 14px; text-align: center; }
+.mlb-empty h2 { margin-bottom: 10px; font-size: 22px; }
+.mlb-empty p { max-width: 520px; margin: auto; font-size: 12px; line-height: 1.8; }
+.mlb-empty button { margin-top: 18px; }
+.mlb-matchups { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
+.mlb-game { padding: 22px; border: 1px solid #48305c; border-radius: 14px; background: radial-gradient(ellipse at 100% 0,#78449c22,transparent),#16101e; }
+.mlb-game-head { display: flex; justify-content: space-between; color: #a48bb8; font-size: 10px; margin-bottom: 22px; }
+.mlb-team-row { display: flex; justify-content: space-between; gap: 12px; margin: 15px 0; }
+.mlb-team-row strong { font-size: 18px; font-weight: 600; }
+.mlb-team-row small { display: block; color: #9b85ad; font-size: 11px; margin-top: 3px; }
+.mlb-game-bottom { padding-top: 14px; margin-top: 20px; border-top: 1px solid #392444; display: flex; justify-content: space-between; color: #b195c8; font-size: 10px; }
+#mlb-dialog { width: min(900px,calc(100vw - 32px)); max-height: 88vh; padding: 32px; background: #15101d; color: var(--text); border: 1px solid #65487c; border-radius: 18px; overflow-y: auto; box-shadow: 0 28px 120px #000a,0 0 70px #854cd91a; }
+#mlb-dialog::backdrop { background: #080510c9; backdrop-filter: blur(6px); }
+.mlb-dialog-title { font-size: 26px; line-height: 1.2; margin: 4px 35px 10px 0; }
+.mlb-dialog-lead { font-size: 12px; line-height: 1.85; margin-bottom: 18px; }
+.mlb-dialog-section { margin-top: 24px; }
+.mlb-dialog-section h3 { color: #d8bde9; margin-bottom: 10px; }
+.mlb-dialog-section p,.mlb-dialog-section li { font-size: 12px; color: #ad9cbd; line-height: 1.9; }
+.mlb-dialog-section a { color: #d1b0ed; text-decoration: underline; text-underline-offset: 3px; }
+.mlb-table-wrap { overflow-x: auto; margin: 12px 0; }
+.mlb-table { border-collapse: collapse; width: 100%; font-size: 11px; }
+.mlb-table th { font-size: 10px; color: #9781aa; text-align: left; font-weight: 500; }
+.mlb-table td,.mlb-table th { padding: 11px 10px; border-bottom: 1px solid #35243f; white-space: nowrap; }
+.mlb-table td { color: #d1bfdc; }
+.mlb-table a { color: #cca6e8; }
+.mlb-facts { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin: 20px 0; }
+.mlb-facts>div { background: #23172e; border: 1px solid #4c2f61; border-radius: 9px; padding: 12px; }
+.mlb-facts strong { display: block; color: #d5b3ed; font: 19px var(--mono); }
+.mlb-facts span { font-size: 10px; color: #9983ab; }
+.mlb-notes { width: 100%; min-height: 90px; resize: vertical; padding: 12px; background: #100b17; color: #ddcce8; border: 1px solid #4a315a; border-radius: 9px; font: 12px/1.7 var(--font); }
+.mlb-source-row { font-size: 10px; padding: 10px 0; border-bottom: 1px solid #32213e; overflow-wrap: anywhere; }
+.mlb-source-row code { color: #826e94; font-size: 9px; }
+.mlb-app #compare-tray { max-width: calc(100vw - 30px); }
+.mlb-app .loading p { margin-top: 9px; }
+.mlb-app #notice:not(:empty) { margin-top: 18px; }
+@media(min-width:1600px) { .mlb-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
+@media(max-width:1100px) { .mlb-grid,.mlb-matchups { grid-template-columns: repeat(2,minmax(0,1fr)); } .mlb-app .connection { display: none; } }
+@media(max-width:700px) { .mlb-app .topbar { gap: 14px; } .mlb-app #mlb-navigation { width: 100%; justify-content: space-between; order: 3; } .mlb-app .sport-switch { margin-left: auto; } .mlb-app .topbar .nav-link { padding: 8px 10px; font-size: 11px; } .mlb-app .page-heading { align-items: flex-start; } .mlb-app h1 { font-size: 35px; } .mlb-app .heading-actions { flex-direction: column; gap: 7px; } .mlb-app .heading-actions .button { padding: 8px 10px; font-size: 10px; } .mlb-app .page-heading p { font-size: 12px; max-width: 200px; } .mlb-app .season-bar { align-items: flex-start; flex-direction: column; gap: 13px; } .date-controls { width: 100%; } .date-controls input { flex: 1; width: 130px; } .market-picker { grid-template-columns: 1fr; gap: 7px; } .market-label { padding-top: 7px; } .market-picker button { font-size: 10px; padding: 7px 9px; } .mlb-app .summary-grid { gap: 9px; } .mlb-app .summary-card { padding: 14px; } .mlb-app .summary-value { font-size: 26px; } .line-source { align-items: flex-start; flex-direction: column; font-size: 10px; } .mlb-grid,.mlb-matchups { grid-template-columns: 1fr; } .mlb-app .research-controls select { flex: 1; } .mlb-app .research-controls .searchbox { min-width: 100%; } .mlb-reason { min-height: 0; } #mlb-dialog { padding: 22px 17px; } .mlb-facts { grid-template-columns: repeat(2,1fr); } .mlb-app footer { align-items: flex-start; gap: 12px; } .mlb-app #compare-tray { font-size: 11px; padding: 10px 12px; } }
+@media(prefers-reduced-motion:reduce) { * { scroll-behavior: auto !important; transition: none !important; } }

@@ -46,6 +46,10 @@ p { color: var(--muted); }
 .brand { display: flex; align-items: center; gap: 11px; flex-shrink: 0; font-size: 21px; font-weight: 750; letter-spacing: .1px; line-height: 1.1; }
 .brand img { filter: drop-shadow(0 0 14px #b27aff28); }
 .brand-light { color: var(--accent); font-weight: 400; margin-left: 4px; }
+.topbar .sport-switch { gap: 3px; border: 1px solid var(--line); border-radius: 9px; padding: 4px; flex-shrink: 0; }
+.sport-switch a { padding: 6px 11px; border-radius: 6px; font-size: 11px; font-weight: 650; color: var(--muted); }
+.sport-switch a[aria-current="page"] { background: #9c63e92d; color: #e4d0ff; box-shadow: var(--glow); }
+.topbar:has(.sport-switch) { gap: 22px; flex-wrap: wrap; padding-top: 12px; padding-bottom: 12px; }
 .brand small { display: block; color: #81748f; font: 8px var(--mono); letter-spacing: 1.7px; margin-top: 7px; }
 .topbar nav { display: flex; align-items: center; gap: 6px; }
 .nav-link { display: flex; align-items: center; gap: 8px; padding: 11px 15px; border: 1px solid transparent; border-radius: 9px; color: var(--muted); font-size: 12px; font-weight: 550; white-space: nowrap; }

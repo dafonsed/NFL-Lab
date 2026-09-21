@@ -1,6 +1,29 @@
-# NFL Lab — independent NFL analytics
+# NFL Lab — independent NFL and MLB analytics
 
 An independent local NFL research app. It downloads public NFL datasets and calculates its own player profiles. **There are no requests to VENOM, Whop, or the reference app.** It does not reproduce anyone's private calibrated scores.
+
+The sport switch opens the daily [MLB section](https://nfl-lab-xi.vercel.app/mlb), backed by MLB's official Stats API. The NFL section remains available at `/nfl` and `/`.
+
+## MLB section
+
+- Sixteen player markets: home runs, hits, total bases, RBIs, runs, hits + runs + RBIs, stolen bases, singles, doubles, batter walks, batter strikeouts, pitcher strikeouts, pitching outs, earned runs allowed, hits allowed, and walks allowed.
+- Daily date navigation with automatic Eastern Time rollover, future schedules, probable pitchers, confirmed lineups, game matchups, and final statistics. Game times use the viewer's local timezone. Spring training is excluded.
+- FanDuel-first public over/under totals from ScoresAndOdds. Fallback sportsbooks are explicitly named. Availability varies: the verified public feed did not publish runs, doubles, batter-walk, or batter-strikeout totals during the initial audit; those markets still show official statistics and research scores. Missing lines remain unposted.
+- Purple desktop/mobile interface, data explanations under player names, over/under result alerts, player game logs, source receipts, watchlists, notes, comparison, and CSV export.
+
+### MLB data and calculations
+
+`https://statsapi.mlb.com/api/v1` supplies schedules, game-specific rosters/lineups, probable pitchers, game logs, and box scores. Each player's detail panel links to the original responses and official games, with response hashes and retrieval timestamps. `/api/mlb/board?date=YYYY-MM-DD&market=hr` supplies the board; `/api/mlb/evidence?date=YYYY-MM-DD&market=hr&player=GAME_ID:PLAYER_ID` exposes the full sample and selected-game box statistics.
+
+The sample contains up to 20 completed batter appearances with a plate appearance, or 8 completed pitcher starts. Same-day and incomplete games are excluded. The search window is 100 days, extended to the prior September early in a season. Recent-form baseline = 60% sample mean + 40% mean of the most recent 5 appearances / 3 starts. A published market scale converts production to a capped 0–100 rating. **The rating is not a calibrated probability or a validated betting forecast.** Opponent, park, weather, injuries, and lineup position are not model inputs. Historical over/under rates compare the sample to the displayed line; an explicitly labeled 1+ benchmark is used for some markets without a line.
+
+Singles subtract extra-base hits from hits. Total bases count singles once, doubles twice, triples three times, and home runs four times. H+R+RBI adds the three official counts. Pitching innings are thirds: 6.1 innings equals 19 outs. Missing statistics are not converted to zero.
+
+Final hit/miss/push alerts require a captured pregame or public archived total. In-play lines are not used to grade pregame results. No appearance, no plate appearance, non-starts, missing data, postponed/suspended games, and missing lines are distinguished. These are statistical comparisons, not book settlement decisions. Public archives do not prove exact closing totals. Arizona-specific pricing is unverified.
+
+The browser refreshes every 15 minutes while visible. Official data is cached for 15–60 minutes by endpoint; public lines for 30 minutes and archived comparisons for one day. Manual refresh rechecks with a one-minute minimum interval. Failed refreshes retain available data with stale markers and original timestamps. Vercel's captured line history is temporary per instance; public archives remain the fallback. A permanent shared snapshot history is not provided.
+
+Run `npm run audit:mlb` against the running app to verify all 16 markets on the fixed regression date September 20, 2026. Pass another date with `npm run audit:mlb -- YYYY-MM-DD`, or set `MLB_AUDIT_URL` to a deployed URL. The audit checks every available final result against fresh official box scores, independently recomputes one full sample per market, and checks the hosted response-size budget. Its report is written to `reports/mlb-verification.json` (not committed). This verifies data and arithmetic, not predictive accuracy.
 
 ## Run
 
