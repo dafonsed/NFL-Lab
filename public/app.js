@@ -104,7 +104,7 @@ function forecastDetail(p){
   const f=p.forecast;if(!f)return '';
   const probabilities=f.probability?`<div class="detail-probabilities">${[['Over',f.probability.over],['Under',f.probability.under],['Push',f.probability.push]].map(([name,value])=>`<span><small>${name}</small><b>${pct(value)}</b></span>`).join('')}</div>`:'<b class="detail-text-value">No comparable estimate</b>';
   return `<details class="detail-panel forecast-panel" open>
-    <summary>Line analysis <small>Workload v1 · experimental</small></summary>
+    <summary>Line analysis <small>Workload + context · experimental</small></summary>
     <p class="detail-lead">${esc(f.explanation||f.reasons?.join(' · '))}</p>
     <div class="metric-grid forecast-metrics">
       <div class="metric-cell"><label>Workload projection</label><b>${state.market==='any_td'?pct(f.point):num(f.point)}</b></div>
@@ -113,11 +113,12 @@ function forecastDetail(p){
     </div>
     <div class="forecast-parts">${(f.parts||[]).map(x=>`<div class="detail-equation"><span>${esc(x.label)}</span><strong>${num(x.workload)} <i>×</i> ${num(x.efficiency,3)} <i>=</i> ${num(x.value)}</strong></div>`).join('')}</div>
     ${f.reasons?.length?`<div class="detail-caution"><strong>No clear lean</strong><ul>${f.reasons.map(reason=>`<li>${esc(reason)}</li>`).join('')}</ul></div>`:''}
+    ${globalThis.renderModelContext(f)}
     <div class="detail-context-grid">
       <div class="detail-context"><h4>Availability</h4><p><strong>${esc(f.availability?.status||'unavailable')}</strong>${f.availability?.reportedAt?' · reported '+esc(new Date(f.availability.reportedAt).toLocaleString()):''}${f.availability?.checkedAt?' · checked '+esc(new Date(f.availability.checkedAt).toLocaleString()):''}. ${esc(f.availability?.note||'')}</p>${f.availability?.sourceUrl?'<a class="source-link" href="'+esc(f.availability.sourceUrl)+'" target="_blank" rel="noreferrer">Availability source ↗</a>':''}</div>
-      <div class="detail-context"><h4>Pregame record</h4><p>${f.capture?'Pregame record saved '+esc(new Date(f.capture.createdAt).toLocaleString())+' at line '+lineNumber(f.capture.line)+'. '+(f.capture.eligible?'Eligible for evaluation.':'Recorded for coverage; excluded from evaluation.'):'No frozen pregame record for this player on this board.'}</p><a class="source-link" href="/performance?season=${state.data.current.season}&week=${state.data.current.week}">See honest model performance & records ↗</a></div>
+      <div class="detail-context"><h4>Pregame record</h4><p>${f.capture?'Pregame record saved '+esc(new Date(f.capture.createdAt).toLocaleString())+' at line '+lineNumber(f.capture.line)+'. Saved model '+esc(f.capture.version||'previous version')+'. '+(f.capture.eligible?'Eligible for evaluation.':'Recorded for coverage; excluded from evaluation.'):'No frozen pregame record for this player on this board.'}</p><a class="source-link" href="/performance?season=${state.data.current.season}&week=${state.data.current.week}">See model performance & records ↗</a> · <a class="source-link" href="/paper?sport=nfl">Paper returns ↗</a></div>
     </div>
-    <p class="forecast-note detail-method-note">${esc(f.intervalLabel||'')} · Historical error set: 2023. ${esc(f.validation||'')} The 60% threshold is fixed for research, not a demonstrated betting edge.</p>
+    <p class="forecast-note detail-method-note">${esc(f.intervalLabel||'')} · Error calibration: 2024 for enabled context models; 2023 for retained base models. ${esc(f.validation||'')} The 60% threshold is fixed for research, not a demonstrated betting edge.</p>
   </details>`;
 }
 function playerRow(p) {

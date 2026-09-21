@@ -28,11 +28,12 @@ export const server = http.createServer(async (req, res) => {
     if (!process.env.VERCEL && !/^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(host)) return json(res, { error: 'This workspace only accepts local connections.' }, 403);
     if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, { error: 'Method not allowed.' }, 405);
     const url = new URL(req.url, 'http://localhost');
-    if (url.pathname === '/api/cron/predictions') {
+    if (['/api/cron/predictions','/api/cron/mlb-predictions'].includes(url.pathname)) {
       const expected=process.env.CRON_SECRET ? Buffer.from('Bearer '+process.env.CRON_SECRET) : null, actual=Buffer.from(req.headers.authorization||'');
       if(!expected||expected.length!==actual.length||!timingSafeEqual(expected,actual))return json(res,{error:'Unauthorized'},401);
-      return json(res,await store.captureDaily());
+      return json(res,await (url.pathname.includes('/mlb-')?mlb:store).captureDaily());
     }
+    if(url.pathname==='/api/paper')return json(res,await (url.searchParams.get('sport')==='mlb'?mlb:store).paperPerformance(Object.fromEntries(url.searchParams)));
     if (url.pathname === '/api/performance') return json(res,await store.performance(Object.fromEntries(url.searchParams)));
     if (url.pathname === '/api/health') return json(res, { ok: true, app: 'independent-nfl-workspace', syncing, lastSync, refreshMinutes: REFRESH_MS / 60_000 });
     if (url.pathname === '/api/mlb/board') return json(res, await mlb.board(Object.fromEntries(url.searchParams), url.searchParams.get('refresh') === '1'));
@@ -41,7 +42,7 @@ export const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/evidence') return json(res, await store.evidence(Object.fromEntries(url.searchParams)));
     if (url.pathname === '/api/catalog') { const {current,weeks}=await store.catalog(url.searchParams.get('refresh') === '1'); return json(res,{current,weeks}); }
     if (url.pathname === '/api/board') return json(res, await store.board(Object.fromEntries(url.searchParams), url.searchParams.get('refresh') === '1'));
-    const names = { '/performance':'performance.html', '/performance.js':'performance.js', '/forecast.css':'forecast.css', '/': 'index.html', '/nfl': 'index.html', '/mlb': 'mlb.html', '/mlb/': 'mlb.html', '/mlb.js': 'mlb.js', '/mlb-model.js':'mlb-model.js', '/mlb.css': 'mlb.css', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/manifest.webmanifest': 'manifest.webmanifest' };
+    const names = { '/paper':'paper.html','/paper.js':'paper.js','/context-ui.js':'context-ui.js','/context.css':'context.css', '/performance':'performance.html', '/performance.js':'performance.js', '/forecast.css':'forecast.css', '/': 'index.html', '/nfl': 'index.html', '/mlb': 'mlb.html', '/mlb/': 'mlb.html', '/mlb.js': 'mlb.js', '/mlb-model.js':'mlb-model.js', '/mlb.css': 'mlb.css', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/manifest.webmanifest': 'manifest.webmanifest' };
     const name = names[url.pathname];
     if (!name) return json(res, { error: 'Not found.' }, 404);
     const bytes = await fs.readFile(path.join(publicDir, name));

@@ -16,12 +16,13 @@
     "dev": "node --watch server.mjs",
     "test": "node --test test/*.test.mjs",
     "sync": "node scripts/sync.mjs",
-    "check": "node --check server.mjs && node --check lib/source.mjs && node --check public/app.js && node --check public/mlb.js && node --check lib/mlb/source.mjs && node --check lib/mlb/props.mjs && node --check lib/mlb/provider.mjs && node --check lib/mlb/model.mjs && node --check lib/mlb/markets.mjs && node --check lib/forecast.mjs && node --check lib/predictions.mjs && node --check lib/availability.mjs && node --check public/performance.js && node --check lib/mlb/forecast-core.mjs && node --check lib/mlb/forecast.mjs && node --check public/mlb-model.js",
+    "check": "node --check server.mjs && node --check lib/source.mjs && node --check public/app.js && node --check public/mlb.js && node --check lib/mlb/source.mjs && node --check lib/mlb/props.mjs && node --check lib/mlb/provider.mjs && node --check lib/mlb/model.mjs && node --check lib/mlb/markets.mjs && node --check lib/forecast.mjs && node --check lib/predictions.mjs && node --check lib/availability.mjs && node --check public/performance.js && node --check lib/mlb/forecast-core.mjs && node --check lib/mlb/forecast.mjs && node --check public/mlb-model.js && node --check lib/context-model.mjs && node --check lib/weather.mjs && node --check lib/mlb/context.mjs && node --check lib/nfl-context.mjs && node --check lib/mlb/availability.mjs && node --check lib/paper.mjs && node --check public/context-ui.js && node --check public/paper.js && node --check scripts/train-context.mjs",
     "audit": "node scripts/audit-independent.mjs",
     "audit:props": "node scripts/audit-props.mjs",
     "audit:mlb": "node scripts/audit-mlb.mjs",
     "evaluate:nfl": "node scripts/evaluate-nfl.mjs",
-    "train:mlb": "node scripts/download-mlb-training.mjs && node scripts/train-mlb-model.mjs"
+    "train:mlb": "node scripts/download-mlb-training.mjs && node scripts/train-mlb-model.mjs",
+    "train:context": "node scripts/train-context.mjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",

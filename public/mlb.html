@@ -1,16 +1,16 @@
 <!doctype html>
 <html lang="en">
-<head>
+<head><script src="/context-ui.js" defer></script>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b0911"><meta name="description" content="Daily MLB player props, official baseball statistics, public sportsbook lines, and transparent recent-form research.">
   <title>MLB LAB · Baseball Analytics</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/mlb.css"><script type="module" src="/mlb.js"></script>
-</head>
+<link rel="stylesheet" href="/context.css"></head>
 <body class="mlb-app">
   <a class="skip" href="#main">Skip to analytics</a>
   <header class="topbar">
     <a href="/mlb" class="brand" aria-label="MLB Lab home"><img src="/favicon.svg" width="40" height="40" alt=""><span>MLB<span class="brand-light">LAB</span><small>THE GAME. DECODED.</small></span></a>
     <nav class="sport-switch" aria-label="Sport"><a href="/nfl">NFL</a><a href="/mlb" aria-current="page">MLB</a></nav>
-    <nav id="mlb-navigation" aria-label="MLB views"><button class="nav-link active" data-view="board">◈ Daily board</button><button class="nav-link" data-view="games">◇ Matchups</button><button class="nav-link" data-view="saved">☆ Watchlist</button><button class="nav-link" data-action="model">↗ Model & evidence</button></nav>
+    <nav id="mlb-navigation" aria-label="MLB views"><button class="nav-link active" data-view="board">◈ Daily board</button><button class="nav-link" data-view="games">◇ Matchups</button><button class="nav-link" data-view="saved">☆ Watchlist</button><button class="nav-link" data-action="model">↗ Model & evidence</button><a class="nav-link" href="/paper?sport=mlb">↗ Paper returns</a></nav>
     <button id="data-button" class="connection"><span class="dot"></span><span id="connection-label">Connecting to MLB</span></button>
   </header>
   <main id="main" tabindex="-1">

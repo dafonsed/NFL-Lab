@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { Provider } from '../lib/providers.mjs';
 import { MARKETS } from '../lib/markets.mjs';
-import { FORECAST_VERSION, RULES, project, priorSample, targetValue, distribution } from '../lib/forecast.mjs';
+import { RULES, project, priorSample, targetValue, distribution } from '../lib/forecast.mjs';
 
 // Split and formulas are declared before loading outcomes. Do not tune on 2025.
 const provider=new Provider(), schedule=await provider.load('schedule');
@@ -42,9 +42,9 @@ for(const row of rows){
 }
 const rnd=x=>Math.round(x*10000)/10000;
 for(const season of Object.values(report))for(const market of Object.values(season))for(const [v,m]of Object.entries(market))market[v]={n:m.n,mae:rnd(m.absoluteError/m.n),rmse:rnd(Math.sqrt(m.squaredError/m.n)),brier:m.probabilityN?rnd(m.brierSum/m.probabilityN):null,probabilityN:m.probabilityN,intervalCoverage:m.intervalN?rnd(m.covered/m.intervalN):null,intervalN:m.intervalN};
-const artifact={version:FORECAST_VERSION,trainingSeason:2023,rules:RULES,pools};
+const artifact={version:'workload-v1',trainingSeason:2023,rules:RULES,pools};
 artifact.id=createHash('sha256').update(JSON.stringify(artifact)).digest('hex');
-const evaluation={version:FORECAST_VERSION,artifactId:artifact.id,generatedAt:new Date().toISOString(),split:{warmup:2022,training:2023,validation:2024,holdout:2025},report,sources:datasets.map(d=>({url:d.meta.url,sha256:d.meta.sha256,fetchedAt:d.meta.fetchedAt})),limitations:[
+const evaluation={version:'workload-v1',artifactId:artifact.id,generatedAt:new Date().toISOString(),split:{warmup:2022,training:2023,validation:2024,holdout:2025},report,sources:datasets.map(d=>({url:d.meta.url,sha256:d.meta.sha256,fetchedAt:d.meta.fetchedAt})),limitations:[
  'Historical reconstruction uses corrected weekly statistics available today, not an archive of what was published before each kickoff.',
  'Only appearances with a published weekly stat row and at least five earlier rows are evaluated. DNPs, snap-only appearances and missing historical props are not fabricated.',
  'No archived sportsbook lines were used here. Yardage/count results are projection errors and interval coverage, not betting hit rates or profitability.',
