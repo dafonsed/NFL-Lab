@@ -69,6 +69,27 @@
 .mlb-team-row small { display: block; color: #9b85ad; font-size: 11px; margin-top: 3px; }
 .mlb-game-bottom { padding-top: 14px; margin-top: 20px; border-top: 1px solid #392444; display: flex; justify-content: space-between; color: #b195c8; font-size: 10px; }
 #mlb-dialog { width: min(900px,calc(100vw - 32px)); max-height: 88vh; padding: 32px; background: #15101d; color: var(--text); border: 1px solid #65487c; border-radius: 18px; overflow-y: auto; box-shadow: 0 28px 120px #000a,0 0 70px #854cd91a; }
+.mlb-model-status { padding: 12px 14px; margin: 13px 0; border: 1px solid #a77ae320; border-radius: 9px; font-size: 10px; color: #d5b9ef; background: #a77ae307; line-height: 1.7; }
+.mlb-model-status span { display: block; color: #a798b5; margin-top: 4px; }
+.mlb-player-research .mlb-forecast { border-color: #a87ce647; background: linear-gradient(135deg,#261934,#17101f); }
+.mlb-model-numbers { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; margin: 18px 0; }
+.mlb-model-numbers > div { display: flex; flex-direction: column; gap: 14px; min-width: 0; background: #0e0a13; border: 1px solid #ffffff0b; border-radius: 10px; padding: 16px; }
+.mlb-model-numbers span { color: #ad9abb; font-size: 11px; }
+.mlb-model-numbers strong { color: #e0c7fa; font-size: 27px; font-variant-numeric: tabular-nums; }
+.mlb-model-flags { padding: 8px 15px; margin: 16px 0; border-left: 2px solid #c5a66c; background: #c5a66c08; border-radius: 6px; }
+.mlb-player-research .mlb-model-flags p { font-size: 11px; margin: 7px 0; }
+.mlb-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; border: 1px solid #ffffff0b; border-radius: 9px; overflow: hidden; margin: 15px 0; background: #ffffff0b; }
+.mlb-inputs > div { padding: 14px; background: #15101d; min-width: 0; }
+.mlb-inputs dt { font-size: 10px; color: #a894bb; margin-bottom: 8px; }
+.mlb-inputs dd { font-size: 12px; margin: 0; color: #decbe9; line-height: 1.6; }
+.mlb-model-math { margin: 18px 0; padding: 14px; border: 1px solid #ffffff0c; border-radius: 9px; }
+.mlb-model-math summary { color: #cfb4e5; font-size: 12px; cursor: pointer; }
+.mlb-player-research .mlb-model-footnote { font-size: 10px; color: #9884aa; }
+.mlb-report-market { color: #d4b1f2; text-align: left; text-decoration: underline; text-underline-offset: 4px; }
+.mlb-model-id { overflow-wrap: anywhere; }
+.mlb-player-research .mlb-table .model-better { color: #8bd8b6; }
+.mlb-player-research .mlb-table .model-worse { color: #eab483; }
+@media(max-width:700px){ .mlb-model-numbers{grid-template-columns:1fr 1fr;} .mlb-inputs{grid-template-columns:1fr;} .mlb-app #mlb-navigation{flex-wrap:wrap;justify-content:flex-start;gap:4px;} }
 #mlb-dialog::backdrop { background: #080510c9; backdrop-filter: blur(6px); }
 .mlb-dialog-title { font-size: 26px; line-height: 1.2; margin: 4px 35px 10px 0; }
 .mlb-dialog-lead { font-size: 12px; line-height: 1.85; margin-bottom: 18px; }
