@@ -108,3 +108,9 @@ nflverse/nflfastR datasets: CC BY 4.0 unless a dataset specifies otherwise. Snap
 Only public data is downloaded. Notes and saved players stay in browser local storage. The server listens on `127.0.0.1` only. Logs are in `logs/server.log`. Legacy reference-site research and snapshots are archived under `.research/obsolete-reference`; the runtime does not read them.
 
 Environment options: `PORT` (3100), `REFRESH_MINUTES` (15), `DATA_DIR` (defaults to `data-independent`), `AUTO_SYNC=0` (disables background refresh). Network failure retains cached raw datasets and marks them stale. A first-time load without internet cannot invent missing data.
+
+## NFL candidate analysis and performance
+
+NFL player cards now include a separate experimental workload projection, line-specific over/under estimates, historical-error range and availability/role warnings. The original model weights and default rankings are unchanged. Open `/performance` for immutable pregame records, paired results and the fixed 2024/2025 historical evaluation. See [the full method and capture policy](docs/nfl-forecast-method.md).
+
+Run `npm run evaluate:nfl` to reproduce the fixed historical evaluation. Production uses private Vercel Blob storage and the protected daily prediction cron; local development keeps its own archive. The candidate remains experimental because historical gains are mixed and a prospective track record is still accumulating.

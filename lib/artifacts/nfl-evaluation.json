@@ -1,0 +1,883 @@
+{
+  "version": "workload-v1",
+  "artifactId": "1842aa64de9f922cd0e0026a2e9da6c998f77b6239e6b2e4c59ce757668770dd",
+  "generatedAt": "2026-09-21T19:31:03.400Z",
+  "split": {
+    "warmup": 2022,
+    "training": 2023,
+    "validation": 2024,
+    "holdout": 2025
+  },
+  "report": {
+    "2024": {
+      "any_td": {
+        "average": {
+          "n": 5672,
+          "mae": 0.2728,
+          "rmse": 0.4045,
+          "brier": 0.143,
+          "probabilityN": 5250,
+          "intervalCoverage": null,
+          "intervalN": 0
+        },
+        "workloadOnly": {
+          "n": 5672,
+          "mae": 0.2652,
+          "rmse": 0.397,
+          "brier": 0.1463,
+          "probabilityN": 5456,
+          "intervalCoverage": null,
+          "intervalN": 0
+        },
+        "efficiencyOnly": {
+          "n": 5672,
+          "mae": 0.2691,
+          "rmse": 0.3857,
+          "brier": 0.1433,
+          "probabilityN": 5516,
+          "intervalCoverage": null,
+          "intervalN": 0
+        },
+        "candidate": {
+          "n": 5672,
+          "mae": 0.2676,
+          "rmse": 0.3869,
+          "brier": 0.1441,
+          "probabilityN": 5489,
+          "intervalCoverage": null,
+          "intervalN": 0
+        }
+      },
+      "pass_yds": {
+        "average": {
+          "n": 641,
+          "mae": 69.7064,
+          "rmse": 88.3259,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8145,
+          "intervalN": 539
+        },
+        "workloadOnly": {
+          "n": 641,
+          "mae": 70.6429,
+          "rmse": 89.117,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8228,
+          "intervalN": 536
+        },
+        "efficiencyOnly": {
+          "n": 641,
+          "mae": 69.1628,
+          "rmse": 87.8179,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8272,
+          "intervalN": 544
+        },
+        "candidate": {
+          "n": 641,
+          "mae": 69.9848,
+          "rmse": 88.4746,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.846,
+          "intervalN": 539
+        }
+      },
+      "pass_tds": {
+        "average": {
+          "n": 641,
+          "mae": 0.9051,
+          "rmse": 1.156,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8861,
+          "intervalN": 641
+        },
+        "workloadOnly": {
+          "n": 641,
+          "mae": 0.9011,
+          "rmse": 1.1525,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.9126,
+          "intervalN": 641
+        },
+        "efficiencyOnly": {
+          "n": 641,
+          "mae": 0.8557,
+          "rmse": 1.0985,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.9111,
+          "intervalN": 641
+        },
+        "candidate": {
+          "n": 641,
+          "mae": 0.8492,
+          "rmse": 1.0947,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.9126,
+          "intervalN": 641
+        }
+      },
+      "rush_yds": {
+        "average": {
+          "n": 3059,
+          "mae": 13.8639,
+          "rmse": 22.1442,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8117,
+          "intervalN": 2952
+        },
+        "workloadOnly": {
+          "n": 3059,
+          "mae": 14.0204,
+          "rmse": 22.4548,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8168,
+          "intervalN": 2948
+        },
+        "efficiencyOnly": {
+          "n": 3059,
+          "mae": 13.8359,
+          "rmse": 22.0998,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8163,
+          "intervalN": 2966
+        },
+        "candidate": {
+          "n": 3059,
+          "mae": 13.9055,
+          "rmse": 22.3159,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.815,
+          "intervalN": 2962
+        }
+      },
+      "rush_attempts": {
+        "average": {
+          "n": 3059,
+          "mae": 2.2922,
+          "rmse": 3.6004,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8871,
+          "intervalN": 2966
+        },
+        "workloadOnly": {
+          "n": 3059,
+          "mae": 2.337,
+          "rmse": 3.6653,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8792,
+          "intervalN": 2971
+        },
+        "efficiencyOnly": {
+          "n": 3059,
+          "mae": 2.2922,
+          "rmse": 3.6004,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8871,
+          "intervalN": 2966
+        },
+        "candidate": {
+          "n": 3059,
+          "mae": 2.337,
+          "rmse": 3.6653,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8792,
+          "intervalN": 2971
+        }
+      },
+      "pass_attempts": {
+        "average": {
+          "n": 641,
+          "mae": 8.6615,
+          "rmse": 11.1922,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.7824,
+          "intervalN": 556
+        },
+        "workloadOnly": {
+          "n": 641,
+          "mae": 8.778,
+          "rmse": 11.3484,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.7996,
+          "intervalN": 544
+        },
+        "efficiencyOnly": {
+          "n": 641,
+          "mae": 8.6615,
+          "rmse": 11.1922,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.7824,
+          "intervalN": 556
+        },
+        "candidate": {
+          "n": 641,
+          "mae": 8.778,
+          "rmse": 11.3484,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.7996,
+          "intervalN": 544
+        }
+      },
+      "pass_completions": {
+        "average": {
+          "n": 641,
+          "mae": 5.8047,
+          "rmse": 7.3657,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8212,
+          "intervalN": 548
+        },
+        "workloadOnly": {
+          "n": 641,
+          "mae": 5.8085,
+          "rmse": 7.4127,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8259,
+          "intervalN": 540
+        },
+        "efficiencyOnly": {
+          "n": 641,
+          "mae": 5.7849,
+          "rmse": 7.3707,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8279,
+          "intervalN": 552
+        },
+        "candidate": {
+          "n": 641,
+          "mae": 5.7943,
+          "rmse": 7.4155,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8185,
+          "intervalN": 540
+        }
+      },
+      "pass_interceptions": {
+        "average": {
+          "n": 641,
+          "mae": 0.6855,
+          "rmse": 0.9058,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.9548,
+          "intervalN": 641
+        },
+        "workloadOnly": {
+          "n": 641,
+          "mae": 0.6849,
+          "rmse": 0.9096,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.9485,
+          "intervalN": 641
+        },
+        "efficiencyOnly": {
+          "n": 641,
+          "mae": 0.6738,
+          "rmse": 0.864,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.961,
+          "intervalN": 641
+        },
+        "candidate": {
+          "n": 641,
+          "mae": 0.6733,
+          "rmse": 0.8684,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.9563,
+          "intervalN": 641
+        }
+      },
+      "rush_rec_yds": {
+        "average": {
+          "n": 5586,
+          "mae": 20.8281,
+          "rmse": 29.2651,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8143,
+          "intervalN": 5467
+        },
+        "workloadOnly": {
+          "n": 5586,
+          "mae": 21.1135,
+          "rmse": 29.8021,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8167,
+          "intervalN": 5461
+        },
+        "efficiencyOnly": {
+          "n": 5586,
+          "mae": 20.6057,
+          "rmse": 28.8634,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8156,
+          "intervalN": 5477
+        },
+        "candidate": {
+          "n": 5586,
+          "mae": 20.8114,
+          "rmse": 29.3618,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.817,
+          "intervalN": 5469
+        }
+      },
+      "rec": {
+        "average": {
+          "n": 4881,
+          "mae": 1.3659,
+          "rmse": 1.8524,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8852,
+          "intervalN": 4773
+        },
+        "workloadOnly": {
+          "n": 4881,
+          "mae": 1.3933,
+          "rmse": 1.9051,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8937,
+          "intervalN": 4771
+        },
+        "efficiencyOnly": {
+          "n": 4881,
+          "mae": 1.362,
+          "rmse": 1.8457,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8863,
+          "intervalN": 4769
+        },
+        "candidate": {
+          "n": 4881,
+          "mae": 1.3873,
+          "rmse": 1.8971,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8913,
+          "intervalN": 4767
+        }
+      },
+      "rec_yds": {
+        "average": {
+          "n": 4881,
+          "mae": 17.748,
+          "rmse": 25.533,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8206,
+          "intervalN": 4777
+        },
+        "workloadOnly": {
+          "n": 4881,
+          "mae": 18.106,
+          "rmse": 26.1079,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8252,
+          "intervalN": 4771
+        },
+        "efficiencyOnly": {
+          "n": 4881,
+          "mae": 17.5099,
+          "rmse": 25.0302,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8254,
+          "intervalN": 4772
+        },
+        "candidate": {
+          "n": 4881,
+          "mae": 17.8285,
+          "rmse": 25.6294,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8212,
+          "intervalN": 4770
+        }
+      }
+    },
+    "2025": {
+      "any_td": {
+        "average": {
+          "n": 5827,
+          "mae": 0.2701,
+          "rmse": 0.4004,
+          "brier": 0.1399,
+          "probabilityN": 5403,
+          "intervalCoverage": null,
+          "intervalN": 0
+        },
+        "workloadOnly": {
+          "n": 5827,
+          "mae": 0.2608,
+          "rmse": 0.3917,
+          "brier": 0.1418,
+          "probabilityN": 5574,
+          "intervalCoverage": null,
+          "intervalN": 0
+        },
+        "efficiencyOnly": {
+          "n": 5827,
+          "mae": 0.2664,
+          "rmse": 0.3822,
+          "brier": 0.14,
+          "probabilityN": 5625,
+          "intervalCoverage": null,
+          "intervalN": 0
+        },
+        "candidate": {
+          "n": 5827,
+          "mae": 0.2656,
+          "rmse": 0.3839,
+          "brier": 0.1404,
+          "probabilityN": 5611,
+          "intervalCoverage": null,
+          "intervalN": 0
+        }
+      },
+      "pass_yds": {
+        "average": {
+          "n": 622,
+          "mae": 71.9379,
+          "rmse": 91.4929,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8216,
+          "intervalN": 538
+        },
+        "workloadOnly": {
+          "n": 622,
+          "mae": 71.5153,
+          "rmse": 90.6952,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.844,
+          "intervalN": 532
+        },
+        "efficiencyOnly": {
+          "n": 622,
+          "mae": 71.0201,
+          "rmse": 90.3632,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8195,
+          "intervalN": 543
+        },
+        "candidate": {
+          "n": 622,
+          "mae": 70.6772,
+          "rmse": 89.6954,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8286,
+          "intervalN": 531
+        }
+      },
+      "pass_tds": {
+        "average": {
+          "n": 622,
+          "mae": 0.954,
+          "rmse": 1.2015,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.873,
+          "intervalN": 622
+        },
+        "workloadOnly": {
+          "n": 622,
+          "mae": 0.9526,
+          "rmse": 1.198,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8891,
+          "intervalN": 622
+        },
+        "efficiencyOnly": {
+          "n": 622,
+          "mae": 0.9305,
+          "rmse": 1.1552,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8891,
+          "intervalN": 622
+        },
+        "candidate": {
+          "n": 622,
+          "mae": 0.9339,
+          "rmse": 1.1596,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.9019,
+          "intervalN": 622
+        }
+      },
+      "rush_yds": {
+        "average": {
+          "n": 3089,
+          "mae": 13.1375,
+          "rmse": 22.2085,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8158,
+          "intervalN": 3019
+        },
+        "workloadOnly": {
+          "n": 3089,
+          "mae": 13.3393,
+          "rmse": 22.6359,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8197,
+          "intervalN": 3012
+        },
+        "efficiencyOnly": {
+          "n": 3089,
+          "mae": 13.1357,
+          "rmse": 22.0484,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8165,
+          "intervalN": 3014
+        },
+        "candidate": {
+          "n": 3089,
+          "mae": 13.2848,
+          "rmse": 22.3766,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8244,
+          "intervalN": 3018
+        }
+      },
+      "rush_attempts": {
+        "average": {
+          "n": 3089,
+          "mae": 2.1809,
+          "rmse": 3.4887,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.882,
+          "intervalN": 3018
+        },
+        "workloadOnly": {
+          "n": 3089,
+          "mae": 2.2129,
+          "rmse": 3.559,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8755,
+          "intervalN": 3020
+        },
+        "efficiencyOnly": {
+          "n": 3089,
+          "mae": 2.1809,
+          "rmse": 3.4887,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.882,
+          "intervalN": 3018
+        },
+        "candidate": {
+          "n": 3089,
+          "mae": 2.2129,
+          "rmse": 3.559,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8755,
+          "intervalN": 3020
+        }
+      },
+      "pass_attempts": {
+        "average": {
+          "n": 622,
+          "mae": 8.8482,
+          "rmse": 11.6029,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.7923,
+          "intervalN": 544
+        },
+        "workloadOnly": {
+          "n": 622,
+          "mae": 8.7835,
+          "rmse": 11.5053,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8139,
+          "intervalN": 532
+        },
+        "efficiencyOnly": {
+          "n": 622,
+          "mae": 8.8482,
+          "rmse": 11.6029,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.7923,
+          "intervalN": 544
+        },
+        "candidate": {
+          "n": 622,
+          "mae": 8.7835,
+          "rmse": 11.5053,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8139,
+          "intervalN": 532
+        }
+      },
+      "pass_completions": {
+        "average": {
+          "n": 622,
+          "mae": 6.0283,
+          "rmse": 7.7622,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8266,
+          "intervalN": 548
+        },
+        "workloadOnly": {
+          "n": 622,
+          "mae": 5.9292,
+          "rmse": 7.7127,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.843,
+          "intervalN": 535
+        },
+        "efficiencyOnly": {
+          "n": 622,
+          "mae": 5.9904,
+          "rmse": 7.7225,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8315,
+          "intervalN": 546
+        },
+        "candidate": {
+          "n": 622,
+          "mae": 5.9202,
+          "rmse": 7.6824,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8475,
+          "intervalN": 531
+        }
+      },
+      "pass_interceptions": {
+        "average": {
+          "n": 622,
+          "mae": 0.6768,
+          "rmse": 0.8647,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.9534,
+          "intervalN": 622
+        },
+        "workloadOnly": {
+          "n": 622,
+          "mae": 0.6692,
+          "rmse": 0.8605,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.955,
+          "intervalN": 622
+        },
+        "efficiencyOnly": {
+          "n": 622,
+          "mae": 0.6501,
+          "rmse": 0.8256,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.9662,
+          "intervalN": 622
+        },
+        "candidate": {
+          "n": 622,
+          "mae": 0.6446,
+          "rmse": 0.8268,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.9646,
+          "intervalN": 622
+        }
+      },
+      "rush_rec_yds": {
+        "average": {
+          "n": 5689,
+          "mae": 20.1857,
+          "rmse": 28.6553,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8207,
+          "intervalN": 5594
+        },
+        "workloadOnly": {
+          "n": 5689,
+          "mae": 20.4475,
+          "rmse": 29.1948,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8265,
+          "intervalN": 5585
+        },
+        "efficiencyOnly": {
+          "n": 5689,
+          "mae": 20.0148,
+          "rmse": 28.329,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8174,
+          "intervalN": 5597
+        },
+        "candidate": {
+          "n": 5689,
+          "mae": 20.2636,
+          "rmse": 28.7993,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8189,
+          "intervalN": 5594
+        }
+      },
+      "rec": {
+        "average": {
+          "n": 4995,
+          "mae": 1.3038,
+          "rmse": 1.7726,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.904,
+          "intervalN": 4885
+        },
+        "workloadOnly": {
+          "n": 4995,
+          "mae": 1.3182,
+          "rmse": 1.8184,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.9054,
+          "intervalN": 4874
+        },
+        "efficiencyOnly": {
+          "n": 4995,
+          "mae": 1.3005,
+          "rmse": 1.7642,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.9032,
+          "intervalN": 4884
+        },
+        "candidate": {
+          "n": 4995,
+          "mae": 1.3137,
+          "rmse": 1.8092,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.9048,
+          "intervalN": 4876
+        }
+      },
+      "rec_yds": {
+        "average": {
+          "n": 4995,
+          "mae": 17.1438,
+          "rmse": 24.64,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8344,
+          "intervalN": 4867
+        },
+        "workloadOnly": {
+          "n": 4995,
+          "mae": 17.2999,
+          "rmse": 25.0953,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8415,
+          "intervalN": 4859
+        },
+        "efficiencyOnly": {
+          "n": 4995,
+          "mae": 16.9433,
+          "rmse": 24.3263,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8291,
+          "intervalN": 4869
+        },
+        "candidate": {
+          "n": 4995,
+          "mae": 17.0781,
+          "rmse": 24.7404,
+          "brier": null,
+          "probabilityN": 0,
+          "intervalCoverage": 0.8304,
+          "intervalN": 4869
+        }
+      }
+    }
+  },
+  "sources": [
+    {
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2022.csv.gz",
+      "sha256": "0f064dede2896107868d784ede7a92cbe239852f7274c12c4589bcfd5e129b4a",
+      "fetchedAt": "2026-09-21T19:30:38.118Z"
+    },
+    {
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2023.csv.gz",
+      "sha256": "6c2258cf5d90cb918dfca093b20dba2e062b1eca54f5d2d348f15a0045d86113",
+      "fetchedAt": "2026-09-21T19:30:38.904Z"
+    },
+    {
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2024.csv.gz",
+      "sha256": "61fc9a44706522218a4448001706e3fec65ebbb97c1d9c5746ceef364989125d",
+      "fetchedAt": "2026-09-21T06:06:58.767Z"
+    },
+    {
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2025.csv.gz",
+      "sha256": "c7401e321bdb369443f3280b9acd74ba6e16d82e710383bf1c01acabfebeac0b",
+      "fetchedAt": "2026-09-21T05:43:25.631Z"
+    }
+  ],
+  "limitations": [
+    "Historical reconstruction uses corrected weekly statistics available today, not an archive of what was published before each kickoff.",
+    "Only appearances with a published weekly stat row and at least five earlier rows are evaluated. DNPs, snap-only appearances and missing historical props are not fabricated.",
+    "No archived sportsbook lines were used here. Yardage/count results are projection errors and interval coverage, not betting hit rates or profitability.",
+    "The original 0–100 rating has no equivalent outcome unit. It remains unchanged and is saved alongside each future prediction for prospective comparison.",
+    "Workload-only and efficiency-only ablations isolate each change; the combined candidate stays experimental regardless of this report.",
+    "Anytime TD tests use weekly rushing, receiving and special-teams touchdowns. Rare fumble-recovery touchdowns may be absent from these weekly fields."
+  ]
+}

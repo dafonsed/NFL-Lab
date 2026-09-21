@@ -16,12 +16,14 @@
     "dev": "node --watch server.mjs",
     "test": "node --test test/*.test.mjs",
     "sync": "node scripts/sync.mjs",
-    "check": "node --check server.mjs && node --check lib/source.mjs && node --check public/app.js && node --check public/mlb.js && node --check lib/mlb/source.mjs && node --check lib/mlb/props.mjs && node --check lib/mlb/provider.mjs && node --check lib/mlb/model.mjs && node --check lib/mlb/markets.mjs",
+    "check": "node --check server.mjs && node --check lib/source.mjs && node --check public/app.js && node --check public/mlb.js && node --check lib/mlb/source.mjs && node --check lib/mlb/props.mjs && node --check lib/mlb/provider.mjs && node --check lib/mlb/model.mjs && node --check lib/mlb/markets.mjs && node --check lib/forecast.mjs && node --check lib/predictions.mjs && node --check lib/availability.mjs && node --check public/performance.js",
     "audit": "node scripts/audit-independent.mjs",
     "audit:props": "node scripts/audit-props.mjs",
-    "audit:mlb": "node scripts/audit-mlb.mjs"
+    "audit:mlb": "node scripts/audit-mlb.mjs",
+    "evaluate:nfl": "node scripts/evaluate-nfl.mjs"
   },
   "dependencies": {
+    "@vercel/blob": "^2.8.0",
     "cheerio": "^1.2.0",
     "csv-parse": "^7.0.2"
   }

@@ -3,7 +3,13 @@
   "functions": {
     "server.mjs": {
       "maxDuration": 300,
-      "includeFiles": "public/**"
+      "includeFiles": "{public,lib/artifacts}/**"
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/predictions",
+      "schedule": "0 10 * * *"
+    }
+  ]
 }
