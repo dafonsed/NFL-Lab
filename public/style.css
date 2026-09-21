@@ -49,6 +49,7 @@ p { color: var(--muted); }
 .topbar .sport-switch { gap: 3px; border: 1px solid var(--line); border-radius: 9px; padding: 4px; flex-shrink: 0; }
 .sport-switch a { padding: 6px 11px; border-radius: 6px; font-size: 11px; font-weight: 650; color: var(--muted); }
 .sport-switch a[aria-current="page"] { background: #9c63e92d; color: #e4d0ff; box-shadow: var(--glow); }
+@media (max-width: 700px) { .research-controls #matchup { flex: 1 0 100%; width: 100%; } }
 .topbar:has(.sport-switch) { gap: 22px; flex-wrap: wrap; padding-top: 12px; padding-bottom: 12px; }
 .brand small { display: block; color: #81748f; font: 8px var(--mono); letter-spacing: 1.7px; margin-top: 7px; }
 .topbar nav { display: flex; align-items: center; gap: 6px; }
