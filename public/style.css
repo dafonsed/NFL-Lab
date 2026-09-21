@@ -380,6 +380,191 @@ dialog p { font-size: 13px; line-height: 1.7; margin: 10px 0 16px; }
 .settlement-values { font-size: 15px !important; }
 .prop-evidence .metric-cell b { font-size: 17px; overflow-wrap: anywhere; }
 .prop-evidence .metric-cell { min-width: 0; }
+
+/* Player research: presentation only; source values and formulas are unchanged. */
+.player-detail, .mlb-player-research {
+  --detail-surface: #15111f;
+  --detail-inset: #0f0c16;
+  --detail-border: #ffffff0e;
+  --detail-muted: #a79bb7;
+  --detail-text: #e6deef;
+}
+.player-detail { padding: 4px 22px 25px; container: player-research / inline-size; }
+.player-detail .detail-panel {
+  padding: 22px;
+  margin-top: 16px;
+  border: 1px solid var(--detail-border);
+  border-radius: 15px;
+  background: var(--detail-surface);
+  box-shadow: 0 5px 18px #0000000a;
+}
+.player-detail .detail-panel.forecast-panel {
+  background: linear-gradient(135deg,#21172e 0%,#16111f 65%);
+  border: 1px solid #a77ae333 !important;
+  box-shadow: inset 0 1px #ffffff04,0 0 28px #a168e707;
+}
+.player-detail .detail-panel > summary {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid var(--detail-border);
+  font-size: 14px;
+  font-weight: 600;
+  color: #eee7f8;
+  line-height: 1.45;
+  letter-spacing: -.1px;
+}
+.player-detail .detail-panel:not([open]) > summary { padding-bottom: 0; border-bottom: 0; }
+.player-detail .detail-panel > summary::before { content: ''; flex: 0 0 3px; height: 15px; border-radius: 4px; background: #aa80d9; }
+.player-detail .detail-panel > summary::after {
+  display: grid;
+  place-items: center;
+  flex: 0 0 23px;
+  width: 23px;
+  height: 23px;
+  border: 1px solid #ffffff0a;
+  border-radius: 7px;
+  color: #b5a5c8;
+  background: #ffffff03;
+  font-size: 14px;
+  font-weight: 400;
+}
+.player-detail .detail-panel > summary small { color: var(--detail-muted); font-size: 10px; line-height: 1.5; }
+.player-detail .detail-panel p { color: var(--detail-muted); font-size: 12px; line-height: 1.8; margin: 14px 0; overflow-wrap: anywhere; }
+.player-detail .detail-panel .detail-lead { color: #c3b7d1; max-width: 90ch; margin: 17px 0; }
+.player-detail .metric-grid { gap: 10px; margin: 18px 0; }
+.player-detail .metric-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+  padding: 17px 18px;
+  border: 1px solid #ffffff0b;
+  border-radius: 11px;
+  background: var(--detail-inset);
+}
+.player-detail .metric-cell label { display: block; color: #a69ab6; font: 10px/1.5 var(--font); letter-spacing: .6px; text-transform: uppercase; }
+.player-detail .metric-cell > b { color: #ebddff; font: 600 29px/1.15 var(--font); letter-spacing: -.8px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.player-detail .metric-cell > b.positive { color: #8ee7c1; }
+.player-detail .metric-cell > b.negative { color: #ffabba; }
+.player-detail .metric-cell > .detail-text-value { font-size: 15px; font-weight: 500; line-height: 1.5; letter-spacing: 0; color: #c0b4cf; }
+.player-detail .forecast-panel .forecast-metrics { grid-template-columns: 1fr 1.6fr 1fr; }
+.player-detail .detail-probabilities, .player-detail .detail-outcomes { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+.player-detail .detail-outcomes { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.player-detail .detail-probabilities > span, .player-detail .detail-outcomes > span { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.player-detail .detail-probabilities small, .player-detail .detail-outcomes small { color: #aa9abb; font-size: 10px; }
+.player-detail .detail-probabilities b { font: 600 23px/1.2 var(--font); color: #e5d2ff; letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
+.player-detail .detail-outcomes b { font-size: 12px; font-weight: 550; line-height: 1.5; color: #ccbadb; }
+.player-detail .detail-outcomes .outcome-hit { color: #8bd8b6; }
+.player-detail .detail-outcomes .outcome-miss { color: #ec9fb0; }
+.player-detail .detail-outcomes .outcome-push { color: #e0c596; }
+.player-detail .forecast-parts { display: grid; gap: 8px; margin: 17px 0; }
+.player-detail .detail-equation { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px 20px; padding: 12px 15px; background: #ffffff02; border: 1px solid var(--detail-border); border-radius: 9px; }
+.player-detail .detail-equation > span { padding: 0; border: 0; color: #aea0bf; font-size: 11px; }
+.player-detail .detail-equation strong { color: #d7c6eb; font: 500 13px/1.6 var(--mono); font-variant-numeric: tabular-nums; }
+.player-detail .detail-equation i { color: #7d6d8f; padding: 0 4px; font-style: normal; }
+.player-detail .detail-caution { padding: 15px 17px; margin: 17px 0; border: 1px solid #d3ac7420; border-left: 3px solid #c8a16a80; border-radius: 9px; background: #cfac7506; }
+.player-detail .detail-caution > strong { color: #dbc3a2; font-size: 12px; font-weight: 550; }
+.player-detail .detail-caution ul { display: grid; gap: 5px; margin: 8px 0 0; padding-left: 16px; color: #b9abbd; font-size: 11px; line-height: 1.65; }
+.player-detail .detail-caution li::marker { color: #917c6c; }
+.player-detail .detail-context-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 19px; margin-top: 21px; padding-top: 19px; border-top: 1px solid var(--detail-border); }
+.player-detail .detail-context { min-width: 0; }
+.player-detail .detail-context h4 { font-size: 11px; font-weight: 600; color: #c9badb; margin: 0 0 8px; }
+.player-detail .detail-context p { margin: 0 0 10px; font-size: 11px; line-height: 1.8; }
+.player-detail .detail-context p strong { color: #d7c9e6; font-weight: 500; }
+.player-detail .detail-panel .detail-method-note { margin: 20px 0 0; padding-top: 16px; border-top: 1px solid var(--detail-border); color: #8f829f; font-size: 10px; line-height: 1.75; }
+.player-detail .detail-support { padding: 0 2px; }
+.player-detail .detail-support strong { font-weight: 500; color: #c4b5d3; }
+.player-detail .source-link { color: #bc9edf; font-size: 11px; line-height: 1.8; text-underline-offset: 4px; text-decoration-color: #bc9edf40; }
+.player-detail .source-link:hover { color: #e6d1ff; text-decoration: underline; }
+.player-detail .detail-top { padding: 24px 5px 10px; gap: 14px; font-size: 10px; color: #a796b9; }
+.player-detail .detail-top strong { color: #d8c2f1; font-size: 23px; font-variant-numeric: tabular-nums; }
+.player-detail .meter { height: 5px; background: #ffffff08; border-radius: 8px; }
+.player-detail .meter > span { background: linear-gradient(90deg,#78509d,#bf95ea); border-radius: inherit; box-shadow: none; }
+.player-detail .detail-two-column { display: grid; grid-template-columns: minmax(0,1fr); gap: 0 16px; align-items: start; }
+.player-detail .detail-two-column > .detail-panel { min-width: 0; }
+.player-detail .component-row { grid-template-columns: minmax(110px,1fr) minmax(50px,1.2fr) 37px; gap: 13px; padding: 11px 2px; border-bottom: 1px solid #ffffff05; font-size: 11px; color: #afa2bf; }
+.player-detail .component-row > span:last-child { color: #d8cae8; font-variant-numeric: tabular-nums; text-align: right; }
+.player-detail .stats-grid { border: 1px solid var(--detail-border); border-radius: 10px; background: var(--detail-border); margin-top: 18px; }
+.player-detail .stat { background: var(--detail-inset); padding: 15px; }
+.player-detail .stat:hover { background: #1c1527; }
+.player-detail .stat summary { min-width: 0; gap: 10px; }
+.player-detail .stat span { color: #afa0bf; font-size: 11px; line-height: 1.5; }
+.player-detail .stat b { color: #e0cfee; font: 550 17px/1.4 var(--font); font-variant-numeric: tabular-nums; }
+.player-detail .stat p { font-size: 11px; margin: 12px 0 0; padding-top: 11px; border-top: 1px solid #ffffff08; }
+.player-detail .table-wrap { border: 1px solid var(--detail-border); border-radius: 10px; margin: 16px 0; scrollbar-width: thin; scrollbar-color: #695078 transparent; }
+.player-detail .data-table { margin: 0; font-size: 12px; font-variant-numeric: tabular-nums; }
+.player-detail .data-table th { padding: 12px 14px; background: #1c1626; color: #a99ab9; font-size: 9px; letter-spacing: .4px; line-height: 1.5; }
+.player-detail .data-table td { padding: 13px 14px; color: #cdbfdc; border-bottom-color: #ffffff06; }
+.player-detail .data-table tr:nth-child(even) td { background: #ffffff02; }
+.player-detail .data-table tbody tr:hover td { background: #aa7bdd08; }
+.player-detail .detail-subhead { font-size: 10px; letter-spacing: .8px; color: #a697b7; margin-top: 22px; }
+.player-detail .signature-tags { gap: 7px; margin: 15px 0 0; }
+.player-detail .signature-tag { border-color: #ffffff0c; background: #ffffff03; color: #b7a6c7; }
+.player-detail .detail-actions { border-top: 1px solid var(--detail-border); padding-top: 20px; margin-top: 22px; }
+.player-detail .note-input { margin-top: 13px; padding: 13px 15px; background: var(--detail-inset); border-color: #ffffff0e; border-radius: 10px; font-size: 12px; }
+.player-detail .source-note { padding: 13px 2px 0; color: #8f819e; font-size: 10px; line-height: 1.8; }
+@container player-research (min-width: 840px) { .player-detail .detail-two-column { grid-template-columns: 1fr 1fr; } }
+@container player-research (max-width: 580px) {
+  .player-detail .detail-panel { padding: 17px; }
+  .player-detail .forecast-panel .forecast-metrics { grid-template-columns: 1fr 1fr; }
+  .player-detail .forecast-metrics .probability-cell { grid-column: 1/-1; grid-row: 2; }
+  .player-detail .detail-context-grid { grid-template-columns: 1fr; gap: 17px; }
+  .player-detail .detail-context + .detail-context { padding-top: 17px; border-top: 1px solid var(--detail-border); }
+  .player-detail .metric-cell { padding: 14px; }
+  .player-detail .metric-cell > b { font-size: 25px; }
+  .player-detail .metric-cell > .detail-text-value { font-size: 13px; }
+}
+@media(max-width:620px) {
+  .player-detail { padding: 2px 11px 19px; }
+  .player-detail .detail-panel > summary { font-size: 13px; gap: 8px; }
+  .player-detail .detail-panel > summary small { font-size: 9px; max-width: 120px; }
+  .player-detail .detail-panel p { font-size: 11px; }
+  .player-detail .result-metrics { grid-template-columns: 1fr 1fr; }
+  .player-detail .result-metrics > .metric-cell:last-child { grid-column: 1/-1; }
+  .player-detail .metric-cell label { font-size: 9px; letter-spacing: .3px; }
+  .player-detail .stats-grid { grid-template-columns: 1fr; }
+  .player-detail .stat { padding: 13px 14px; }
+  .player-detail .stat summary { display: flex; align-items: center; justify-content: space-between; }
+  .player-detail .stat b { flex-shrink: 0; font-size: 16px; }
+  .player-detail .detail-actions { align-items: center; gap: 12px; }
+  .player-detail .detail-actions small { font-size: 9px; }
+}
+
+/* The same visual hierarchy inside MLB's player-only dialog. */
+#mlb-dialog:has(.mlb-player-research) { width: min(1040px,calc(100vw - 32px)); padding: 30px; background: linear-gradient(150deg,#1c1428,#110e18 45%); border-color: #9b75c447; border-radius: 20px; }
+.mlb-player-research .eyebrow { font-size: 10px; letter-spacing: 1.4px; line-height: 1.8; padding-right: 26px; }
+.mlb-player-research .mlb-dialog-title { font-size: 32px; letter-spacing: -.8px; margin-top: 9px; margin-bottom: 12px; }
+.mlb-player-research .mlb-dialog-lead { max-width: 80ch; font-size: 13px; line-height: 1.85; color: #b9abc9; }
+.mlb-player-research .mlb-facts { gap: 11px; margin: 24px 0; }
+.mlb-player-research .mlb-facts > div { display: flex; flex-direction: column; justify-content: space-between; gap: 16px; min-width: 0; padding: 18px; border: 1px solid #ab7ede23; border-radius: 12px; background: linear-gradient(140deg,#241a31,#17111f); }
+.mlb-player-research .mlb-facts span { order: 1; color: #a99ab9; font-size: 10px; letter-spacing: .4px; line-height: 1.5; }
+.mlb-player-research .mlb-facts strong { order: 2; font: 600 28px/1.15 var(--font); color: #e2cefa; letter-spacing: -.6px; font-variant-numeric: tabular-nums; }
+.mlb-player-research .mlb-dialog-section { border: 1px solid var(--detail-border); border-radius: 14px; padding: 21px; margin-top: 16px; background: var(--detail-surface); }
+.mlb-player-research .mlb-dialog-section h3 { padding-bottom: 14px; margin: 0 0 15px; border-bottom: 1px solid var(--detail-border); color: #e3d7f0; font-size: 14px; font-weight: 600; line-height: 1.5; }
+.mlb-player-research .mlb-dialog-section p { font-size: 12px; color: var(--detail-muted); line-height: 1.85; margin: 12px 0; }
+.mlb-player-research .mlb-dialog-section a { color: #b99bd7; font-size: 11px; text-decoration-color: #b99bd744; text-underline-offset: 4px; }
+.mlb-player-research .mlb-table-wrap { margin: 18px 0 2px; border: 1px solid var(--detail-border); border-radius: 10px; scrollbar-width: thin; scrollbar-color: #695078 transparent; }
+.mlb-player-research .mlb-table { font-size: 12px; font-variant-numeric: tabular-nums; }
+.mlb-player-research .mlb-table th { background: #20172b; color: #b4a1c8; font-size: 10px; letter-spacing: .4px; padding: 12px 15px; }
+.mlb-player-research .mlb-table td { padding: 13px 15px; border-bottom-color: #ffffff06; color: #d0bfdc; }
+.mlb-player-research .mlb-table td:nth-child(3) { color: #e5cdfd; font-weight: 600; }
+.mlb-player-research .mlb-table tr:nth-child(even) td { background: #ffffff02; }
+.mlb-player-research .mlb-table tbody tr:hover td { background: #a878de08; }
+.mlb-player-research .mlb-source-row { padding: 13px 15px; margin: 10px 0; background: var(--detail-inset); border: 1px solid var(--detail-border); border-radius: 9px; font-size: 10px; color: #9c8cad; line-height: 1.8; }
+.mlb-player-research .mlb-source-row code { display: inline-block; margin-top: 6px; color: #9481a6; font-size: 10px; }
+.mlb-player-research .mlb-notes { padding: 15px; border: 1px solid #ffffff12; border-radius: 10px; background: var(--detail-inset); font-size: 12px; }
+@media(max-width:700px) {
+  #mlb-dialog:has(.mlb-player-research) { width: calc(100vw - 20px); padding: 23px 14px 18px; border-radius: 16px; }
+  .mlb-player-research .mlb-dialog-title { font-size: 28px; }
+  .mlb-player-research .mlb-dialog-lead { font-size: 12px; }
+  .mlb-player-research .mlb-facts { gap: 9px; }
+  .mlb-player-research .mlb-facts > div { padding: 15px; gap: 12px; }
+  .mlb-player-research .mlb-facts strong { font-size: 25px; }
+  .mlb-player-research .mlb-dialog-section { padding: 16px; }
+}
 @media (min-width: 901px) and (max-width: 1150px) {
   .matchups { grid-template-columns: 1fr; }
   .player-main { grid-template-columns: 44px minmax(0,1fr) 161px; }
