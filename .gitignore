@@ -5,6 +5,7 @@ reports/*.json
 reports/espn/
 logs/
 node_modules/
+.vercel/
 .env
 .env.*
 !.env.example

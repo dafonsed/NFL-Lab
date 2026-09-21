@@ -1,0 +1,31 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+
+test('Vercel can import the default server without starting a listener or background sync', async () => {
+  const script = `
+    import assert from 'node:assert/strict';
+    import path from 'node:path';
+    import os from 'node:os';
+    import server from './server.mjs';
+    import { DATA_DIR } from './lib/providers.mjs';
+    assert.equal(server.listening, false);
+    assert.equal(DATA_DIR, path.join(os.tmpdir(), 'nfl-lab-data'));
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    const base = 'http://127.0.0.1:' + server.address().port;
+    try {
+      const health = await fetch(base + '/api/health', {headers:{host:'nfl-lab-xi.vercel.app'}});
+      assert.equal(health.status,200);const status=await health.json();assert.equal(status.syncing,false);assert.equal(status.lastSync,null);
+      const page=await fetch(base+'/');assert.equal(page.status,200);assert.match(await page.text(),/NFL LAB/);
+      assert.equal((await fetch(base+'/style.css')).status,200);
+      assert.equal((await fetch(base+'/api/board?market=invalid')).status,400);
+      assert.equal((await fetch(base+'/.env')).status,404);
+      assert.equal((await fetch(base+'/api/health',{method:'POST'})).status,405);
+    } finally { server.closeAllConnections();await new Promise(resolve=>server.close(resolve)); }
+  `;
+  const env={...process.env,VERCEL:'1'};delete env.DATA_DIR;
+  const child=spawn(process.execPath,['--input-type=module','-e',script],{cwd:new URL('../',import.meta.url),env,windowsHide:true});
+  let output='';child.stdout.on('data',d=>output+=d);child.stderr.on('data',d=>output+=d);
+  const code=await new Promise((resolve,reject)=>{child.on('error',reject);child.on('exit',resolve);});
+  assert.equal(code,0,output);
+});

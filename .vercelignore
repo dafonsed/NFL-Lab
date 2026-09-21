@@ -1,0 +1,11 @@
+.git
+.research
+.agents
+.codex
+data
+data-independent
+logs
+reports
+node_modules
+.env*
+test

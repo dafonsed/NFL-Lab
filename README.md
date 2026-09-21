@@ -17,6 +17,12 @@ Downloaded datasets, local logs, and machine-specific research files are exclude
 
 Double-click **Start-App.cmd**, or run `npm start`, then open **http://127.0.0.1:3100**. The launcher runs the server in the background; `npm start` stops when its terminal closes. Restart with the launcher after restarting Windows. Node 22+ is required. On a fresh copy run `npm ci` first. No API key or subscription is needed for the connected data.
 
+### Vercel deployment
+
+The repository supports the existing [hosted NFL Lab](https://nfl-lab-xi.vercel.app/). `server.mjs` exports its HTTP server for Vercel; Vercel owns its listener and invocation lifetime. `vercel.json` includes the frontend assets and allows up to 300 seconds for a cold data load. The initial board may take about 30 seconds while public datasets download.
+
+Hosted requests refresh datasets and lines according to their cache lifetimes; the browser still checks every five minutes. The local version additionally runs background sync. Vercel uses writable temporary storage for downloaded data instead of the deployment's read-only directory. This cache is instance-local and can reset after redeployment or scaling. Saved pregame history on Vercel is therefore best-effort; the public archived listing remains the fallback. Durable multi-instance line history would require shared storage. Notes and saved players still stay in each browser.
+
 ## Included
 
 - Weekly matchup groups, independent rankings, Viper opportunity-gap filters, game-line movement, and methodology.

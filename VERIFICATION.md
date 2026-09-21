@@ -48,3 +48,11 @@ See README.md for source links and reports/INDEPENDENT-AUDIT.md for the current 
 - Chrome verified market selection, previous/future weeks, posted totals adjacent to ratings, historical result badges, expanded source/result details, and mobile alignment at 390 pixels without horizontal overflow. The desktop viewport was restored.
 - Actuals are sourced independently from nflverse. Archived public lines are visibly distinguished from lines captured before kickoff and are not claimed as closing prices or historical model predictions.
 - Reproduce the targeted integration check with `npm run audit:props` while the local server is running. Detailed source URLs and comparisons are saved locally in `reports/prop-verification.json`.
+
+## Vercel startup repair — September 21, 2026
+
+- Production logs reported `Invalid export found in module "/var/task/server.mjs". The default export must be a function or server.`
+- Added the default HTTP-server export; Vercel controls the listener and requests. Local loopback binding and host restrictions remain in local mode. Hosted data writes use the temporary directory, and background intervals only run locally.
+- Explicitly included public assets and configured a 300-second function limit. Deployment uploads exclude local data, logs, research and environment files.
+- 53 automated tests and syntax checks passed. The new deployment regression test imports the Vercel entrypoint without starting a listener, checks the hosted hostname, static assets, health, invalid queries, private-file rejection and unsupported methods.
+- Vercel preview returned HTTP 200 for health and a fresh passing-yards board (57 profiles, 32 FanDuel lines), with a cold load of about 29 seconds. Chrome loaded the full anytime-TD board (429 profiles, 400 public totals) with no captured browser errors.

@@ -21,7 +21,7 @@ export const server = http.createServer(async (req, res) => {
   res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://static.www.nfl.com https://a.espncdn.com data:; connect-src 'self'; font-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
   try {
     const host = req.headers.host || '';
-    if (!/^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(host)) return json(res, { error: 'This workspace only accepts local connections.' }, 403);
+    if (!process.env.VERCEL && !/^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(host)) return json(res, { error: 'This workspace only accepts local connections.' }, 403);
     if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, { error: 'Method not allowed.' }, 405);
     const url = new URL(req.url, 'http://localhost');
     if (url.pathname === '/api/health') return json(res, { ok: true, app: 'independent-nfl-workspace', syncing, lastSync, refreshMinutes: REFRESH_MS / 60_000 });
@@ -38,5 +38,8 @@ export const server = http.createServer(async (req, res) => {
   } catch (e) { console.error(`[request] ${e.message}`); json(res, { error: e.message }, e.status || 500); }
 });
 const port = Number(process.env.PORT || 3100);
-server.listen(port, '127.0.0.1', () => { console.log(`NFL Analytics is ready at http://127.0.0.1:${port}`); if (process.env.AUTO_SYNC !== '0') { sync(); setInterval(sync, REFRESH_MS).unref(); } });
+// Vercel owns the listener and invocation lifetime. Dataset refreshes there run
+// on demand through SourceStore's TTL; a background interval cannot be relied on.
+if (!process.env.VERCEL) server.listen(port, '127.0.0.1', () => { console.log(`NFL Analytics is ready at http://127.0.0.1:${port}`); if (process.env.AUTO_SYNC !== '0') { sync(); setInterval(sync, REFRESH_MS).unref(); } });
 server.on('error', e => { console.error(e.code === 'EADDRINUSE' ? `Port ${port} is already in use. Open http://127.0.0.1:${port}, or set PORT to another port.` : e.message); process.exitCode = 1; });
+export default server;
