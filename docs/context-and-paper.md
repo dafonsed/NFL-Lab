@@ -43,3 +43,13 @@ Storage reuses the private Vercel Blob integration, with separate production/pre
 ## Checks
 
 `npm run check` and `npm test` cover strict time cutoffs, correct opponent sides/positions, roof and missing-data handling, forecast-hour matching, injury joins/unavailability, immutable capture across instances, odds arithmetic, push/void/missing results, and existing player/source behavior. Live UI/API checks verify source-to-player evidence and both paper report routes before deployment.
+
+## NFL injury refresh and ranking eligibility
+
+The NFL board and automatic browser refresh check ESPN availability every minute (while visible, with automatic refresh enabled). Manual Refresh bypasses the application cache and requests an uncached upstream report, including when an older request is already running. Bulk nflverse files and posted-line caches keep their independent refresh policies.
+
+The board's `availability` receipt exposes the last check, last successful fetch, upstream feed timestamp, source URL, failure state and number excluded. Each unavailable player retains their ESPN ID, status, report time and source link in `unavailablePlayers`; these rows have no model score or new forecast and do not appear in `players` rankings. Questionable/doubtful or unverified status is visible beside the name and prevents a new lean. Historical usage statistics do not change merely because an injury report changed.
+
+Current reports apply within seven days before scheduled start and until a completed game is recognized or eight hours after scheduled start. This retains the gate through Monday kickoff and UTC midnight without rewriting prior-game boards. Duplicate reports use the latest timestamp. An outage retains the previous report with a stale warning; a newly omitted Out report from the past 24 hours remains last-known Out in that server instance, not evidence of activation. A newer explicit active report can clear it. ESPN publishing delays and cold-start source outages remain visible limitations; no listing is not confirmation of participation.
+
+Regression coverage in `test/availability-refresh.test.mjs` replays the September 21 Puka Nacua Questionable-to-Out transition through `SourceStore.board`, across prop types and views, with cache invalidation, after-kickoff eligibility and paper-capture exclusion. Live verification separately checks the actual ESPN feed, app API, and browser Refresh button.
