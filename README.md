@@ -48,6 +48,16 @@ Hosted requests refresh datasets and lines according to their cache lifetimes; t
 
 ## Included
 
+### Personal bet tracker
+
+Open **Bet Tracker** at the top right of any board, or go to `/bets`. Add singles or parlays with the selection, sport, date, sportsbook, stake in USD, American or decimal odds, and notes. Update tickets to won, lost, push, void, or cashed out. Cash-out return includes any returned stake. Results are entered manually.
+
+The all-time summary shows settled profit/loss, ROI, win/loss record, and open stake. ROI divides net profit by stakes on wins, losses, and cash-outs; refunded and open tickets are excluded. The win rate includes only wins and losses. Search and sport/result filters apply to the ticket list and CSV export; summary totals always include all saved bets.
+
+Bets are saved in this browser's local storage, like player notes. They persist across reloads but do not sync between devices, browsers, or site addresses. Clearing site data deletes them; export a CSV copy first. Storage failures are shown without reporting a successful save or overwriting unreadable records.
+
+### Research features
+
 - Weekly matchup groups, independent rankings, Viper opportunity-gap filters, game-line movement, and methodology.
 - Eleven prop types: anytime TD, passing yards, passing TDs, rushing yards, rushing attempts, receptions, receiving yards, passing attempts, completions, interceptions thrown, and combined rushing/receiving yards.
 - Public sportsbook over/under lines beside model ratings, preferring FanDuel and explicitly naming fallback books. Prior-week cards show actual results and over hit / over missed / push badges.
@@ -114,3 +124,9 @@ Environment options: `PORT` (3100), `REFRESH_MINUTES` (15), `DATA_DIR` (defaults
 NFL player cards now include a separate experimental workload projection, line-specific over/under estimates, historical-error range and availability/role warnings. The original model weights and default rankings are unchanged. Open `/performance` for immutable pregame records, paired results and the fixed 2024/2025 historical evaluation. See [the full method and capture policy](docs/nfl-forecast-method.md).
 
 Run `npm run evaluate:nfl` to reproduce the fixed historical evaluation. Production uses private Vercel Blob storage and the protected daily prediction cron; local development keeps its own archive. The candidate remains experimental because historical gains are mixed and a prospective track record is still accumulating.
+
+## NFL live player props
+
+Open the **Live** tab at `/nfl/live` for a separate in-game workload model across eight player markets. It shows recorded stats, remaining production, projected regulation totals, and each player's exact weights. ESPN box scores refresh every 15 seconds while visible; prior workload uses completed nflverse games. Enter the current full-game sportsbook total manually to compare it with the projection. Stale inputs, unsupported game states, and expired lines are visibly withheld.
+
+Role shifts toward observed usage (up to 70% live); efficiency retains at least 80% historical weight; pace blends 65% historical / 35% live after five minutes. Score, clock, possession and pass/run mix adjust remaining opportunities. This is experimental and has no calibrated live betting probabilities. See [inputs, equations, limitations, and refresh policy](docs/nfl-live-method.md).

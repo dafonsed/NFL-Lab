@@ -18,8 +18,16 @@ test('Vercel can import the default server without starting a listener or backgr
       assert.equal(health.status,200);const status=await health.json();assert.equal(status.syncing,false);assert.equal(status.lastSync,null);
       const page=await fetch(base+'/');assert.equal(page.status,200);assert.match(await page.text(),/NFL LAB/);
       assert.equal((await fetch(base+'/style.css')).status,200);
+      for(const route of ['/nba','/nhl','/soccer','/sports.js','/sports.css'])assert.equal((await fetch(base+route)).status,200);
+      assert.equal((await fetch(base+'/api/sports/board?sport=invalid')).status,400);
       assert.equal((await fetch(base+'/performance')).status,200);
       assert.equal((await fetch(base+'/forecast.css')).status,200);
+      const betsPage = await fetch(base+'/bets');
+      assert.equal(betsPage.status,200); assert.match(await betsPage.text(), /Bet Tracker/);
+      for (const asset of ['/bets/', '/bets.js', '/bet-utils.js', '/bets.css']) assert.equal((await fetch(base+asset)).status,200,asset);
+      for (const route of ['/nfl/live','/live.js','/live-utils.js','/live.css']) assert.equal((await fetch(base+route)).status,200);
+      assert.equal((await fetch(base+'/api/nfl/live?game=invalid')).status,400);
+      assert.equal((await fetch(base+'/api/nfl/live?date=2026-02-31')).status,400);
       assert.equal((await fetch(base+'/api/cron/predictions')).status,401);
       assert.equal((await fetch(base+'/api/performance?season=2026&week=99')).status,400);
       assert.equal((await fetch(base+'/api/board?market=invalid')).status,400);

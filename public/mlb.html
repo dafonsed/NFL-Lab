@@ -9,10 +9,10 @@
   <a class="skip" href="#main">Skip to analytics</a>
   <header class="topbar">
     <a href="/mlb" class="brand" aria-label="MLB Lab home"><img src="/favicon.svg" width="40" height="40" alt=""><span>MLB<span class="brand-light">LAB</span><small>THE GAME. DECODED.</small></span></a>
-    <nav class="sport-switch" aria-label="Sport"><a href="/nfl">NFL</a><a href="/mlb" aria-current="page">MLB</a></nav>
+    <nav class="sport-switch" aria-label="Sport"><a href="/nfl">NFL</a><a href="/mlb" aria-current="page">MLB</a><a href="/nba">NBA</a><a href="/nhl">NHL</a><a href="/soccer">Soccer</a></nav>
     <nav id="mlb-navigation" aria-label="MLB views"><button class="nav-link active" data-view="board">◈ Daily board</button><button class="nav-link" data-view="games">◇ Matchups</button><button class="nav-link" data-view="saved">☆ Watchlist</button><button class="nav-link" data-action="model">↗ Model & evidence</button><a class="nav-link" href="/paper?sport=mlb">↗ Paper returns</a></nav>
     <button id="data-button" class="connection"><span class="dot"></span><span id="connection-label">Connecting to MLB</span></button>
-  </header>
+  <nav class="tracker-nav" aria-label="Personal workspace"><a class="nav-link" href="/bets"><span aria-hidden="true">▤</span> Bet Tracker</a></nav></header>
   <main id="main" tabindex="-1">
     <div class="page-heading"><div><div class="eyebrow">✧ YOUR DAILY EDGE</div><h1>Diamond Lab<span class="accent">.</span></h1><p>The lineup. The matchup. The numbers behind every prop.</p></div><div class="heading-actions"><button class="button subtle" id="export-button">↓ Export</button><button class="button primary" id="refresh-button">↻ Refresh data</button></div></div>
     <section class="season-bar" aria-label="MLB date"><div class="season-label"><span class="live-mark"></span><strong>MLB DAILY BOARD</strong><span class="separator">/</span><span id="date-label">Today · automatic</span></div><div class="date-controls"><button class="icon-button" id="previous-day" aria-label="Previous day">‹</button><label class="sr-only" for="game-date">Game date</label><input type="date" id="game-date" min="2000-01-01" max="2100-12-31"><button class="icon-button" id="next-day" aria-label="Next day">›</button><button class="button subtle" id="today-button">Today</button></div></section>
