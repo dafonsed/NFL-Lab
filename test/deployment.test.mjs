@@ -18,6 +18,8 @@ test('Vercel can import the default server without starting a listener or backgr
       assert.equal(health.status,200);const status=await health.json();assert.equal(status.syncing,false);assert.equal(status.lastSync,null);
       const page=await fetch(base+'/');assert.equal(page.status,200);assert.match(await page.text(),/NFL LAB/);
       assert.equal((await fetch(base+'/style.css')).status,200);
+      for(const route of ['/nba','/nhl','/soccer','/sports.js','/sports.css'])assert.equal((await fetch(base+route)).status,200);
+      assert.equal((await fetch(base+'/api/sports/board?sport=invalid')).status,400);
       assert.equal((await fetch(base+'/performance')).status,200);
       assert.equal((await fetch(base+'/forecast.css')).status,200);
       assert.equal((await fetch(base+'/api/cron/predictions')).status,401);

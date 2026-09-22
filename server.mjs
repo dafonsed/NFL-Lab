@@ -5,11 +5,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SourceStore, REFRESH_MS } from './lib/source.mjs';
 import { MlbStore } from './lib/mlb/source.mjs';
+import { SportsStore } from './lib/sports/source.mjs';
 import { mlbModelReport } from './lib/mlb/forecast.mjs';
 
 const publicDir = fileURLToPath(new URL('./public/', import.meta.url));
 const store = new SourceStore();
 const mlb = new MlbStore();
+const sports = new SportsStore();
 let syncing = false, lastSync = null;
 async function sync() {
   if (syncing) return;
@@ -36,13 +38,16 @@ export const server = http.createServer(async (req, res) => {
     if(url.pathname==='/api/paper')return json(res,await (url.searchParams.get('sport')==='mlb'?mlb:store).paperPerformance(Object.fromEntries(url.searchParams)));
     if (url.pathname === '/api/performance') return json(res,await store.performance(Object.fromEntries(url.searchParams)));
     if (url.pathname === '/api/health') return json(res, { ok: true, app: 'independent-nfl-workspace', syncing, lastSync, refreshMinutes: REFRESH_MS / 60_000 });
+    if (url.pathname === '/api/sports/catalog') return json(res, await sports.catalog(Object.fromEntries(url.searchParams),url.searchParams.get('refresh')==='1'));
+    if (url.pathname === '/api/sports/board') return json(res, await sports.board(Object.fromEntries(url.searchParams),url.searchParams.get('refresh')==='1'));
+    if (url.pathname === '/api/sports/performance') return json(res,await sports.performance(Object.fromEntries(url.searchParams)));
     if (url.pathname === '/api/mlb/board') return json(res, await mlb.board(Object.fromEntries(url.searchParams), url.searchParams.get('refresh') === '1'));
     if (url.pathname === '/api/mlb/model') return json(res, mlbModelReport());
     if (url.pathname === '/api/mlb/evidence') return json(res, await mlb.evidence(Object.fromEntries(url.searchParams)));
     if (url.pathname === '/api/evidence') return json(res, await store.evidence(Object.fromEntries(url.searchParams)));
     if (url.pathname === '/api/catalog') { const {current,weeks}=await store.catalog(url.searchParams.get('refresh') === '1'); return json(res,{current,weeks}); }
     if (url.pathname === '/api/board') return json(res, await store.board(Object.fromEntries(url.searchParams), url.searchParams.get('refresh') === '1'));
-    const names = { '/paper':'paper.html','/paper.js':'paper.js','/context-ui.js':'context-ui.js','/context.css':'context.css', '/performance':'performance.html', '/performance.js':'performance.js', '/forecast.css':'forecast.css', '/': 'index.html', '/nfl': 'index.html', '/mlb': 'mlb.html', '/mlb/': 'mlb.html', '/mlb.js': 'mlb.js', '/mlb-model.js':'mlb-model.js', '/mlb.css': 'mlb.css', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/manifest.webmanifest': 'manifest.webmanifest' };
+    const names = { '/nba':'sports.html','/nhl':'sports.html','/soccer':'sports.html','/sports.js':'sports.js','/sports.css':'sports.css', '/paper':'paper.html','/paper.js':'paper.js','/context-ui.js':'context-ui.js','/context.css':'context.css', '/performance':'performance.html', '/performance.js':'performance.js', '/forecast.css':'forecast.css', '/': 'index.html', '/nfl': 'index.html', '/mlb': 'mlb.html', '/mlb/': 'mlb.html', '/mlb.js': 'mlb.js', '/mlb-model.js':'mlb-model.js', '/mlb.css': 'mlb.css', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/manifest.webmanifest': 'manifest.webmanifest' };
     const name = names[url.pathname];
     if (!name) return json(res, { error: 'Not found.' }, 404);
     const bytes = await fs.readFile(path.join(publicDir, name));
