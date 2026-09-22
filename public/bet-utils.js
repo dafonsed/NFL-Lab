@@ -1,5 +1,5 @@
 export const BET_STORAGE_KEY = 'nfl-lab.personal-bets.v1';
-export const SPORTS = ['NFL', 'MLB', 'NBA', 'NHL', 'Soccer', 'Other'];
+export const SPORTS = ['NFL', 'MLB', 'NBA', 'WNBA', 'NHL', 'Soccer', 'Other'];
 export const STATUSES = { open: 'Open', won: 'Won', lost: 'Lost', push: 'Push', void: 'Void', cashed: 'Cashed out' };
 const MAX_MONEY = 1_000_000;
 const cents = amount => Math.round(amount * 100);

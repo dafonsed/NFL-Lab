@@ -23,7 +23,9 @@
     "evaluate:nfl": "node scripts/evaluate-nfl.mjs",
     "train:mlb": "node scripts/download-mlb-training.mjs && node scripts/train-mlb-model.mjs",
     "train:context": "node scripts/train-context.mjs",
-    "evaluate:opportunities": "node scripts/evaluate-opportunities.mjs"
+    "evaluate:opportunities": "node scripts/evaluate-opportunities.mjs",
+    "download:wnba": "node scripts/download-wnba.mjs",
+    "evaluate:wnba": "node scripts/evaluate-wnba.mjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",

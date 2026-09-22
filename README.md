@@ -1,8 +1,12 @@
-# NFL Lab — independent NFL and MLB analytics
+# Sports Lab — independent multi-sport analytics
 
 An independent local NFL research app. It downloads public NFL datasets and calculates its own player profiles. **There are no requests to VENOM, Whop, or the reference app.** It does not reproduce anyone's private calibrated scores.
 
 The sport switch opens the daily [MLB section](https://nfl-lab-xi.vercel.app/mlb), backed by MLB's official Stats API. The NFL section remains available at `/nfl` and `/`.
+
+## WNBA section
+
+[WNBA Lab](https://nfl-lab-xi.vercel.app/wnba) includes 15 player-prop forecasts, WNBA-specific minutes/pace, matchup and rest effects, injury and lineup handling, FanDuel-first public totals where available, saved pregame records and transparent source evidence. Its WNBA-only chronological evaluation, calculations and coverage limits are documented in [WNBA model and data](docs/wnba-model.md).
 
 ## MLB section
 

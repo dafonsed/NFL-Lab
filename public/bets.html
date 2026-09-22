@@ -10,7 +10,7 @@
   <a class="skip" href="#main">Skip to bet tracker</a>
   <header class="topbar">
     <a href="/nfl" class="brand" aria-label="NFL Lab home"><img src="/favicon.svg" width="40" height="40" alt=""><span>NFL<span class="brand-light">LAB</span><small>THE GAME. DECODED.</small></span></a>
-    <nav class="sport-switch" aria-label="Sport"><a href="/nfl">NFL</a><a href="/mlb">MLB</a><a href="/nba">NBA</a><a href="/nhl">NHL</a><a href="/soccer">Soccer</a></nav>
+    <nav class="sport-switch" aria-label="Sport"><a href="/nfl">NFL</a><a href="/mlb">MLB</a><a href="/nba">NBA</a><a href="/wnba">WNBA</a><a href="/nhl">NHL</a><a href="/soccer">Soccer</a></nav>
     <nav class="tracker-nav" aria-label="Personal workspace"><a class="nav-link active" href="/bets" aria-current="page"><span aria-hidden="true">▤</span> Bet Tracker</a></nav>
   </header>
   <main id="main" tabindex="-1">
@@ -21,7 +21,7 @@
     <p class="tracker-method">All-time totals · ROI uses stakes on wins, losses, and cash-outs. Pushes and voids are refunded; open bets are unsettled.</p>
     <section class="research-controls" aria-label="Filter bets">
       <div class="searchbox"><span aria-hidden="true">⌕</span><input id="bet-search" type="search" placeholder="Search bets, books, or notes…" aria-label="Search bets"></div>
-      <label class="sr-only" for="sport-filter">Filter by sport</label><select id="sport-filter"><option value="">All sports</option><option>NFL</option><option>MLB</option><option>NBA</option><option>NHL</option><option>Soccer</option><option>Other</option></select>
+      <label class="sr-only" for="sport-filter">Filter by sport</label><select id="sport-filter"><option value="">All sports</option><option>NFL</option><option>MLB</option><option>NBA</option><option>WNBA</option><option>NHL</option><option>Soccer</option><option>Other</option></select>
       <label class="sr-only" for="status-filter">Filter by result</label><select id="status-filter"><option value="">All results</option><option value="open">Open</option><option value="won">Won</option><option value="lost">Lost</option><option value="push">Push</option><option value="void">Void</option><option value="cashed">Cashed out</option></select>
       <button class="button subtle" id="clear-filters" hidden>Clear filters</button>
     </section>
@@ -35,7 +35,7 @@
     <form id="bet-form">
       <div class="bet-form-grid">
         <label class="full-field">Bet / selection<input name="selection" id="selection" required maxlength="240" placeholder="e.g. Bills −3.5 vs. Dolphins" autofocus></label>
-        <label>Sport<select name="sport"><option>NFL</option><option>MLB</option><option>NBA</option><option>NHL</option><option>Soccer</option><option>Other</option></select></label>
+        <label>Sport<select name="sport"><option>NFL</option><option>MLB</option><option>NBA</option><option>WNBA</option><option>NHL</option><option>Soccer</option><option>Other</option></select></label>
         <label>Bet type<select name="type"><option value="single">Single</option><option value="parlay">Parlay</option></select></label>
         <label>Date placed<input name="date" type="date" required min="1900-01-01" max="2100-12-31"></label>
         <label>Sportsbook <span class="optional">optional</span><input name="book" maxlength="80" placeholder="e.g. FanDuel"></label>
