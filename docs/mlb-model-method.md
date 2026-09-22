@@ -1,3 +1,5 @@
+> Current opportunity/availability extensions and their separate validation: [Opportunity upgrades](opportunity-upgrades.md). The original model methodology below remains the baseline reference.
+
 # MLB count regression v1
 
 The board now presents estimated over/under probabilities and expected counts from a trained model. The old 0–100 form score remains a comparison statistic, never a probability. There are separate models for all 16 supported markets.

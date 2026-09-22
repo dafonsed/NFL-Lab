@@ -1,3 +1,5 @@
+> Current opportunity/availability extensions and their separate validation: [Opportunity upgrades](opportunity-upgrades.md). The original model methodology below remains the baseline reference.
+
 # NFL live player props — live-workload-v1
 
 The **Live** tab at `/nfl/live` is a separate, experimental model for in-progress NFL player props. It does not reuse the pregame rating as a live probability, use pregame error calibration for in-play estimates, or add records to pregame performance. The implementation is in `lib/live-nfl-model.mjs`; the public feed is in `lib/live-nfl.mjs`.

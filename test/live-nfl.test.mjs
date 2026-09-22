@@ -132,3 +132,13 @@ test('malformed category values never imply zero for an omitted player', () => {
   assert.equal(normalizeSummary(summary, game).players.find(p => p.id === '100').stats.rushing_yards, undefined);
   assert.equal(project({ player: { ...player, teamId: 'wrong' } }).projection, null);
 });
+
+test('a refreshed live injury report pauses a previously projected player by athlete ID', async () => {
+  let clock=now,ruledOut=false;const {summary,scoreboard}=fixture();
+  const store=new LiveNflStore({now:()=>clock,fetcher:async url=>new Response(JSON.stringify(url.includes('/injuries')?{injuries:ruledOut?[{injuries:[{athlete:{id:'100'},status:'Out',date:new Date(clock).toISOString()}]}]:[]}:url.includes('/summary')?summary:scoreboard))});
+  const schedule=Array.from({length:5},(_,i)=>({game_id:'past'+i,game_type:'REG',gameday:`2026-09-0${i+1}`,home_score:20,away_score:10}));
+  const weekly=schedule.flatMap(g=>[{game_id:g.game_id,player_id:'receiver',team:'ATL',position:'WR',targets:5,receptions:4,receiving_yards:48,carries:0},{game_id:g.game_id,player_id:'qb',team:'ATL',position:'QB',attempts:30,carries:20,sacks_suffered:2}]);
+  store.history=async()=>({weekly,schedule,rosters:[{espn_id:'100',gsis_id:'receiver',team:'ATL',position:'WR',season:2026,week:2}],stale:false,sources:[]});
+  const before=(await store.board()).players.find(p=>p.id==='100');assert.ok(before.projections.rec_yds.projection>48);
+  clock+=61000;ruledOut=true;const after=(await store.board()).players.find(p=>p.id==='100');assert.equal(after.availability.status,'Out');assert.equal(after.projections.rec_yds.projection,null);assert.equal(after.projections.rec_yds.current,48);
+});

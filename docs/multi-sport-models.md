@@ -1,3 +1,5 @@
+> Current opportunity/availability extensions and their separate validation: [Opportunity upgrades](opportunity-upgrades.md). The original model methodology below remains the baseline reference.
+
 # MLB matchup extension and NBA / NHL / soccer
 
 The new pages are `/nba`, `/nhl`, and `/soccer`. They share date and matchup controls, but use separate sport market definitions and sport-specific context. Soccer covers Premier League, La Liga, Bundesliga, Serie A, Ligue 1, MLS and Champions League. Schedules refresh automatically on visits; no season-specific fixture list is hardcoded. Forecasts do not imply a demonstrated betting edge.

@@ -1,3 +1,5 @@
+> Current opportunity/availability extensions and their separate validation: [Opportunity upgrades](opportunity-upgrades.md). The original model methodology below remains the baseline reference.
+
 # NFL workload candidate and prediction record
 
 The `independent-v1` scoring weights in `lib/model.mjs` remain the baseline. `workload-injury-v3` adds an explicit teammate-absence workload scenario; it recalculates supported ratings with the same weights and reorders the board by the resulting score. The original score and historical box scores are retained. Forecasts never substitute for missing sportsbook lines.
