@@ -1,5 +1,5 @@
 import test from 'node:test';
-import { isReportedOut } from '../lib/sports/source.mjs';
+import { isReportedOut,SportsStore } from '../lib/sports/source.mjs';
 import assert from 'node:assert/strict';
 import { query,SPORTS,SOCCER_LEAGUES } from '../lib/sports/config.mjs';
 import { fields,normalizeSummary,soccerMinutes } from '../lib/sports/normalize.mjs';
@@ -21,3 +21,5 @@ test('MLB historical matchup excludes current-year and career-total leakage',()=
 test('MLB handedness selects the correct split, limits head-to-head influence and preserves missing stats',()=>{const i={pitcherId:8,pitcherHand:'L',hand:[stat(2025,'vl',100,50),stat(2025,'vr',200,20)],versus:[stat(2025,'',3,3)],sources:[]};const a=matchupAdjustment(i,'hits',1,.25),b=matchupAdjustment({...i,pitcherHand:'R'},'hits',1,.25);assert.ok(a.after>b.after);assert.ok(Math.abs(a.factor-1)<=.100001);assert.ok(Math.abs(a.components[1].fullGameEffect)<=.025);assert.equal(matchupAdjustment({...i,pitcherHand:null},'hits',1,.25).factor,1);assert.equal(matchupAdjustment(i,'runs',1,.25).components[0].plateAppearances,0);});
 
 test('source suspension status is unavailable and empty diagnostics do not imply perfect accuracy',()=>{for(const status of ['Out','Inactive','IR','Suspension','Suspended'])assert.equal(isReportedOut(status),true);assert.equal(isReportedOut('Day-To-Day'),false);const r=backtest({sport:'nhl',market:'shots',history:[]});assert.equal(r.n,0);assert.equal(r.mae,null);assert.equal(r.brier,null);});
+
+test('transient uncached source failure retries once and records the successful receipt',async()=>{let calls=0;const provider={read:async()=>{calls++;if(calls===1)throw Error('fetch failed');return {payload:{events:[]},url:'https://example.test/feed',sha256:'hash',stale:false};}},sources=[],store=new SportsStore({provider,archive:{}});await store.get('https://example.test/feed',{sources});assert.equal(calls,2);assert.equal(sources.length,1);assert.equal(sources[0].stale,false);});
