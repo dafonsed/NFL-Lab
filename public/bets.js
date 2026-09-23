@@ -2,6 +2,8 @@ import { BET_STORAGE_KEY, STATUSES, validateBet, betReturns, summarizeBets, read
 import { BetLegEditor } from './bet-editor.js';
 import { LEG_RESULTS, legState, ticketSettlement, gameKey, refreshTicket, formatLegTarget, validateLeg } from './bet-legs.js';
 import { icon } from './ui-icons.js';
+import { BetDashboard } from './bet-dashboard.js';
+import { BetSlipImport } from './bet-slip-import.js';
 
 const $ = selector => document.querySelector(selector);
 const form = $('#bet-form');
@@ -15,6 +17,9 @@ const today = () => { const now = new Date(); return `${now.getFullYear()}-${Str
 let bets = [], editing = null, toastTimer, storageReady = false;
 let dirty = false, saving = false, returnFocus = null;
 let tracking=false;
+document.querySelectorAll('[data-bet-icon]').forEach(node=>{node.innerHTML=icon(node.dataset.betIcon);});
+const dashboard=new BetDashboard($('#bet-overview'),{month:today().slice(0,7),onChange:()=>{$('#ticket-range').value='month';render();}});
+const slipImport=new BetSlipImport({onDraft:draft=>openForm(null,draft)});
 const editor=new BetLegEditor($('#leg-editor'),()=>{if(editor.rows.length>1)field('type').value='parlay';updateForm();});
 const safeUrl=url=>/^https:\/\/(site\.api\.espn\.com|statsapi\.mlb\.com)\//.test(url||'')?esc(url):'#';
 function legMarkup(leg,index){
@@ -42,47 +47,54 @@ function load() {
     $('#storage-error').hidden = false;
   }
   $('#add-bet').disabled = !storageReady;
+  $('#import-slip').disabled = !storageReady;
   render();
 }
 
-function filteredBets() {
+function filteredBets(ignoreStatus=false) {
   const query = $('#bet-search').value.trim().toLowerCase();
-  const sport = $('#sport-filter').value, status = $('#status-filter').value;
-  return bets.filter(bet => (!sport || bet.sport === sport || bet.legs?.some(l=>l.sport===sport)) && (!status || (status === 'settled' ? bet.status !== 'open' : bet.status === status)) && (!query || `${bet.selection} ${bet.book} ${bet.notes} ${(bet.legs||[]).map(l=>l.label+' '+l.matchup).join(' ')}`.toLowerCase().includes(query)))
+  const sport = $('#sport-filter').value, status = ignoreStatus?'':$('#status-filter').value,book=$('#book-filter').value;
+  return bets.filter(bet => (!dashboard.selectedDay||bet.date===dashboard.selectedDay) && ($('#ticket-range').value==='all'||bet.date.startsWith(dashboard.month)) && (!book||(bet.book||'No sportsbook')===book) && (!sport || bet.sport === sport || bet.legs?.some(l=>l.sport===sport)) && (!status || (status === 'settled' ? bet.status !== 'open' : bet.status === status)) && (!query || `${bet.selection} ${bet.book} ${bet.notes} ${(bet.legs||[]).map(l=>l.label+' '+l.matchup).join(' ')}`.toLowerCase().includes(query)))
     .sort((a, b) => b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt));
 }
 
 function render() {
-  document.body.classList.toggle('picks-empty', storageReady && !bets.length);
+  document.body.classList.toggle('tracker-empty', storageReady && !bets.length);
   if (!storageReady) {
-    $('#bet-summary').innerHTML = '';
+    $('#bet-overview').innerHTML = '';
+    $('#alltime-bet-summary').textContent='Storage unavailable';
     $('#bet-list').innerHTML = '<div class="bet-empty"><h2>Your saved bets are unavailable</h2><p>Restore access to browser storage and reload to continue.</p></div>';
     $('#bet-count').textContent = 'Storage unavailable';
     $('#export-bets').disabled = true;
     return;
   }
   const total = summarizeBets(bets);
+  $('#alltime-bet-summary').innerHTML=`<span>Net profit <strong class="${tone(total.profit)}">${signedMoney(total.profit)}</strong></span><span>ROI <strong>${total.roi===null?'—':total.roi.toFixed(1)+'%'}</strong></span><span>Record <strong>${total.won} wins · ${total.lost} losses</strong></span><span>Open stake <strong>${money(total.openStake)}</strong></span>`;
+  const calendarFocus=document.activeElement?.getAttribute('data-calendar-day');
+  dashboard.render(bets);
+  if(calendarFocus)document.querySelector(`[data-calendar-day="${calendarFocus}"]`)?.focus({preventScroll:true});
+  const currentBook=$('#book-filter').value;
+  $('#book-filter').innerHTML='<option value="">All books</option>'+[...new Set(bets.map(b=>b.book||'No sportsbook'))].sort().map(book=>`<option value="${esc(book)}">${esc(book)}</option>`).join('');
+  $('#book-filter').value=currentBook;
+  $('#selected-bet-day').hidden=!dashboard.selectedDay;
+  $('#selected-bet-day').innerHTML=dashboard.selectedDay?`<span>Tickets placed ${esc(new Date(dashboard.selectedDay+'T12:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}))}</span><button class="tracker-button" type="button" data-clear-day>Show the whole month ${icon('close')}</button>`:'';
   const selectedStatus = $('#status-filter').value;
   document.querySelectorAll('[data-ticket-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.ticketView === (selectedStatus && selectedStatus !== 'open' ? 'settled' : selectedStatus))));
-  const ticketCounts = { all: bets.length, open: total.open, settled: bets.length - total.open };
+  const counted=filteredBets(true),openCount=counted.filter(b=>b.status==='open').length;
+  const ticketCounts = { all: counted.length, open: openCount, settled: counted.length - openCount };
   document.querySelectorAll('[data-ticket-count]').forEach(element => { element.textContent = ticketCounts[element.dataset.ticketCount]; });
-  const cards = [
-    ['Net profit / loss', signedMoney(total.profit), 'Settled bets only', tone(total.profit)],
-    ['ROI', total.roi === null ? '—' : `${total.roi > 0 ? '+' : ''}${total.roi.toFixed(1)}%`, `${money(total.settledStake)} in settled stakes`, tone(total.roi)],
-    ['Record', `${total.won}–${total.lost}`, total.winRate === null ? 'Wins – losses · No decided bets' : `${total.winRate.toFixed(1)}% win rate · Wins / losses only`, ''],
-    ['Open stake', money(total.openStake), `${total.open} open ${total.open === 1 ? 'bet' : 'bets'}`, ''],
-  ];
-  $('#bet-summary').innerHTML = cards.map(([label, value, note, color]) => `<article class="summary-card"><div class="label">${label}</div><div class="summary-value ${color}">${value}</div><div class="summary-note">${note}</div></article>`).join('');
+  const expanded=new Set([...document.querySelectorAll('.bet-ticket details[open]')].map(el=>el.closest('[data-ticket-id]').dataset.ticketId+':'+el.className));
+  const focusedEdit=document.activeElement?.dataset.edit;
   const visible = filteredBets();
-  const hasFilter = !!($('#bet-search').value || $('#sport-filter').value || $('#status-filter').value);
+  const hasFilter = !!($('#bet-search').value || $('#sport-filter').value || $('#status-filter').value || $('#book-filter').value || dashboard.selectedDay || $('#ticket-range').value!=='all');
   $('#clear-filters').hidden = !hasFilter;
   $('#bet-count').textContent = `${visible.length} of ${bets.length} ${bets.length === 1 ? 'bet' : 'bets'} · Newest first`;
   $('#export-bets').disabled = !visible.length;
-  $('#export-bets').textContent = hasFilter ? '↓ Export filtered CSV' : '↓ Export CSV';
+  $('#export-bets').innerHTML = icon('download')+(hasFilter ? ' Export filtered CSV' : ' Export CSV');
   if (!visible.length) {
     $('#bet-list').innerHTML = bets.length
-      ? '<div class="bet-empty"><h2>No matching tickets</h2><p>Try another search or clear your filters to see all your bets.</p><button class="button subtle" data-clear>Clear filters</button></div>'
-      : `<div class="bet-empty"><span class="bet-empty-icon" aria-hidden="true">${icon('picks')}</span><h2>No tickets yet</h2><p>Record a single bet or parlay with your booked odds and stake. Link selections to games for result tracking, or enter results yourself.</p><button class="button primary" data-add>${icon('plus')} Add your first bet</button><div class="picks-empty-details"><span>Singles & parlays</span><span>Automatic or manual results</span><span>Stored in this browser</span></div></div>`;
+      ? '<div class="bet-empty"><h2>No tickets in this view</h2><p>Choose another month, change your filters, or view your full record.</p><button class="tracker-button" data-clear>Show all tickets</button></div>'
+      : `<div class="bet-empty"><span class="bet-empty-icon" aria-hidden="true">${icon('picks')}</span><h2>Your record starts with one ticket</h2><p>Add a single or parlay, or import the details from a screenshot. Your calendar will fill in as you record results.</p><div><button class="tracker-button primary" data-add>${icon('plus')} Add a bet</button><button class="tracker-button" data-import>${icon('paper')} Import screenshot</button></div></div>`;
     return;
   }
   $('#bet-list').innerHTML = `<div class="bet-ledger">${visible.map(bet => {
@@ -90,14 +102,17 @@ function render() {
     const odds = bet.oddsFormat === 'american' ? `${bet.odds > 0 ? '+' : ''}${bet.odds}` : String(bet.odds);
     const date = new Date(`${bet.date}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
     const legs=bet.legs||[];
-    return `<article class="bet-ticket"><div class="bet-row"><div class="bet-description"><div class="bet-meta"><span class="sport-tag">${esc([...new Set(legs.map(l=>l.sport))].join(' + ')||bet.sport)}</span><span>· ${bet.type === 'parlay' ? (legs.length?legs.length+'-leg parlay':'Parlay') : 'Single'}</span><span>· ${esc(date)}</span></div><h3 class="bet-selection">${esc(bet.selection)}</h3>${bet.book ? `<p class="bet-book">${esc(bet.book)}</p>` : ''}${bet.notes ? `<details class="bet-notes"><summary>Notes</summary><p>${esc(bet.notes)}</p></details>` : ''}</div><div class="bet-number"><span>${bet.oddsFormat === 'decimal' ? 'Decimal odds' : 'American odds'}</span><strong>${esc(odds)}</strong></div><div class="bet-number"><span>Stake</span><strong>${money(bet.stake)}</strong></div><div class="bet-number"><span>${repricing?'Book payout needed':bet.status === 'open' ? 'To win · net' : 'Profit / loss'}</span><strong class="${bet.status === 'open' ? '' : tone(result.profit)}">${repricing?'—':signedMoney(result.profit ?? result.potentialProfit)}</strong></div><span class="bet-result ${bet.status}">${STATUSES[bet.status]}</span><button class="button subtle" data-edit="${esc(bet.id)}" aria-label="Edit ${esc(bet.selection)}">Edit ticket</button></div>${legs.length?`<div class="ticket-tracking"><div class="leg-summary"><strong>${legs.filter(l=>legState(l)==='won').length} / ${legs.length} legs hit</strong><span>${esc(bet.settlement==='auto'?ticketSettlement(legs).note:'Ticket result set from sportsbook.')}</span></div><ol class="tracked-legs">${legs.map(legMarkup).join('')}</ol></div>`:'<p class="legacy-ticket">Manual ticket · Edit to add and track each selection.</p>'}</article>`;
+    return `<article class="bet-ticket" data-ticket-id="${esc(bet.id)}"><div class="bet-row"><div class="bet-description"><div class="bet-meta"><span class="sport-tag">${esc([...new Set(legs.map(l=>l.sport))].join(' + ')||bet.sport)}</span><span>· ${bet.type === 'parlay' ? (legs.length?legs.length+'-leg parlay':'Parlay') : 'Single'}</span><span>· ${esc(date)}</span></div><h3 class="bet-selection">${esc(bet.selection)}</h3>${bet.book ? `<p class="bet-book">${esc(bet.book)}</p>` : ''}${bet.notes ? `<details class="bet-notes"><summary>Notes</summary><p>${esc(bet.notes)}</p></details>` : ''}</div><div class="bet-number"><span>${bet.oddsFormat === 'decimal' ? 'Decimal odds' : 'American odds'}</span><strong>${esc(odds)}</strong></div><div class="bet-number"><span>Stake</span><strong>${money(bet.stake)}</strong></div><div class="bet-number"><span>${bet.status==='open'?'Potential return':'Total returned'}</span><strong>${repricing?'—':money(result.returned??result.potentialReturn)}</strong></div><div class="bet-number"><span>${repricing?'Book payout needed':bet.status === 'open' ? 'To win · net' : 'Profit / loss'}</span><strong class="${bet.status === 'open' ? '' : tone(result.profit)}">${repricing?'—':signedMoney(result.profit ?? result.potentialProfit)}</strong></div><span class="bet-result ${bet.status}">${STATUSES[bet.status]}</span><button class="button subtle" data-edit="${esc(bet.id)}" aria-label="Edit ${esc(bet.selection)}">Edit ticket</button></div>${legs.length?`<details class="ticket-tracking"><summary class="leg-summary"><strong>${legs.filter(l=>legState(l)==='won').length} / ${legs.length} legs hit</strong><span>${esc(bet.settlement==='auto'?ticketSettlement(legs).note:'Ticket result set from sportsbook.')}</span><span class="ticket-details-action">View selections ${icon('chevron')}</span></summary><ol class="tracked-legs">${legs.map(legMarkup).join('')}</ol></details>`:'<p class="legacy-ticket">Manual ticket · Edit to add and track each selection.</p>'}</article>`;
   }).join('')}</div>`;
+  document.querySelectorAll('.bet-ticket details').forEach(el=>{el.open=expanded.has(el.closest('[data-ticket-id]').dataset.ticketId+':'+el.className);});
+  if(focusedEdit)[...document.querySelectorAll('[data-edit]')].find(el=>el.dataset.edit===focusedEdit)?.focus({preventScroll:true});
 }
 
 function clearFilters() {
   $('#bet-search').value = '';
   $('#sport-filter').value = '';
   $('#status-filter').value = '';
+  $('#book-filter').value='';$('#ticket-range').value='all';dashboard.selectedDay='';
   render();
 }
 
@@ -130,7 +145,7 @@ function updateForm() {
   }
 }
 
-function openForm(id) {
+function openForm(id, draft) {
   if (!storageReady) return;
   editing = id ? bets.find(bet => bet.id === id) : null;
   if (id && !editing) return;
@@ -141,12 +156,19 @@ function openForm(id) {
   if (editing) for (const [key, value] of Object.entries(editing)) { if (field(key)) field(key).value = value ?? ''; }
   field('settlement').value=editing?.settlement|| (editing?'manual':'auto');
   editor.reset(editing?.legs||[],field('sport').value,field('date').value);
-  if(!editing)editor.add(field('sport').value,field('date').value);
+  if(!editing&&!draft)editor.add(field('sport').value,field('date').value);
+  $('#slip-form-review').hidden=!draft;
+  if(draft){
+    for(const [key,value] of Object.entries(draft.fields))if(field(key))field(key).value=value??'';
+    editor.reset(draft.legs.map(leg=>({...leg,id:crypto.randomUUID()})),field('sport').value,field('date').value);
+    $('#slip-form-review').innerHTML=`<strong>${icon('paper')} Review your imported ticket</strong><p>Check the stake, combined odds and every selection against your screenshot. Imported selections use manual results until you connect them to a game.</p>${draft.preview?'<details class="imported-slip-source"><summary>View original screenshot</summary><img alt="Original screenshot for checking your ticket" src="'+esc(draft.preview)+'"></details>':''}${draft.issues.length?'<ul>'+draft.issues.map(issue=>'<li>'+esc(issue)+'</li>').join('')+'</ul>':''}`;
+    returnFocus=$('#import-slip');
+  }
   $('#bet-dialog-title').textContent = editing ? 'Edit your bet' : 'Add a bet';
   $('#delete-bet').hidden = !editing;
   $('#form-error').hidden = true;
   updateForm();
-  dirty = false;
+  dirty = !!draft;
   dialog.showModal();
   $('.bet-form-body').scrollTop = 0;
   field('selection').focus();
@@ -205,6 +227,7 @@ dialog.addEventListener('keydown', event => {
 });
 dialog.addEventListener('close', () => {
   dirty = false;
+  $('#slip-form-review').innerHTML='';
   const target = returnFocus?.isConnected ? returnFocus : editing ? [...document.querySelectorAll('[data-edit]')].find(el => el.dataset.edit === editing.id) : null;
   (target || $('#add-bet')).focus({preventScroll:true});
 });
@@ -240,6 +263,7 @@ form.addEventListener('submit', async event => {
     saving = true; submit.disabled = true; submit.textContent = 'Saving…'; form.setAttribute('aria-busy','true');
     await new Promise(resolve => requestAnimationFrame(resolve));
     const bet = { ...validated, id: editing?.id || crypto.randomUUID(), updatedAt: new Date().toISOString() };
+    if(!editing){dashboard.month=bet.date.slice(0,7);dashboard.selectedDay='';$('#ticket-range').value='month';for(const id of ['bet-search','sport-filter','status-filter','book-filter'])$('#'+id).value='';}
     mutate(latest => editing ? latest.map(item => item.id === editing.id ? bet : item) : [...latest, bet]);
     dialog.close();
     toast(editing ? 'Bet updated.' : 'Bet saved.');
@@ -256,6 +280,7 @@ form.addEventListener('click', event => { if (event.target.closest('[data-remove
 form.addEventListener('input', updateForm);
 form.addEventListener('change', updateForm);
 $('#add-bet').addEventListener('click', () => openForm());
+$('#import-slip').addEventListener('click',()=>slipImport.open());
 $('#add-leg').addEventListener('click',()=>{ dirty = true; editor.add(field('sport').value,field('date').value); $('#leg-editor .leg-editor:last-child input, #leg-editor .leg-editor:last-child select')?.focus(); });
 $('#close-bet').addEventListener('click', requestClose);
 $('#cancel-bet').addEventListener('click', requestClose);
@@ -281,11 +306,15 @@ $('#bet-list').addEventListener('click', event => {
   const button = event.target.closest('button');
   if (button?.hasAttribute('data-add')) openForm();
   if (button?.hasAttribute('data-clear')) clearFilters();
+  if (button?.hasAttribute('data-import')) slipImport.open();
   if (button?.dataset.edit) openForm(button.dataset.edit);
 });
 $('#bet-search').addEventListener('input', render);
 $('#sport-filter').addEventListener('change', render);
 $('#status-filter').addEventListener('change', render);
+$('#book-filter').addEventListener('change',render);
+$('#ticket-range').addEventListener('change',()=>{dashboard.selectedDay='';render();});
+$('#selected-bet-day').addEventListener('click',event=>{if(event.target.closest('[data-clear-day]')){dashboard.selectedDay='';render();}});
 document.querySelectorAll('[data-ticket-view]').forEach(button => button.addEventListener('click', () => {
   $('#status-filter').value = button.dataset.ticketView;
   $('#status-filter').dispatchEvent(new Event('change', { bubbles: true }));
@@ -302,7 +331,7 @@ $('#export-bets').addEventListener('click', () => {
   toast(`Exported ${visible.length} ${visible.length === 1 ? 'bet' : 'bets'}.`);
 });
 async function refreshLines({all=false}={}){
-  if(tracking||!storageReady||document.hidden||dialog.open)return;
+  if(tracking||!storageReady||document.hidden||dialog.open||slipImport.dialog.open)return;
   const candidates=bets.filter(b=>b.legs?.some(l=>l.mode==='auto'&&!l.override&&(all||!['won','lost','push','void'].includes(legState(l))||Date.parse(l.date)>Date.now()-3*86400000)));
   const groups=new Map(candidates.flatMap(b=>b.legs.filter(l=>l.mode==='auto'&&!l.override).map(l=>[gameKey(l),l])));
   if(!groups.size){$('#tracking-status').textContent=bets.some(b=>b.legs?.some(l=>l.mode==='auto'))?'No unfinished legs to check. Use Refresh results to recheck earlier games.':'Add connected legs to track game results. Existing manual tickets are preserved.';return;}

@@ -57,7 +57,7 @@ test('every page renders the same working navigation and Live link before any Ja
     assert.deepEqual($('.site-sports a').map((_, a) => $(a).text()).get(), ['NFL', 'MLB', 'NBA', 'WNBA', 'NHL', 'Soccer'], route);
     assert.equal($('.site-tracker').attr('href'), '/bets');
     assert.equal($('body.site-layout').length, 1); assert.equal($('main#main').length, 1);
-    assert.equal($('.page-heading h1').length, 1); assert.equal($('link[rel="stylesheet"]').last().attr('href'), '/app-design.css');
+    assert.equal($('.page-heading h1,.tracker-page-heading h1').length, 1); assert.equal($('link[rel="stylesheet"]').last().attr('href'), template === 'bets' ? '/bets.css' : '/app-design.css');
     assert.equal(html.includes('<!--site-header-->'), false);
     const ids = $('[id]').map((_, e) => $(e).attr('id')).get(); assert.equal(new Set(ids).size, ids.length, `Duplicate IDs on ${route}`);
   }

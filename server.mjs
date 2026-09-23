@@ -36,7 +36,7 @@ function json(res, data, status = 200) { res.writeHead(status, { 'Content-Type':
 export const server = http.createServer(async (req, res) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://static.www.nfl.com https://a.espncdn.com https://img.mlbstatic.com data:; connect-src 'self'; font-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
+  res.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self' ${req.url.split('?')[0] === '/vendor/ocr/worker.min.js' ? "'wasm-unsafe-eval'" : ''}; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://static.www.nfl.com https://a.espncdn.com https://img.mlbstatic.com data:; connect-src 'self'; font-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`);
   try {
     const host = req.headers.host || '';
     if (!process.env.VERCEL && !/^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(host)) return json(res, { error: 'This workspace only accepts local connections.' }, 403);
@@ -72,6 +72,8 @@ export const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/board') return json(res, compactNflBoard(await store.board(Object.fromEntries(url.searchParams), url.searchParams.get('refresh') === '1')));
     const names = { '/bets':'bets.html', '/bets/':'bets.html', '/bets.js':'bets.js', '/bet-legs.js':'bet-legs.js', '/bet-editor.js':'bet-editor.js', '/bet-utils.js':'bet-utils.js', '/presentation.js':'presentation.js', '/bets.css':'bets.css', '/wnba':'sports.html','/wnba/':'sports.html','/nba':'sports.html','/nhl':'sports.html','/soccer':'sports.html','/sports.js':'sports.js','/sports-view.js':'sports-view.js','/sports.css':'sports.css', '/nfl/live':'live.html', '/nfl/live/':'live.html', '/live.js':'live.js', '/live-game.js':'live-game.js', '/live.css':'live.css', '/live-utils.js':'live-utils.js', '/paper':'paper.html','/paper.js':'paper.js','/context-ui.js':'context-ui.js','/context.css':'context.css', '/performance':'performance.html', '/performance.js':'performance.js', '/forecast.css':'forecast.css', '/': 'index.html', '/nfl': 'index.html', '/mlb': 'mlb.html', '/mlb/': 'mlb.html', '/mlb.js': 'mlb.js', '/mlb-model.js':'mlb-model.js', '/mlb.css': 'mlb.css', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/manifest.webmanifest': 'manifest.webmanifest' };
     const pagePath = url.pathname.replace(/\/$/, '') || '/';
+    if (['bet-dashboard.js','bet-analytics.js','bet-slip-import.js','bet-slip-parser.js'].some(file => pagePath === '/' + file)) names[pagePath]=pagePath.slice(1);
+    if (/^\/vendor\/ocr\/(?:tesseract\.esm\.min\.js|worker\.min\.js|tesseract-core-(?:lstm|simd-lstm|relaxedsimd-lstm)\.wasm\.js|eng\.traineddata\.gz|[A-Za-z.-]+\.txt)$/.test(pagePath)) names[pagePath]=pagePath.slice(1);
     if (/^\/assets\/leagues\/(nfl|mlb|nba|wnba|nhl|premier)\.png$/.test(pagePath)) names[pagePath]=pagePath.slice(1);
     if (['/assets/fonts/InterVariable.woff2','/assets/fonts/Inter-LICENSE.txt'].includes(pagePath)) names[pagePath]=pagePath.slice(1);
     for (const file of ['simulation.js', 'simulation-props.js', 'simulation.css']) names['/' + file] = file;
@@ -81,7 +83,7 @@ export const server = http.createServer(async (req, res) => {
     const name = context.section === 'landing' ? 'landing.html' : context.section === 'home' ? 'home.html' : context.section === 'trends' ? 'trends.html' : /^\/(nba|wnba|mlb)\/live$/.test(pagePath) ? 'live-sports.html' : pagePath === '/live' ? 'live-hub.html' : pagePath === '/site-layout.css' ? 'site-layout.css' : pagePath === '/live-sports.js' ? 'live-sports.js' : names[pagePath];
     if (!name) return json(res, { error: 'Not found.' }, 404);
     const bytes = await fs.readFile(path.join(publicDir, name));
-    const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
+    const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.gz': 'application/gzip', '.webmanifest': 'application/manifest+json' };
     const body = name.endsWith('.html') ? renderSitePage(bytes.toString('utf8'), url) : bytes;
     res.writeHead(200, { 'Content-Type': (types[path.extname(name)] || 'text/plain') + '; charset=utf-8', 'Cache-Control': 'no-cache' });
     res.end(req.method === 'HEAD' ? undefined : body);
