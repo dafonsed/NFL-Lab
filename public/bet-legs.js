@@ -4,11 +4,12 @@ const number=v=>v!==''&&v!==null&&v!==undefined&&Number.isFinite(Number(v))?Numb
 const text=(v,max=160)=>String(v??'').trim().slice(0,max);
 export const gameKey=l=>[l.sport,l.league,l.date,l.gameId].join('|');
 export const playerEligible=(player,market)=>market?.kind==='player'&&(!market.playerRole||player.roles?.includes(market.playerRole)===true);
+export const playerMarkets=(player,markets)=>Object.entries(markets||{}).filter(([,m])=>playerEligible(player,m));
 const foldedName=value=>String(value||'').normalize('NFKD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^a-z0-9]/g,'');
 export const playerNameMatches=(player,query)=>!!foldedName(query)&&foldedName(player.name).includes(foldedName(query));
 export function findPlayers(games,marketKey,query){
   const matches=new Map();
-  for(const g of games)for(const p of g.players||[])if(playerEligible(p,g.markets?.[marketKey])&&playerNameMatches(p,query))matches.set(g.game.id+':'+p.id,{player:p,game:g.game});
+  for(const g of games)for(const p of g.players||[])if((marketKey?playerEligible(p,g.markets?.[marketKey]):playerMarkets(p,g.markets).length>0)&&playerNameMatches(p,query))matches.set(g.game.id+':'+p.id,{player:p,game:g.game});
   return [...matches.values()].sort((a,b)=>a.player.name.localeCompare(b.player.name)||a.game.id.localeCompare(b.game.id));
 }
 export function validateLeg(input) {
@@ -24,7 +25,7 @@ export function validateLeg(input) {
   if(input.override&&!outcomes.includes(input.override))throw Error('Choose a valid leg result.');
   const o=input.observation;
   const observation=o&&Object.hasOwn(LEG_RESULTS,o.state)?{state:o.state,actual:number(o.actual),checkedAt:text(o.checkedAt,40),sourceUrl:text(o.sourceUrl,500),message:text(o.message,300),gameStatus:text(o.gameStatus)}:null;
-  return {id:text(input.id,80)||crypto.randomUUID(),mode:input.mode,sport:input.sport,league:text(input.league,40),date:text(input.date,10),gameId:text(input.gameId,12),market:text(input.market,50),marketLabel,subjectId:text(input.subjectId,30),subject,matchup,label,side:input.side,line:input.market==='moneyline'?null:line,override:input.override||null,observation};
+  return {id:text(input.id,80)||crypto.randomUUID(),mode:input.mode,entry:input.entry==='quick'?'quick':'game',sport:input.sport,league:text(input.league,40),date:text(input.date,10),gameId:text(input.gameId,12),market:text(input.market,50),marketLabel,subjectId:text(input.subjectId,30),subject,matchup,label,side:input.side,line:input.market==='moneyline'?null:line,override:input.override||null,observation};
 }
 export function legState(leg){return leg.override||leg.observation?.state||'open';}
 export function ticketSettlement(legs) {

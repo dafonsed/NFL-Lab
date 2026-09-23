@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { playerRoles,trackerMarkets,BetTrackerStore } from '../lib/bet-tracker.mjs';
-import { playerEligible,playerNameMatches,findPlayers } from '../public/bet-legs.js';
+import { playerEligible,playerNameMatches,playerMarkets,findPlayers,validateLeg } from '../public/bet-legs.js';
 const player=(position,sport,extra={})=>{const p={id:position,name:position,position,values:{},...extra};return {...p,roles:playerRoles(p,sport)};};
 
 test('NFL props restrict pregame positions and retain verified unusual stat roles',()=>{
@@ -50,4 +50,19 @@ test('pregame roster enrichment fills position on existing box-score players and
  assert.equal(result.players.find(p=>p.id==='22').values.receiving_yards,null);
  assert.deepEqual(result.players.filter(p=>playerEligible(p,result.markets.receiving_yards)).map(p=>p.id),['22']);
  assert.deepEqual(result.players.filter(p=>playerEligible(p,result.markets.passing_yards)).map(p=>p.id),['24']);
+});
+
+test('Quick Search finds a player before a prop is chosen, then limits their prop menu',()=>{
+ const markets=trackerMarkets('nfl'),qb=player('QB','nfl',{name:'Quarterback Test'}),wr=player('WR','nfl',{name:'Receiver Test'}),defender=player('CB','nfl',{name:'Defender Test'});
+ const games=[{game:{id:'401000001'},markets,players:[qb,wr,defender]}];
+ assert.deepEqual(findPlayers(games,null,'Test').map(r=>r.player.id),['QB','WR']);
+ assert.ok(playerMarkets(qb,markets).some(([k])=>k==='passing_yards'));
+ assert.equal(playerMarkets(wr,markets).some(([k])=>k==='passing_yards'),false);
+ assert.equal(playerMarkets(qb,markets).some(([k])=>k==='receiving_yards'),false);
+ assert.equal(playerMarkets(wr,markets).some(([k])=>k==='receiving_yards'),true);
+});
+test('Quick Search preference persists while the saved leg remains automatically tracked',()=>{
+ const input={id:'test-leg',mode:'auto',entry:'quick',sport:'NFL',league:'nfl',date:'2026-09-22',gameId:'401000001',market:'receiving_yards',subjectId:'22',label:'Receiver over 50.5',side:'over',line:50.5};
+ const saved=validateLeg(input);assert.equal(saved.entry,'quick');assert.equal(saved.mode,'auto');assert.deepEqual(validateLeg(saved),saved);
+ assert.equal(validateLeg({...input,entry:undefined}).entry,'game');
 });
