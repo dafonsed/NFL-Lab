@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#08090b">
-  <meta name="description" content="A clearer view of the matchup. Explore player trends, posted lines, experimental models and your own picks in the Sportslab research workspace.">
+  <meta name="theme-color" content="#050607">
+  <meta name="description" content="Explore player trends, compare posted lines, and put the matchup in context. Try the interactive Sportslab demo, then open your research workspace.">
   <title>Sportslab — A clearer picture of the game</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="/manifest.webmanifest">
@@ -17,76 +17,64 @@
   <a class="landing-skip" href="#main">Skip to content</a>
   <header class="landing-header">
     <div class="landing-container landing-header-inner">
-      <a class="landing-brand" href="/" aria-label="Sportslab home"><img src="/favicon.svg" width="36" height="36" alt=""><span>sports<span>lab</span></span></a>
-      <nav class="landing-nav" aria-label="Main navigation">
-        <a href="#workspace">The workspace</a><a href="#sports">Sports</a><a href="#tools">Research tools</a>
-      </nav>
-      <a class="landing-button landing-button-small" href="/research">Open Sportslab <span data-icon="arrow" aria-hidden="true">↗</span></a>
+      <a class="landing-brand" href="/" aria-label="Sportslab home"><img src="/favicon.svg" width="34" height="34" alt=""><span>sports<span>lab</span></span></a>
+      <nav class="landing-nav" aria-label="Main navigation"><a href="#workspace">Explore the demo</a><a href="#sports">Sports</a><a href="#tools">Research tools</a></nav>
+      <a class="landing-button landing-button-outline landing-button-small" href="/research">Open Sportslab <span data-icon="arrow" aria-hidden="true">→</span></a>
     </div>
   </header>
   <main id="main">
-    <section class="landing-hero landing-container" aria-labelledby="hero-title">
-      <div class="landing-eyebrow"><span class="landing-mark" aria-hidden="true"></span> THE GAME. IN GREATER DETAIL.</div>
-      <div class="landing-hero-copy">
-        <h1 id="hero-title">Your next pick.<br><span>A clearer picture.</span></h1>
-        <div class="landing-intro">
-          <p>Go beyond the box score. Explore player trends, compare posted lines, and put the matchup in context.</p>
-          <a class="landing-button" href="/research">Start your research <span data-icon="arrow" aria-hidden="true">→</span></a>
-          <span class="landing-access">No account needed. Open and explore.</span>
-        </div>
+    <section class="landing-hero" aria-labelledby="hero-title">
+      <div class="landing-container">
+        <div class="landing-hero-mark" aria-hidden="true"><span data-icon="research"></span></div>
+        <h1 id="hero-title">Your next pick.<br><span>See the whole picture.</span></h1>
+        <p class="landing-hero-description">Player trends. Matchup context. Posted lines.<br>Everything you need to take a closer look.</p>
+        <div class="landing-hero-actions"><a class="landing-button" href="/research">Start your research <span data-icon="arrow" aria-hidden="true">→</span></a><a class="landing-text-link" href="#workspace">Try the demo <span data-icon="chevron" aria-hidden="true">›</span></a></div>
+        <p class="landing-access">No account needed. Choose a sport and explore.</p>
       </div>
+    </section>
+    <section class="landing-demo-section landing-container" aria-label="Inside Sportslab">
+      <div class="landing-demo-heading"><span class="landing-eyebrow">INSIDE SPORTSLAB</span><span>Real controls. Sample data. Give it a try.</span></div>
       <section class="landing-showcase" id="workspace" aria-label="Explore the Sportslab workspace">
         <div class="landing-showcase-toolbar">
           <div class="landing-preview-tabs" role="tablist" aria-label="Demo workspace">
             <button id="preview-research-tab" role="tab" aria-selected="true" aria-controls="preview-research" tabindex="0"><span data-icon="research" aria-hidden="true"></span>Player research</button>
             <button id="preview-trends-tab" role="tab" aria-selected="false" aria-controls="preview-trends" tabindex="-1"><span data-icon="trends" aria-hidden="true"></span>Trends &amp; lines</button>
           </div>
-          <span class="landing-preview-label">INSIDE SPORTSLAB</span>
+          <button type="button" class="demo-reset" data-demo-reset aria-label="Reset demo"><span data-icon="refresh" aria-hidden="true"></span><span>Reset demo</span></button>
         </div>
-        <div class="demo-notice"><span><b>Interactive demo</b><span>Fictional players &amp; sample games</span></span><button type="button" class="demo-reset" data-demo-reset>Reset demo <span data-icon="refresh" aria-hidden="true"></span></button></div>
+        <div class="demo-notice"><b>Interactive demo</b><span>Fictional players &amp; sample games</span></div>
         <div class="landing-preview-panel" id="preview-research" role="tabpanel" aria-labelledby="preview-research-tab"><div id="demo-research"><p class="demo-starting">Preparing the interactive demo…</p><noscript><p>This demo needs JavaScript. You can still <a href="/research">open the research workspace</a>.</p></noscript></div></div>
         <div class="landing-preview-panel" id="preview-trends" role="tabpanel" aria-labelledby="preview-trends-tab" hidden><div id="demo-trends"></div></div>
         <div class="demo-footer"><span id="demo-feedback" role="status">Try a filter or drag the comparison line.</span><a id="demo-open-research" href="/research?sport=nfl">Open real research <span data-icon="arrow" aria-hidden="true">→</span></a></div>
       </section>
-      <p class="landing-preview-caption">Explore freely. This demo uses sample data, not current odds or predictions. Demo saves and notes reset when you reload.</p>
+      <p class="landing-preview-caption">Sample results, not current odds or predictions. Demo saves and notes reset on reload.</p>
     </section>
     <section class="landing-sports landing-container" id="sports" aria-labelledby="sports-title">
-      <div class="landing-section-top"><h2 id="sports-title">Your sport. Your starting point.</h2><p>Go straight to player research.</p></div>
+      <h2 id="sports-title">Six sports. One research workspace.</h2>
       <nav class="landing-sport-links" aria-label="Choose a sport">
-        <a href="/research?sport=nfl"><span data-icon="football" aria-hidden="true"></span>NFL<span data-icon="arrow" aria-hidden="true">→</span></a>
-        <a href="/research?sport=mlb"><span data-icon="baseball" aria-hidden="true"></span>MLB<span data-icon="arrow" aria-hidden="true">→</span></a>
-        <a href="/research?sport=nba"><span data-icon="basketball" aria-hidden="true"></span>NBA<span data-icon="arrow" aria-hidden="true">→</span></a>
-        <a href="/research?sport=wnba"><span data-icon="basketball" aria-hidden="true"></span>WNBA<span data-icon="arrow" aria-hidden="true">→</span></a>
-        <a href="/research?sport=nhl"><span data-icon="hockey" aria-hidden="true"></span>NHL<span data-icon="arrow" aria-hidden="true">→</span></a>
-        <a href="/research?sport=soccer"><span data-icon="soccer" aria-hidden="true"></span>Soccer<span data-icon="arrow" aria-hidden="true">→</span></a>
+        <a href="/research?sport=nfl"><span data-icon="football" aria-hidden="true"></span>NFL</a><a href="/research?sport=nba"><span data-icon="basketball" aria-hidden="true"></span>NBA</a><a href="/research?sport=wnba"><span data-icon="basketball" aria-hidden="true"></span>WNBA</a><a href="/research?sport=mlb"><span data-icon="baseball" aria-hidden="true"></span>MLB</a><a href="/research?sport=nhl"><span data-icon="hockey" aria-hidden="true"></span>NHL</a><a href="/research?sport=soccer"><span data-icon="soccer" aria-hidden="true"></span>Soccer</a>
       </nav>
-      <p class="landing-coverage">Available markets and history vary by sport. Live research covers NFL, MLB, NBA and WNBA.</p>
+      <p class="landing-coverage">Markets and history vary by sport. Live research covers NFL, MLB, NBA and WNBA.</p>
     </section>
-    <section class="landing-process landing-container" aria-labelledby="process-title">
-      <div class="landing-section-heading"><div><p class="landing-eyebrow">FROM A QUESTION TO A CLOSER LOOK</p><h2 id="process-title">More context.<br>Better questions.</h2></div><p>A season average only tells part of the story. Follow the research from recent games to the matchup ahead.</p></div>
-      <div class="landing-process-grid">
-        <article><span class="landing-step">01 <span>RECENT FORM</span></span><h3>Start with the games.</h3><p>See individual results, change the sample, and drag the comparison line to explore what happened above or below it.</p></article>
-        <article><span class="landing-step">02 <span>MATCHUP CONTEXT</span></span><h3>Look at the other side.</h3><p>Check opponent statistics and available injury or lineup information. Source labels help you understand what is known.</p></article>
-        <article><span class="landing-step">03 <span>YOUR RESEARCH</span></span><h3>Keep your own record.</h3><p>Save players, add research notes, and track tickets in My picks. Your personal records stay in this browser.</p></article>
-      </div>
+    <section class="landing-feature landing-container" aria-labelledby="feature-title">
+      <div class="landing-feature-copy"><p class="landing-eyebrow">FROM THE TREND TO THE DETAIL</p><h2 id="feature-title">Find a trend.<br><span>Follow the numbers.</span></h2><p>See the games behind a hit rate. Change the sample, move the line, and check the matchup before drawing a conclusion.</p><a class="landing-text-link" href="#workspace" data-demo-launch="trends">Explore the sample board <span data-icon="arrow" aria-hidden="true">→</span></a></div>
+      <div class="landing-feature-board"><div class="landing-feature-board-title"><span data-icon="trends" aria-hidden="true"></span><h3>A closer look starts here</h3><span>DEMO</span></div><div id="landing-sample-players"></div><p>Last 10 sample games · above the comparison line</p></div>
     </section>
     <section class="landing-tools landing-container" id="tools" aria-labelledby="tools-title">
-      <div class="landing-section-heading"><div><p class="landing-eyebrow">ONE WORKSPACE</p><h2 id="tools-title">Follow the game<br>from every angle.</h2></div><p>Use the view that answers your question. Historical results, experimental estimates and your own records stay clearly identified.</p></div>
-      <div class="landing-tool-grid">
-        <a class="landing-tool" href="/nfl?view=trends"><span class="landing-tool-icon" data-icon="trends" aria-hidden="true"></span><div><h3>Trends &amp; lines</h3><p>Game logs, hit rates and the context behind recent form.</p><span class="landing-tool-link">Explore trends <span data-icon="arrow" aria-hidden="true">→</span></span></div></a>
-        <a class="landing-tool" href="/live"><span class="landing-tool-icon" data-icon="live" aria-hidden="true"></span><div><h3>Live research</h3><p>Game state, available odds and eligible in-game model estimates.</p><span class="landing-tool-link">Choose a live board <span data-icon="arrow" aria-hidden="true">→</span></span></div></a>
-        <a class="landing-tool" href="/simulation"><span class="landing-tool-icon" data-icon="simulation" aria-hidden="true"></span><div><h3>Simulation</h3><p>Explore possible game outcomes and inspect the assumptions.</p><span class="landing-tool-link">Open simulation <span data-icon="arrow" aria-hidden="true">→</span></span></div></a>
-        <a class="landing-tool" href="/bets"><span class="landing-tool-icon" data-icon="picks" aria-hidden="true"></span><div><h3>My picks</h3><p>Record single bets and parlays, with your own notes and results.</p><span class="landing-tool-link">Open your tracker <span data-icon="arrow" aria-hidden="true">→</span></span></div></a>
+      <div class="landing-tools-intro"><p class="landing-eyebrow">BEYOND THE PLAYER CHART</p><h2 id="tools-title">Keep the game<br><span>in perspective.</span></h2><p>Follow live play, explore possible outcomes, and keep track of your own research.</p><a class="landing-text-link" href="/research">Enter the workspace <span data-icon="arrow" aria-hidden="true">→</span></a></div>
+      <div class="landing-tool-list">
+        <a class="landing-tool" href="/live"><span data-icon="live" aria-hidden="true"></span><div><h3>Follow the live game</h3><p>Game state, available odds and eligible model estimates.</p></div><span data-icon="arrow" aria-hidden="true">→</span></a>
+        <a class="landing-tool" href="/simulation"><span data-icon="simulation" aria-hidden="true"></span><div><h3>Explore possible outcomes</h3><p>Run simulations and inspect the assumptions behind them.</p></div><span data-icon="arrow" aria-hidden="true">→</span></a>
+        <a class="landing-tool" href="/bets"><span data-icon="picks" aria-hidden="true"></span><div><h3>Keep your own record</h3><p>Save tickets, notes and results in My picks.</p></div><span data-icon="arrow" aria-hidden="true">→</span></a>
+        <a class="landing-tool" href="/performance"><span data-icon="performance" aria-hidden="true"></span><div><h3>Check the model’s record</h3><p>Review recorded NFL estimates against completed games.</p></div><span data-icon="arrow" aria-hidden="true">→</span></a>
       </div>
     </section>
-    <section class="landing-closing landing-container" aria-labelledby="closing-title">
-      <div><p class="landing-eyebrow">MAKE THE RESEARCH YOURS</p><h2 id="closing-title">Take a closer look.</h2><p>Choose a sport. Find a player. See the whole picture.</p></div>
-      <a class="landing-button" href="/research">Open Sportslab <span data-icon="arrow" aria-hidden="true">→</span></a>
+    <section class="landing-questions landing-container" aria-labelledby="questions-title">
+      <h2 id="questions-title">Before you get started.</h2>
+      <div><details><summary>Is this demo showing real picks?<span data-icon="plus" aria-hidden="true"></span></summary><p>No. The demo uses fictional players and sample games so you can try every control. Open the research workspace for available source data, posted lines and their limitations.</p></details><details><summary>Where are my picks and notes saved?<span data-icon="plus" aria-hidden="true"></span></summary><p>Your records in the research workspace stay in this browser. The homepage demo is separate: its saves and notes last only until you reload.</p></details><details><summary>Does a hit rate predict the next game?<span data-icon="plus" aria-hidden="true"></span></summary><p>No. A hit rate describes the games in the selected sample. Model estimates are shown separately, are experimental, and can be unavailable when the required data is missing.</p></details></div>
     </section>
+    <section class="landing-closing landing-container" aria-labelledby="closing-title"><p class="landing-eyebrow">SPORTSLAB / YOUR RESEARCH WORKSPACE</p><h2 id="closing-title">The next move is yours.</h2><a class="landing-button" href="/research">Open Sportslab <span data-icon="arrow" aria-hidden="true">→</span></a></section>
   </main>
-  <footer class="landing-footer landing-container">
-    <div class="landing-footer-top"><a class="landing-brand" href="/" aria-label="Sportslab home"><img src="/favicon.svg" width="30" height="30" alt=""><span>sports<span>lab</span></span></a><nav aria-label="More research tools"><a href="/performance">NFL model performance</a><a href="/paper">Paper returns</a><a href="/bets">My picks</a></nav></div>
-    <p>Independent sports research. Models are experimental, public feeds may lag, and past hit rates are not future probabilities. Check the sources and limitations in each view. Sportslab does not place bets.</p>
-  </footer>
+  <footer class="landing-footer landing-container"><div class="landing-footer-top"><a class="landing-brand" href="/" aria-label="Sportslab home"><img src="/favicon.svg" width="30" height="30" alt=""><span>sports<span>lab</span></span></a><nav aria-label="More research tools"><a href="/nfl?view=trends">Trends &amp; lines</a><a href="/performance">NFL performance</a><a href="/paper">Paper returns</a><a href="/bets">My picks</a></nav></div><p>Independent sports research. Models are experimental, public feeds may lag, and past hit rates are not future probabilities. Check the sources and limitations in each view. Sportslab does not place bets.</p></footer>
 </body>
 </html>

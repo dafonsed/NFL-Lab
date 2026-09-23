@@ -2,6 +2,8 @@
 
 September 23, 2026. Replaces the two static “Inside Sportslab” screenshots with native HTML controls and SVG charts.
 
+The compact homepage update is documented in [landing-layout-refresh.md](landing-layout-refresh.md). It adds four-player pagination, expandable secondary controls and a smaller chart while retaining the interactions below.
+
 ## Implemented
 
 - Research: six sports, twelve fictional players, three statistics per sport, L5/L10/L20/H2H, home/away filters, Over/Under and numerical line entry.

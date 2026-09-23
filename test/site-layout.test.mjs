@@ -17,7 +17,7 @@ test('public homepage is separate from the sport-aware research workspace', asyn
   const homepage = await fs.readFile(new URL('../public/landing.html', import.meta.url), 'utf8');
   const $ = load(renderSitePage(homepage, root));
   assert.equal($('.site-header').length, 0);
-  assert.equal($('h1').text(), 'Your next pick.A clearer picture.');
+  assert.equal($('h1').text(), 'Your next pick.See the whole picture.');
   assert.equal($('script[src="/home.js"]').length, 0);
   assert.equal($('.landing-button[href="/research"]').length, 3);
   assert.equal($('.landing-sport-links a').length, 6);
