@@ -1,5 +1,5 @@
 import { SPORTS } from './bet-utils.js';
-import { gameKey,playerEligible,playerMarkets,findPlayers } from './bet-legs.js';
+import { gameKey,playerEligible,playerMarkets,findPlayers,formatLegTarget } from './bet-legs.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const leagues={'eng.1':'Premier League','esp.1':'La Liga','ger.1':'Bundesliga','ita.1':'Serie A','fra.1':'Ligue 1','usa.1':'MLS','uefa.champions':'Champions League'};
 const option=(value,label,selected)=>`<option value="${esc(value)}"${value===selected?' selected':''}>${esc(label)}</option>`;
@@ -66,7 +66,7 @@ export class BetLegEditor {
       l.subjectId=market.kind==='total'?'game':l.side;
       l.subject=market.kind==='total'?'Game total':l.side==='draw'?'Draw':game?.[l.side]?.name||l.side;
     }else if(g){const p=(market?.kind==='team'?g.teams:g.players).find(x=>x.id===l.subjectId);if(p)l.subject=p.name;}
-    const side=l.market==='moneyline'?'Moneyline':l.market==='spread'?'Spread '+(Number(l.line)>0?'+':'')+l.line:(l.side==='under'?'Under ':'Over ')+l.line;
+    const side=formatLegTarget(l);
     l.label=[l.subject,l.market==='moneyline'||l.market==='spread'?side:l.marketLabel+' · '+side].filter(Boolean).join(' · ');
   }
   values(){return this.rows.map(l=>{this.hydrate(l);return {...l,mode:l.mode==='quick'?'auto':l.mode,entry:l.mode==='quick'?'quick':'game',...(l.mode==='manual'?{market:l.market||'custom',override:l.override||'open'}:{})};});}
@@ -109,7 +109,9 @@ export class BetLegEditor {
       if(l.subjectId&&!subjects.some(([id])=>id===l.subjectId))subjects.push([l.subjectId,'Saved selection: '+(l.subject||l.subjectId)]);
       const search=this.searchState(l),picked=g?.players.find(p=>p.id===l.subjectId),props=picked?playerMarkets(picked,g.markets).map(([k,v])=>[k,v.label]):[];
       if(l.market&&!props.some(([key])=>key===l.market))props.push([l.market,l.marketLabel||l.market]);
-      const sides=['moneyline','spread'].includes(l.market)?[['home','Home'],['away','Away'],...(l.sport==='Soccer'&&l.market==='moneyline'?[['draw','Draw']]:[])]:[['over','Over'],['under','Under']];
+      const teamSide=['moneyline','spread'].includes(l.market),customTarget=['at_least','exactly'].includes(l.side);
+      const sides=teamSide?[['home','Home'],['away','Away'],...(l.sport==='Soccer'&&l.market==='moneyline'?[['draw','Draw']]:[])]:[['over','Over'],['under','Under'],['at_least','At least (X+)'],['exactly','Exactly']];
+      const targetHelp=l.side==='at_least'?'Reaching this amount counts as a hit (e.g. 25+ includes exactly 25).':l.side==='exactly'?'Only this exact final amount counts as a hit.':'Enter the line you took, including alternate lines.';
       const quickFlow=`<div class="quick-player-search full-field"><label>Player name<input type="search" data-search-player="${esc(l.id)}" value="${esc(search.query)}" placeholder="Type a player name…" autocomplete="off" maxlength="100"></label><div data-search-results="${esc(l.id)}" aria-live="polite"></div></div>${l.subjectId?`<div class="selected-search-player full-field"><strong>${esc(l.subject)}</strong><small>${esc(l.matchup)}</small></div>${select('market','Bet type',[['','Choose player prop…'],...props],l.market)}`:''}`;
       const gameFlow=`<div class="full-field">${select('gameId','Game',gameChoices,l.gameId)}</div>${select('market','Bet type',[['','Choose market…'],...Object.entries(c?.markets||g?.markets||{}).map(([k,v])=>[k,v.label])],l.market)}${m&&['player','team'].includes(m.kind)?select('subjectId',m.kind==='team'?'Team':'Player',subjects,l.subjectId):''}`;
       return `<fieldset class="leg-editor" data-leg-id="${esc(l.id)}"><legend>Leg ${i+1}</legend><button type="button" class="leg-remove" data-remove="${esc(l.id)}" aria-label="Remove leg ${i+1}">Remove</button><div class="leg-fields">
@@ -118,7 +120,8 @@ export class BetLegEditor {
         ${l.sport==='Soccer'?select('league','League',Object.entries(leagues),l.league):''}
         ${manual?input('label','Selection / player / market',l.label,'maxlength="240" placeholder="e.g. A’ja Wilson points"'):quick?quickFlow:gameFlow}
         ${manual?select('market','Line type',[['custom','Player prop / total'],['spread','Spread'],['moneyline','Moneyline']],l.market||'custom'):''}
-        ${!quick||l.subjectId&&l.market?`${select('side','Your side',sides,l.side)}${l.market!=='moneyline'?input('line','Line you took',l.line,`type="number" step="${manual?'any':'0.5'}" min="-100000" max="100000" placeholder="e.g. 24.5"`):''}
+        ${!quick||l.subjectId&&l.market?`${select('side',teamSide?'Your side':'Target type',sides,l.side)}${l.market!=='moneyline'?input('line',customTarget?'Custom amount':'Line you took',l.line,`type="number" step="${customTarget?'1':manual?'any':'0.5'}" min="${customTarget?'0':'-100000'}" max="100000" placeholder="${customTarget?'e.g. 25':'e.g. 24.5'}"`):''}
+        ${!teamSide?`<p class="leg-help full-field">${targetHelp}</p>`:''}
         ${select('override','Leg result',[...(!manual?[['','Automatic from box score']]:[]),['open','Pending'],['won','Hit / won'],['lost','Miss / lost'],['push','Push'],['void','Void']],l.override||(manual?'open':''))}`:''}
       </div>${!manual?`<p class="leg-help" role="status">${this.pending.has(l.id)?'Loading games…':esc(this.errors.get(l.id)||(!c?.games.length?'No published games on this date. Choose another date or enter manually.':quick?'Search covers all '+l.sport+' games on '+l.date+'.':'Full-game lines only. Soccer uses regulation time; other sports include overtime. Enter your exact booked line.'))}</p>`:''}</fieldset>`;
     }).join('')||'<p class="leg-help">No connected legs. Existing tickets can keep their manual result, or you can add their selections below.</p>';

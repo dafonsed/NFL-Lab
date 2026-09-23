@@ -3,6 +3,7 @@ const outcomes=['open','won','lost','push','void'];
 const number=v=>v!==''&&v!==null&&v!==undefined&&Number.isFinite(Number(v))?Number(v):null;
 const text=(v,max=160)=>String(v??'').trim().slice(0,max);
 export const gameKey=l=>[l.sport,l.league,l.date,l.gameId].join('|');
+export const formatLegTarget=l=>l.market==='moneyline'?'Moneyline':l.market==='spread'?'Spread '+(Number(l.line)>0?'+':'')+l.line:l.side==='at_least'?l.line+'+':(l.side==='exactly'?'Exactly ':l.side==='under'?'Under ':'Over ')+l.line;
 export const playerEligible=(player,market)=>market?.kind==='player'&&(!market.playerRole||player.roles?.includes(market.playerRole)===true);
 export const playerMarkets=(player,markets)=>Object.entries(markets||{}).filter(([,m])=>playerEligible(player,m));
 const foldedName=value=>String(value||'').normalize('NFKD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^a-z0-9]/g,'');
@@ -17,10 +18,11 @@ export function validateLeg(input) {
   if(!['NFL','MLB','NBA','WNBA','NHL','Soccer','Other'].includes(input.sport))throw Error('Choose a sport for each leg.');
   const label=text(input.label,240),marketLabel=text(input.marketLabel),subject=text(input.subject),matchup=text(input.matchup);
   if(!label)throw Error('Describe every leg.');
-  if(!['over','under','home','away','draw'].includes(input.side))throw Error('Choose a side for every leg.');
+  if(!['over','under','at_least','exactly','home','away','draw'].includes(input.side))throw Error('Choose a target or side for every leg.');
   const line=number(input.line);
+  if(['at_least','exactly'].includes(input.side)&&(line===null||!Number.isInteger(line)||line<0||line>100000))throw Error('Enter a custom amount from 0 to 100,000 as a whole number for X+ or Exactly.');
   if(input.market!=='moneyline'&&(line===null||Math.abs(line)>100000||input.mode==='auto'&&!Number.isInteger(line*2)))throw Error('Enter a whole- or half-point line for every connected leg. Quarter lines require manual book settlement.');
-  if(input.mode==='auto'&&(['moneyline','spread'].includes(input.market)?!['home','away',...(input.sport==='Soccer'&&input.market==='moneyline'?['draw']:[])].includes(input.side):!['over','under'].includes(input.side)))throw Error('Choose a side that matches the bet type.');
+  if(input.mode==='auto'&&(['moneyline','spread'].includes(input.market)?!['home','away',...(input.sport==='Soccer'&&input.market==='moneyline'?['draw']:[])].includes(input.side):!['over','under','at_least','exactly'].includes(input.side)))throw Error('Choose a side that matches the bet type.');
   if(input.mode==='auto'&&(!/^\d{6,12}$/.test(input.gameId||'')||!/^\d{4}-\d{2}-\d{2}$/.test(input.date||'')||!Number.isFinite(Date.parse(input.date))||new Date(input.date).toISOString().slice(0,10)!==input.date||!input.market||!input.subjectId))throw Error('Connect every automatic leg to a game and player or team.');
   if(input.override&&!outcomes.includes(input.override))throw Error('Choose a valid leg result.');
   const o=input.observation;
@@ -67,6 +69,7 @@ export function evaluateLeg(leg,snapshot) {
   }
   if(!Number.isFinite(actual))return result(game.complete?'review':'unavailable','Required statistic is missing; this is not counted as a miss.');
   if(!game.complete)return result('live','In progress · result remains unsettled until final.',actual);
+  if(config.kind!=='spread'&&['at_least','exactly'].includes(leg.side))return result((leg.side==='at_least'?actual>=leg.line:actual===leg.line)?'won':'lost','Final box-score result.',actual);
   const diff=config.kind==='spread'?actual+leg.line:actual-leg.line;
   return result(diff===0?'push':(config.kind==='spread'||leg.side==='over'?diff>0:diff<0)?'won':'lost','Final box-score result.',actual);
 }

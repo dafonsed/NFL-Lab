@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluateLeg,ticketSettlement,validateLeg,refreshTicket,gameKey } from '../public/bet-legs.js';
-import { validateBet,betReturns,readBets,BET_STORAGE_KEY,betsCsv } from '../public/bet-utils.js';
+import { evaluateLeg,ticketSettlement,validateLeg,refreshTicket,gameKey,formatLegTarget } from '../public/bet-legs.js';
+import { validateBet,betReturns,readBets,writeBets,BET_STORAGE_KEY,betsCsv } from '../public/bet-utils.js';
 import { trackerQuery,trackerMarkets,espnTrackerGame,nflPlayers,mlbTrackerGame,BetTrackerStore } from '../lib/bet-tracker.mjs';
 const leg=(extra={})=>({id:'leg-1',mode:'auto',sport:'WNBA',league:'wnba',date:'2026-09-22',gameId:'401000001',market:'points',marketLabel:'Points',subjectId:'22',subject:'Player',matchup:'Away @ Home',label:'Player points over 10.5',side:'over',line:10.5,override:null,...extra});
 const snapshot=(extra={})=>({sport:'wnba',league:'wnba',source:{url:'https://site.api.espn.com/result',checkedAt:'2026-09-22T10:00Z',stale:false},game:{id:'401000001',state:'post',complete:true,status:'Final',home:{id:'1',score:80},away:{id:'2',score:75}},markets:trackerMarkets('wnba'),players:[{id:'22',participation:'played',values:{points:12}}],...extra});
@@ -15,6 +15,39 @@ test('final outcomes use the entered line: over, under, integer push and true ze
  const zero=snapshot({players:[{id:'22',participation:'played',values:{points:0}}]});
  assert.equal(evaluateLeg(leg({side:'under',line:.5}),zero).state,'won');
  assert.equal(evaluateLeg(leg({line:.5}),zero).state,'lost');
+});
+test('custom milestones include equality while exact targets exclude larger results',()=>{
+ for(const [side,line,expected] of [['at_least',11,'won'],['at_least',12,'won'],['at_least',13,'lost'],['exactly',11,'lost'],['exactly',12,'won'],['exactly',13,'lost']])assert.equal(evaluateLeg(validateLeg(leg({side,line})),snapshot()).state,expected);
+ const zero=snapshot({players:[{id:'22',participation:'played',values:{points:0}}]});
+ assert.equal(evaluateLeg(leg({side:'exactly',line:0}),zero).state,'won');
+ assert.equal(evaluateLeg(leg({side:'at_least',line:1}),zero).state,'lost');
+ assert.equal(evaluateLeg(leg({side:'over',line:12}),snapshot()).state,'push');
+});
+test('custom targets retain live, DNP, missing-stat and source protections',()=>{
+ for(const side of ['at_least','exactly']){
+  const pick=leg({side,line:12}),live=snapshot();live.game.complete=false;live.game.state='in';
+  assert.equal(evaluateLeg(pick,live).state,'live');
+  for(const players of [[],[{id:'22',participation:'dnp',values:{points:0}}],[{id:'22',participation:'played',values:{}}]])assert.equal(evaluateLeg(pick,snapshot({players})).state,'review');
+  const stale=snapshot();stale.source.stale=true;assert.equal(evaluateLeg(pick,stale).state,'unavailable');
+ }
+});
+test('custom amounts validate, persist, export and settle within a mixed parlay',()=>{
+ for(const side of ['at_least','exactly']){
+  for(const line of ['',-1,1.5,Infinity,100001])assert.throws(()=>validateLeg(leg({side,line})),/custom amount/);
+  for(const market of ['moneyline','spread'])assert.throws(()=>validateLeg(leg({side,line:2,market})),/side that matches/);
+  assert.equal(validateLeg(leg({side,line:'25'})).line,25);
+ }
+ const picks=[leg({side:'at_least',line:12,label:'Player points 12+'}),leg({id:'leg-2',side:'under',line:13}),leg({id:'leg-3',side:'exactly',line:12,label:'Player points Exactly 12'})];
+ const bet={...validateBet(ticket({type:'parlay',legs:picks})),id:'custom-target-ticket',updatedAt:'2026-09-22T10:00Z'};
+ const entries=new Map(),storage={getItem:k=>entries.get(k)??null,setItem:(k,v)=>entries.set(k,v)};
+ writeBets(storage,[bet]);const saved=readBets(storage)[0];
+ assert.deepEqual(saved.legs.map(l=>[l.side,l.line]),[['at_least',12],['under',13],['exactly',12]]);
+ const snapshots=new Map([[gameKey(picks[0]),snapshot()]]),settled=refreshTicket(saved,snapshots);
+ assert.equal(settled.status,'won');assert.ok(settled.legs.every(l=>l.observation.state==='won'));
+ const csv=betsCsv([settled]);assert.match(csv,/\| 12\+ \|/);assert.match(csv,/\| Exactly 12 \|/);
+ const corrected=snapshot();corrected.players[0].values.points=13;snapshots.set(gameKey(picks[0]),corrected);
+ assert.equal(refreshTicket(settled,snapshots).status,'lost');
+ assert.equal(formatLegTarget(picks[0]),'12+');assert.equal(formatLegTarget(picks[2]),'Exactly 12');
 });
 test('live overs stay unsettled and missing / DNP / stale sources never become misses',()=>{
  const live=snapshot();live.game.complete=false;live.game.state='in';

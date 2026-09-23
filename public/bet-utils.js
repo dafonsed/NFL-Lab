@@ -1,4 +1,4 @@
-import { validateLeg, ticketSettlement, LEG_RESULTS, legState } from './bet-legs.js';
+import { validateLeg, ticketSettlement, LEG_RESULTS, legState, formatLegTarget } from './bet-legs.js';
 export const BET_STORAGE_KEY = 'nfl-lab.personal-bets.v1';
 export const SPORTS = ['NFL', 'MLB', 'NBA', 'WNBA', 'NHL', 'Soccer', 'Other'];
 export const STATUSES = { open: 'Open', won: 'Won', lost: 'Lost', push: 'Push', void: 'Void', cashed: 'Cashed out' };
@@ -95,7 +95,7 @@ export function betsCsv(bets) {
   const rows = [['Date', 'Sport', 'Type', 'Bet', 'Sportsbook', 'Odds format', 'Odds', 'Stake USD', 'Result', 'Return USD', 'Profit USD', 'Notes', 'Legs', 'Ticket settlement']];
   for (const bet of bets) {
     const result = betReturns(bet);
-    rows.push([bet.date, bet.sport, bet.type, bet.selection, bet.book, bet.oddsFormat, bet.odds, bet.stake, STATUSES[bet.status], result.returned, result.profit, bet.notes,(bet.legs||[]).map((l,i)=>`${i+1}. ${l.label} | ${l.side} ${l.line??''} | ${l.matchup} | ${l.date} | ${LEG_RESULTS[legState(l)]} | Actual: ${l.observation?.actual??'—'} | ${l.observation?.sourceUrl||'Manual'}`).join('\n'),bet.settlement||'manual']);
+    rows.push([bet.date, bet.sport, bet.type, bet.selection, bet.book, bet.oddsFormat, bet.odds, bet.stake, STATUSES[bet.status], result.returned, result.profit, bet.notes,(bet.legs||[]).map((l,i)=>`${i+1}. ${l.label} | ${formatLegTarget(l)} | ${l.matchup} | ${l.date} | ${LEG_RESULTS[legState(l)]} | Actual: ${l.observation?.actual??'—'} | ${l.observation?.sourceUrl||'Manual'}`).join('\n'),bet.settlement||'manual']);
   }
   return rows.map(row => row.map(cell).join(',')).join('\r\n');
 }

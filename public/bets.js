@@ -1,6 +1,6 @@
 import { BET_STORAGE_KEY, STATUSES, validateBet, betReturns, summarizeBets, readBets, writeBets, betsCsv } from './bet-utils.js';
 import { BetLegEditor } from './bet-editor.js';
-import { LEG_RESULTS, legState, ticketSettlement, gameKey, refreshTicket } from './bet-legs.js';
+import { LEG_RESULTS, legState, ticketSettlement, gameKey, refreshTicket, formatLegTarget } from './bet-legs.js';
 
 const $ = selector => document.querySelector(selector);
 const form = $('#bet-form');
@@ -17,7 +17,7 @@ const editor=new BetLegEditor($('#leg-editor'),()=>{if(editor.rows.length>1)fiel
 const safeUrl=url=>/^https:\/\/(site\.api\.espn\.com|statsapi\.mlb\.com)\//.test(url||'')?esc(url):'#';
 function legMarkup(leg,index){
   const state=legState(leg),o=leg.observation,actual=o?.actual;
-  const threshold=leg.market==='moneyline'?'Moneyline':leg.market==='spread'?'Spread '+(leg.line>0?'+':'')+leg.line:(leg.side==='under'?'Under ':'Over ')+leg.line;
+  const threshold=formatLegTarget(leg);
   const progress=Number.isFinite(actual)&&leg.line>0&&!['spread','moneyline'].includes(leg.market)?Math.max(0,Math.min(100,actual/leg.line*100)):null;
   return `<li class="tracked-leg"><div class="leg-index">${index+1}</div><div class="leg-description"><strong>${esc(leg.label)}</strong><small>${esc([leg.sport,leg.matchup,leg.date].filter(Boolean).join(' · '))}</small><span class="leg-line">${esc(threshold)}${Number.isFinite(actual)?' <span>· '+(state==='live'?'Current':'Reported')+':</span> <b>'+actual+'</b>':''}</span>${progress!==null?`<div class="leg-progress" aria-hidden="true"><span style="width:${progress}%"></span></div>`:''}<small>${leg.override?'Result entered manually.':esc(o?.message||'Waiting for a result refresh.')}${o?.checkedAt?' Checked '+esc(new Date(o.checkedAt).toLocaleTimeString()):''}${o?.sourceUrl?` · <a href="${safeUrl(o.sourceUrl)}" target="_blank" rel="noreferrer">Box score ↗</a>`:''}</small></div><span class="bet-result ${state}">${LEG_RESULTS[state]}</span></li>`;
 }

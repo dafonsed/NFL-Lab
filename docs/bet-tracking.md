@@ -14,6 +14,8 @@ Choose **Quick Search** in the **Tracking** dropdown and type a player name. No 
 
 ## Source and result rules
 
+For a player milestone, choose **Target type → At least (X+)** and enter your **Custom amount**, such as 25 for 25+ points or 2 for 2+ hits. Reaching the entered amount wins; it is not an Over bet and cannot push at that amount. **Exactly** wins only when the final statistic equals the custom amount. Both use nonnegative whole-number targets and work on singles and parlay legs. Over/Under still accepts your own whole- or half-point alternate line and pushes on equality. Saved tickets, editing and CSV exports preserve these distinctions.
+
 - MLB: `https://statsapi.mlb.com/api/v1/schedule` for game selection and `https://statsapi.mlb.com/api/v1.1/game/{id}/feed/live` for score, status and box scores. Pitcher outs convert innings with baseball notation: 5.2 means 17 outs. Batting and pitching fields stay separate.
 - Other connected sports: `https://site.api.espn.com/apis/site/v2/sports/{sport}/{league}/scoreboard`, `/summary?event={id}`, and pregame `/teams/{id}/roster` when available. Football fields remain attached to their statistical category, so defensive interceptions cannot become interceptions thrown.
 - A live reading is progress, even if an over has passed its line. Only a completed game can establish hit/miss/push. A later official-stat correction updates the automatic result when checked again.
