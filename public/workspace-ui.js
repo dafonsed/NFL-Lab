@@ -42,8 +42,8 @@ function sheet(title, eyebrow, content, footer = '') {
 }
 
 function displaySettings() {
-  const dialog = sheet('Make it yours', 'Display settings', `
-    <div class="display-preview"><span>SPORTS LAB / DISPLAY</span><strong>More room for the game.</strong><p>Choose how much information fits on your screen.</p></div>
+  const dialog = sheet('Appearance', 'Display settings', `
+    <div class="display-preview"><span class="appearance-label">${icon('palette')} NIGHT THEME</span><strong>Display preferences</strong><p>Adjust card spacing and animations below.</p><div class="appearance-swatches" aria-label="Theme colors"><span style="--swatch:#85aaff" title="Blue"></span><span style="--swatch:#a698ff" title="Violet"></span><span style="--swatch:#76dcf7" title="Cyan"></span><span style="--swatch:#5ce1cd" title="Mint"></span><span style="--swatch:#f3f4fb" title="White"></span></div></div>
     <div class="sheet-field"><span>Card spacing</span><div class="display-segments" role="group" aria-label="Card spacing"><button data-density="comfortable" aria-pressed="${settings.density !== 'compact'}">Comfortable</button><button data-density="compact" aria-pressed="${settings.density === 'compact'}">Compact</button></div></div>
     <label class="sheet-switch"><span>Reduce animations</span><input type="checkbox" data-reduce-motion ${settings.motion === 'reduce' ? 'checked' : ''}></label>
     <div><div class="sheet-section-title"><span>Developer mode</span><button class="site-dev-toggle" data-dev-toggle aria-pressed="${document.documentElement.dataset.devMode === 'true'}">${icon('code')}<span>Dev mode</span><b>${document.documentElement.dataset.devMode === 'true' ? 'On' : 'Off'}</b></button></div><p>Show model inputs, formulas, and source data in player research.</p></div>
@@ -189,6 +189,14 @@ for (const search of document.querySelectorAll('.searchbox,.td-search')) {
 for (const choice of document.querySelectorAll('.choice-symbol')) choice.innerHTML = icon(choice.closest('.trends-choice') ? 'trends' : 'research');
 for (const node of document.querySelectorAll('[data-ui-icon]')) node.outerHTML = icon(node.dataset.uiIcon);
 
+// Label the destination on each research page; no status is inferred from styling.
+const pageHeader = $('.site-header'), headingLabel = $('.page-heading .eyebrow');
+if (headingLabel && pageHeader) {
+  const sport = pageHeader.dataset.siteSport, section = pageHeader.dataset.siteSection;
+  const labels = { research: 'PLAYER RESEARCH', trends: 'PLAYER TRENDS', live: 'LIVE GAME CENTER', bets: 'MY PICKS', performance: 'MODEL PERFORMANCE', paper: 'PAPER RETURNS', simulation: 'GAME SIMULATION' };
+  if (!headingLabel.querySelector('[id]')) headingLabel.innerHTML = `${icon(section === 'bets' ? 'picks' : section)}<span>${esc(sport ? sport.toUpperCase() + ' / ' : '')}${esc(labels[section] || 'SPORTS LAB')}</span>`;
+}
+
 // Put the player data ahead of repeated board-level explanations. Native details
 // keep every source note and overview available without another modal.
 function foldPanel(node, title, className) {
@@ -202,6 +210,11 @@ function foldPanel(node, title, className) {
 if (!document.body.classList.contains('bets-app')) foldPanel($('#summary'), 'Board overview', 'overview-fold');
 foldPanel($('#prop-status') || $('#line-source'), 'Sportsbook lines & sources', 'sources-fold');
 foldPanel($('#game-context'), 'Matchup & availability', 'context-fold');
+const boardNotes = [...document.querySelectorAll('main > .workspace-fold')];
+if (boardNotes.length > 1) {
+  const strip = document.createElement('div'); strip.className = 'workspace-context-strip';
+  boardNotes[0].before(strip); strip.append(...boardNotes);
+}
 const notices = $('#notice');
 if (notices) {
   const foldNotes = () => { for (const note of notices.querySelectorAll(':scope > .notice.info')) foldPanel(note, 'About this data', 'information-fold'); };

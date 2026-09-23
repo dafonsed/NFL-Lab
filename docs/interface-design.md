@@ -4,11 +4,13 @@ The app uses one dark design system across NFL, MLB, NBA, WNBA, NHL, and soccer.
 
 ## Design decisions
 
-- Charcoal surfaces and fine borders distinguish content without bright outlines on every card. Mint marks primary actions and positive comparisons. White marks selected sports and tabs. Negative outcomes retain warm red; missing values remain a dash.
+- The night theme uses graphite surfaces, visible cyan/violet lighting at panel edges, and a dotted texture on navigation and featured headers. Blue-to-violet pills mark primary actions. Secondary actions use translucent dark pills, and circular utility controls use a light surface. Mint/red remain the chart's hit/miss colors; decorative glows never imply a model outcome.
+- Sport selectors, market tabs, saved-player actions, metadata labels, filter counts, and the floating mobile dock have distinct selected states. Player headers keep matchup labels, sportsbook lines, and chart controls together in the Outlier research hierarchy. The mobile player footer keeps the line and source button in one row.
 - The desktop rail carries destinations; the top bar carries sports and display controls. On phones, Research, Trends, Live, My picks, and More remain available in the bottom bar. Every icon-only destination has an accessible name.
 - Charts, projections, and lines stay ahead of technical explanations. Board overviews, source notes, and matchup context use native expandable sections. Source failures and stale-data warnings remain visible. Developer mode reveals calculation details and the longer model explanations.
 - Filter sheets edit drafts. Cancel or Escape discards them; Apply updates the existing page controls. Presets are scoped to sport and workspace, preserve the current date/market/search, and save only the controls shown in the sheet. Names are escaped. Storage failures are reported without preventing session use.
-- Comfortable/compact spacing and reduced animation preferences persist locally. Native dialogs provide modal focus behavior; closing a sheet restores the trigger, including opening settings from the mobile menu.
+- Research toolbars keep search, sort, and quick toggles in one row; detailed dropdown filters live in the filter sheet. Related source and overview disclosures share a compact strip, with an open disclosure expanding to the full width.
+- The labeled Appearance control opens the theme preview, comfortable/compact spacing, and reduced-animation preferences. Preferences persist locally. Native dialogs provide modal focus behavior; closing a sheet restores the trigger, including opening settings from the mobile menu.
 - My picks adds All/Open/Settled views over the existing local ticket ledger. Refunded tickets count as settled; existing profit, ROI, export, and settlement calculations are unchanged.
 - Remote headshots reveal when available. Initials remain behind slow or failed images; no placeholder statistics or fabricated player imagery are used.
 
