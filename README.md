@@ -4,6 +4,14 @@ An independent local NFL research app. It downloads public NFL datasets and calc
 
 The sport switch opens the daily [MLB section](https://nfl-lab-xi.vercel.app/mlb), backed by MLB's official Stats API. The NFL section remains available at `/nfl` and `/`.
 
+## Live odds and player props
+
+Open **Live odds & props** from NBA, WNBA or MLB research, or go directly to `/nba/live`, `/wnba/live`, or `/mlb/live`. Each page refreshes every 15 seconds while visible and includes game selection, live scores, player statistics, transparent regulation projections, manual full-game player-line comparisons, and source receipts. The NFL live page remains at `/nfl/live`.
+
+Moneyline, spread/run line, and total prices come from ESPN's explicit live quote fields. Missing or suspended prices remain unavailable; pregame and archived prices are labeled separately. MLB box scores and inning state come from the official MLB Stats API; an ESPN odds event must match both teams and start time unambiguously. Public prices may differ from the user's sportsbook. Player prop lines are manually entered and expire after a changed game snapshot or 60 seconds. Feed failures and data older than 45 seconds pause comparisons.
+
+The new live models are experimental, separate from pregame forecasts, and expose their calculations under each player. Basketball uses league-specific regulation minutes and earlier appearances; baseball uses remaining innings, confirmed batting orders and starter pitch budgets. Neither model supplies calibrated live probabilities or projects overtime/extra innings. See [live model details](docs/multi-sport-live.md).
+
 ## WNBA section
 
 [WNBA Lab](https://nfl-lab-xi.vercel.app/wnba) includes 15 player-prop forecasts, WNBA-specific minutes/pace, matchup and rest effects, injury and lineup handling, FanDuel-first public totals where available, saved pregame records and transparent source evidence. Its WNBA-only chronological evaluation, calculations and coverage limits are documented in [WNBA model and data](docs/wnba-model.md).

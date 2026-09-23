@@ -8,6 +8,7 @@ import { MlbStore } from './lib/mlb/source.mjs';
 import { SportsStore } from './lib/sports/source.mjs';
 import { mlbModelReport } from './lib/mlb/forecast.mjs';
 import { LiveNflStore } from './lib/live-nfl.mjs';
+import { LiveSportsStore } from './lib/live-sports.mjs';
 import { BetTrackerStore } from './lib/bet-tracker.mjs';
 
 const publicDir = fileURLToPath(new URL('./public/', import.meta.url));
@@ -15,6 +16,7 @@ const store = new SourceStore();
 const nflLive = new LiveNflStore({ provider: store.provider });
 const mlb = new MlbStore();
 const sports = new SportsStore();
+const liveSports = new LiveSportsStore({ provider: sports.provider });
 const betTracker = new BetTrackerStore();
 let syncing = false, lastSync = null;
 async function sync() {
@@ -45,6 +47,8 @@ export const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/bets/catalog') return json(res,await betTracker.catalog(Object.fromEntries(url.searchParams)));
     if (url.pathname === '/api/bets/game') return json(res,await betTracker.game(Object.fromEntries(url.searchParams)));
     if (url.pathname === '/api/nfl/live') return json(res, await nflLive.board(Object.fromEntries(url.searchParams)));
+    const liveRoute = /^\/api\/(nba|wnba|mlb)\/live$/.exec(url.pathname);
+    if (liveRoute) return json(res, await liveSports.board({ ...Object.fromEntries(url.searchParams), sport: liveRoute[1] }));
     if (url.pathname === '/api/sports/performance') return json(res,await sports.performance(Object.fromEntries(url.searchParams)));
     if (url.pathname === '/api/sports/catalog') return json(res, await sports.catalog(Object.fromEntries(url.searchParams),url.searchParams.get('refresh')==='1'));
     if (url.pathname === '/api/sports/board') return json(res, await sports.board(Object.fromEntries(url.searchParams),url.searchParams.get('refresh')==='1'));
@@ -55,7 +59,7 @@ export const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/catalog') { const {current,weeks}=await store.catalog(url.searchParams.get('refresh') === '1'); return json(res,{current,weeks}); }
     if (url.pathname === '/api/board') return json(res, await store.board(Object.fromEntries(url.searchParams), url.searchParams.get('refresh') === '1'));
     const names = { '/bets':'bets.html', '/bets/':'bets.html', '/bets.js':'bets.js', '/bet-legs.js':'bet-legs.js', '/bet-editor.js':'bet-editor.js', '/bet-utils.js':'bet-utils.js', '/bets.css':'bets.css', '/wnba':'sports.html','/wnba/':'sports.html','/nba':'sports.html','/nhl':'sports.html','/soccer':'sports.html','/sports.js':'sports.js','/sports-view.js':'sports-view.js','/sports.css':'sports.css', '/nfl/live':'live.html', '/nfl/live/':'live.html', '/live.js':'live.js', '/live.css':'live.css', '/live-utils.js':'live-utils.js', '/paper':'paper.html','/paper.js':'paper.js','/context-ui.js':'context-ui.js','/context.css':'context.css', '/performance':'performance.html', '/performance.js':'performance.js', '/forecast.css':'forecast.css', '/': 'index.html', '/nfl': 'index.html', '/mlb': 'mlb.html', '/mlb/': 'mlb.html', '/mlb.js': 'mlb.js', '/mlb-model.js':'mlb-model.js', '/mlb.css': 'mlb.css', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/manifest.webmanifest': 'manifest.webmanifest' };
-    const name = names[url.pathname];
+    const name = /^\/(nba|wnba|mlb)\/live\/?$/.test(url.pathname) ? 'live-sports.html' : url.pathname === '/live-sports.js' ? 'live-sports.js' : names[url.pathname];
     if (!name) return json(res, { error: 'Not found.' }, 404);
     const bytes = await fs.readFile(path.join(publicDir, name));
     const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };

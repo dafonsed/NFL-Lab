@@ -28,6 +28,12 @@ test('Vercel can import the default server without starting a listener or backgr
       assert.equal((await fetch(base+'/api/bets/catalog?sport=invalid&date=2026-09-22')).status,400);
       assert.equal((await fetch(base+'/api/bets/game?sport=wnba&date=2026-09-22&game=invalid')).status,400);
       for (const route of ['/nfl/live','/live.js','/live-utils.js','/live.css']) assert.equal((await fetch(base+route)).status,200);
+      for (const sport of ['nba','wnba','mlb']) {
+        for (const suffix of ['/live','/live/']) assert.equal((await fetch(base+'/'+sport+suffix)).status,200);
+        assert.equal((await fetch(base+'/api/'+sport+'/live?game=invalid')).status,400);
+        assert.equal((await fetch(base+'/api/'+sport+'/live?date=2026-02-31')).status,400);
+      }
+      assert.equal((await fetch(base+'/live-sports.js')).status,200);
       assert.equal((await fetch(base+'/api/nfl/live?game=invalid')).status,400);
       assert.equal((await fetch(base+'/api/nfl/live?date=2026-02-31')).status,400);
       assert.equal((await fetch(base+'/api/cron/predictions')).status,401);
