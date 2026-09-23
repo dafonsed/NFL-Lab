@@ -1803,11 +1803,15 @@ html[data-motion=reduce] .site-layout :is(button,a,input,select,textarea,summary
 .pr-line-control { cursor:ns-resize; touch-action:none; user-select:none; -webkit-user-select:none; outline:none; }
 .pr-line-control > * { touch-action:none; }
 .pr-line-target { stroke:transparent; stroke-width:40; fill:none; pointer-events:stroke; }
-.pr-line-control .pr-line-pill { fill:var(--accent); stroke:var(--accent); stroke-width:1; }
-.pr-line-control .pr-line-label { fill:#071014; font:600 12px var(--font); pointer-events:none; }
-.pr-line-grip { fill:none; stroke:#071014; stroke-width:1.4; pointer-events:none; }
-.pr-line-control:hover .pr-line-pill,.pr-line-control:focus-visible .pr-line-pill,.pr-line-control.is-dragging .pr-line-pill { fill:#dcf8ff; stroke:#4dcced; stroke-width:2; }
+.pr-line-hitbox { fill:transparent; pointer-events:all; }
+.pr-line-control .pr-line-pill { fill:color-mix(in srgb,var(--control) 88%,var(--accent)); stroke:color-mix(in srgb,var(--accent) 65%,var(--control)); stroke-width:1; transition:fill .15s,stroke .15s,filter .15s; }
+.pr-line-control .pr-line-label { fill:var(--text); font:650 12px var(--font); font-variant-numeric:tabular-nums; letter-spacing:.1px; pointer-events:none; }
+.pr-line-grip { fill:none; stroke:var(--accent); stroke-width:2.2; stroke-linecap:round; pointer-events:none; }
+.pr-line-divider { stroke:var(--accent); stroke-opacity:.25; stroke-width:1; pointer-events:none; }
+.pr-line-control:hover .pr-line-pill,.pr-line-control:focus-visible .pr-line-pill,.pr-line-control.is-dragging .pr-line-pill { fill:color-mix(in srgb,var(--control) 74%,var(--accent)); stroke:var(--accent); stroke-width:1.5; }
+.pr-line-control:focus-visible .pr-line-pill,.pr-line-control.is-dragging .pr-line-pill { filter:drop-shadow(0 0 3px rgb(var(--accent-rgb) / .3)); }
 .pr-line-control:focus-visible .pr-threshold,.pr-line-control.is-dragging .pr-threshold { stroke:var(--accent); stroke-width:2; }
+@media(prefers-reduced-motion:reduce) { .pr-line-control .pr-line-pill { transition:none; } }
 .site-layout .pr-drag-hint { color:var(--muted); font:12px/1.5 var(--font); margin:0 0 10px; }
 .site-layout .td-main-chart .pr-drag-hint { padding:0 12px; }
 .site-layout .td-chart-bottom .td-legend { flex-basis:100%; }

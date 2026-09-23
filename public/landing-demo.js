@@ -1,5 +1,5 @@
 import {icon} from './ui-icons.js';
-import {bindComparisonLines, snapComparisonLine} from './chart-line.js';
+import {bindComparisonLines, snapComparisonLine, comparisonLineHandle, COMPARISON_LINE_GUTTER} from './chart-line.js';
 import {DEMO_SPORTS, DEMO_PLAYERS, demoGames, demoSummary} from './demo-data.js';
 
 const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -61,12 +61,12 @@ export function mountLandingDemo(root) {
     const container=research.querySelector('.demo-chart');if(!container)return;
     const rows=games();
     if(!rows.length){container.style.minWidth='';container.innerHTML='<div class="demo-empty"><strong>No sample games for these filters</strong><p>Try both home and away games to see this matchup’s sample.</p><button type="button" class="demo-button" data-demo-all-venues>Show home + away</button></div>';return;}
-    const width=Math.max(container.parentElement.clientWidth,rows.length*34+60),height=288,top=30,plot=208,left=52,gap=(width-left-12)/rows.length,high=market()[3],y=value=>top+(high-value)/high*plot;
+    const width=Math.max(container.parentElement.clientWidth,rows.length*34+COMPARISON_LINE_GUTTER),height=288,top=30,plot=208,left=COMPARISON_LINE_GUTTER,gap=(width-left-12)/rows.length,high=market()[3],y=value=>top+(high-value)/high*plot;
     container.style.minWidth=width+'px';
     container.innerHTML=`<svg class="demo-chart-svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="group" aria-label="${esc(market()[1])} in sample games; comparison line at ${line()}" data-low="0" data-high="${high}" data-top="${top}" data-height="${plot}" data-side="${state.side}">
       ${[0,1,2,3,4].map(i=>{const v=high*i/4;return `<line x1="${left}" x2="${width-10}" y1="${y(v)}" y2="${y(v)}" class="demo-grid-line"/><text x="${left-10}" y="${y(v)+4}" class="demo-axis" text-anchor="end">${num(v)}</text>`;}).join('')}
       ${rows.map((g,i)=>{const value=g.stats[state.market],x=left+i*gap+gap*.13,w=gap*.74;return `<g data-result="${value}" data-demo-game="${g.id}" role="button" tabindex="0" aria-label="Sample game ${g.id}, ${g.home?'home vs':'away at'} ${g.opponent}: ${value} ${market()[1]}" aria-pressed="${state.game===g.id}" class="demo-bar-group"><title>Game ${g.id} · ${g.home?'vs':'@'} ${g.opponent} · ${value} ${market()[1]}</title><rect x="${x}" y="${top}" width="${w}" height="${plot+26}" fill="transparent"/><rect class="pr-bar ${chartResult(value)}" x="${x}" y="${value===0?y(0)-2:y(value)}" width="${w}" height="${Math.max(2,value/high*plot)}" rx="3"/><text x="${x+w/2}" y="${y(value)-8}" text-anchor="middle" class="demo-bar-value">${value}</text><text x="${x+w/2}" y="${top+plot+21}" text-anchor="middle" class="demo-axis">G${g.id}</text><text x="${x+w/2}" y="${top+plot+39}" text-anchor="middle" class="demo-axis">${g.home?'vs':'@'} ${g.opponent}</text></g>`;}).join('')}
-      <g data-comparison-line class="pr-line-control" transform="translate(0 ${y(line())})" tabindex="0" role="slider" aria-label="Drag comparison line" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="${high}" aria-valuenow="${line()}" aria-valuetext="${line()}, your comparison line"><line class="pr-line-target" x1="${left}" x2="${width-10}"/><line class="pr-threshold" x1="${left}" x2="${width-10}"/><rect class="pr-line-pill" x="0" y="-16" width="49" height="32" rx="9"/><path class="pr-line-grip" d="m6 -4 3 -3 3 3m-6 8 3 3 3-3"/><text class="pr-line-label" x="30" y="4" text-anchor="middle">${num(line())}</text></g></svg>`;
+      <g data-comparison-line class="pr-line-control" transform="translate(0 ${y(line())})" tabindex="0" role="slider" aria-label="Drag comparison line" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="${high}" aria-valuenow="${line()}" aria-valuetext="${line()}, your comparison line"><line class="pr-line-target" x1="${left}" x2="${width-10}"/><line class="pr-threshold" x1="${left}" x2="${width-10}"/>${comparisonLineHandle(line())}</g></svg>`;
   }
   function setLine(value,focusChart=false){
     if(!Number.isFinite(value))return;

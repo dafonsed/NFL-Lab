@@ -71,8 +71,6 @@
 .demo-bar-group:hover .pr-bar{filter:brightness(1.2)}
 .demo-bar-group[aria-pressed=true] .pr-bar,.demo-bar-group:focus-visible .pr-bar{stroke:var(--text);stroke-width:2}
 .demo-chart .pr-threshold{stroke:#a8eaf6;stroke-width:1.5;stroke-dasharray:5 5;pointer-events:none}
-.demo-chart .pr-line-pill{fill:var(--accent);stroke:#aeeafb}
-.demo-chart .pr-line-label{font-size:11px}
 .demo-chart-caption{display:flex;justify-content:space-between;gap:12px;color:var(--muted);font-size:10px;margin-top:4px}
 .demo-chart-caption>span:first-child{display:flex;align-items:center;gap:5px}
 .demo-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-left:5px;flex-shrink:0}

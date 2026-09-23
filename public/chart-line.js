@@ -1,4 +1,12 @@
 // Presentation controls only: changing this line never changes a sportsbook quote.
+export const COMPARISON_LINE_GUTTER = 82;
+
+// Shared visual handle for Research, Trends and the homepage demo.
+export function comparisonLineHandle(value) {
+  const label = Number.isFinite(Number(value)) ? String(Number(value)) : '—';
+  return `<rect class="pr-line-hitbox" x="0" y="-22" width="78" height="44" rx="14"/><rect class="pr-line-pill" x="1" y="-17" width="72" height="34" rx="12"/><path class="pr-line-grip" d="M11 -5h.01M17 -5h.01M11 0h.01M17 0h.01M11 5h.01M17 5h.01"/><line class="pr-line-divider" x1="25" x2="25" y1="-8" y2="8"/><text class="pr-line-label" x="49" y="4" text-anchor="middle">${label}</text>`;
+}
+
 export function snapComparisonLine(value, min = -100, max = 1000, step = .5) {
   return Math.max(min, Math.min(max, Math.round(value / step) * step));
 }
