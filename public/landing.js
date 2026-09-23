@@ -16,3 +16,41 @@ document.querySelectorAll('[data-demo-launch]').forEach(control => control.addEv
   demo.open({view:control.dataset.demoLaunch, playerId:control.dataset.samplePlayer});
   workspace.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
 }));
+
+// A second visual group creates a seamless loop. Only the original six links
+// enter the accessibility tree; keyboard and reduced-motion users get a scrollable list.
+const carousel = document.querySelector('.league-carousel');
+const track = carousel.querySelector('.league-track');
+const leagueGroup = carousel.querySelector('.league-group');
+const motionButton = document.querySelector('.league-motion-toggle');
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const duplicate = leagueGroup.cloneNode(true);
+duplicate.classList.remove('landing-sport-links');
+duplicate.classList.add('league-duplicate');
+duplicate.removeAttribute('aria-label');
+duplicate.setAttribute('aria-hidden','true');
+duplicate.querySelectorAll('a').forEach(link => { link.tabIndex = -1; });
+track.append(duplicate);
+carousel.classList.add('is-ready');
+let motionPaused = false;
+function updateMotion() {
+  carousel.classList.toggle('is-paused',motionPaused);
+  motionButton.hidden = reducedMotion.matches;
+  motionButton.setAttribute('aria-pressed',String(motionPaused));
+  motionButton.setAttribute('aria-label',motionPaused?'Resume league animation':'Pause league animation');
+  motionButton.querySelector('span').textContent=motionPaused?'Play':'Pause';
+  motionButton.querySelector('path').setAttribute('d',motionPaused?'m9 5 10 7-10 7Z':'M9 6v12M15 6v12');
+  carousel.scrollLeft=0;
+}
+motionButton.addEventListener('click',()=>{motionPaused=!motionPaused;updateMotion();});
+reducedMotion.addEventListener('change',updateMotion);
+carousel.addEventListener('focusin',event=>{
+  if(!event.target.closest('a')||!event.target.matches(':focus-visible'))return;
+  carousel.classList.add('is-keyboard');
+  event.target.scrollIntoView({block:'nearest',inline:'nearest'});
+});
+carousel.addEventListener('focusout',()=>{
+  queueMicrotask(()=>{if(!carousel.contains(document.activeElement)){carousel.classList.remove('is-keyboard');carousel.scrollLeft=0;}});
+});
+carousel.querySelectorAll('img').forEach(img=>{img.addEventListener('error',()=>{img.hidden=true;});if(img.complete&&!img.naturalWidth)img.hidden=true;});
+updateMotion();
