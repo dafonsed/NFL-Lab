@@ -11,7 +11,7 @@ const blank=(sport,date)=>({id:crypto.randomUUID(),mode:sport==='Other'?'manual'
 export class BetLegEditor {
   constructor(element,onChange){
     this.element=element;this.onChange=onChange;this.rows=[];this.catalogs=new Map();this.catalogPending=new Map();this.games=new Map();this.gamePending=new Map();this.errors=new Map();this.pending=new Set();this.searches=new Map();
-    element.addEventListener('click',e=>{const b=e.target.closest('[data-remove]'),pick=e.target.closest('[data-pick-player]');if(b){this.rows=this.rows.filter(l=>l.id!==b.dataset.remove);this.render();onChange();}if(pick)this.pickPlayer(pick);});
+    element.addEventListener('click',e=>{const b=e.target.closest('[data-remove]'),pick=e.target.closest('[data-pick-player]');if(b){const index=this.rows.findIndex(l=>l.id===b.dataset.remove);this.rows=this.rows.filter(l=>l.id!==b.dataset.remove);this.render();onChange();const groups=[...this.element.querySelectorAll('[data-leg-id]')];(groups[Math.min(index,groups.length-1)]?.querySelector('select,input')||document.querySelector('#add-leg'))?.focus();}if(pick)this.pickPlayer(pick);});
     element.addEventListener('input',e=>{if(e.target.hasAttribute('data-search-player')){const l=this.rows.find(l=>l.id===e.target.dataset.searchPlayer);if(!l)return;const s=this.searchState(l);s.query=e.target.value;clearTimeout(s.timer);s.sequence++;s.loading=false;s.results=[];this.renderSearch(l);s.timer=setTimeout(()=>this.searchPlayers(l),250);}else if(e.target.tagName==='INPUT')this.change(e,false);});
     element.addEventListener('change',e=>this.change(e,true));
   }
@@ -53,7 +53,9 @@ export class BetLegEditor {
     if(changed&&name==='gameId'){l.subjectId='';l.subject='';}
     if(changed&&name==='market'){if(l.mode!=='quick')l.subjectId='';l.side=['moneyline','spread'].includes(l.market)?'home':'over';}
     if(changed&&name!=='override')l.observation=null;
-    if(rerender){this.hydrate(l);this.render();if(['sport','date','league','mode','gameId'].includes(name))this.load(l);if(name==='mode'&&l.mode==='quick')[...this.element.querySelectorAll('[data-search-player]')].find(e=>e.dataset.searchPlayer===l.id)?.focus();}
+    // Committing a typed label/line must not replace the next focused input.
+    // Only controls that change the editor's structure require a redraw.
+    if(rerender){this.hydrate(l);if(target.tagName==='SELECT'||name==='date')this.render();if(['sport','date','league','mode','gameId'].includes(name))this.load(l);if(name==='mode'&&l.mode==='quick')[...this.element.querySelectorAll('[data-search-player]')].find(e=>e.dataset.searchPlayer===l.id)?.focus();}
     this.onChange();
   }
   hydrate(l){
@@ -100,6 +102,7 @@ export class BetLegEditor {
   }
   render(){
     const active=document.activeElement,searchFocus=this.element.contains(active)?active?.dataset.searchPlayer:null,caret=searchFocus?active.selectionStart:null;
+    const focusedLeg=this.element.contains(active)?active.closest('[data-leg-id]')?.dataset.legId:null,focusedField=active?.dataset.field;
     this.element.innerHTML=this.rows.map((l,i)=>{
       const c=this.catalogs.get(this.catalogKey(l)),g=this.games.get(gameKey(l)),m=c?.markets[l.market]||g?.markets[l.market],manual=l.mode==='manual',quick=l.mode==='quick';
       const gameChoices=[['','Choose game…'],...(c?.games||[]).map(g=>[g.id,g.away.name+' @ '+g.home.name+' · '+g.status])];
@@ -127,5 +130,6 @@ export class BetLegEditor {
     }).join('')||'<p class="leg-help">No connected legs. Existing tickets can keep their manual result, or you can add their selections below.</p>';
     for(const l of this.rows)this.renderSearch(l);
     if(searchFocus){const input=[...this.element.querySelectorAll('[data-search-player]')].find(e=>e.dataset.searchPlayer===searchFocus);if(input){input.focus({preventScroll:true});if(caret!==null)input.setSelectionRange(caret,caret);}}
+    else if(focusedLeg&&focusedField){[...this.element.querySelectorAll('[data-leg-id]')].find(e=>e.dataset.legId===focusedLeg)?.querySelector(`[data-field="${focusedField}"]`)?.focus({preventScroll:true});}
   }
 }

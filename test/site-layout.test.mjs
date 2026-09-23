@@ -18,7 +18,7 @@ test('every page renders the same working navigation and Live link before any Ja
     assert.equal($('.site-header').length, 1, route);
     assert.equal($('.site-live-link').text().trim(), 'Live', route);
     assert.equal($('.site-live-link').attr('href'), target, route);
-    assert.deepEqual($('.site-navigation a').map((_, a) => $(a).text().trim()).get(), ['Research', 'Trends', 'Live', 'Performance', 'Paper returns'], route);
+    assert.deepEqual($('.site-navigation a').map((_, a) => $(a).text().trim()).get(), ['Research', 'Trends', 'Live', 'Simulation', 'NFL performance', 'Paper returns'], route);
     assert.ok($('.site-navigation a').toArray().every(a => $(a).attr('aria-label')), 'Icon rail links retain accessible labels');
     assert.deepEqual($('.site-sports a').map((_, a) => $(a).text()).get(), ['NFL', 'MLB', 'NBA', 'WNBA', 'NHL', 'Soccer'], route);
     assert.equal($('.site-tracker').attr('href'), '/bets');
@@ -49,5 +49,6 @@ test('navigation context cannot inject untrusted query parameters and the live d
   const url = new URL('http://localhost/paper?sport=%22%3E%3Cscript%3Ealert(1)%3C/script%3E');
   assert.deepEqual(siteContext(url), { sport: 'nfl', section: 'paper' }); assert.ok(!siteHeader(url).includes('<script>'));
   const $ = load(await fs.readFile(new URL('../public/live-hub.html', import.meta.url), 'utf8'));
-  assert.deepEqual($('.live-directory-card a').map((_, e) => $(e).attr('href')).get(), ['/nfl/live','/mlb/live','/nba/live','/wnba/live']);
+  assert.deepEqual($('.live-directory a').map((_, e) => $(e).attr('href')).get(), ['/nfl/live','/mlb/live','/nba/live','/wnba/live']);
+  assert.deepEqual($('.live-directory a strong').map((_, e) => $(e).text()).get(), ['NFL','MLB','NBA','WNBA']);
 });

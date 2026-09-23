@@ -1,5 +1,6 @@
 // One stroke, size and view box for navigation and controls across the app.
 const paths = {
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v.01"/>',
   research: '<path d="M4 19V9m5 10V4m6 15v-7m5 7V7"/>',
   trends: '<path d="m3 16 6-6 4 4 8-10M15 4h6v6"/>',
   live: '<path d="M3 12h4l3-8 4 16 3-8h4"/>',

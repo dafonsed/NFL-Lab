@@ -14,3 +14,13 @@ reports/model-upgrades-*.png
 
 reports/wnba-*.png
 reports/live-game-*.png
+
+# Local frontend browser verification artifacts
+reports/frontend/
+reports/frontend-before-home.png
+
+# Generated audit output and downloaded provider caches
+reports/*.jsonl
+reports/marketing/
+reports/simulation-boundary/
+reports/simulation-deep/

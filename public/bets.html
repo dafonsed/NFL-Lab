@@ -28,9 +28,10 @@
     <footer><span>SPORTS LAB <span class="muted">/ Personal workspace</span></span><span>MLB Stats API + ESPN box scores · Your booked lines stay fixed</span></footer>
   </main>
   <dialog id="bet-dialog" aria-labelledby="bet-dialog-title">
-    <button class="dialog-close" id="close-bet" aria-label="Close bet form" type="button">×</button>
-    <div class="eyebrow">PERSONAL BET LOG</div><h2 id="bet-dialog-title">Add a bet</h2>
-    <form id="bet-form">
+    <header class="bet-dialog-header"><div><span class="eyebrow">MY PICKS</span><h2 id="bet-dialog-title">Add a bet</h2></div><button class="sheet-close" id="close-bet" aria-label="Close bet form" type="button">×</button></header>
+    <form id="bet-form" novalidate>
+      <div class="bet-form-body">
+      <h3 class="form-section-title">Ticket details</h3>
       <div class="bet-form-grid">
         <label class="full-field">Bet / selection<input name="selection" id="selection" required maxlength="240" placeholder="e.g. Bills −3.5 vs. Dolphins" autofocus></label>
         <label>Sport<select name="sport"><option>NFL</option><option>MLB</option><option>NBA</option><option>WNBA</option><option>NHL</option><option>Soccer</option><option>Other</option></select></label>
@@ -41,17 +42,19 @@
         <label>Odds format<select name="oddsFormat" id="odds-format"><option value="american">American</option><option value="decimal">Decimal</option></select></label>
         <label>Odds<input name="odds" id="bet-odds" type="number" step="1" required placeholder="−110" aria-describedby="odds-help"><small id="odds-help">Use +100 or higher, or −100 or lower.</small></label>
         <label>Ticket result mode<select name="settlement" id="ticket-settlement"><option value="auto">Track from leg results</option><option value="manual">Set result from sportsbook</option></select></label>
-        <label>Result<select name="status" id="bet-status"><option value="open">Open</option><option value="won">Won</option><option value="lost">Lost</option><option value="push">Push — stake refunded</option><option value="void">Void — stake refunded</option><option value="cashed">Cashed out</option></select></label>
+        <label>Result<select name="status" id="bet-status" aria-describedby="result-help"><option value="open">Open</option><option value="won">Won</option><option value="lost">Lost</option><option value="push">Push — stake refunded</option><option value="void">Void — stake refunded</option><option value="cashed">Cashed out</option></select><small id="result-help">Determined from your leg results. Change result mode to enter your sportsbook’s result.</small></label>
         <label id="actual-return-field" hidden>Actual total return (USD) <span class="optional">optional</span><input name="returnOverride" type="number" min="0" max="1000000" step="0.01" placeholder="Book’s payout"><small>Includes returned stake. Use for a parlay repriced after a void, push, or promotion.</small></label>
         <label class="full-field" id="cashout-field" hidden>Cash-out return (USD)<input name="cashout" type="number" min="0" max="1000000" step="0.01" inputmode="decimal"><small>Total amount returned by the book, including any returned stake.</small></label>
         <label class="full-field">Notes <span class="optional">optional</span><textarea name="notes" maxlength="2000" rows="2" placeholder="Book rules, promotions, or a note for later."></textarea></label>
       </div>
       <section class="ticket-selections" aria-label="Ticket selections"><div class="results-heading"><h3>Your selections</h3><button type="button" class="button subtle" id="add-leg">＋ Add leg</button></div><p class="leg-help">One leg for a single; two or more for a parlay. Enter the combined ticket odds above. Mixed-sport parlays are supported.</p><div id="leg-editor"></div></section>
       <div id="return-preview" class="return-preview" role="status">Enter a stake and odds to preview your return.</div>
-      <p id="form-error" class="form-error" role="alert" hidden></p>
+      <p id="form-error" class="form-error" role="alert" tabindex="-1" hidden></p>
+      </div>
       <div class="bet-form-actions"><button class="button danger-button" type="button" id="delete-bet" hidden>Delete bet</button><div><button class="button subtle" type="button" id="cancel-bet">Cancel</button><button class="button primary" type="submit">Save bet</button></div></div>
     </form>
   </dialog>
+  <dialog id="discard-dialog" aria-labelledby="discard-title"><h2 id="discard-title">Discard your changes?</h2><p>Your unsaved ticket details will be lost.</p><div class="delete-actions"><button class="button subtle" id="keep-editing">Keep editing</button><button class="button danger-button" id="discard-bet">Discard changes</button></div></dialog>
   <dialog id="delete-dialog" aria-labelledby="delete-title"><h2 id="delete-title">Delete this bet?</h2><p id="delete-description"></p><p>This removes the ticket and its result from your totals.</p><div class="delete-actions"><button class="button subtle" id="cancel-delete">Keep bet</button><button class="button danger-button" id="confirm-delete">Delete bet</button></div></dialog>
   <div id="bet-toast" class="toast" role="status" hidden></div>
   <noscript>Enable JavaScript to save and manage your bets.</noscript>

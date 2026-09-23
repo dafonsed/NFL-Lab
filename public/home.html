@@ -1,41 +1,17 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#101719">
-  <meta name="description" content="Choose your Sports Lab workspace: models and data, or player trends and sportsbook lines.">
-  <title>Sports Lab · Choose your workspace</title>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/style.css">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0b0d12"><meta name="description" content="Research games, player props and recent results across six sports. Inspect Sportslab sources and experimental models.">
+<title>Research today · Sportslab</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css"><script type="module" src="/home.js"></script>
 </head>
-<body class="workspace-home">
-  <a class="skip" href="#main">Skip to workspaces</a>
-  <!--site-header-->
-  <main id="main" tabindex="-1">
-    <div class="home-intro"><span class="home-eyebrow">ONE LAB. TWO WAYS TO RESEARCH.</span><h1>Your next pick.<br><span class="home-title-accent">A clearer picture.</span></h1><p>Compare the models or explore player trends. Start with the view that works for you.</p></div>
-    <section class="workspace-choices" aria-label="Choose your workspace">
-      <a class="workspace-choice models-choice" href="/nfl" aria-label="Open Models & Data">
-        <div class="choice-top"><span class="choice-symbol" aria-hidden="true">◫</span><span>01 / ANALYTICS</span><span class="choice-arrow" aria-hidden="true">↗</span></div>
-        <div><h2>Models &amp; Data</h2><p>Projections, rankings, live models, and the data behind every matchup.</p></div>
-        <div class="choice-features"><span>Player projections</span><span>Live game models</span><span>Model performance</span></div>
-        <div class="choice-bottom">Open the analytics workspace <span aria-hidden="true">→</span></div>
-      </a>
-      <a class="workspace-choice trends-choice" href="/nfl?view=trends" aria-label="Open Trends & Lines">
-        <div class="choice-top"><span class="choice-symbol" aria-hidden="true">▥</span><span>02 / PLAYER RESEARCH</span><span class="choice-arrow" aria-hidden="true">↗</span></div>
-        <div><h2>Trends &amp; Lines</h2><p>Game-by-game charts, hit rates, posted lines, and a closer look at recent form.</p></div>
-        <div class="choice-features"><span>Recent game logs</span><span>Over / under splits</span><span>Matchup context</span></div>
-        <div class="choice-bottom">Open the trends dashboard <span aria-hidden="true">→</span></div>
-      </a>
-    </section>
-    <section class="home-sports" aria-label="Open a sport"><div><h2>Choose your sport</h2><p>Go straight to player research.</p></div><nav aria-label="Sport shortcuts">
-      <a href="/nfl"><span data-ui-icon="football" aria-hidden="true"></span><span>NFL</span><span data-ui-icon="arrow" aria-hidden="true"></span></a>
-      <a href="/nba"><span data-ui-icon="basketball" aria-hidden="true"></span><span>NBA</span><span data-ui-icon="arrow" aria-hidden="true"></span></a>
-      <a href="/wnba"><span data-ui-icon="basketball" aria-hidden="true"></span><span>WNBA</span><span data-ui-icon="arrow" aria-hidden="true"></span></a>
-      <a href="/mlb"><span data-ui-icon="baseball" aria-hidden="true"></span><span>MLB</span><span data-ui-icon="arrow" aria-hidden="true"></span></a>
-      <a href="/nhl"><span data-ui-icon="hockey" aria-hidden="true"></span><span>NHL</span><span data-ui-icon="arrow" aria-hidden="true"></span></a>
-      <a href="/soccer"><span data-ui-icon="soccer" aria-hidden="true"></span><span>Soccer</span><span data-ui-icon="arrow" aria-hidden="true"></span></a>
-    </nav></section>
-    <div class="home-footer"><span>Independent sports research</span><span>Switch workspaces anytime.</span></div>
-  </main>
-</body>
-</html>
+<body class="product-home"><a class="skip" href="#main">Skip to research</a><!--site-header-->
+<main id="main" tabindex="-1">
+<div class="home-contextbar"><header class="product-page-heading"><div><h1>Player research</h1><p id="home-context">Schedules, recorded results and experimental projections.</p></div><a id="full-research" class="button primary" href="/mlb">Sport workspace <span data-ui-icon="arrow" aria-hidden="true"></span></a></header>
+<div class="home-toolbar"><label id="home-date-label">Date<input type="date" id="home-date"></label><label id="home-week-label" hidden>Season / week<select id="home-week"><option value="">Latest available week</option></select></label><label>Prop<select id="home-market" aria-label="Player prop"></select></label><button class="button subtle" id="home-refresh"><span data-ui-icon="refresh" aria-hidden="true"></span>Refresh</button></div></div>
+<div class="home-secondary-toolbar"><details class="home-schedule"><summary>Games on this date <span aria-hidden="true">⌄</span></summary><label class="home-search-label">Find a player<input type="search" id="home-search" placeholder="Player or team" autocomplete="off"></label><section id="home-games" aria-label="Game schedule"></section></details>
+<div class="home-board-heading"><div><h2 id="home-board-title">Player props</h2><span id="home-count"></span></div><nav aria-label="Research views"><a id="home-trends" href="/mlb?view=trends"><span data-ui-icon="trends" aria-hidden="true"></span>Trends &amp; charts</a><a id="home-live" href="/mlb/live"><span data-ui-icon="live" aria-hidden="true"></span>Live games</a></nav></div>
+<details class="home-data-context"><summary>Data &amp; historical context</summary><p id="home-disclosure" class="board-disclosure">Model estimates are experimental. Historical results and final outcomes are labeled separately.</p></details></div>
+<p id="home-status" class="home-status" role="status"></p><section id="home-board" aria-label="Player research" aria-busy="true"></section>
+<div class="home-board-footer"><span id="home-source"></span><a id="home-all" href="/mlb">Open the full board →</a></div>
+<section class="product-tools" aria-label="More research tools"><a id="home-simulation" href="/mlb/simulation"><span data-ui-icon="simulation" aria-hidden="true"></span><span><strong>Game simulation</strong><small>Explore experimental game scenarios</small></span><span aria-hidden="true">↗</span></a><a href="/performance"><span data-ui-icon="performance" aria-hidden="true"></span><span><strong>Model performance</strong><small>Inspect the NFL evidence archive</small></span><span aria-hidden="true">↗</span></a><a href="/bets"><span data-ui-icon="picks" aria-hidden="true"></span><span><strong>My picks</strong><small>Track your own tickets in this browser</small></span><span aria-hidden="true">↗</span></a></section>
+</main></body></html>

@@ -16,7 +16,7 @@ test('Vercel can import the default server without starting a listener or backgr
     try {
       const health = await fetch(base + '/api/health', {headers:{host:'nfl-lab-xi.vercel.app'}});
       assert.equal(health.status,200);const status=await health.json();assert.equal(status.syncing,false);assert.equal(status.lastSync,null);
-      const page=await fetch(base+'/');assert.equal(page.status,200);assert.match(await page.text(),/Choose your workspace/);
+      const page=await fetch(base+'/');assert.equal(page.status,200);assert.match(await page.text(),/Player research/);
       for (const sport of ['nfl','mlb','nba','wnba','nhl','soccer']) {
         const page=await fetch(base+'/'+sport+'?view=trends');assert.equal(page.status,200);
         const html=await page.text();assert.match(html,/id="td-workbench"/);assert.ok(html.includes('src="/trends.js"'));
@@ -24,7 +24,7 @@ test('Vercel can import the default server without starting a listener or backgr
       const legacy=await fetch(base+'/?view=board&market=rec');assert.ok((await legacy.text()).includes('src="/app.js"'));
       for(const asset of ['/workspace.css','/trends.css','/trends.js','/trends-data.js'])assert.equal((await fetch(base+asset)).status,200);
       assert.equal((await fetch(base+'/style.css')).status,200);
-      for(const asset of ['/app-design.css','/workspace-ui.js','/ui-icons.js'])assert.equal((await fetch(base+asset)).status,200);
+      for(const asset of ['/app-design.css','/workspace-ui.js','/ui-icons.js','/home.js','/product-ui.js','/chart-line.js','/research-notes.js'])assert.equal((await fetch(base+asset)).status,200);
       for(const route of ['/wnba','/wnba/','/nba','/nhl','/soccer','/sports.js','/sports-view.js','/sports.css','/player-research.js','/research-data.js','/site-preferences.js','/player-research.css'])assert.equal((await fetch(base+route)).status,200);
       assert.equal((await fetch(base+'/api/sports/board?sport=invalid')).status,400);
       assert.equal((await fetch(base+'/performance')).status,200);

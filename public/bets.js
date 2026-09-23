@@ -1,6 +1,7 @@
 import { BET_STORAGE_KEY, STATUSES, validateBet, betReturns, summarizeBets, readBets, writeBets, betsCsv } from './bet-utils.js';
 import { BetLegEditor } from './bet-editor.js';
-import { LEG_RESULTS, legState, ticketSettlement, gameKey, refreshTicket, formatLegTarget } from './bet-legs.js';
+import { LEG_RESULTS, legState, ticketSettlement, gameKey, refreshTicket, formatLegTarget, validateLeg } from './bet-legs.js';
+import { icon } from './ui-icons.js';
 
 const $ = selector => document.querySelector(selector);
 const form = $('#bet-form');
@@ -12,6 +13,7 @@ const tone = amount => amount > 0 ? 'bet-positive' : amount < 0 ? 'bet-negative'
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const today = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; };
 let bets = [], editing = null, toastTimer, storageReady = false;
+let dirty = false, saving = false, returnFocus = null;
 let tracking=false;
 const editor=new BetLegEditor($('#leg-editor'),()=>{if(editor.rows.length>1)field('type').value='parlay';updateForm();});
 const safeUrl=url=>/^https:\/\/(site\.api\.espn\.com|statsapi\.mlb\.com)\//.test(url||'')?esc(url):'#';
@@ -51,6 +53,7 @@ function filteredBets() {
 }
 
 function render() {
+  document.body.classList.toggle('picks-empty', storageReady && !bets.length);
   if (!storageReady) {
     $('#bet-summary').innerHTML = '';
     $('#bet-list').innerHTML = '<div class="bet-empty"><h2>Your saved bets are unavailable</h2><p>Restore access to browser storage and reload to continue.</p></div>';
@@ -79,7 +82,7 @@ function render() {
   if (!visible.length) {
     $('#bet-list').innerHTML = bets.length
       ? '<div class="bet-empty"><h2>No matching tickets</h2><p>Try another search or clear your filters to see all your bets.</p><button class="button subtle" data-clear>Clear filters</button></div>'
-      : '<div class="bet-empty"><span class="bet-empty-icon" aria-hidden="true">▤</span><h2>Your first ticket starts here</h2><p>Add your stake, ticket odds, and each selection. Connect the legs to games to follow their results automatically.</p><button class="button primary" data-add>＋ Add your first bet</button></div>';
+      : `<div class="bet-empty"><span class="bet-empty-icon" aria-hidden="true">${icon('picks')}</span><h2>No tickets yet</h2><p>Record a single bet or parlay with your booked odds and stake. Link selections to games for result tracking, or enter results yourself.</p><button class="button primary" data-add>${icon('plus')} Add your first bet</button><div class="picks-empty-details"><span>Singles & parlays</span><span>Automatic or manual results</span><span>Stored in this browser</span></div></div>`;
     return;
   }
   $('#bet-list').innerHTML = `<div class="bet-ledger">${visible.map(bet => {
@@ -103,6 +106,7 @@ function updateForm() {
   const legs=editor.values();
   if(automatic)field('status').value=ticketSettlement(legs).status;
   field('status').disabled=automatic;
+  $('#result-help').hidden = !automatic;
   $('#actual-return-field').hidden=automatic||field('status').value!=='won';
   field('returnOverride').disabled=$('#actual-return-field').hidden;
   const decimal = field('oddsFormat').value === 'decimal';
@@ -130,6 +134,8 @@ function openForm(id) {
   if (!storageReady) return;
   editing = id ? bets.find(bet => bet.id === id) : null;
   if (id && !editing) return;
+  returnFocus = document.activeElement;
+  clearFormErrors();
   form.reset();
   field('date').value = today();
   if (editing) for (const [key, value] of Object.entries(editing)) { if (field(key)) field(key).value = value ?? ''; }
@@ -140,9 +146,73 @@ function openForm(id) {
   $('#delete-bet').hidden = !editing;
   $('#form-error').hidden = true;
   updateForm();
+  dirty = false;
   dialog.showModal();
+  $('.bet-form-body').scrollTop = 0;
   field('selection').focus();
 }
+
+function clearFormErrors() {
+  form.querySelectorAll('[aria-invalid]').forEach(control => {
+    control.removeAttribute('aria-invalid');
+    const ids = (control.getAttribute('aria-describedby') || '').split(' ').filter(id => !id.startsWith('ticket-error-'));
+    if (ids.length) control.setAttribute('aria-describedby', ids.join(' ')); else control.removeAttribute('aria-describedby');
+  });
+  form.querySelectorAll('.field-error').forEach(error => error.remove());
+  $('#form-error').hidden = true;
+}
+
+function showFormError(message, control) {
+  $('#form-error').textContent = message;
+  $('#form-error').hidden = false;
+  if (control && !control.disabled) {
+    const error = document.createElement('small');
+    error.id = 'ticket-error-' + crypto.randomUUID(); error.className = 'field-error'; error.textContent = message;
+    control.setAttribute('aria-invalid', 'true');
+    control.setAttribute('aria-describedby', [control.getAttribute('aria-describedby'), error.id].filter(Boolean).join(' '));
+    control.after(error); control.focus({preventScroll:true}); control.scrollIntoView({block:'center'});
+  } else {
+    $('#form-error').focus({preventScroll:true}); $('#form-error').scrollIntoView({block:'center'});
+  }
+}
+
+function errorControl(message) {
+  const ticketField = /odds/i.test(message) ? 'odds' : /Stake/.test(message) ? 'stake' : /Cash-out/.test(message) ? 'cashout' : /Actual return/.test(message) ? 'returnOverride' : /bet description/.test(message) ? 'selection' : /bet date/.test(message) ? 'date' : /single needs|parlay needs/.test(message) ? 'type' : null;
+  if (ticketField) return field(ticketField);
+  for (const leg of editor.values()) {
+    try { validateLeg(leg); } catch {
+      const group = [...form.querySelectorAll('[data-leg-id]')].find(el => el.dataset.legId === leg.id);
+      const connected = leg.mode === 'auto';
+      const target = connected && !leg.gameId ? '[data-search-player], [data-field=gameId]' : connected && !leg.market ? '[data-field=market]' : connected && !leg.subjectId ? '[data-search-player], [data-field=subjectId]' : /line|amount/i.test(message) ? '[data-field=line]' : /side|target/i.test(message) ? '[data-field=side]' : /result/i.test(message) ? '[data-field=override]' : '[data-field=label], [data-search-player], [data-field=gameId]';
+      return group?.querySelector(target) || group?.querySelector('input,select');
+    }
+  }
+  return null;
+}
+
+function requestClose() {
+  if (saving) return;
+  if (!dirty) { dialog.close(); return; }
+  $('#discard-dialog').showModal(); $('#keep-editing').focus();
+}
+dialog.addEventListener('cancel', event => { event.preventDefault(); requestClose(); });
+dialog.addEventListener('keydown', event => {
+  if (event.key !== 'Tab') return;
+  const controls = [...dialog.querySelectorAll('button,input,select,textarea,a[href],[tabindex]')].filter(el => !el.disabled && el.tabIndex >= 0 && el.getClientRects().length);
+  const first = controls[0], last = controls.at(-1);
+  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+});
+dialog.addEventListener('close', () => {
+  dirty = false;
+  const target = returnFocus?.isConnected ? returnFocus : editing ? [...document.querySelectorAll('[data-edit]')].find(el => el.dataset.edit === editing.id) : null;
+  (target || $('#add-bet')).focus({preventScroll:true});
+});
+$('#keep-editing').addEventListener('click', () => $('#discard-dialog').close());
+$('#discard-bet').addEventListener('click', () => { $('#discard-dialog').close(); dialog.close(); });
+window.addEventListener('beforeunload', event => { if (dialog.open && dirty) { event.preventDefault(); event.returnValue = ''; } });
+const resizeDialog = () => document.documentElement.style.setProperty('--bet-viewport', `${window.visualViewport?.height || innerHeight}px`);
+window.visualViewport?.addEventListener('resize', resizeDialog); resizeDialog();
 
 // Re-read before each write so another tab's added tickets are preserved.
 function mutate(change) {
@@ -158,26 +228,37 @@ function mutate(change) {
   render();
 }
 
-form.addEventListener('submit', event => {
+form.addEventListener('submit', async event => {
   event.preventDefault();
+  if (saving || !dialog.open) return;
+  clearFormErrors();
+  const invalid = [...form.elements].find(control => control.willValidate && !control.checkValidity());
+  if (invalid) { showFormError(invalid.validationMessage, invalid); return; }
+  const submit = form.querySelector('[type=submit]');
   try {
     const validated = validateBet({...Object.fromEntries(new FormData(form)),status:field('status').value,legs:editor.values()});
+    saving = true; submit.disabled = true; submit.textContent = 'Saving…'; form.setAttribute('aria-busy','true');
+    await new Promise(resolve => requestAnimationFrame(resolve));
     const bet = { ...validated, id: editing?.id || crypto.randomUUID(), updatedAt: new Date().toISOString() };
     mutate(latest => editing ? latest.map(item => item.id === editing.id ? bet : item) : [...latest, bet]);
     dialog.close();
     toast(editing ? 'Bet updated.' : 'Bet saved.');
     refreshLines({all:true});
   } catch (error) {
-    $('#form-error').textContent = error.message;
-    $('#form-error').hidden = false;
+    showFormError(error.message, errorControl(error.message));
+  } finally {
+    saving = false; submit.disabled = false; submit.textContent = 'Save bet'; form.removeAttribute('aria-busy');
   }
 });
+form.addEventListener('input', () => { dirty = true; clearFormErrors(); });
+form.addEventListener('change', () => { dirty = true; });
+form.addEventListener('click', event => { if (event.target.closest('[data-remove], [data-pick-player]')) dirty = true; });
 form.addEventListener('input', updateForm);
 form.addEventListener('change', updateForm);
 $('#add-bet').addEventListener('click', () => openForm());
-$('#add-leg').addEventListener('click',()=>editor.add(field('sport').value,field('date').value));
-$('#close-bet').addEventListener('click', () => dialog.close());
-$('#cancel-bet').addEventListener('click', () => dialog.close());
+$('#add-leg').addEventListener('click',()=>{ dirty = true; editor.add(field('sport').value,field('date').value); $('#leg-editor .leg-editor:last-child input, #leg-editor .leg-editor:last-child select')?.focus(); });
+$('#close-bet').addEventListener('click', requestClose);
+$('#cancel-bet').addEventListener('click', requestClose);
 $('#delete-bet').addEventListener('click', () => {
   $('#delete-description').textContent = editing.selection;
   $('#delete-dialog').showModal();

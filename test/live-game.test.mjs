@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildGamePrior, projectLiveGame, compareGameMarkets, impliedProbability, fairAmerican, nflGameHistory, mlbGameHistory } from '../lib/live-game-model.mjs';
+import { buildGamePrior, projectLiveGame, compareGameMarkets, impliedProbability, fairAmerican, betExpectedValue, nflGameHistory, mlbGameHistory } from '../lib/live-game-model.mjs';
 import { gameOddsHtml, gameOddsFreshness } from '../public/live-game.js';
 import { LiveNflStore } from '../lib/live-nfl.mjs';
 import { LiveSportsStore } from '../lib/live-sports.mjs';
@@ -26,6 +26,17 @@ test('American fair prices and market implied probabilities round trip', () => {
   assert.equal(impliedProbability(-400), .8); assert.equal(impliedProbability(400), .2);
   assert.equal(impliedProbability(-50), null); assert.equal(fairAmerican(null), null);
   assert.equal(fairAmerican(.999999), -19900);
+});
+test('estimated EV uses the offered payout and unconditional win/loss/push probabilities', () => {
+  const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-12, `${a} != ${b}`);
+  near(betExpectedValue(-110, .55), .05);
+  near(betExpectedValue(150, .4, .2), .2);
+  near(betExpectedValue(-200, .4, .2), -.2);
+  near(betExpectedValue(100, .4, .2), 0);
+  near(betExpectedValue(100, 0, 1), 0);
+  near(betExpectedValue(200, 1), 2);
+  near(betExpectedValue(200, 0), -1);
+  for (const values of [[null, .5], [50, .5], [100, null], [100, -.1], [100, .9, .2], [100, .5, -1], [Infinity, .5]]) assert.equal(betExpectedValue(...values), null);
 });
 test('historical priors exclude same-day, future, incomplete, ancient and duplicate results', () => {
   const a = args('nfl'), original = buildGamePrior(a);
@@ -65,8 +76,13 @@ test('market comparison handles integer pushes, spread signs and no-vig normaliz
   const spread = result.markets[1].selections[0];
   assert.equal(spread.pushProbability, .2); assert.equal(spread.probability, .3);
   assert.equal(spread.conditionalProbability, .3 / .8);
+  assert.ok(Math.abs(spread.estimatedEV - (.3 * 100 / 110 - .5)) < 1e-12);
   const unpaired = structuredClone(odds); unpaired.books[0].markets[1].selections[1].line = 4;
   assert.equal(compareGameMarkets(unpaired, [[20, 23]])[0].markets[1].selections[0].marketProbability, null);
+  const single = structuredClone(odds); single.books[0].markets[0].selections.pop();
+  const oneSide = compareGameMarkets(single, [[20, 23], [20, 19]])[0].markets[0].selections[0];
+  assert.equal(oneSide.marketProbability, null);
+  assert.ok(Math.abs(oneSide.estimatedEV - (.5 * 100 / 150 - .5)) < 1e-12);
 });
 test('stale, missing, interrupted, final, endgame and overtime states withhold estimates', () => {
   for (const patch of [{ stale: true }, { historyStale: true }, { history: [] }]) assert.equal(projectLiveGame({ ...args('nba'), ...patch }).status, 'withheld');
@@ -98,7 +114,15 @@ test('history adapters preserve missing scores and exclude exhibition games', ()
 test('rendered comparisons expose reasons, caveats and escaping; freshness expires in the browser', () => {
   const a = args('nfl'), gameModel = projectLiveGame(a), data = { game: a.game, odds, gameModel, fetchedAt: new Date(now).toISOString() };
   const html = gameOddsHtml(data);
-  for (const text of ['Why the model believes this', 'Model fair odds', 'Market chance', 'Push', 'not a guaranteed betting edge', 'Experimental']) assert.ok(html.includes(text), text);
+  for (const text of ['Simulation assumptions & inputs', 'Model fair odds', 'Market chance', 'Push', 'Estimated EV', 'net / $100', 'not a guaranteed return', 'Experimental']) assert.ok(html.includes(text), text);
+  assert.ok(!html.includes('Difference') && !html.includes(' pp'));
+  const displayedEV = structuredClone(data);
+  displayedEV.gameModel.books[0].markets[0].selections[0].estimatedEV = .05;
+  displayedEV.gameModel.books[0].markets[0].selections[1].estimatedEV = -.125;
+  assert.match(gameOddsHtml(displayedEV), /\+5\.0%<small>\+\$5\.00 net \/ \$100/);
+  assert.match(gameOddsHtml(displayedEV), /-12\.5%<small>−\$12\.50 net \/ \$100/);
+  displayedEV.gameModel.books[0].markets[0].selections[0].estimatedEV = null;
+  assert.match(gameOddsHtml(displayedEV), /data-label="Estimated EV"><span data-game-comparison>—<\/span>/);
   const escaped = structuredClone(data); escaped.odds.books[0].name = '<img onerror=bad>';
   assert.ok(!gameOddsHtml(escaped).includes('<img onerror'));
   assert.deepEqual(gameOddsFreshness(data, '', now), { modelStale: false, oddsStale: false });

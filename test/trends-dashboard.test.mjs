@@ -7,21 +7,24 @@ import { renderSitePage, siteContext, siteHeader } from '../lib/site-layout.mjs'
 
 const player = (id, prop, values = [0, 1, 2, 3, 4]) => ({ key: id, playerId: id, gameId: id === 'b' ? '2' : '1', name: 'Player ' + id, team: 'NY', opponent: 'LA', sport: 'nba', market: 'points', prop, rows: values.map((value, i) => ({ value, home: i % 2 === 0, opponent: 'LA', date: '2026-09-' + (20 - i) })) });
 
-test('home offers exactly two working workspace choices without loading a player board', async () => {
+test('home opens actual research with six sports and accessible loading state', async () => {
   const url = new URL('http://localhost/');
-  assert.deepEqual(siteContext(url), { sport: null, section: 'home' });
+  assert.deepEqual(siteContext(url), { sport: 'mlb', section: 'home' });
   const $ = load(renderSitePage(await fs.readFile(new URL('../public/home.html', import.meta.url), 'utf8'), url));
-  assert.deepEqual($('.workspace-choice').map((_, a) => $(a).attr('href')).get(), ['/nfl', '/nfl?view=trends']);
+  assert.equal($('#home-board[aria-busy=true]').length,1);
+  assert.equal($('script[src="/home.js"]').length,1);
+  assert.equal($('.site-sports a').length,6);
+  assert.equal($('.workspace-choice').length,0);
   assert.equal($('script[src="/app.js"]').length, 0);
   assert.equal(siteContext(new URL('http://localhost/?view=board')).section, 'research');
   assert.equal(siteContext(new URL('http://localhost/?view=trends')).section, 'trends');
 });
 
-test('workspace switch preserves the current sport and Sports Lab always returns to the chooser', () => {
+test('main navigation preserves the current sport and the brand returns to research overview', () => {
   for (const sport of ['nfl', 'mlb', 'nba', 'wnba', 'nhl', 'soccer']) {
     const $ = load(siteHeader(new URL(`http://localhost/${sport}?view=trends`)));
-    assert.deepEqual($('.workspace-switch a').map((_, a) => $(a).attr('href')).get(), ['/' + sport, '/' + sport + '?view=trends']);
-    assert.equal($('.workspace-switch [aria-current]').text(), 'Trends & Lines');
+    assert.deepEqual($('.site-navigation a').slice(0,2).map((_, a) => $(a).attr('href')).get(), ['/' + sport, '/' + sport + '?view=trends']);
+    assert.equal($('.site-navigation [aria-current]').text(), 'Trends');
     assert.equal($('.site-brand').attr('href'), '/');
   }
 });

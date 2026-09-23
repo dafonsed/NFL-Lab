@@ -1,6 +1,6 @@
 # Live game odds and fair prices
 
-`live-game-distribution-v1` adds a separate game forecast to `/nfl/live`, `/nba/live`, `/wnba/live`, and `/mlb/live`. Player projections retain their existing methods. The game panel shows sportsbook moneyline, spread/run line and total prices alongside estimated fair prices, probabilities, pushes, and explanations generated from the actual numeric inputs. These are estimated fair odds, not known true probabilities.
+`live-game-distribution-v1` adds a separate game forecast to `/nfl/live`, `/nba/live`, `/wnba/live`, and `/mlb/live`. Player projections retain their existing methods. The game panel shows sportsbook moneyline, spread/run line and total prices alongside estimated fair prices, probabilities, pushes, estimated EV, and explanations generated from the actual numeric inputs. These are estimated fair odds, not known true probabilities.
 
 ## Inputs and independence
 
@@ -32,7 +32,9 @@ NFL/basketball estimates pause in overtime or the final two minutes. All sports 
 
 For every exact quoted selection, simulations count wins, losses, and pushes. Symmetric half-observation smoothing prevents a finite simulation from claiming certainty. The table's model probability excludes pushes: `P(win) / (1 − P(push))`. Fair American odds are converted from that conditional probability and capped at ±19900 for display. Team cards show unconditional win probability and tie probability separately.
 
-The market probability normalizes the two American-price implied probabilities to sum to one. This removes the displayed overround proportionally; it does not establish the bookmaker's true probability. It is only computed for matching opposite spread thresholds or identical totals. Missing or mismatched opposite selections have no no-vig probability or difference. Difference is conditional model probability minus no-vig market probability in percentage points, not a validated betting edge.
+The market probability normalizes the two American-price implied probabilities to sum to one. This removes the displayed overround proportionally; it does not establish the bookmaker's true probability. It is only computed for matching opposite spread thresholds or identical totals. Missing or mismatched opposite selections have no no-vig probability.
+
+**Estimated EV** replaces the probability-difference column. `estimatedEV` is expected net profit per unit staked: `P(win) × net payout per unit − P(loss)`, with `P(loss) = 1 − P(win) − P(push)`. Use unconditional probabilities, not the table's push-excluded probabilities. The net payout is `American odds / 100` for positive odds and `100 / abs(American odds)` for negative odds. A push contributes zero profit. EV uses the actual offered sportsbook price and remains calculable with a single valid selection; it does not remove vig or use the capped model fair price. The UI shows percentage EV and expected net dollars per $100 staked. For example, 55% win probability at −110 with no pushes gives +5% EV, or +$5 net per $100 over repeated comparable wagers. Positive EV depends on the accuracy of the model and does not guarantee a profitable bet. Missing/invalid or stale prices never produce actionable EV.
 
 Only fresh explicit `.live` quote nodes are compared. Pregame/archived prices are labeled and never compared with a live model. Quote retrieval time is not a verified bookmaker update time. The browser independently expires game estimates and price comparisons after 45 seconds, including upstream cache age, even with auto-refresh disabled. A failed refresh hides old fair values and explanations.
 
@@ -51,6 +53,6 @@ Initial local results:
 
 These cover games present in the local data with eligible checkpoints/history, not necessarily every game of the season. Checkpoints from a game are correlated. Corrected historical files do not recreate feed latency or point-in-time publication. There are no synchronized sportsbook prices, profit results, held-out live calibration fit, or NBA/WNBA/MLB outcome validations. Lower retrospective Brier scores are encouraging but do not establish a betting advantage. The UI therefore retains its experimental label.
 
-`test/live-game.test.mjs` checks history exclusion, deterministic market independence, probability conservation, spread signs, pushes, price conversion, no-vig matching, all four sport paths, missing/stale guards, browser expiry, HTML escaping, and API integration. Existing player tests remain separate.
+`test/live-game.test.mjs` checks history exclusion, deterministic market independence, probability conservation, spread signs, pushes, price conversion, no-vig matching, expected-value arithmetic, all four sport paths, missing/stale guards, browser expiry, HTML escaping, and API integration. Existing player tests remain separate.
 
 Reference: [nflfastR model inputs](https://nflverse.r-universe.dev/nflfastR/doc/manual.html) illustrate the richer down/distance, field-position, timeout and possession information used by established NFL win-probability models. This implementation does not claim equivalence to that model.

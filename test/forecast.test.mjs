@@ -113,5 +113,5 @@ test('new model versions append alongside prior daily snapshots and preserve the
  const legacy={schema:1,createdAt:new Date(now-60000).toISOString(),candidateVersion:'workload-context-v2',records:[]};await store.append(legacyKey,legacy);
  b.players[0].baseRating={score:70,projected:39,tdProb:null};b.players[0].modelScore=82;b.players[0].forecast.teammateImpact={applied:true,rating:{before:70,after:82,delta:12}};
  await store.capture(b,[game],artifact);const batches=await store.batches(2026,1);assert.equal(batches.length,2);assert.deepEqual(await store.read(legacyKey),legacy);
- const current=batches.find(x=>x.candidateVersion==='workload-opportunities-v4');assert.equal(current.records[0].original.score,70);assert.equal(current.records[0].adjustedRating.after,82);assert.equal(current.records[0].forecast.teammateImpact.rating.before,70);
+ const current=batches.find(x=>x.candidateVersion==='workload-opportunities-v4.1');assert.equal(current.records[0].original.score,70);assert.equal(current.records[0].adjustedRating.after,82);assert.equal(current.records[0].forecast.teammateImpact.rating.before,70);
 });

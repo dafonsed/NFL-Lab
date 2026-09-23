@@ -20,7 +20,7 @@ function fixture(){
    weeklyRosters.push({...p,week});const [targets,carries]=values[p.gsis_id],offense=p.gsis_id==='reserveqb'||p.gsis_id==='donor'&&absent?0:40;
    snaps.push({game_id,pfr_player_id:p.gsis_id,team:'A',offense_snaps:offense});
    if(!offense)continue;
-   players.set(p.gsis_id,{player_id:p.gsis_id,player_display_name:p.full_name,position:p.position,team:'A',season:2026,week,statsAvailable:true,offense_snaps:offense,snap_pct:.7,targets,receptions:targets*.5,receiving_yards:targets*8,receiving_tds:targets*.05,carries,rushing_yards:carries*4,rushing_tds:carries*.02,attempts:p.position==='QB'?30:0,completions:p.position==='QB'?20:0,passing_yards:p.position==='QB'?240:0,passing_tds:1,passing_interceptions:0,special_teams_tds:0});
+   players.set(p.gsis_id,{player_id:p.gsis_id,player_display_name:p.full_name,position:p.position,team:'A',season:2026,week,statsAvailable:true,offense_snaps:offense,snap_pct:.7,targets,receptions:Math.ceil(targets*.5),receiving_yards:targets*8,receiving_tds:targets>0&&week%3===0?1:0,carries,rushing_yards:carries*4,rushing_tds:carries>0&&week%4===0?1:0,attempts:p.position==='QB'?30:0,completions:p.position==='QB'?20:0,passing_yards:p.position==='QB'?240:0,passing_tds:1,passing_interceptions:0,special_teams_tds:0});
   }
   games.push({game_id,gameday,season:2026,week,home_team:'A',away_team:'B',game_type:'REG',complete:true,players,plays:[],chart:[]});
  }

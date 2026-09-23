@@ -16,7 +16,7 @@ const input=()=>({sport:'wnba',market:'points',player:{...player},target:{...tar
 
 test('WNBA uses its own 40-minute configuration, markets, version and evaluation',()=>{
  const q=query({sport:'wnba',date:'2026-09-22'});assert.equal(q.path,'basketball/wnba');assert.equal(q.league,'wnba');assert.equal(SPORTS.wnba.duration,40);assert.equal(Object.keys(SPORTS.wnba.markets).length,15);
- assert.equal(predict(input()).version,'wnba-opportunities-v1');assert.equal(modelEvidence('wnba').season,2025);assert.equal(modelEvidence('nba'),null);
+ assert.equal(predict(input()).version,'wnba-opportunities-v1.1');assert.equal(modelEvidence('wnba').season,2025);assert.equal(modelEvidence('nba'),null);
  assert.equal(positionGroup(player,'wnba'),'guard');assert.equal(positionGroup({...player,position:'C'},'wnba'),'center');
 });
 test('WNBA possessions are normalized to 40 minutes; explicit DNP is distinct from missing minutes',()=>{
@@ -63,7 +63,7 @@ test('WNBA board retains guards, confirms five starters, refreshes reported Out,
  const provider={read:async url=>{urls.push(url);let payload;if(url.includes('/scoreboard'))payload={events:[event()]};else if(url.includes('/summary'))payload=raw(event());else if(url.includes('/roster'))payload={athletes:[]};else if(url.includes('/injuries'))payload={injuries:[{injuries:out?[{athlete:{id:'10'},status:'Out',date:new Date(clock).toISOString()}]:[]}]};else payload={events:[]};return {payload,url,sha256:'fixture',fetchedAt:new Date(clock).toISOString(),checkedAt:new Date(clock).toISOString(),stale:false};}};
  const archive={environment:'test',written:new Map(),status:{},append:async(key,r)=>{records.push({key,...r});return r;}};
  const store=new SportsStore({provider,archive,now:()=>clock});store.history=async()=>history().map(g=>({...g,players:g.players.map(p=>({...p,id:p.teamId+(Number(p.id)%6)}))}));store.props={lines:async()=>({quotes:[],status:'unavailable'})};
- const a=await store.board({sport:'wnba',date:'2026-09-22'});assert.equal(a.players.length,12);assert.equal(a.players.find(p=>p.id==='10').lineupConfirmed,true);assert.ok(a.players.find(p=>p.id==='10').forecast.point>0);assert.equal(a.model.version,'wnba-opportunities-v1');assert.ok(records[0].key.includes('/wnba/wnba/'));assert.match(records[0].key,/wnba-opportunities-v1/);
+ const a=await store.board({sport:'wnba',date:'2026-09-22'});assert.equal(a.players.length,12);assert.equal(a.players.find(p=>p.id==='10').lineupConfirmed,true);assert.ok(a.players.find(p=>p.id==='10').forecast.point>0);assert.equal(a.model.version,'wnba-opportunities-v1.1');assert.ok(records[0].key.includes('/wnba/wnba/'));assert.match(records[0].key,/wnba-opportunities-v1/);
  out=true;clock+=61000;const b=await store.board({sport:'wnba',date:'2026-09-22'},true);assert.equal(b.players.some(p=>p.id==='10'),false);assert.equal(b.unavailablePlayers[0].id,'10');assert.ok(urls.every(u=>u.includes('/basketball/wnba/')));
 });
 test('WNBA history requests both regular season and playoffs, never future/post-target games',async()=>{

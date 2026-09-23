@@ -28,7 +28,8 @@ test('MLB definitions count total bases, singles and combined props correctly',(
 test('innings are thirds, not decimal arithmetic',()=>{
   assert.equal(inningsToOuts('6.1'),19);assert.equal(inningsToOuts('5.2'),17);assert.equal(inningsToOuts('0.0'),0);
   assert.equal(inningsToOuts('6.3'),null);assert.equal(inningsToOuts(''),null);assert.equal(statValue({inningsPitched:'6.1'},'outs'),19);
-  assert.equal(statValue({outs:0,inningsPitched:'1.0'},'outs'),0);
+  assert.equal(statValue({outs:0,inningsPitched:'0.0'},'outs'),0);
+  assert.equal(statValue({outs:0,inningsPitched:'1.0'},'outs'),null);
 });
 test('MLB dates roll over in Eastern time and reject invalid dates/markets',()=>{
   assert.equal(mlbDay('2026-09-21T02:00:00Z'),'2026-09-20');assert.equal(shiftDate('2026-03-01',-1),'2026-02-28');

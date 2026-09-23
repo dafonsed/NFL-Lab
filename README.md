@@ -45,6 +45,10 @@ Run `npm run audit:mlb` against the running app to verify all 16 markets on the 
 
 ## Run
 
+### Game simulation
+
+Open **Models & Data → Simulation**, or `/nfl/simulation`. NFL, NBA, WNBA and MLB use the existing weighted game-score model for 1,000–50,000 seeded scenarios, score ranges, margin/total distributions and optional manual two-way odds comparisons. The default is 10,000 runs. Missing/stale data and unsupported sports are explicit. Results remain experimental; see [the methods and historical evaluation](docs/game-simulation.md) and [the follow-up verification checklist](docs/simulation-follow-up-audit.md). Reproduce the NFL chronological diagnostic with `npm run evaluate:simulation -- --verify-artifact` after the existing schedule data has been downloaded.
+
 Clone [dafonsed/NFL-Lab](https://github.com/dafonsed/NFL-Lab), then install and start:
 
 ```sh

@@ -12,6 +12,8 @@ function applyDisplay() {
   document.documentElement.dataset.motion = settings.motion === 'reduce' ? 'reduce' : 'system';
 }
 applyDisplay();
+document.querySelectorAll('.site-live-dot').forEach(dot => dot.remove());
+document.querySelectorAll('.site-nav-link,.site-tracker,.workspace-home-link').forEach(link => link.title = link.getAttribute('aria-label') || link.textContent.trim());
 window.addEventListener('storage', event => {
   if (event.key !== settingsKey) return;
   const next = read(settingsKey, {});
@@ -43,7 +45,7 @@ function sheet(title, eyebrow, content, footer = '') {
 
 function displaySettings() {
   const dialog = sheet('Appearance', 'Display settings', `
-    <div class="display-preview"><span class="appearance-label">${icon('palette')} NIGHT THEME</span><strong>Display preferences</strong><p>Adjust card spacing and animations below.</p><div class="appearance-swatches" aria-label="Theme colors"><span style="--swatch:#85aaff" title="Blue"></span><span style="--swatch:#a698ff" title="Violet"></span><span style="--swatch:#76dcf7" title="Cyan"></span><span style="--swatch:#5ce1cd" title="Mint"></span><span style="--swatch:#f3f4fb" title="White"></span></div></div>
+    <div class="display-preview"><span class="appearance-label">${icon('palette')} NIGHT THEME</span><strong>Display preferences</strong><p>Black surfaces. Blue and cyan accents.</p><div class="appearance-swatches" aria-label="Theme colors"><span style="--swatch:var(--bg)" title="Black"></span><span style="--swatch:var(--accent-strong)" title="Blue"></span><span style="--swatch:var(--accent)" title="Cyan"></span><span style="--swatch:var(--text)" title="White"></span></div></div>
     <div class="sheet-field"><span>Card spacing</span><div class="display-segments" role="group" aria-label="Card spacing"><button data-density="comfortable" aria-pressed="${settings.density !== 'compact'}">Comfortable</button><button data-density="compact" aria-pressed="${settings.density === 'compact'}">Compact</button></div></div>
     <label class="sheet-switch"><span>Reduce animations</span><input type="checkbox" data-reduce-motion ${settings.motion === 'reduce' ? 'checked' : ''}></label>
     <div><div class="sheet-section-title"><span>Developer mode</span><button class="site-dev-toggle" data-dev-toggle aria-pressed="${document.documentElement.dataset.devMode === 'true'}">${icon('code')}<span>Dev mode</span><b>${document.documentElement.dataset.devMode === 'true' ? 'On' : 'Off'}</b></button></div><p>Show model inputs, formulas, and source data in player research.</p></div>
@@ -62,6 +64,57 @@ function navigationMenu() {
   const links = [...document.querySelectorAll('.site-navigation a,.site-personal a,.workspace-home-link')].map(link => link.outerHTML).join('');
   sheet('Your workspace', 'Sports Lab', `<nav class="sheet-nav" aria-label="All destinations">${links}</nav>`, `<button class="button subtle" data-display-settings>${icon('settings')} Display settings</button>`);
 }
+
+const guide = $('.research-guide');
+if (guide) {
+  const anchor = $('#content') || $('#players') || $('#sim-results') || $('#td-workbench') || $('#bet-list') || $('#historical') || $('#report');
+  if (anchor) anchor.after(guide); else $('.page-heading')?.after(guide);
+}
+
+// Existing evidence/compare dialogs change content in place; keep their name
+// tied to the visible heading without exposing technical content by default.
+for (const dialog of document.querySelectorAll('dialog:not([aria-labelledby]):not([aria-label])')) {
+  const name = () => dialog.setAttribute('aria-label', dialog.querySelector('h2,h3')?.textContent.trim() || 'Research details');
+  new MutationObserver(name).observe(dialog, { childList: true, subtree: true });
+  name();
+}
+for (const dialog of document.querySelectorAll('dialog')) {
+  const close = dialog.querySelector(':scope > .dialog-close');
+  if (close) {
+    const header = document.createElement('div'); header.className = 'research-dialog-bar';
+    const label = document.createElement('span'); label.textContent = 'SPORTS LAB / RESEARCH';
+    header.append(label, close); dialog.prepend(header);
+    if (dialog.id === 'bet-dialog') label.textContent = 'SPORTS LAB / TICKET EDITOR';
+  }
+}
+
+// Give every empty table a readable, correctly spanned row. Zero values remain
+// data; only a genuinely empty tbody gets an unavailable state.
+function explainEmptyTables(root) {
+  const tables = root.matches?.('table') ? [root] : [...root.querySelectorAll?.('table') || []];
+  for (const table of tables) {
+    const body = table.tBodies[0];
+    if (!body || body.rows.length) continue;
+    const cell = body.insertRow().insertCell();
+    cell.colSpan = Math.max(1, table.tHead?.rows[0]?.cells.length || 1);
+    cell.className = 'table-empty-state';
+    cell.textContent = 'No records available for this selection. Try another date or filter; missing results are not counted as zero.';
+  }
+}
+explainEmptyTables(document);
+new MutationObserver(records => { for (const record of records) for (const node of record.addedNodes) if (node instanceof Element) explainEmptyTables(node); }).observe(document.querySelector('main'), { childList: true, subtree: true });
+
+// Preserve compatible date/market selections when switching research views.
+document.addEventListener('click', event => {
+  const link = event.target.closest('.site-navigation a,.mobile-navigation a,.workspace-switch a,.sheet-nav a');
+  if (!link) return;
+  const destination = new URL(link.href), current = new URL(location.href);
+  if (destination.origin !== current.origin || destination.pathname !== current.pathname) return;
+  for (const key of ['date','season','week','market','game','league']) {
+    if (current.searchParams.has(key) && !destination.searchParams.has(key)) destination.searchParams.set(key, current.searchParams.get(key));
+  }
+  link.href = destination.href;
+});
 
 document.addEventListener('click', event => {
   if (event.target.closest('[data-display-settings]')) displaySettings();
@@ -134,7 +187,7 @@ if (filterBar) {
   const presetKey = `sports-lab-filter-presets:${sport}:${section}`;
   function openFilters() {
     const initial = values();
-    const fieldsHTML = fields.map(field => {
+    const fieldsHTML = fields.filter(field => !document.getElementById(field.id).closest('[hidden]')).map(field => {
       const control = document.getElementById(field.id);
       return field.kind === 'select' ? `<label class="sheet-field">${esc(field.label)}<select data-filter-field="${esc(field.id)}">${[...control.options].map(option => `<option value="${esc(option.value)}"${option.value === initial[field.id] ? ' selected' : ''}>${esc(option.textContent)}</option>`).join('')}</select></label>` : `<label class="sheet-switch"><span>${esc(field.label)}</span><input type="checkbox" data-filter-field="${esc(field.id)}"${initial[field.id] ? ' checked' : ''}></label>`;
     }).join('');
@@ -181,6 +234,7 @@ for (const [selector, name] of [
   const label = button.textContent.replace(/^[↻↓＋+\s]+/, '').trim();
   button.innerHTML = `${icon(name)}<span>${esc(label)}</span>`;
   if (!button.getAttribute('aria-label')) button.setAttribute('aria-label', label);
+  if (!button.title) button.title = button.getAttribute('aria-label');
 }
 for (const search of document.querySelectorAll('.searchbox,.td-search')) {
   const prefix = search.querySelector('span[aria-hidden=true]');
@@ -191,6 +245,7 @@ for (const node of document.querySelectorAll('[data-ui-icon]')) node.outerHTML =
 
 // Label the destination on each research page; no status is inferred from styling.
 const pageHeader = $('.site-header'), headingLabel = $('.page-heading .eyebrow');
+if (pageHeader) document.body.dataset.section = pageHeader.dataset.siteSection;
 if (headingLabel && pageHeader) {
   const sport = pageHeader.dataset.siteSport, section = pageHeader.dataset.siteSection;
   const labels = { research: 'PLAYER RESEARCH', trends: 'PLAYER TRENDS', live: 'LIVE GAME CENTER', bets: 'MY PICKS', performance: 'MODEL PERFORMANCE', paper: 'PAPER RETURNS', simulation: 'GAME SIMULATION' };
@@ -210,6 +265,16 @@ function foldPanel(node, title, className) {
 if (!document.body.classList.contains('bets-app')) foldPanel($('#summary'), 'Board overview', 'overview-fold');
 foldPanel($('#prop-status') || $('#line-source'), 'Sportsbook lines & sources', 'sources-fold');
 foldPanel($('#game-context'), 'Matchup & availability', 'context-fold');
+if ($('.context-fold') && $('.page-tools-actions')) $('.page-tools-actions').after($('.context-fold'));
+const researchActions = $('.page-tools-actions');
+if (researchActions && $('.context-fold')) {
+  const tools = document.createElement('details'); tools.className = 'research-tools';
+  tools.innerHTML = `<summary>Research notes & tools ${icon('chevron')}</summary>`;
+  researchActions.before(tools); tools.append(researchActions, $('.context-fold'));
+  const desktop = matchMedia('(min-width:701px)');
+  tools.open = false;
+  desktop.addEventListener('change', () => { tools.open = false; });
+}
 const boardNotes = [...document.querySelectorAll('main > .workspace-fold')];
 if (boardNotes.length > 1) {
   const strip = document.createElement('div'); strip.className = 'workspace-context-strip';
@@ -217,25 +282,33 @@ if (boardNotes.length > 1) {
 }
 const notices = $('#notice');
 if (notices) {
-  const foldNotes = () => { for (const note of notices.querySelectorAll(':scope > .notice.info')) foldPanel(note, 'About this data', 'information-fold'); };
+  const foldNotes = () => {
+    for (const note of notices.querySelectorAll(':scope > .notice.info')) {
+      foldPanel(note, 'About this data', 'information-fold');
+      // Keep related NFL context in one row; warnings and freshness stay visible.
+      const strip = $('.workspace-context-strip');
+      const options = $('.research-options');
+      if(options) options.append(note.parentElement);
+      else if (strip && $('#week-select')) strip.append(note.parentElement);
+    }
+  };
   new MutationObserver(foldNotes).observe(notices, { childList: true }); foldNotes();
 }
 
-// The schedule sits beside the Trends heading on wide screens. Source-check
-// status remains in the footer; quote freshness stays next to each actual line.
+// Keep source freshness before the player board, close to schedule controls.
 if (document.body.classList.contains('trends-workspace')) {
   const toolbar = $('.td-toolbar'), heading = $('.page-heading'), status = $('#td-status');
   if (toolbar && heading) { heading.classList.add('trends-heading'); heading.insertBefore(toolbar, $('#trend-refresh')); }
-  if (status) $('main > footer')?.append(status);
+  if (status) { status.classList.add('board-freshness'); heading?.after(status); }
 }
 
 // A slow or unavailable remote headshot still gets a useful, deterministic avatar.
 // Keep the real image above the initials and reveal it when the request succeeds.
 function prepareAvatars(root) {
-  const images = root.matches?.('img') ? [root] : [...root.querySelectorAll?.('.avatar,.mlb-avatar,.sports-card header img,.td-player-name img,.td-player-identity img,.pr-identity > img,.trend-card header img') || []];
+  const images = root.matches?.('img') ? [root] : [...root.querySelectorAll?.('.research-player img,.avatar,.mlb-avatar,.sports-card header img,.td-player-name img,.td-player-identity img,.pr-identity > img,.trend-card header img') || []];
   for (const img of images) {
     if (!(img instanceof HTMLImageElement) || img.dataset.avatarReady || img.closest('.ui-avatar')) continue;
-    const group = img.closest('.player-main,.mlb-card-top,.sports-card header,.td-player-name,.td-player-identity,.pr-identity,.trend-card header');
+    const group = img.closest('.research-player,.player-main,.mlb-card-top,.sports-card header,.td-player-name,.td-player-identity,.pr-identity,.trend-card header');
     const name = group?.querySelector('.player-name,h2,h3,strong')?.textContent?.trim(); if (!name) continue;
     img.dataset.avatarReady = 'true';
     const holder = document.createElement('span'); holder.className = 'ui-avatar'; holder.setAttribute('aria-hidden','true');

@@ -21,14 +21,14 @@
     <nav id="td-markets" class="td-markets" aria-label="Player prop market"></nav>
     <div id="td-notice" role="status"></div>
     <section id="td-overview" class="td-overview" aria-label="Board overview"></section>
-    <section class="td-filters" aria-label="Player filters">
+    <button class="button td-browse" id="td-browse" aria-expanded="false" aria-controls="td-players">Choose a player <span id="td-browse-name"></span><span aria-hidden="true">⌄</span></button><div class="td-workbench" id="td-workbench" aria-busy="true">
+      <section class="td-players" id="td-players" aria-label="Players"><div class="td-panel-heading"><h2>Player board</h2><span id="td-count">Loading</span></div>    <section class="td-filters" aria-label="Player filters">
       <label class="td-search"><span aria-hidden="true">⌕</span><input type="search" id="td-search" placeholder="Search players or teams" aria-label="Search players or teams" autocomplete="off"></label>
       <label class="sr-only" for="td-sort">Sort players</label><select id="td-sort"><option value="rate">Highest hit rate</option><option value="average">Highest average</option><option value="change">Biggest form change</option><option value="name">Player name</option></select>
       <button id="td-posted" aria-pressed="false">Posted lines only</button><button id="td-saved" aria-pressed="false">☆ Watchlist</button>
       <div class="td-side" aria-label="Comparison side"><button data-side="over" aria-pressed="true">Over</button><button data-side="under" aria-pressed="false">Under</button></div>
     </section>
-    <div class="td-workbench" id="td-workbench" aria-busy="true">
-      <section class="td-players" aria-label="Players"><div class="td-panel-heading"><h2>Player board</h2><span id="td-count">Loading</span></div><div id="td-player-list"><div class="td-empty"><div class="loader"></div><h3>Building your board</h3><p>Loading game history and available lines.</p></div></div></section>
+<div id="td-player-list"><div class="td-empty"><div class="loader"></div><h3>Building your board</h3><p>Loading game history and available lines.</p></div></div></section>
       <section class="td-detail" id="td-detail" aria-label="Selected player analysis"><div class="td-empty"><span class="td-empty-icon" aria-hidden="true">▥</span><h2>Your research, in one view.</h2><p>Choose a player to explore their game history, splits, and line.</p></div></section>
     </div>
     <footer><span>SPORTS LAB <span class="muted">/ Trends &amp; Lines</span></span><span>Past hit rates describe recorded games, not future probabilities.</span></footer>
