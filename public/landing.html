@@ -10,6 +10,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/app-design.css">
   <link rel="stylesheet" href="/landing.css">
+  <link rel="stylesheet" href="/landing-demo.css">
   <script type="module" src="/landing.js"></script>
 </head>
 <body class="landing-page">
@@ -36,26 +37,18 @@
       </div>
       <section class="landing-showcase" id="workspace" aria-label="Explore the Sportslab workspace">
         <div class="landing-showcase-toolbar">
-          <div class="landing-preview-tabs" role="tablist" aria-label="Workspace preview">
+          <div class="landing-preview-tabs" role="tablist" aria-label="Demo workspace">
             <button id="preview-research-tab" role="tab" aria-selected="true" aria-controls="preview-research" tabindex="0"><span data-icon="research" aria-hidden="true"></span>Player research</button>
             <button id="preview-trends-tab" role="tab" aria-selected="false" aria-controls="preview-trends" tabindex="-1"><span data-icon="trends" aria-hidden="true"></span>Trends &amp; lines</button>
           </div>
           <span class="landing-preview-label">INSIDE SPORTSLAB</span>
         </div>
-        <div class="landing-preview-panel" id="preview-research" role="tabpanel" aria-labelledby="preview-research-tab">
-          <a class="landing-preview-image" href="/nfl?season=2026&amp;week=3&amp;market=rec_yds&amp;researchPlayer=nfl%3A2026_03_LV_NO%3A00-0037239%3Arec_yds" aria-label="Open the interactive Chris Olave research shown in this preview">
-            <img src="/research-preview.png" width="1176" height="650" alt="Sportslab player research: Chris Olave’s receiving-yard history, an adjustable comparison line, and opponent context." fetchpriority="high">
-          </a>
-          <div class="landing-preview-footer"><p><span class="landing-preview-number">01</span><strong>The player. The line. The matchup.</strong><span class="landing-preview-description">Research the numbers together.</span></p><a href="/nfl?season=2026&amp;week=3&amp;market=rec_yds&amp;researchPlayer=nfl%3A2026_03_LV_NO%3A00-0037239%3Arec_yds">Explore this view <span data-icon="arrow" aria-hidden="true">→</span></a></div>
-        </div>
-        <div class="landing-preview-panel" id="preview-trends" role="tabpanel" aria-labelledby="preview-trends-tab" hidden>
-          <a class="landing-preview-image" href="/wnba?view=trends&amp;date=2026-09-22&amp;market=points" aria-label="Open WNBA trends for the date shown in this preview">
-            <img src="/trends-preview.png" width="1176" height="650" alt="Sportslab trends: Caitlin Clark’s last ten games, historical hit rate, comparison line and matchup statistics." loading="lazy">
-          </a>
-          <div class="landing-preview-footer"><p><span class="landing-preview-number">02</span><strong>See the games behind the average.</strong><span class="landing-preview-description">Adjust the line. Explore recent form.</span></p><a href="/wnba?view=trends&amp;date=2026-09-22&amp;market=points">Explore WNBA trends <span data-icon="arrow" aria-hidden="true">→</span></a></div>
-        </div>
+        <div class="demo-notice"><span><b>Interactive demo</b><span>Fictional players &amp; sample games</span></span><button type="button" class="demo-reset" data-demo-reset>Reset demo <span data-icon="refresh" aria-hidden="true"></span></button></div>
+        <div class="landing-preview-panel" id="preview-research" role="tabpanel" aria-labelledby="preview-research-tab"><div id="demo-research"><p class="demo-starting">Preparing the interactive demo…</p><noscript><p>This demo needs JavaScript. You can still <a href="/research">open the research workspace</a>.</p></noscript></div></div>
+        <div class="landing-preview-panel" id="preview-trends" role="tabpanel" aria-labelledby="preview-trends-tab" hidden><div id="demo-trends"></div></div>
+        <div class="demo-footer"><span id="demo-feedback" role="status">Try a filter or drag the comparison line.</span><a id="demo-open-research" href="/research?sport=nfl">Open real research <span data-icon="arrow" aria-hidden="true">→</span></a></div>
       </section>
-      <p class="landing-preview-caption">Actual Sportslab screens, captured September 23, 2026. These are static previews; lines and availability change.</p>
+      <p class="landing-preview-caption">Explore freely. This demo uses sample data, not current odds or predictions. Demo saves and notes reset when you reload.</p>
     </section>
     <section class="landing-sports landing-container" id="sports" aria-labelledby="sports-title">
       <div class="landing-section-top"><h2 id="sports-title">Your sport. Your starting point.</h2><p>Go straight to player research.</p></div>

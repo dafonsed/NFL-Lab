@@ -23,6 +23,10 @@ test('public homepage is separate from the sport-aware research workspace', asyn
   assert.equal($('.landing-sport-links a').length, 6);
   assert.equal($('[role="tabpanel"]').length, 2);
   assert.equal($('[role="tab"][aria-selected="true"]').length, 1);
+  assert.equal($('#workspace img').length, 0, 'Homepage demo uses real controls, not screenshots');
+  assert.equal($('#demo-research').length, 1);
+  assert.equal($('#demo-trends').length, 1);
+  assert.match($('.demo-notice').text(), /Fictional players & sample games/);
   const workspace = new URL('http://localhost/research?sport=wnba');
   assert.deepEqual(siteContext(workspace), { sport: 'wnba', section: 'home' });
   const nav = load(siteHeader(workspace));

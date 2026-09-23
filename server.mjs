@@ -74,7 +74,7 @@ export const server = http.createServer(async (req, res) => {
     const pagePath = url.pathname.replace(/\/$/, '') || '/';
     for (const file of ['simulation.js', 'simulation-props.js', 'simulation.css']) names['/' + file] = file;
     if (pagePath === '/simulation' || /^\/(nfl|nba|wnba|mlb|nhl|soccer)\/simulation$/.test(pagePath)) names[pagePath] = 'simulation.html';
-    if (['/landing.css','/landing.js','/research-preview.png','/trends-preview.png','/home.js','/product-ui.js','/player-research.js','/chart-line.js','/research-notes.js','/research-data.js','/site-preferences.js','/player-research.css','/workspace.css','/trends.css','/trends.js','/trends-data.js','/app-design.css','/workspace-ui.js','/ui-icons.js'].includes(pagePath)) names[pagePath]=pagePath.slice(1);
+    if (['/landing.css','/landing.js','/landing-demo.js','/landing-demo.css','/demo-data.js','/home.js','/product-ui.js','/player-research.js','/chart-line.js','/research-notes.js','/research-data.js','/site-preferences.js','/player-research.css','/workspace.css','/trends.css','/trends.js','/trends-data.js','/app-design.css','/workspace-ui.js','/ui-icons.js'].includes(pagePath)) names[pagePath]=pagePath.slice(1);
     const context = siteContext(url);
     const name = context.section === 'landing' ? 'landing.html' : context.section === 'home' ? 'home.html' : context.section === 'trends' ? 'trends.html' : /^\/(nba|wnba|mlb)\/live$/.test(pagePath) ? 'live-sports.html' : pagePath === '/live' ? 'live-hub.html' : pagePath === '/site-layout.css' ? 'site-layout.css' : pagePath === '/live-sports.js' ? 'live-sports.js' : names[pagePath];
     if (!name) return json(res, { error: 'Not found.' }, 404);

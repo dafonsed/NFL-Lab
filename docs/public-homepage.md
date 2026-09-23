@@ -2,6 +2,8 @@
 
 Implemented September 23, 2026.
 
+Update: the initial screenshot previews described below were replaced by a fully interactive, explicitly labelled sample-data workspace. See [interactive-homepage-demo.md](interactive-homepage-demo.md) for the current controls and verification.
+
 The main domain previously rendered `home.html`, immediately fetched a research board, and rewrote `/` with a selected player. The root now serves a separate public homepage. The existing research overview lives at `/research`.
 
 | Area | Implementation | Verification |
@@ -21,6 +23,6 @@ The main domain previously rendered `home.html`, immediately fetched a research 
 - A saved link to a non-default MLB player retained that player after redirect and manual refresh.
 - Responsive preview tabs support click, arrow keys, Home and End. All navigation and primary entry links use ordinary anchors.
 
-Local visual evidence is in `.research/homepage/`: `production-before.png` and `desktop-after.png` use the same 1440 × 1200 viewport; `mobile-after.png`, `narrow-after.png` and `tablet-after.png` capture the final responsive presentation. Full-page captures and browser assertions are also retained there. The two shipped preview assets are original captures of this application, not invented product data.
+Initial-release visual evidence is in `.research/homepage/`: `production-before.png` and `desktop-after.png` use the same 1440 × 1200 viewport; `mobile-after.png`, `narrow-after.png` and `tablet-after.png` capture that responsive presentation. Full-page captures and browser assertions are also retained there. The original screenshot assets have since been removed in favor of the interactive demo.
 
 This change affects presentation and routing. It does not change data providers, model calculations or browser-stored research records.
