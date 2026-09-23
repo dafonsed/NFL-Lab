@@ -2,14 +2,44 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { load } from 'cheerio';
-import { renderSitePage, siteHeader, siteContext } from '../lib/site-layout.mjs';
+import { renderSitePage, siteHeader, siteContext, legacyResearchUrl } from '../lib/site-layout.mjs';
 
 const routes = [
-  ['/?view=games', 'index', '/nfl/live'], ['/nfl/', 'index', '/nfl/live'], ['/mlb', 'mlb', '/mlb/live'], ['/nba', 'sports', '/nba/live'], ['/wnba/', 'sports', '/wnba/live'],
+  ['/nfl?view=games', 'index', '/nfl/live'], ['/nfl/', 'index', '/nfl/live'], ['/mlb', 'mlb', '/mlb/live'], ['/nba', 'sports', '/nba/live'], ['/wnba/', 'sports', '/wnba/live'],
   ['/nhl', 'sports', '/live'], ['/soccer', 'sports', '/live'], ['/nfl/live', 'live', '/nfl/live'], ['/mlb/live', 'live-sports', '/mlb/live'],
   ['/nba/live', 'live-sports', '/nba/live'], ['/wnba/live', 'live-sports', '/wnba/live'], ['/bets', 'bets', '/live'], ['/performance', 'performance', '/nfl/live'],
   ['/paper', 'paper', '/nfl/live'], ['/paper?sport=mlb', 'paper', '/mlb/live'], ['/live', 'live-hub', '/live']
 ];
+
+test('public homepage is separate from the sport-aware research workspace', async () => {
+  const root = new URL('http://localhost/');
+  assert.deepEqual(siteContext(root), { sport: null, section: 'landing' });
+  const homepage = await fs.readFile(new URL('../public/landing.html', import.meta.url), 'utf8');
+  const $ = load(renderSitePage(homepage, root));
+  assert.equal($('.site-header').length, 0);
+  assert.equal($('h1').text(), 'Your next pick.A clearer picture.');
+  assert.equal($('script[src="/home.js"]').length, 0);
+  assert.equal($('.landing-button[href="/research"]').length, 3);
+  assert.equal($('.landing-sport-links a').length, 6);
+  assert.equal($('[role="tabpanel"]').length, 2);
+  assert.equal($('[role="tab"][aria-selected="true"]').length, 1);
+  const workspace = new URL('http://localhost/research?sport=wnba');
+  assert.deepEqual(siteContext(workspace), { sport: 'wnba', section: 'home' });
+  const nav = load(siteHeader(workspace));
+  assert.equal(nav('.site-sports [aria-current="page"]').attr('href'), '/research?sport=wnba');
+  assert.equal(nav('.site-overview-link').attr('href'), '/research');
+  assert.equal(nav('.workspace-home-link').attr('href'), '/research');
+  assert.equal(nav('.site-brand').attr('href'), '/');
+});
+
+test('saved root research links preserve their exact context while ordinary visits stay on the homepage', () => {
+  for (const query of ['', '?utm_source=bookmark', '?unrelated=value']) assert.equal(legacyResearchUrl(new URL('http://localhost/' + query)), null);
+  for (const query of ['?sport=mlb&date=2026-09-23&prop=hits&researchPlayer=mlb%3A823894%3A605141%3Ahits', '?sport=wnba&game=401857208', '?period=2026-3']) {
+    assert.equal(legacyResearchUrl(new URL('http://localhost/' + query)), '/research' + query);
+  }
+  assert.equal(legacyResearchUrl(new URL('http://localhost/?view=board&season=2026&week=3&market=rec_yds')), '/nfl?view=board&season=2026&week=3&market=rec_yds');
+  assert.equal(legacyResearchUrl(new URL('http://localhost/research?sport=mlb')), null);
+});
 
 test('every page renders the same working navigation and Live link before any JavaScript runs', async () => {
   for (const [route, template, target] of routes) {

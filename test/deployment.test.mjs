@@ -16,7 +16,12 @@ test('Vercel can import the default server without starting a listener or backgr
     try {
       const health = await fetch(base + '/api/health', {headers:{host:'nfl-lab-xi.vercel.app'}});
       assert.equal(health.status,200);const status=await health.json();assert.equal(status.syncing,false);assert.equal(status.lastSync,null);
-      const page=await fetch(base+'/');assert.equal(page.status,200);assert.match(await page.text(),/Player research/);
+      const page=await fetch(base+'/');assert.equal(page.status,200);const homepage=await page.text();assert.match(homepage,/Your next pick/);assert.ok(!homepage.includes('src="/home.js"'));
+      const research=await fetch(base+'/research?sport=wnba');assert.equal(research.status,200);assert.ok((await research.text()).includes('src="/home.js"'));
+      const oldQuery='?sport=mlb&date=2026-09-23&prop=hits&researchPlayer=mlb%3A823894%3A605141%3Ahits';
+      const moved=await fetch(base+'/'+oldQuery,{redirect:'manual'});assert.equal(moved.status,302);assert.equal(moved.headers.get('location'),'/research'+oldQuery);
+      const tracked=await fetch(base+'/?utm_source=example');assert.match(await tracked.text(),/Your next pick/);
+      for(const asset of ['/landing.css','/landing.js','/research-preview.png','/trends-preview.png']) {const response=await fetch(base+asset);assert.equal(response.status,200);if(asset.endsWith('.png'))assert.match(response.headers.get('content-type'),/^image\\/png/);}
       for (const sport of ['nfl','mlb','nba','wnba','nhl','soccer']) {
         const page=await fetch(base+'/'+sport+'?view=trends');assert.equal(page.status,200);
         const html=await page.text();assert.match(html,/id="td-workbench"/);assert.ok(html.includes('src="/trends.js"'));

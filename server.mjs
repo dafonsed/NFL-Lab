@@ -11,7 +11,7 @@ import { mlbModelReport } from './lib/mlb/forecast.mjs';
 import { LiveNflStore } from './lib/live-nfl.mjs';
 import { LiveSportsStore } from './lib/live-sports.mjs';
 import { BetTrackerStore } from './lib/bet-tracker.mjs';
-import { renderSitePage, siteContext } from './lib/site-layout.mjs';
+import { renderSitePage, siteContext, legacyResearchUrl } from './lib/site-layout.mjs';
 import { SimulationStore } from './lib/simulation-source.mjs';
 import { SimulationPropsStore, createSimulationPropStores } from './lib/simulation-props.mjs';
 
@@ -42,6 +42,8 @@ export const server = http.createServer(async (req, res) => {
     if (!process.env.VERCEL && !/^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(host)) return json(res, { error: 'This workspace only accepts local connections.' }, 403);
     if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, { error: 'Method not allowed.' }, 405);
     const url = new URL(req.url, 'http://localhost');
+    const legacyUrl = legacyResearchUrl(url);
+    if (legacyUrl) { res.writeHead(302, { Location: legacyUrl, 'Cache-Control': 'no-store' }); return res.end(); }
     if (['/api/cron/predictions','/api/cron/mlb-predictions'].includes(url.pathname)) {
       const expected=process.env.CRON_SECRET ? Buffer.from('Bearer '+process.env.CRON_SECRET) : null, actual=Buffer.from(req.headers.authorization||'');
       if(!expected||expected.length!==actual.length||!timingSafeEqual(expected,actual))return json(res,{error:'Unauthorized'},401);
@@ -72,12 +74,12 @@ export const server = http.createServer(async (req, res) => {
     const pagePath = url.pathname.replace(/\/$/, '') || '/';
     for (const file of ['simulation.js', 'simulation-props.js', 'simulation.css']) names['/' + file] = file;
     if (pagePath === '/simulation' || /^\/(nfl|nba|wnba|mlb|nhl|soccer)\/simulation$/.test(pagePath)) names[pagePath] = 'simulation.html';
-    if (['/home.js','/product-ui.js','/player-research.js','/chart-line.js','/research-notes.js','/research-data.js','/site-preferences.js','/player-research.css','/workspace.css','/trends.css','/trends.js','/trends-data.js','/app-design.css','/workspace-ui.js','/ui-icons.js'].includes(pagePath)) names[pagePath]=pagePath.slice(1);
+    if (['/landing.css','/landing.js','/research-preview.png','/trends-preview.png','/home.js','/product-ui.js','/player-research.js','/chart-line.js','/research-notes.js','/research-data.js','/site-preferences.js','/player-research.css','/workspace.css','/trends.css','/trends.js','/trends-data.js','/app-design.css','/workspace-ui.js','/ui-icons.js'].includes(pagePath)) names[pagePath]=pagePath.slice(1);
     const context = siteContext(url);
-    const name = context.section === 'home' ? 'home.html' : context.section === 'trends' ? 'trends.html' : /^\/(nba|wnba|mlb)\/live$/.test(pagePath) ? 'live-sports.html' : pagePath === '/live' ? 'live-hub.html' : pagePath === '/site-layout.css' ? 'site-layout.css' : pagePath === '/live-sports.js' ? 'live-sports.js' : names[pagePath];
+    const name = context.section === 'landing' ? 'landing.html' : context.section === 'home' ? 'home.html' : context.section === 'trends' ? 'trends.html' : /^\/(nba|wnba|mlb)\/live$/.test(pagePath) ? 'live-sports.html' : pagePath === '/live' ? 'live-hub.html' : pagePath === '/site-layout.css' ? 'site-layout.css' : pagePath === '/live-sports.js' ? 'live-sports.js' : names[pagePath];
     if (!name) return json(res, { error: 'Not found.' }, 404);
     const bytes = await fs.readFile(path.join(publicDir, name));
-    const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
+    const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
     const body = name.endsWith('.html') ? renderSitePage(bytes.toString('utf8'), url) : bytes;
     res.writeHead(200, { 'Content-Type': (types[path.extname(name)] || 'text/plain') + '; charset=utf-8', 'Cache-Control': 'no-cache' });
     res.end(req.method === 'HEAD' ? undefined : body);

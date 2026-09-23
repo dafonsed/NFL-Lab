@@ -7,8 +7,8 @@ import { renderSitePage, siteContext, siteHeader } from '../lib/site-layout.mjs'
 
 const player = (id, prop, values = [0, 1, 2, 3, 4]) => ({ key: id, playerId: id, gameId: id === 'b' ? '2' : '1', name: 'Player ' + id, team: 'NY', opponent: 'LA', sport: 'nba', market: 'points', prop, rows: values.map((value, i) => ({ value, home: i % 2 === 0, opponent: 'LA', date: '2026-09-' + (20 - i) })) });
 
-test('home opens actual research with six sports and accessible loading state', async () => {
-  const url = new URL('http://localhost/');
+test('research overview opens with six sports and accessible loading state', async () => {
+  const url = new URL('http://localhost/research');
   assert.deepEqual(siteContext(url), { sport: 'mlb', section: 'home' });
   const $ = load(renderSitePage(await fs.readFile(new URL('../public/home.html', import.meta.url), 'utf8'), url));
   assert.equal($('#home-board[aria-busy=true]').length,1);
@@ -16,11 +16,11 @@ test('home opens actual research with six sports and accessible loading state', 
   assert.equal($('.site-sports a').length,6);
   assert.equal($('.workspace-choice').length,0);
   assert.equal($('script[src="/app.js"]').length, 0);
-  assert.equal(siteContext(new URL('http://localhost/?view=board')).section, 'research');
-  assert.equal(siteContext(new URL('http://localhost/?view=trends')).section, 'trends');
+  assert.equal(siteContext(new URL('http://localhost/nfl?view=board')).section, 'research');
+  assert.equal(siteContext(new URL('http://localhost/nfl?view=trends')).section, 'trends');
 });
 
-test('main navigation preserves the current sport and the brand returns to research overview', () => {
+test('main navigation preserves the current sport and the brand returns to the public homepage', () => {
   for (const sport of ['nfl', 'mlb', 'nba', 'wnba', 'nhl', 'soccer']) {
     const $ = load(siteHeader(new URL(`http://localhost/${sport}?view=trends`)));
     assert.deepEqual($('.site-navigation a').slice(0,2).map((_, a) => $(a).attr('href')).get(), ['/' + sport, '/' + sport + '?view=trends']);
