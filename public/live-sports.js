@@ -1,9 +1,10 @@
 import { compareLiveLine } from './live-utils.js';
+import { renderGameOdds, updateGameOdds } from './live-game.js';
 const $ = s => document.querySelector(s);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (x, digits = 1) => Number.isFinite(x) ? x.toFixed(digits) : '—';
 const pct = x => Number.isFinite(x) ? Math.round(x * 100) + '%' : '—';
-const price = x => Number.isFinite(x) ? (x > 0 ? '+' : '') + x : '—';
+
 const safe = url => /^https:\/\//.test(url || '') ? esc(url) : '#';
 const time = t => t ? new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : 'unavailable';
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -46,17 +47,12 @@ function render() {
   $('#game').innerHTML = d?.events.length ? d.events.map(e => `<option value="${esc(e.id)}" ${e.id === state.game ? 'selected' : ''}>${esc(e.teams.find(t => t.homeAway === 'away')?.abbreviation)} @ ${esc(e.teams.find(t => t.homeAway === 'home')?.abbreviation)} · ${esc(e.status)}</option>`).join('') : `<option value="">${!d && state.loading ? 'Loading games…' : 'No games on this date'}</option>`;
   $('#markets').innerHTML = Object.entries(d?.markets || {}).map(([k, m]) => `<button class="market-tab ${k === state.market ? 'active' : ''}" data-market="${esc(k)}" aria-pressed="${k === state.market}">${esc(m.label)}</button>`).join('');
   $('#scoreboard').innerHTML = g ? `<div class="live-scoreboard"><div class="live-score-top"><span>${esc(gameClock(g))}</span><span>${esc(new Date(g.date).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</span></div><div class="live-score-teams">${g.teams.map(t => `<div class="live-score-team"><span title="${esc(t.name)}">${esc(t.abbreviation)}</span><b>${g.state === 'pre' ? '—' : num(t.score, 0)}</b></div>`).join('<span class="live-score-divider">:</span>')}</div>${sport === 'mlb' && g.state === 'in' ? `<p class="live-bases">On base: ${g.bases?.length ? g.bases.map(esc).join(' · ') : 'Bases empty'}</p>` : ''}<p class="live-last-play">${esc(g.lastPlay?.text || (g.state === 'pre' ? 'Projections activate after play begins and statistics are recorded.' : 'No play description available.'))}</p></div>` : '';
-  renderOdds(); renderPlayers();
+  renderGameOdds($('#odds'), d); renderPlayers();
   const method = d?.method;
   $('#method-content').innerHTML = method ? `<div class="live-formula">${esc(method.formula)}</div><div class="live-method-grid">${method.sections.map(([title, description], i) => `<article><h3>0${i + 1} / ${esc(title)}</h3><p>${esc(description)}</p></article>`).join('')}</div><p class="live-method-note">${esc(method.limits)}</p>` : 'The model specification appears when the feed connects.';
   $('#model-version').textContent = method?.version || 'Independent live model';
   $('#sources').innerHTML = [...(d?.sources || []), ...(d?.historySources || [])].map(s => `<p><a href="${safe(s.url)}" target="_blank" rel="noreferrer">${esc(s.url)}</a><br>Fetched ${esc(s.fetchedAt || 'unavailable')} · ${s.stale ? 'STALE' : 'source available'}${s.sha256 ? '<br>SHA-256 ' + esc(s.sha256) : ''}${s.error ? '<br>' + esc(s.error) : ''}</p>`).join('');
   updateFreshness();
-}
-function renderOdds() {
-  const odds = state.data?.odds, game = state.data?.game; $('#odds').hidden = !game;
-  if (!game) { $('#odds').innerHTML = ''; return; }
-  $('#odds').innerHTML = `<div class="live-odds-heading"><div class="eyebrow">SPORTSBOOK GAME ODDS</div><span id="odds-status" class="live-tag"></span></div>${odds?.books?.length ? odds.books.map(book => `<h2>${esc(book.name)}</h2><div class="live-odds-grid">${book.markets.map(m => `<article class="live-odds-market"><h3>${esc(m.label)}</h3>${m.selections.map(s => `<div><span>${esc(s.label)}${s.line !== null ? ' ' + (m.key === 'pointSpread' ? price(s.line) : num(s.line)) : ''}</span><strong>${price(s.odds)}</strong></div>`).join('')}</article>`).join('')}</div>`).join('') : `<h2>${game.state === 'in' ? 'Live prices unavailable' : 'No published prices'}</h2><p>Prices appear when the public provider supplies this game’s markets. Suspended or missing prices stay unavailable.</p>`}<p class="live-odds-note">${esc(odds?.note || 'No matching odds source is available for this game.')} ${esc(odds?.regionNote || '')}${odds?.sourceUrl ? ` <a href="${safe(odds.sourceUrl)}" target="_blank" rel="noreferrer">Source ↗</a>` : ''}</p>`;
 }
 function breakdown(f) {
   const b = f.breakdown; if (!b) return '';
@@ -86,14 +82,9 @@ function feedStale() {
 }
 function updateFreshness() {
   const d = state.data, stale = feedStale(), age = d?.fetchedAt ? Math.max(0, Math.floor((Date.now() - Date.parse(d.fetchedAt) + (d.sourceAgeMs || 0)) / 1000)) : null;
+  updateGameOdds($('#odds'), d, state.error);
   $('#feed-status').classList.toggle('is-stale', stale);
   $('#feed-status').textContent = state.loading ? 'Refreshing live data…' : `${stale ? 'PAUSED / STALE' : d.game?.state === 'in' ? 'LIVE FEED' : 'SCOREBOARD'} · fetched ${time(d?.fetchedAt)}${age !== null ? ` · ${age}s old` : ''} · ${$('#auto').checked ? 'checks every 15s while visible' : 'auto-refresh off'}${d?.game?.lastPlay?.at ? ' · last play ' + time(d.game.lastPlay.at) : ''}`;
-  const odds = d?.odds, status = $('#odds-status');
-  if (status) {
-    const age = Date.now() - Date.parse(odds?.fetchedAt) + (odds?.sourceAgeMs || 0), old = !!state.error || odds?.status === 'stale' || !Number.isFinite(age) || age > 45000 || age < -5000;
-    status.textContent = !odds?.books?.length ? 'UNAVAILABLE' : old ? 'STALE · refresh prices' : `${d.game.state === 'in' ? 'PROVIDER LIVE' : d.game.state === 'post' ? 'ARCHIVED PREGAME' : 'PREGAME'} · checked ${time(odds.fetchedAt)}`;
-    status.classList.toggle('withheld', old || !odds?.books?.length); $('#odds').classList.toggle('is-stale', old);
-  }
   for (const el of document.querySelectorAll('[data-comparison]')) {
     const id = el.dataset.comparison, p = d?.players.find(p => p.id === id);
     const c = compareLiveLine({ projection: p?.projections[state.market], quote: state.quotes.get(key(id)), snapshot: d?.snapshot, fetchedAt: d?.fetchedAt, stale, paused: state.paused.has(playerKey(id)) });

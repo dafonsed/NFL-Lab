@@ -1,5 +1,7 @@
 # NBA, WNBA and MLB live odds and props
 
+The game-odds panel now includes independent estimated fair odds, push-aware comparisons and numeric explanations. See the [live game model](live-game-model.md) for its scoring distributions, assumptions and validation. The player projection methods below remain separate.
+
 Pages: `/nba/live`, `/wnba/live`, `/mlb/live`. APIs: `/api/nba/live`, `/api/wnba/live`, `/api/mlb/live`, with optional `date=YYYY-MM-DD` (Eastern) and `game=ID`. Invalid dates and game IDs are rejected before source access. Games must belong to the selected slate; MLB doubleheaders retain separate official IDs.
 
 ## Sources and refresh

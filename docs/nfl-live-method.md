@@ -2,6 +2,8 @@
 
 # NFL live player props — live-workload-v1
 
+Game moneyline/spread/total comparisons now use the separate [live game model](live-game-model.md), including fair prices and numeric explanations. The specification below concerns player props only.
+
 The **Live** tab at `/nfl/live` is a separate, experimental model for in-progress NFL player props. It does not reuse the pregame rating as a live probability, use pregame error calibration for in-play estimates, or add records to pregame performance. The implementation is in `lib/live-nfl-model.mjs`; the public feed is in `lib/live-nfl.mjs`.
 
 ## Markets and output

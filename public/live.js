@@ -1,4 +1,5 @@
 import { compareLiveLine } from './live-utils.js';
+import { renderGameOdds, updateGameOdds, gameOddsFreshness } from './live-game.js';
 const $ = s => document.querySelector(s);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (x, digits = 1) => Number.isFinite(x) ? x.toFixed(digits) : '—';
@@ -42,6 +43,7 @@ function render() {
   $('#markets').innerHTML = Object.entries(d?.markets || {}).map(([k, m]) => `<button class="market-tab ${k === state.market ? 'active' : ''}" data-market="${esc(k)}" aria-pressed="${k === state.market}">${esc(m.label)}</button>`).join('');
   const g = d?.game;
   $('#scoreboard').innerHTML = g ? `<div class="live-scoreboard"><div class="live-score-top"><span>${esc(g.state === 'in' ? 'IN PROGRESS' : g.status)}${g.state === 'in' && g.period ? ` · Q${g.period} · ${esc(g.clock || 'Clock unavailable')}` : ''}</span><span>${g.date ? esc(new Date(g.date).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) : ''}</span></div><div class="live-score-teams">${[...g.teams].sort((a, b) => a.homeAway === 'away' ? -1 : b.homeAway === 'away' ? 1 : 0).map(t => `<div class="live-score-team"><span>${g.possession === t.id ? '• ' : ''}${esc(t.abbreviation)}</span><b>${g.state === 'pre' ? '—' : num(t.score, 0)}</b></div>`).join('<span class="live-score-divider">:</span>')}</div><p class="live-last-play">${esc(g.lastPlay?.text || (g.state === 'pre' ? 'Player projections activate after kickoff and the first recorded opportunities.' : 'No play description available.'))}</p></div>` : '';
+  renderGameOdds($('#odds'), d);
   renderPlayers();
   if (d?.method) {
     const m = d.method;
@@ -88,7 +90,8 @@ function renderPlayers() {
 }
 function updateFreshness() {
   const d = state.data, age = d?.fetchedAt ? Math.max(0, Math.floor((Date.now() - Date.parse(d.fetchedAt)) / 1000)) : null;
-  const stale = !!state.error || !d || d.stale || age === null || age > 45;
+  const stale = !d || d.stale || gameOddsFreshness(d, state.error).modelStale;
+  updateGameOdds($('#odds'), d, state.error);
   $('#feed-status').classList.toggle('is-stale', stale);
   $('#feed-status').textContent = state.loading ? 'Refreshing live data…' : `${stale ? 'PAUSED / STALE' : d.game?.state === 'in' ? 'LIVE FEED' : 'SCOREBOARD'} · fetched ${time(d?.fetchedAt)}${age !== null ? ` · ${age}s ago` : ''} · ${$('#auto').checked ? 'checks every 15s while visible' : 'auto-refresh off'}${d?.game?.lastPlay?.at ? ' · last play ' + time(d.game.lastPlay.at) : ''}`;
   for (const el of document.querySelectorAll('[data-comparison]')) {

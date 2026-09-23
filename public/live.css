@@ -1,4 +1,40 @@
 .live-main { max-width: 1440px; }
+.game-model-teams { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 20px 0; }
+.game-model-teams article { padding: 20px; border: 1px solid #a178d944; border-radius: 12px; background: linear-gradient(130deg,#221830,var(--bg)); }
+.game-model-teams article > strong { display: block; font: 32px var(--mono); color: #c7a8ef; margin-top: 12px; }
+.game-model-teams p { font-size: 13px; margin: 10px 0 6px; }
+.game-model-teams b,.fair-price { color: #b4dfcb; }
+.game-model-teams small,.game-model-intro,.game-model-reasons { color: var(--muted); font-size: 12px; line-height: 1.7; }
+.game-model-verdict { font-size: 13px; line-height: 1.8; }
+.game-model-reasons { border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; }
+.game-model-reasons summary { color: var(--text); cursor: pointer; font-weight: 600; }
+.game-model-reasons li { margin: 10px 0; padding-left: 4px; }
+.game-books-heading { margin: 28px 0 16px; }
+.game-book h3 { font-size: 15px; margin: 20px 0 12px; }
+.game-market-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; justify-content: space-between; }
+.game-market-heading h4 { font-size: 12px; margin: 12px 0; text-transform: uppercase; letter-spacing: 1px; }
+.game-market-heading span { color: var(--muted); font-size: 11px; }
+.game-odds-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 9px; margin-bottom: 10px; }
+.game-odds-table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 12px; }
+.game-odds-table th,.game-odds-table td { padding: 12px 14px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.game-odds-table tr:last-child td,.game-odds-table tr:last-child th { border-bottom: 0; }
+.game-odds-table thead th { color: var(--muted); font-weight: 400; font-size: 10px; background: var(--bg); }
+.game-odds-table th:first-child { text-align: left; }
+.game-odds-table td { font-family: var(--mono); }
+.game-odds-table small { display: block; color: var(--muted); font-size: 9px; margin-top: 4px; }
+.live-odds.is-stale .book-price { color: var(--muted); }
+.live-odds [hidden] { display: none !important; }
+@media(max-width:720px) { .game-model-teams { grid-template-columns: repeat(2,minmax(0,1fr)); }.game-model-total { grid-column: 1 / -1; }.game-model-teams article { padding: 15px; }.game-model-teams article > strong { font-size: 27px; } }
+@media(max-width:620px) {
+  .game-odds-table { min-width: 0; }
+  .game-odds-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .game-odds-table tbody { display: block; }
+  .game-odds-table tbody tr { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); border-bottom: 1px solid var(--line); padding: 6px; }
+  .game-odds-table tbody tr:last-child { border-bottom: 0; }
+  .game-odds-table tbody th { grid-column: 1 / -1; color: var(--text); font-size: 14px; }
+  .game-odds-table th,.game-odds-table td { border: 0; text-align: left; padding: 10px; }
+  .game-odds-table td::before { content: attr(data-label); display: block; color: var(--muted); font: 10px var(--font); margin-bottom: 6px; }
+}
 .live-odds { padding: 22px; margin-bottom: 26px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
 .live-odds-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .live-odds h2 { font-size: 17px; margin: 16px 0 12px; }

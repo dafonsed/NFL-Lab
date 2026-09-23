@@ -11,7 +11,7 @@
   <!--site-header-->
   <main id="main" class="live-main" tabindex="-1">
     <div class="page-heading"><div><div class="eyebrow"><span class="live-orb"></span><span id="live-eyebrow">LIVE GAME CENTER</span></div><h1>Live odds & props<span class="accent">.</span></h1><p>The score. The market. What’s still to come.</p></div><div class="heading-actions"><a class="button subtle" href="#method">How it’s weighted ↘</a><button id="refresh" class="button primary">↻ Refresh live</button></div></div>
-    <div class="live-disclosure"><strong>Independent model · experimental</strong><span id="live-disclosure">Public live odds and box scores. Recorded stats + projected remaining production. Feed delivery can lag the game.</span></div>
+    <div class="live-disclosure"><strong>Independent model · experimental</strong><span id="live-disclosure">Game fair odds, sportsbook comparisons and player projections. Public feeds can lag the game; model assumptions and reasons are shown below.</span></div>
     <section class="live-toolbar" aria-label="Live game selection">
       <label>Game date · Eastern<input id="date" type="date" min="2005-01-01" max="2100-12-31" aria-label="Game date (Eastern time)"></label><button id="today" class="button subtle">Today</button>
       <label class="game-select-label">Game<select id="game"><option value="">Loading games…</option></select></label>
@@ -19,7 +19,7 @@
     </section>
     <div id="feed-status" class="feed-status" role="status">Connecting to the live scoreboard…</div><div id="warnings" role="status"></div>
     <section id="scoreboard" aria-label="Selected game"></section>
-    <section id="odds" class="live-odds" aria-label="Sportsbook game odds" hidden></section>
+    <section id="odds" class="live-odds" aria-label="Game odds and model fair odds" hidden></section>
     <nav id="markets" class="market-tabs" aria-label="Live player prop markets"></nav>
     <div class="live-filter-row"><div><h2 id="market-title">Player projections</h2><p id="players-count">Loading live box score…</p></div><label class="searchbox"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Find a player or team" aria-label="Find a player or team"></label></div>
     <div class="live-line-note">Player lines are entered from your sportsbook’s <strong>full-game total</strong>, including recorded stats. Reconfirm after a game update or 60 seconds. Game odds above refresh automatically when published.</div>
