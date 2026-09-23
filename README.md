@@ -54,7 +54,11 @@ Hosted requests refresh datasets and lines according to their cache lifetimes; t
 
 ### Personal bet tracker
 
-Open **Bet Tracker** at the top right of any board, or go to `/bets`. Add singles or parlays with the selection, sport, date, sportsbook, stake in USD, American or decimal odds, and notes. Update tickets to won, lost, push, void, or cashed out. Cash-out return includes any returned stake. Results are entered manually.
+Open **Bet Tracker** at the top right of any board, or go to `/bets`. Enter the ticket stake and combined American or decimal odds, then add each selection separately: sport, game date, game, player/team, market, side, and the exact booked line. Singles have one leg; parlays support 2–20, including mixed sports. Connected legs show box-score progress and final hit/miss/push results. The tracker refreshes when opened, when returning to the tab, and every minute while visible; **Refresh results** checks all connected tickets. Older final results are rechecked on opening or manual refresh, rather than polled indefinitely.
+
+MLB results come from the official MLB Stats API. NFL, WNBA, NBA, NHL and soccer use ESPN public scoreboards, game summaries and pregame rosters. Each reading includes a timestamp and direct source link. Supported full-game player props, moneylines, spreads and totals use your saved line, never a subsequently changed sportsbook total. Soccer extra-time games, DNPs, missing data and interrupted games require review. Unconnected markets and custom rules can be entered and settled manually. See [Bet tracking and settlement](docs/bet-tracking.md).
+
+Automatic ticket settlement combines the leg results. Any miss loses the ticket; all hits win it. A push or void combined with winning legs requires the book's adjusted payout: choose **Set result from sportsbook**, set the result, and enter **Actual total return**. Cash-outs and manual ticket results are preserved during refresh. Actual return and cash-out amounts include any returned stake. Existing saved tickets and notes are preserved and can be edited to add connected legs.
 
 The all-time summary shows settled profit/loss, ROI, win/loss record, and open stake. ROI divides net profit by stakes on wins, losses, and cash-outs; refunded and open tickets are excluded. The win rate includes only wins and losses. Search and sport/result filters apply to the ticket list and CSV export; summary totals always include all saved bets.
 

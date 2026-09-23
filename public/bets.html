@@ -25,9 +25,10 @@
       <label class="sr-only" for="status-filter">Filter by result</label><select id="status-filter"><option value="">All results</option><option value="open">Open</option><option value="won">Won</option><option value="lost">Lost</option><option value="push">Push</option><option value="void">Void</option><option value="cashed">Cashed out</option></select>
       <button class="button subtle" id="clear-filters" hidden>Clear filters</button>
     </section>
+    <div class="tracking-bar"><div><strong>Track every selection</strong><p id="tracking-status" role="status">Connected game results refresh every minute while this page is visible.</p></div><button class="button subtle" id="refresh-lines">↻ Refresh results</button></div>
     <div class="results-heading"><h2>Your tickets</h2><span id="bet-count" role="status"></span></div>
     <section id="bet-list" aria-label="Saved bets"></section>
-    <footer><span>NFL LAB <span class="muted">/ Personal workspace</span></span><span>Manual entries · Update results from your sportsbook</span></footer>
+    <footer><span>NFL LAB <span class="muted">/ Personal workspace</span></span><span>MLB Stats API + ESPN box scores · Your booked lines stay fixed</span></footer>
   </main>
   <dialog id="bet-dialog" aria-labelledby="bet-dialog-title">
     <button class="dialog-close" id="close-bet" aria-label="Close bet form" type="button">×</button>
@@ -42,10 +43,13 @@
         <label>Stake (USD)<input name="stake" type="number" min="0.01" max="1000000" step="0.01" required placeholder="25.00" inputmode="decimal"></label>
         <label>Odds format<select name="oddsFormat" id="odds-format"><option value="american">American</option><option value="decimal">Decimal</option></select></label>
         <label>Odds<input name="odds" id="bet-odds" type="number" step="1" required placeholder="−110" aria-describedby="odds-help"><small id="odds-help">Use +100 or higher, or −100 or lower.</small></label>
+        <label>Ticket result mode<select name="settlement" id="ticket-settlement"><option value="auto">Track from leg results</option><option value="manual">Set result from sportsbook</option></select></label>
         <label>Result<select name="status" id="bet-status"><option value="open">Open</option><option value="won">Won</option><option value="lost">Lost</option><option value="push">Push — stake refunded</option><option value="void">Void — stake refunded</option><option value="cashed">Cashed out</option></select></label>
+        <label id="actual-return-field" hidden>Actual total return (USD) <span class="optional">optional</span><input name="returnOverride" type="number" min="0" max="1000000" step="0.01" placeholder="Book’s payout"><small>Includes returned stake. Use for a parlay repriced after a void, push, or promotion.</small></label>
         <label class="full-field" id="cashout-field" hidden>Cash-out return (USD)<input name="cashout" type="number" min="0" max="1000000" step="0.01" inputmode="decimal"><small>Total amount returned by the book, including any returned stake.</small></label>
-        <label class="full-field">Notes / parlay legs <span class="optional">optional</span><textarea name="notes" maxlength="2000" rows="3" placeholder="Add each leg, the line you took, or a note for later."></textarea></label>
+        <label class="full-field">Notes <span class="optional">optional</span><textarea name="notes" maxlength="2000" rows="2" placeholder="Book rules, promotions, or a note for later."></textarea></label>
       </div>
+      <section class="ticket-selections" aria-label="Ticket selections"><div class="results-heading"><h3>Your selections</h3><button type="button" class="button subtle" id="add-leg">＋ Add leg</button></div><p class="leg-help">One leg for a single; two or more for a parlay. Enter the combined ticket odds above. Mixed-sport parlays are supported.</p><div id="leg-editor"></div></section>
       <div id="return-preview" class="return-preview" role="status">Enter a stake and odds to preview your return.</div>
       <p id="form-error" class="form-error" role="alert" hidden></p>
       <div class="bet-form-actions"><button class="button danger-button" type="button" id="delete-bet" hidden>Delete bet</button><div><button class="button subtle" type="button" id="cancel-bet">Cancel</button><button class="button primary" type="submit">Save bet</button></div></div>

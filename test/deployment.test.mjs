@@ -24,7 +24,9 @@ test('Vercel can import the default server without starting a listener or backgr
       assert.equal((await fetch(base+'/forecast.css')).status,200);
       const betsPage = await fetch(base+'/bets');
       assert.equal(betsPage.status,200); assert.match(await betsPage.text(), /Bet Tracker/);
-      for (const asset of ['/bets/', '/bets.js', '/bet-utils.js', '/bets.css']) assert.equal((await fetch(base+asset)).status,200,asset);
+      for (const asset of ['/bets/', '/bets.js', '/bet-utils.js', '/bet-legs.js', '/bet-editor.js', '/bets.css']) assert.equal((await fetch(base+asset)).status,200,asset);
+      assert.equal((await fetch(base+'/api/bets/catalog?sport=invalid&date=2026-09-22')).status,400);
+      assert.equal((await fetch(base+'/api/bets/game?sport=wnba&date=2026-09-22&game=invalid')).status,400);
       for (const route of ['/nfl/live','/live.js','/live-utils.js','/live.css']) assert.equal((await fetch(base+route)).status,200);
       assert.equal((await fetch(base+'/api/nfl/live?game=invalid')).status,400);
       assert.equal((await fetch(base+'/api/nfl/live?date=2026-02-31')).status,400);

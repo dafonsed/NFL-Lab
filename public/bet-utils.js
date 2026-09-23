@@ -1,3 +1,4 @@
+import { validateLeg, ticketSettlement, LEG_RESULTS, legState } from './bet-legs.js';
 export const BET_STORAGE_KEY = 'nfl-lab.personal-bets.v1';
 export const SPORTS = ['NFL', 'MLB', 'NBA', 'WNBA', 'NHL', 'Soccer', 'Other'];
 export const STATUSES = { open: 'Open', won: 'Won', lost: 'Lost', push: 'Push', void: 'Void', cashed: 'Cashed out' };
@@ -27,10 +28,20 @@ export function validateBet(input) {
   if (!['american', 'decimal'].includes(input.oddsFormat) || !Number.isFinite(odds)) throw new Error('Enter valid odds.');
   if (input.oddsFormat === 'american' && (!Number.isInteger(odds) || Math.abs(odds) < 100 || Math.abs(odds) > 100000)) throw new Error('American odds must be a whole number from +100 to +100000 or −100 to −100000.');
   if (input.oddsFormat === 'decimal' && (odds <= 1 || odds > 1001)) throw new Error('Decimal odds must be greater than 1 and no more than 1001.');
+  const legs=input.legs===undefined?[]:input.legs;
+  if(!Array.isArray(legs)||legs.length>20)throw new Error('Use up to 20 legs per ticket.');
+  if(legs.length&&(input.type==='single'&&legs.length!==1||input.type==='parlay'&&legs.length<2))throw new Error('A single needs one leg; a parlay needs at least two.');
+  const validatedLegs=legs.map(validateLeg);
+  if(new Set(validatedLegs.map(l=>l.id)).size!==validatedLegs.length)throw new Error('Every leg must have its own ID.');
+  const settlement=input.settlement||'manual';
+  if(!['auto','manual'].includes(settlement)||settlement==='auto'&&!legs.length)throw new Error('Add legs before enabling automatic ticket results.');
+  const status=settlement==='auto'?ticketSettlement(validatedLegs).status:input.status;
   return {
     selection, book, notes, sport: input.sport, type: input.type, date: input.date,
-    odds, oddsFormat: input.oddsFormat, stake: amount(input.stake, 'Stake'), status: input.status,
-    cashout: input.status === 'cashed' ? amount(input.cashout, 'Cash-out return', true) : null,
+    odds, oddsFormat: input.oddsFormat, stake: amount(input.stake, 'Stake'), status,
+    cashout: status === 'cashed' ? amount(input.cashout, 'Cash-out return', true) : null,
+    legs:validatedLegs,settlement,
+    returnOverride:settlement==='manual'&&status==='won'&&input.returnOverride!==''&&input.returnOverride!=null?amount(input.returnOverride,'Actual return',true):null,
   };
 }
 
@@ -41,6 +52,7 @@ export function betReturns(bet) {
   const potentialProfit = Math.round(stake * multiplier);
   let returned = null;
   if (bet.status === 'won') returned = stake + potentialProfit;
+  if (bet.status === 'won' && Number.isFinite(bet.returnOverride)) returned = cents(bet.returnOverride);
   if (bet.status === 'lost') returned = 0;
   if (['push', 'void'].includes(bet.status)) returned = stake;
   if (bet.status === 'cashed') returned = cents(bet.cashout);
@@ -80,10 +92,10 @@ export function writeBets(storage, bets) {
 export function betsCsv(bets) {
   // Quoting alone does not prevent spreadsheet formula execution.
   const cell = value => typeof value === 'number' ? String(value) : '"' + String(value ?? '').replace(/^[\s]*[=+@-]/, match => "'" + match).replaceAll('"', '""') + '"';
-  const rows = [['Date', 'Sport', 'Type', 'Bet', 'Sportsbook', 'Odds format', 'Odds', 'Stake USD', 'Result', 'Return USD', 'Profit USD', 'Notes']];
+  const rows = [['Date', 'Sport', 'Type', 'Bet', 'Sportsbook', 'Odds format', 'Odds', 'Stake USD', 'Result', 'Return USD', 'Profit USD', 'Notes', 'Legs', 'Ticket settlement']];
   for (const bet of bets) {
     const result = betReturns(bet);
-    rows.push([bet.date, bet.sport, bet.type, bet.selection, bet.book, bet.oddsFormat, bet.odds, bet.stake, STATUSES[bet.status], result.returned, result.profit, bet.notes]);
+    rows.push([bet.date, bet.sport, bet.type, bet.selection, bet.book, bet.oddsFormat, bet.odds, bet.stake, STATUSES[bet.status], result.returned, result.profit, bet.notes,(bet.legs||[]).map((l,i)=>`${i+1}. ${l.label} | ${l.side} ${l.line??''} | ${l.matchup} | ${l.date} | ${LEG_RESULTS[legState(l)]} | Actual: ${l.observation?.actual??'—'} | ${l.observation?.sourceUrl||'Manual'}`).join('\n'),bet.settlement||'manual']);
   }
   return rows.map(row => row.map(cell).join(',')).join('\r\n');
 }
