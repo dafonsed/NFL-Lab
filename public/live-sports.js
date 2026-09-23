@@ -12,10 +12,8 @@ const state = { data: null, game: params.get('game') || '', date: params.get('da
 let controller, requestId = 0;
 const key = id => `${sport}:${state.game}:${id}:${state.market}`;
 const playerKey = id => `${sport}:${state.game}:${id}`;
-$('#brand-sport').textContent = label; $('#live-brand').href = `/${sport}`; $('#live-link').href = `/${sport}/live`;
-$('#research-link').href = $('#back-link').href = `/${sport}`;
+$('#back-link').href = `/${sport}`;
 $('#live-eyebrow').textContent = label + ' / LIVE GAME CENTER'; $('#footer-label').textContent = label + ' LAB / Live odds & props';
-$(`.sport-switch a[href="/${sport}/live"]`)?.setAttribute('aria-current', 'page');
 document.title = label + ' Lab · Live odds & props'; $('#date').value = state.date;
 function updateUrl() {
   const q = new URLSearchParams({ date: state.date, market: state.market }); if (state.game) q.set('game', state.game);

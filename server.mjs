@@ -10,6 +10,7 @@ import { mlbModelReport } from './lib/mlb/forecast.mjs';
 import { LiveNflStore } from './lib/live-nfl.mjs';
 import { LiveSportsStore } from './lib/live-sports.mjs';
 import { BetTrackerStore } from './lib/bet-tracker.mjs';
+import { renderSitePage } from './lib/site-layout.mjs';
 
 const publicDir = fileURLToPath(new URL('./public/', import.meta.url));
 const store = new SourceStore();
@@ -59,12 +60,14 @@ export const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/catalog') { const {current,weeks}=await store.catalog(url.searchParams.get('refresh') === '1'); return json(res,{current,weeks}); }
     if (url.pathname === '/api/board') return json(res, await store.board(Object.fromEntries(url.searchParams), url.searchParams.get('refresh') === '1'));
     const names = { '/bets':'bets.html', '/bets/':'bets.html', '/bets.js':'bets.js', '/bet-legs.js':'bet-legs.js', '/bet-editor.js':'bet-editor.js', '/bet-utils.js':'bet-utils.js', '/bets.css':'bets.css', '/wnba':'sports.html','/wnba/':'sports.html','/nba':'sports.html','/nhl':'sports.html','/soccer':'sports.html','/sports.js':'sports.js','/sports-view.js':'sports-view.js','/sports.css':'sports.css', '/nfl/live':'live.html', '/nfl/live/':'live.html', '/live.js':'live.js', '/live.css':'live.css', '/live-utils.js':'live-utils.js', '/paper':'paper.html','/paper.js':'paper.js','/context-ui.js':'context-ui.js','/context.css':'context.css', '/performance':'performance.html', '/performance.js':'performance.js', '/forecast.css':'forecast.css', '/': 'index.html', '/nfl': 'index.html', '/mlb': 'mlb.html', '/mlb/': 'mlb.html', '/mlb.js': 'mlb.js', '/mlb-model.js':'mlb-model.js', '/mlb.css': 'mlb.css', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/manifest.webmanifest': 'manifest.webmanifest' };
-    const name = /^\/(nba|wnba|mlb)\/live\/?$/.test(url.pathname) ? 'live-sports.html' : url.pathname === '/live-sports.js' ? 'live-sports.js' : names[url.pathname];
+    const pagePath = url.pathname.replace(/\/$/, '') || '/';
+    const name = /^\/(nba|wnba|mlb)\/live$/.test(pagePath) ? 'live-sports.html' : pagePath === '/live' ? 'live-hub.html' : pagePath === '/site-layout.css' ? 'site-layout.css' : pagePath === '/live-sports.js' ? 'live-sports.js' : names[pagePath];
     if (!name) return json(res, { error: 'Not found.' }, 404);
     const bytes = await fs.readFile(path.join(publicDir, name));
     const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
+    const body = name.endsWith('.html') ? renderSitePage(bytes.toString('utf8'), url) : bytes;
     res.writeHead(200, { 'Content-Type': (types[path.extname(name)] || 'text/plain') + '; charset=utf-8', 'Cache-Control': 'no-cache' });
-    res.end(req.method === 'HEAD' ? undefined : bytes);
+    res.end(req.method === 'HEAD' ? undefined : body);
   } catch (e) { console.error(`[request] ${e.message}`); json(res, { error: e.message }, e.status || 500); }
 });
 const port = Number(process.env.PORT || 3100);

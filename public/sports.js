@@ -6,12 +6,6 @@ try{state.saved=new Set(JSON.parse(localStorage.getItem('sports-lab-saved-'+spor
 let controller,refreshing=false;
 $('#title').innerHTML=esc(titles[sport]||'Sports Lab')+'<span class="accent">.</span>';document.title=(titles[sport]||'Sports Lab')+' · Sports Lab';$('#date').value=state.date;$('#league').value=state.league;$('#league-label').hidden=sport!=='soccer';$(`.sport-switch a[href="/${sport}"]`)?.setAttribute('aria-current','page');
 const query=()=>new URLSearchParams({sport,date:state.date,league:state.league,market:state.market,...(state.game?{game:state.game}:{}),...(sport==='wnba'?{view:state.view,rank:state.rankBy}:{})});
-if (['nba','wnba'].includes(sport)) {
- document.body.classList.add('has-live');
- const live = document.createElement('a'); live.className = 'button subtle'; live.textContent = '◉ Live odds & props'; live.href = `/${sport}/live`;
- document.querySelector('.heading-actions').prepend(live);
- live.addEventListener('click', () => { const q = new URLSearchParams({date:state.date,market:state.market}); if (state.game && state.game !== 'all') q.set('game',state.game); live.href = `/${sport}/live?` + q; });
-}
 async function request(path,signal){const r=await fetch(path,{signal});let d;try{d=await r.json();}catch{throw Error('The data service returned an unreadable response. Please retry.');}if(!r.ok)throw Error(d.error||'Data request failed');return d;}
 function loading(text){$('#content').setAttribute('aria-busy','true');$('#content').innerHTML=`<div class="loading"><div class="loader"></div><h2>${esc(text)}</h2><p>Reading schedules, completed box scores, availability and matchup context…</p></div>`;$('#connection').textContent='Refreshing sources';$('#refresh').disabled=true;}
 async function load({schedule=true,force=false,background=false}={}){

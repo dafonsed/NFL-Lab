@@ -13,14 +13,10 @@
 <link rel="stylesheet" href="/context.css"></head>
 <body>
   <a class="skip" href="#main">Skip to analytics</a>
-  <header class="topbar">
-    <a href="/" class="brand" aria-label="NFL LAB NFL home"><img src="/favicon.svg" alt="" width="40" height="40"><span>NFL<span class="brand-light">LAB</span><small>THE GAME. DECODED.</small></span></a>
-    <nav class="sport-switch" aria-label="Sport"><a href="/nfl" aria-current="page">NFL</a><a href="/mlb">MLB</a><a href="/nba">NBA</a><a href="/wnba">WNBA</a><a href="/nhl">NHL</a><a href="/soccer">Soccer</a></nav>
-    <nav id="navigation" aria-label="Main navigation"></nav>
-    <button id="status-button" class="connection" title="View data source and sync status"><span class="dot"></span><span id="connection-label">Connecting</span></button>
-  <nav class="tracker-nav" aria-label="Personal workspace"><a class="nav-link" href="/bets"><span aria-hidden="true">▤</span> Bet Tracker</a></nav></header>
+  <!--site-header-->
   <main id="main" tabindex="-1">
     <div class="page-heading"><div><div class="eyebrow"><span class="mini-ball">✧</span> YOUR WEEKLY ADVANTAGE</div><h1 id="page-title">Game Vault<span class="accent">.</span></h1><p id="page-description">The matchups. The roles. The numbers behind every player.</p></div><div class="heading-actions"><button class="button subtle" id="export-button" aria-label="Export this board">↓ <span>Export</span></button><button class="button primary" id="refresh-button" aria-label="Refresh player data">↻ <span>Refresh data</span></button></div></div>
+    <div class="page-tools"><nav id="navigation" class="section-tabs" aria-label="NFL research views"></nav><button id="status-button" class="connection" title="View data source and sync status"><span class="dot"></span><span id="connection-label">Connecting</span></button></div>
     <section class="season-bar" aria-label="Season and week"><div class="season-label"><span class="live-mark"></span><strong id="season-label">NFL SEASON</strong><span class="separator">/</span><span id="week-label">Discovering weeks</span></div><div class="week-controls"><label for="week-select" class="sr-only">NFL week</label><select id="week-select"><option value="latest">Latest week · automatic</option></select><button class="icon-button" id="custom-week" title="Choose any season and week" aria-label="Choose any season and week">⌗</button></div></section>
     <nav class="market-tabs" id="markets" aria-label="Prop markets"></nav>
     <section id="prop-status" class="prop-status" aria-label="Player line sources" hidden></section>
@@ -35,7 +31,7 @@
     </section>
     <div class="results-heading" id="results-heading"><h2 id="results-title">Weekly matchups</h2><span id="results-count"></span></div>
     <section id="content" aria-live="polite" aria-busy="true"><div class="loading"><div class="loader"></div><h2>Loading the latest board</h2><p>Loading independent NFL datasets…</p></div></section>
-    <footer><span>NFL LAB NFL <span class="muted">/ Personal workspace</span></span><span id="footer-status">nflverse data · Local calculations</span><button id="about-button">Data & methodology ↗</button></footer>
+    <footer><span>SPORTS LAB <span class="muted">/ Personal workspace</span></span><span id="footer-status">nflverse data · Local calculations</span><button id="about-button">Data & methodology ↗</button></footer>
   </main>
   <div id="compare-tray" class="compare-tray" hidden></div>
   <dialog id="dialog"><div id="dialog-content"></div><button id="close-dialog" class="dialog-close" aria-label="Close dialog">×</button></dialog>

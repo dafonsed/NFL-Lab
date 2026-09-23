@@ -8,11 +8,7 @@
 </head>
 <body class="bets-app">
   <a class="skip" href="#main">Skip to bet tracker</a>
-  <header class="topbar">
-    <a href="/nfl" class="brand" aria-label="NFL Lab home"><img src="/favicon.svg" width="40" height="40" alt=""><span>NFL<span class="brand-light">LAB</span><small>THE GAME. DECODED.</small></span></a>
-    <nav class="sport-switch" aria-label="Sport"><a href="/nfl">NFL</a><a href="/mlb">MLB</a><a href="/nba">NBA</a><a href="/wnba">WNBA</a><a href="/nhl">NHL</a><a href="/soccer">Soccer</a></nav>
-    <nav class="tracker-nav" aria-label="Personal workspace"><a class="nav-link active" href="/bets" aria-current="page"><span aria-hidden="true">▤</span> Bet Tracker</a></nav>
-  </header>
+  <!--site-header-->
   <main id="main" tabindex="-1">
     <div class="page-heading"><div><div class="eyebrow">YOUR BETS / YOUR RECORD</div><h1>Bet Tracker<span class="accent">.</span></h1><p>Every ticket. Every result. Your personal record.</p></div><div class="heading-actions"><button class="button subtle" id="export-bets" disabled>↓ Export CSV</button><button class="button primary" id="add-bet">＋ Add bet</button></div></div>
     <div class="tracker-storage"><span><span class="dot" aria-hidden="true"></span> Saved in this browser</span><p>Bets stay on this device and browser. Export a copy before clearing site data. Amounts in USD.</p></div>
@@ -28,7 +24,7 @@
     <div class="tracking-bar"><div><strong>Track every selection</strong><p id="tracking-status" role="status">Connected game results refresh every minute while this page is visible.</p></div><button class="button subtle" id="refresh-lines">↻ Refresh results</button></div>
     <div class="results-heading"><h2>Your tickets</h2><span id="bet-count" role="status"></span></div>
     <section id="bet-list" aria-label="Saved bets"></section>
-    <footer><span>NFL LAB <span class="muted">/ Personal workspace</span></span><span>MLB Stats API + ESPN box scores · Your booked lines stay fixed</span></footer>
+    <footer><span>SPORTS LAB <span class="muted">/ Personal workspace</span></span><span>MLB Stats API + ESPN box scores · Your booked lines stay fixed</span></footer>
   </main>
   <dialog id="bet-dialog" aria-labelledby="bet-dialog-title">
     <button class="dialog-close" id="close-bet" aria-label="Close bet form" type="button">×</button>
