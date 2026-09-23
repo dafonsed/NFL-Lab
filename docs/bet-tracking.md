@@ -8,6 +8,10 @@ Enter the ticket title, date placed, stake and combined ticket odds. Each leg se
 
 Pregame roster entries are selectable but do not establish participation. Player names identify a selection to the user; result joins use athlete and game IDs. Multiple legs on the same game share one result request. Up to three distinct game requests run concurrently, with a 30-second source cache and source-level concurrency limits.
 
+The player picker filters by the chosen prop's role using reported positions and game stat categories: passing, rushing, receiving and kicking in football; hitters versus pitchers in baseball; skaters versus goalies in hockey; and goalkeepers for soccer saves. Basketball props remain available to all basketball positions. Recorded exceptions and two-way baseball roles remain eligible. A previously saved selection is retained explicitly even if it is no longer in the matching roster.
+
+**Quick player search** accepts partial names and ignores accents and punctuation. Search within the selected matchup, or enable **Search all games on this date**. Picking a result fills both the game and exact player ID, retaining the selected prop and booked line. Across-game searches run only after at least two letters are entered and use at most three concurrent game requests. Failed roster requests are disclosed as incomplete results; doubleheader selections remain separate.
+
 ## Source and result rules
 
 - MLB: `https://statsapi.mlb.com/api/v1/schedule` for game selection and `https://statsapi.mlb.com/api/v1.1/game/{id}/feed/live` for score, status and box scores. Pitcher outs convert innings with baseball notation: 5.2 means 17 outs. Batting and pitching fields stay separate.

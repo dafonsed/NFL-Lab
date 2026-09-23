@@ -3,6 +3,14 @@ const outcomes=['open','won','lost','push','void'];
 const number=v=>v!==''&&v!==null&&v!==undefined&&Number.isFinite(Number(v))?Number(v):null;
 const text=(v,max=160)=>String(v??'').trim().slice(0,max);
 export const gameKey=l=>[l.sport,l.league,l.date,l.gameId].join('|');
+export const playerEligible=(player,market)=>market?.kind==='player'&&(!market.playerRole||player.roles?.includes(market.playerRole)===true);
+const foldedName=value=>String(value||'').normalize('NFKD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+export const playerNameMatches=(player,query)=>!!foldedName(query)&&foldedName(player.name).includes(foldedName(query));
+export function findPlayers(games,marketKey,query){
+  const matches=new Map();
+  for(const g of games)for(const p of g.players||[])if(playerEligible(p,g.markets?.[marketKey])&&playerNameMatches(p,query))matches.set(g.game.id+':'+p.id,{player:p,game:g.game});
+  return [...matches.values()].sort((a,b)=>a.player.name.localeCompare(b.player.name)||a.game.id.localeCompare(b.game.id));
+}
 export function validateLeg(input) {
   if(!input||!['auto','manual'].includes(input.mode))throw Error('Choose automatic or manual tracking for each leg.');
   if(!['NFL','MLB','NBA','WNBA','NHL','Soccer','Other'].includes(input.sport))throw Error('Choose a sport for each leg.');
