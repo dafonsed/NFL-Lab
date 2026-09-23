@@ -104,6 +104,7 @@ test('board trims chart payload without truncating evidence or historical rate',
   const dir=await temp(t),rows=Array.from({length:20},(_,i)=>row(i+1,`2026-09-${String(i+1).padStart(2,'0')}`));
   const store=new MlbStore({provider:{dir,read:async url=>({url,payload:'',fetchedAt:quoteMeta.fetchedAt,stale:false})},now:()=>Date.parse(quoteMeta.fetchedAt)});
   const b={created:Date.parse(quoteMeta.fetchedAt),date:'2026-09-21',games:[game],candidates:[candidate],people:new Map([[7,person(rows)]]),completed:new Set(rows.map(r=>r.game.gamePk)),sources:[],warnings:[],sampleStart:'2026-06-12',sampleEnd:'2026-09-20'};store.bundles.set(b.date,b);
-  const board=await store.board({date:b.date,market:'hits'});assert.equal(board.players[0].logs.length,10);assert.equal(board.players[0].sampleOver.total,20);assert.equal(board.players[0].logs[0].stats,undefined);
+  const board=await store.board({date:b.date,market:'hits'});assert.equal(board.players[0].logs.length,20);assert.equal(board.players[0].sampleOver.total,20);assert.equal(board.players[0].logs[0].stats,undefined);
   const evidence=await store.evidence({date:b.date,market:'hits',player:candidate.id});assert.equal(evidence.player.logs.length,20);assert.equal(evidence.player.logs[0].stats.hits,3);assert.equal(evidence.player.sampleOver.total,20);
+  assert.equal(evidence.player.trendGames.length,20);assert.equal(evidence.player.trendGames[0].stats.hits,3);
 });

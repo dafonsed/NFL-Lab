@@ -6,13 +6,17 @@ The sport switch opens the daily [MLB section](https://nfl-lab-xi.vercel.app/mlb
 
 ## Live odds and player props
 
-Every page uses the same sport switch, **Research / Live / Performance / Paper returns** navigation, and **Bet Tracker** link. Click **Live** on NFL, MLB, NBA, or WNBA to open that sport's live board. NHL, soccer, and Bet Tracker link to `/live`, a directory of the four supported live boards. Navigation renders before any data requests, with the same headings, controls, spacing, and mobile layout across the site.
+Every page uses the same sport switch, **Research / Live / Trends / Performance / Paper returns** navigation, and **Bet Tracker** link. Click **Live** on NFL, MLB, NBA, or WNBA to open that sport's live board. NHL, soccer, and Bet Tracker link to `/live`, a directory of the four supported live boards. Navigation renders before any data requests, with the same headings, controls, spacing, and mobile layout across the site.
 
 Direct live routes are `/nfl/live`, `/nba/live`, `/wnba/live`, and `/mlb/live`. Each page refreshes every 15 seconds while visible and includes game selection, live scores, player statistics, transparent regulation projections, manual full-game player-line comparisons, and source receipts.
 
 Moneyline, spread/run line, and total prices come from ESPN's explicit live quote fields. Missing or suspended prices remain unavailable; pregame and archived prices are labeled separately. MLB box scores and inning state come from the official MLB Stats API; an ESPN odds event must match both teams and start time unambiguously. Public prices may differ from the user's sportsbook. Player prop lines are manually entered and expire after a changed game snapshot or 60 seconds. Feed failures and data older than 45 seconds pause comparisons.
 
 The new live models are experimental, separate from pregame forecasts, and expose their calculations under each player. Basketball uses league-specific regulation minutes and earlier appearances; baseball uses remaining innings, confirmed batting orders and starter pitch budgets. Neither model supplies calibrated live probabilities or projects overtime/extra innings. See [live model details](docs/multi-sport-live.md).
+
+## Player details and Trends
+
+All six sports share a chart-first player view with L5/L10/L20, opponent and location filters, supporting statistics, clear matchup explanations, game logs, personal notes, and observed line movement. **Dev mode**, at the top right, reveals model inputs and raw source context. Open **Trends** to compare recent form. See [player research details and data limits](docs/player-research.md).
 
 ## WNBA section
 

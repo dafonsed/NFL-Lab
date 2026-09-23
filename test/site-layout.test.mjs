@@ -18,11 +18,11 @@ test('every page renders the same working navigation and Live link before any Ja
     assert.equal($('.site-header').length, 1, route);
     assert.equal($('.site-live-link').text().trim(), 'Live', route);
     assert.equal($('.site-live-link').attr('href'), target, route);
-    assert.deepEqual($('.site-navigation a').map((_, a) => $(a).text().trim()).get(), ['Research', 'Live', 'Performance', 'Paper returns'], route);
+    assert.deepEqual($('.site-navigation a').map((_, a) => $(a).text().trim()).get(), ['Research', 'Live', 'Trends', 'Performance', 'Paper returns'], route);
     assert.deepEqual($('.site-sports a').map((_, a) => $(a).text()).get(), ['NFL', 'MLB', 'NBA', 'WNBA', 'NHL', 'Soccer'], route);
     assert.equal($('.site-tracker').attr('href'), '/bets');
     assert.equal($('body.site-layout').length, 1); assert.equal($('main#main').length, 1);
-    assert.equal($('.page-heading h1').length, 1); assert.equal($('link[rel="stylesheet"]').last().attr('href'), '/site-layout.css');
+    assert.equal($('.page-heading h1').length, 1); assert.equal($('link[rel="stylesheet"]').last().attr('href'), '/player-research.css');
     assert.equal(html.includes('<!--site-header-->'), false);
     const ids = $('[id]').map((_, e) => $(e).attr('id')).get(); assert.equal(new Set(ids).size, ids.length, `Duplicate IDs on ${route}`);
   }

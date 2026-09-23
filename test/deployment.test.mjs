@@ -18,7 +18,7 @@ test('Vercel can import the default server without starting a listener or backgr
       assert.equal(health.status,200);const status=await health.json();assert.equal(status.syncing,false);assert.equal(status.lastSync,null);
       const page=await fetch(base+'/');assert.equal(page.status,200);assert.match(await page.text(),/NFL LAB/);
       assert.equal((await fetch(base+'/style.css')).status,200);
-      for(const route of ['/wnba','/wnba/','/nba','/nhl','/soccer','/sports.js','/sports-view.js','/sports.css'])assert.equal((await fetch(base+route)).status,200);
+      for(const route of ['/wnba','/wnba/','/nba','/nhl','/soccer','/sports.js','/sports-view.js','/sports.css','/player-research.js','/research-data.js','/site-preferences.js','/player-research.css'])assert.equal((await fetch(base+route)).status,200);
       assert.equal((await fetch(base+'/api/sports/board?sport=invalid')).status,400);
       assert.equal((await fetch(base+'/performance')).status,200);
       assert.equal((await fetch(base+'/forecast.css')).status,200);
@@ -45,6 +45,7 @@ test('Vercel can import the default server without starting a listener or backgr
       assert.equal((await fetch(base+'/api/cron/predictions')).status,401);
       assert.equal((await fetch(base+'/api/performance?season=2026&week=99')).status,400);
       assert.equal((await fetch(base+'/api/board?market=invalid')).status,400);
+      assert.equal((await fetch(base+'/api/nfl/research?market=invalid')).status,400);
       assert.equal((await fetch(base+'/.env')).status,404);
       assert.equal((await fetch(base+'/api/health',{method:'POST'})).status,405);
     } finally { server.closeAllConnections();await new Promise(resolve=>server.close(resolve)); }
