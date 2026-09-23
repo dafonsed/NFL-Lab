@@ -2,23 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0b0911"><meta name="description" content="Your personal bet tracker. Log tickets, update results, and track profit and loss.">
-  <title>Bet Tracker · NFL Lab</title><link rel="icon" href="/favicon.svg">
+  <meta name="theme-color" content="#101719"><meta name="description" content="Your personal bet tracker. Log tickets, update results, and track profit and loss.">
+  <title>My picks · Sports Lab</title><link rel="icon" href="/favicon.svg">
   <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/bets.css"><script type="module" src="/bets.js"></script>
 </head>
 <body class="bets-app">
   <a class="skip" href="#main">Skip to bet tracker</a>
   <!--site-header-->
   <main id="main" tabindex="-1">
-    <div class="page-heading"><div><div class="eyebrow">YOUR BETS / YOUR RECORD</div><h1>Bet Tracker<span class="accent">.</span></h1><p>Every ticket. Every result. Your personal record.</p></div><div class="heading-actions"><button class="button subtle" id="export-bets" disabled>↓ Export CSV</button><button class="button primary" id="add-bet">＋ Add bet</button></div></div>
+    <div class="page-heading"><div><div class="eyebrow">YOUR BETS / YOUR RECORD</div><h1>My picks<span class="accent">.</span></h1><p>Save your tickets, follow each selection, and review your results.</p></div><div class="heading-actions"><button class="button subtle" id="export-bets" disabled>↓ Export CSV</button><button class="button primary" id="add-bet">＋ Add bet</button></div></div>
     <div class="tracker-storage"><span><span class="dot" aria-hidden="true"></span> Saved in this browser</span><p>Bets stay on this device and browser. Export a copy before clearing site data. Amounts in USD.</p></div>
     <div id="storage-error" class="notice" role="alert" hidden></div>
     <section id="bet-summary" class="summary-grid" aria-label="All-time bet totals"></section>
     <p class="tracker-method">All-time totals · ROI uses stakes on wins, losses, and cash-outs. Pushes and voids are refunded; open bets are unsettled.</p>
+    <nav class="picks-tabs" aria-label="Ticket view"><button data-ticket-view="" aria-pressed="true">All tickets <span data-ticket-count="all">0</span></button><button data-ticket-view="open" aria-pressed="false">Open <span data-ticket-count="open">0</span></button><button data-ticket-view="settled" aria-pressed="false">Settled <span data-ticket-count="settled">0</span></button></nav>
     <section class="research-controls" aria-label="Filter bets">
       <div class="searchbox"><span aria-hidden="true">⌕</span><input id="bet-search" type="search" placeholder="Search bets, books, or notes…" aria-label="Search bets"></div>
       <label class="sr-only" for="sport-filter">Filter by sport</label><select id="sport-filter"><option value="">All sports</option><option>NFL</option><option>MLB</option><option>NBA</option><option>WNBA</option><option>NHL</option><option>Soccer</option><option>Other</option></select>
-      <label class="sr-only" for="status-filter">Filter by result</label><select id="status-filter"><option value="">All results</option><option value="open">Open</option><option value="won">Won</option><option value="lost">Lost</option><option value="push">Push</option><option value="void">Void</option><option value="cashed">Cashed out</option></select>
+      <label class="sr-only" for="status-filter">Filter by result</label><select id="status-filter"><option value="">All results</option><option value="open">Open</option><option value="settled">All settled</option><option value="won">Won</option><option value="lost">Lost</option><option value="push">Push</option><option value="void">Void</option><option value="cashed">Cashed out</option></select>
       <button class="button subtle" id="clear-filters" hidden>Clear filters</button>
     </section>
     <div class="tracking-bar"><div><strong>Track every selection</strong><p id="tracking-status" role="status">Connected game results refresh every minute while this page is visible.</p></div><button class="button subtle" id="refresh-lines">↻ Refresh results</button></div>

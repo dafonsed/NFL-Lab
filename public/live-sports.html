@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0b0911"><meta name="description" content="Live NBA, WNBA and MLB odds, scores, player stats and transparent in-game projections.">
+  <meta name="theme-color" content="#101719"><meta name="description" content="Live NBA, WNBA and MLB odds, scores, player stats and transparent in-game projections.">
   <title>Sports Lab · Live odds & props</title><link rel="icon" href="/favicon.svg">
   <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/live.css"><script type="module" src="/live-sports.js"></script>
 </head>
@@ -10,7 +10,7 @@
   <a class="skip" href="#main">Skip to live odds and props</a>
   <!--site-header-->
   <main id="main" class="live-main" tabindex="-1">
-    <div class="page-heading"><div><div class="eyebrow"><span class="live-orb"></span><span id="live-eyebrow">LIVE GAME CENTER</span></div><h1>Live odds & props<span class="accent">.</span></h1><p>The score. The market. What’s still to come.</p></div><div class="heading-actions"><a class="button subtle" href="#method">How it’s weighted ↘</a><button id="refresh" class="button primary">↻ Refresh live</button></div></div>
+    <div class="page-heading"><div><div class="eyebrow"><span class="live-orb"></span><span id="live-eyebrow">LIVE GAME CENTER</span></div><h1>Live odds & props<span class="accent">.</span></h1><p>Follow the game, compare available odds, and check updated player projections.</p></div><div class="heading-actions"><a class="button subtle" href="#method">How the model works ↘</a><button id="refresh" class="button primary">↻ Refresh live</button></div></div>
     <div class="live-disclosure"><strong>Independent model · experimental</strong><span id="live-disclosure">Game fair odds, sportsbook comparisons and player projections. Public feeds can lag the game; model assumptions and reasons are shown below.</span></div>
     <section class="live-toolbar" aria-label="Live game selection">
       <label>Game date · Eastern<input id="date" type="date" min="2005-01-01" max="2100-12-31" aria-label="Game date (Eastern time)"></label><button id="today" class="button subtle">Today</button>
@@ -24,7 +24,7 @@
     <div class="live-filter-row"><div><h2 id="market-title">Player projections</h2><p id="players-count">Loading live box score…</p></div><label class="searchbox"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Find a player or team" aria-label="Find a player or team"></label></div>
     <div class="live-line-note">Player lines are entered from your sportsbook’s <strong>full-game total</strong>, including recorded stats. Reconfirm after a game update or 60 seconds. Game odds above refresh automatically when published.</div>
     <section id="players" class="live-player-grid" aria-label="Live player projections" aria-busy="true"></section>
-    <section id="method" class="live-method" aria-label="Live model weighting"><div class="eyebrow">OPEN THE MODEL</div><h2>Every input. Every weight.</h2><div id="method-content">Loading the model specification…</div></section>
+    <section id="method" class="live-method" aria-label="Live model weighting"><div class="eyebrow">OPEN THE MODEL</div><h2>How the live model works</h2><div id="method-content">Loading the model specification…</div></section>
     <details class="live-sources"><summary>Data sources & snapshot receipts</summary><div id="sources"></div></details>
     <footer><span id="footer-label">SPORTS LAB / Live odds & props</span><span id="model-version">Independent live model</span><a id="back-link" href="/nba">Back to player research ↗</a></footer>
   </main>

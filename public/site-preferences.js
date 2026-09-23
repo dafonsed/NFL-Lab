@@ -1,3 +1,4 @@
+import { icon } from './ui-icons.js';
 const key = 'sports-lab-dev-mode';
 let enabled = false;
 try { enabled = localStorage.getItem(key) === '1'; } catch {}
@@ -5,7 +6,7 @@ function render() {
   document.documentElement.dataset.devMode = String(enabled);
   for (const button of document.querySelectorAll('[data-dev-toggle]')) {
     button.setAttribute('aria-pressed', String(enabled));
-    button.innerHTML = '<span aria-hidden="true">&lt;/&gt;</span> Dev mode <b>' + (enabled ? 'On' : 'Off') + '</b>';
+    button.innerHTML = icon('code') + '<span>Dev mode</span><b>' + (enabled ? 'On' : 'Off') + '</b>';
   }
 }
 document.addEventListener('click', event => {

@@ -2,14 +2,14 @@
 <html lang="en">
 <head><script src="/context-ui.js" defer></script>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0b0911"><meta name="description" content="Daily MLB player props, official baseball statistics, public sportsbook lines, and transparent recent-form research.">
-  <title>MLB LAB · Baseball Analytics</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/mlb.css"><script type="module" src="/mlb.js"></script>
+  <meta name="theme-color" content="#101719"><meta name="description" content="Daily MLB player props, official baseball statistics, public sportsbook lines, and transparent recent-form research.">
+  <title>MLB research · Sports Lab</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/mlb.css"><script type="module" src="/mlb.js"></script>
 <link rel="stylesheet" href="/context.css"></head>
 <body class="mlb-app">
   <a class="skip" href="#main">Skip to analytics</a>
   <!--site-header-->
   <main id="main" tabindex="-1">
-    <div class="page-heading"><div><div class="eyebrow">✧ YOUR DAILY EDGE</div><h1>Diamond Lab<span class="accent">.</span></h1><p>The lineup. The matchup. The numbers behind every prop.</p></div><div class="heading-actions"><button class="button subtle" id="export-button">↓ Export</button><button class="button primary" id="refresh-button">↻ Refresh data</button></div></div>
+    <div class="page-heading"><div><div class="eyebrow">✧ YOUR DAILY EDGE</div><h1>MLB research<span class="accent">.</span></h1><p>Player history, lineup status, and sportsbook lines for today’s games.</p></div><div class="heading-actions"><button class="button subtle" id="export-button">↓ Export</button><button class="button primary" id="refresh-button">↻ Refresh data</button></div></div>
     <div class="page-tools"><nav id="mlb-navigation" class="section-tabs" aria-label="MLB views"><button class="nav-link active" data-view="board">◈ Daily board</button><button class="nav-link" data-view="games">◇ Matchups</button><button class="nav-link" data-view="saved">☆ Watchlist</button><button class="nav-link" data-action="model">↗ Model & evidence</button><a class="nav-link" href="/paper?sport=mlb">↗ Paper returns</a></nav><button id="data-button" class="connection"><span class="dot"></span><span id="connection-label">Connecting to MLB</span></button></div>
     <section class="season-bar" aria-label="MLB date"><div class="season-label"><span class="live-mark"></span><strong>MLB DAILY BOARD</strong><span class="separator">/</span><span id="date-label">Today · automatic</span></div><div class="date-controls"><button class="icon-button" id="previous-day" aria-label="Previous day">‹</button><label class="sr-only" for="game-date">Game date</label><input type="date" id="game-date" min="2000-01-01" max="2100-12-31"><button class="icon-button" id="next-day" aria-label="Next day">›</button><button class="button subtle" id="today-button">Today</button></div></section>
     <section class="market-picker" aria-label="MLB prop markets"><div class="market-label">BATTERS</div><nav id="batter-markets" aria-label="Batter markets"></nav><div class="market-label">PITCHERS</div><nav id="pitcher-markets" aria-label="Pitcher markets"></nav></section>

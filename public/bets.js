@@ -46,7 +46,7 @@ function load() {
 function filteredBets() {
   const query = $('#bet-search').value.trim().toLowerCase();
   const sport = $('#sport-filter').value, status = $('#status-filter').value;
-  return bets.filter(bet => (!sport || bet.sport === sport || bet.legs?.some(l=>l.sport===sport)) && (!status || bet.status === status) && (!query || `${bet.selection} ${bet.book} ${bet.notes} ${(bet.legs||[]).map(l=>l.label+' '+l.matchup).join(' ')}`.toLowerCase().includes(query)))
+  return bets.filter(bet => (!sport || bet.sport === sport || bet.legs?.some(l=>l.sport===sport)) && (!status || (status === 'settled' ? bet.status !== 'open' : bet.status === status)) && (!query || `${bet.selection} ${bet.book} ${bet.notes} ${(bet.legs||[]).map(l=>l.label+' '+l.matchup).join(' ')}`.toLowerCase().includes(query)))
     .sort((a, b) => b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt));
 }
 
@@ -59,6 +59,10 @@ function render() {
     return;
   }
   const total = summarizeBets(bets);
+  const selectedStatus = $('#status-filter').value;
+  document.querySelectorAll('[data-ticket-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.ticketView === (selectedStatus && selectedStatus !== 'open' ? 'settled' : selectedStatus))));
+  const ticketCounts = { all: bets.length, open: total.open, settled: bets.length - total.open };
+  document.querySelectorAll('[data-ticket-count]').forEach(element => { element.textContent = ticketCounts[element.dataset.ticketCount]; });
   const cards = [
     ['Net profit / loss', signedMoney(total.profit), 'Settled bets only', tone(total.profit)],
     ['ROI', total.roi === null ? '—' : `${total.roi > 0 ? '+' : ''}${total.roi.toFixed(1)}%`, `${money(total.settledStake)} in settled stakes`, tone(total.roi)],
@@ -201,6 +205,10 @@ $('#bet-list').addEventListener('click', event => {
 $('#bet-search').addEventListener('input', render);
 $('#sport-filter').addEventListener('change', render);
 $('#status-filter').addEventListener('change', render);
+document.querySelectorAll('[data-ticket-view]').forEach(button => button.addEventListener('click', () => {
+  $('#status-filter').value = button.dataset.ticketView;
+  $('#status-filter').dispatchEvent(new Event('change', { bubbles: true }));
+}));
 $('#clear-filters').addEventListener('click', clearFilters);
 $('#export-bets').addEventListener('click', () => {
   const visible = filteredBets();

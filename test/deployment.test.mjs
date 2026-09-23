@@ -16,14 +16,21 @@ test('Vercel can import the default server without starting a listener or backgr
     try {
       const health = await fetch(base + '/api/health', {headers:{host:'nfl-lab-xi.vercel.app'}});
       assert.equal(health.status,200);const status=await health.json();assert.equal(status.syncing,false);assert.equal(status.lastSync,null);
-      const page=await fetch(base+'/');assert.equal(page.status,200);assert.match(await page.text(),/NFL LAB/);
+      const page=await fetch(base+'/');assert.equal(page.status,200);assert.match(await page.text(),/Choose your workspace/);
+      for (const sport of ['nfl','mlb','nba','wnba','nhl','soccer']) {
+        const page=await fetch(base+'/'+sport+'?view=trends');assert.equal(page.status,200);
+        const html=await page.text();assert.match(html,/id="td-workbench"/);assert.ok(html.includes('src="/trends.js"'));
+      }
+      const legacy=await fetch(base+'/?view=board&market=rec');assert.ok((await legacy.text()).includes('src="/app.js"'));
+      for(const asset of ['/workspace.css','/trends.css','/trends.js','/trends-data.js'])assert.equal((await fetch(base+asset)).status,200);
       assert.equal((await fetch(base+'/style.css')).status,200);
+      for(const asset of ['/app-design.css','/workspace-ui.js','/ui-icons.js'])assert.equal((await fetch(base+asset)).status,200);
       for(const route of ['/wnba','/wnba/','/nba','/nhl','/soccer','/sports.js','/sports-view.js','/sports.css','/player-research.js','/research-data.js','/site-preferences.js','/player-research.css'])assert.equal((await fetch(base+route)).status,200);
       assert.equal((await fetch(base+'/api/sports/board?sport=invalid')).status,400);
       assert.equal((await fetch(base+'/performance')).status,200);
       assert.equal((await fetch(base+'/forecast.css')).status,200);
       const betsPage = await fetch(base+'/bets');
-      assert.equal(betsPage.status,200); assert.match(await betsPage.text(), /Bet Tracker/);
+      assert.equal(betsPage.status,200); assert.match(await betsPage.text(), /My picks/);
       for (const asset of ['/bets/', '/bets.js', '/bet-utils.js', '/bet-legs.js', '/bet-editor.js', '/bets.css']) assert.equal((await fetch(base+asset)).status,200,asset);
       assert.equal((await fetch(base+'/api/bets/catalog?sport=invalid&date=2026-09-22')).status,400);
       assert.equal((await fetch(base+'/api/bets/game?sport=wnba&date=2026-09-22&game=invalid')).status,400);

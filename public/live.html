@@ -2,15 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0b0911"><meta name="description" content="NFL live player props with transparent workload projections, current box scores and visible model weights.">
-  <title>NFL LAB · Live odds & props</title><link rel="icon" href="/favicon.svg">
+  <meta name="theme-color" content="#101719"><meta name="description" content="NFL live player props with transparent workload projections, current box scores and visible model weights.">
+  <title>NFL Live · Sports Lab</title><link rel="icon" href="/favicon.svg">
   <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/live.css"><script type="module" src="/live.js"></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to live player props</a>
   <!--site-header-->
   <main id="main" class="live-main" tabindex="-1">
-    <div class="page-heading"><div><div class="eyebrow"><span class="live-orb"></span> LIVE GAME & PLAYER MODELS</div><h1>Live odds & props<span class="accent">.</span></h1><p>Sportsbook prices. Model fair odds. The reasons behind them.</p></div><div class="heading-actions"><a class="button subtle" href="#method">How it’s weighted ↘</a><button id="refresh" class="button primary">↻ Refresh live</button></div></div>
+    <div class="page-heading"><div><div class="eyebrow"><span class="live-orb"></span> LIVE GAME & PLAYER MODELS</div><h1>Live odds & props<span class="accent">.</span></h1><p>Follow the game, compare available odds, and check updated player projections.</p></div><div class="heading-actions"><a class="button subtle" href="#method">How the model works ↘</a><button id="refresh" class="button primary">↻ Refresh live</button></div></div>
     <div class="live-disclosure"><strong>Independent model · experimental</strong><span>Game fair odds, sportsbook comparisons and player projections. Public feeds can lag the game; model assumptions and reasons are shown below.</span></div>
     <section class="live-toolbar" aria-label="Live game selection">
       <label>Game date · Eastern <input id="date" type="date" aria-label="Game date (Eastern time)"></label><button id="current-week" class="button subtle">Current NFL week</button>
@@ -25,7 +25,7 @@
     <div class="live-filter-row"><div><h2 id="market-title">Player projections</h2><p id="players-count">Loading live box score…</p></div><label class="searchbox"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Find a player or team" aria-label="Find a player or team"></label></div>
     <div class="live-line-note">Use your sportsbook’s <strong>full-game total</strong>, including stats already recorded. Lines here are manually entered; confirm again after a game update or 60 seconds. Possible overtime is excluded from projections.</div>
     <section id="players" class="live-player-grid" aria-label="Live player projections" aria-busy="true"></section>
-    <section id="method" class="live-method" aria-label="Live model weighting"><div class="eyebrow">OPEN THE MODEL</div><h2>Every input. Every weight.</h2><div id="method-content">Loading the model specification…</div></section>
+    <section id="method" class="live-method" aria-label="Live model weighting"><div class="eyebrow">OPEN THE MODEL</div><h2>How the live model works</h2><div id="method-content">Loading the model specification…</div></section>
     <details class="live-sources"><summary>Data sources & snapshot receipts</summary><div id="sources"></div></details>
     <footer><span>SPORTS LAB / Live player props</span><span>live-workload-v1 · Separate from the pregame model</span><a href="/nfl">Back to NFL research ↗</a></footer>
   </main>
