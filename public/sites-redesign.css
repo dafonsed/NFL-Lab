@@ -1,0 +1,204 @@
+/* Sportslab's compact, data-led visual system. The product content remains its own. */
+body.landing-page {
+  --accent:#35b6f2;
+  --bright:#7ad1fa;
+  background:#080c10;
+}
+body.landing-page .landing-header {
+  height:60px;
+  background:#080b0e;
+  border-bottom:1px solid #273039;
+}
+body.landing-page .landing-header-inner {
+  min-height:60px;
+  width:min(1440px,calc(100% - 48px));
+  gap:26px;
+}
+body.landing-page .landing-nav { margin-left:38px;gap:30px }
+body.landing-page .landing-nav a,
+body.landing-page .landing-header-link { font-size:13px;color:#d4dce2 }
+body.landing-page .landing-button { border-radius:7px;box-shadow:none }
+body.landing-page .landing-hero {
+  background:radial-gradient(circle at 10% 74%,#0b2732 0,transparent 38%),#080c10;
+}
+body.landing-page .landing-hero-grid {
+  width:min(1200px,calc(100% - 64px));
+  grid-template-columns:minmax(0,1.08fr) minmax(380px,.92fr);
+  align-items:center;
+  min-height:405px;
+  gap:74px;
+  padding-top:52px;
+}
+body.landing-page .landing-hero-copy { padding-top:0 }
+body.landing-page .landing-hero h1 {
+  max-width:620px;
+  font-size:clamp(48px,5vw,68px);
+  font-weight:650;
+  line-height:1.065;
+  letter-spacing:-.055em;
+}
+body.landing-page .landing-hero-description {
+  max-width:530px;
+  margin:22px 0 27px!important;
+  color:#bec9d0;
+  font-size:17px;
+  line-height:1.5;
+}
+body.landing-page .hero-product {
+  border-color:#34414a;
+  border-radius:10px;
+  background:#151b20;
+  box-shadow:0 22px 56px #0006;
+}
+body.landing-page .hero-score-badge { border-radius:18px;top:-22px }
+body.landing-page .landing-evidence {
+  width:min(1200px,calc(100% - 64px));
+  margin-top:32px;
+  padding-top:19px;
+  border-top:1px solid #26333a;
+}
+body.landing-page .landing-evidence>div { min-height:76px;padding:0 22px }
+body.landing-page .landing-evidence>div:first-child { padding-left:0 }
+body.landing-page .landing-evidence strong { font-size:37px;font-weight:650 }
+body.landing-page .landing-evidence span { font-size:12px;margin-top:4px;max-width:220px }
+body.landing-page .landing-league-band { margin-top:34px;padding-bottom:42px }
+body.landing-page .landing-league-inner { width:min(1200px,calc(100% - 64px)) }
+body.landing-page .landing-league-inner>p { margin-bottom:12px }
+body.landing-page .landing-league-inner img { width:32px;height:32px }
+@media(max-width:800px){
+  body.landing-page .landing-hero-grid { grid-template-columns:1fr;min-height:0;gap:42px;padding-top:54px }
+  body.landing-page .landing-evidence { margin-top:44px }
+}
+@media(max-width:650px){
+  body.landing-page .landing-header { height:auto }
+  body.landing-page .landing-header-inner { width:calc(100% - 32px);min-height:60px;padding-top:8px }
+  body.landing-page .landing-nav { margin:5px 0 0;gap:19px }
+  body.landing-page .landing-hero-grid { width:calc(100% - 32px);padding-top:44px;gap:42px }
+  body.landing-page .landing-hero h1 { font-size:clamp(40px,10vw,52px) }
+  body.landing-page .landing-hero-description { font-size:16px }
+  body.landing-page .landing-evidence { width:calc(100% - 32px);margin-top:41px }
+  body.landing-page .landing-evidence>div { min-height:83px;padding:8px 12px }
+  body.landing-page .landing-evidence strong { font-size:30px }
+  body.landing-page .landing-league-inner { width:calc(100% - 32px) }
+}
+
+/* Keep the live product demo and supporting content as compact as the first screen. */
+body.landing-page :is(.landing-product-section,.landing-workflow-section,.landing-paths-section,.landing-compare-section,.landing-outcomes-section,.landing-receipts-section,.landing-sports-section,.landing-questions){padding-block:76px}
+body.landing-page .landing-showcase{border-radius:9px}
+body.landing-page :is(.landing-compare-card,.landing-outcome-panel,.landing-receipt-card,.landing-closing-inner){border-radius:9px;box-shadow:none}
+body.landing-page .landing-compare-card{min-height:405px}
+body.landing-page .landing-receipt-card{min-height:245px}
+body.landing-page .landing-compare-grid{gap:12px;margin-top:34px}
+body.landing-page .landing-receipts-rail{gap:12px;margin-top:35px}
+body.landing-page .landing-closing{padding:0 0 76px}
+body.landing-page .landing-sports-list a{min-height:90px!important}
+body.landing-page :is(a,button,input,select,summary):focus-visible{outline:2px solid #7ad1fa;outline-offset:3px}
+
+/* The workspace uses the same restrained palette as the Sportslab homepage. */
+body.site-layout.ui-theme.reference-design{
+  --bg:#080c10;--panel:#11181d;--panel2:#151d23;--control:#151c22;
+  --surface-sunken:#090d11;--surface-hover:#202b33;--line:#29343d;
+  --border-strong:#3d4c57;--text:#f2f6f8;--secondary:#c2cdd3;
+  --muted:#98a9b2;--accent:#41baf2;--bright:#82d5fa;
+  --accent-wash:#41baf21a;--violet-wash:#41baf21a;
+  --ui-fill:#172027;--ui-hover:#24323d;--ui-selected:#dceef7;
+  --ui-selected-text:#09141b;--selected:#dceef7;--ui-selection-wash:#142937;
+  --action-fill:#3bb8ef;--trend:#68dc9e;--trend-dim:#68dc9e18;
+  --tracker-accent:#41baf2;--tracker-positive:#68dc9e;
+  --desk-canvas:#080c10;--desk-panel:#11181d;--desk-row:#131b20;
+  --desk-row-alt:#10171b;--desk-rule:#29343d;--desk-heading:#0d1418;
+  --desk-hover:#1d2c34;
+  --hero-fill:linear-gradient(90deg,#0c2632 0%,#11232d 45%,#0b1218 100%);
+  background:#080c10;color:#f2f6f8;
+}
+body.site-layout.ui-theme.reference-design :is(a,button,input,select,textarea,summary):focus-visible{outline:2px solid #7ad1fa;outline-offset:2px}
+body.site-layout.ui-theme.reference-design :is(input,textarea,select){background-color:#111a20!important;border-color:#34434e!important;color:#edf4f7}
+body.site-layout.ui-theme.reference-design input::placeholder{color:#99abb5}
+body.site-layout.ui-theme.reference-design :is([data-ui-control],.calendar-trigger,.td-choice-trigger){--button-fill:#172129;--button-border:#34424d;--button-ink:#d9e4e9}
+body.site-layout.ui-theme.reference-design [data-ui-control=primary]{--button-fill:#40baf2;--button-border:#40baf2;--button-ink:#08151d}
+body.site-layout.ui-theme.reference-design [data-ui-control=primary]:hover:not(:disabled){--button-fill:#75d1fc;--button-border:#75d1fc}
+body.site-layout.ui-theme.reference-design [data-ui-control=segment]:is(.active,[aria-pressed=true],[aria-selected=true]){--button-fill:#dceef7;--button-ink:#0b1820}
+body.site-layout.ui-theme.reference-design .pr-bar.hit{fill:#63d798!important}
+body.site-layout.ui-theme.reference-design .pr-bar.miss{fill:#d66958!important}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-save{background:#41baf2!important;color:#091a23!important}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-priced-quote{border-color:#3b8eac;background:#102934}
+
+/* A flat, compact header gives the data the available width. */
+@media(min-width:701px){
+  body.site-layout.ui-theme.research-console.reference-design .site-header{display:flex;align-items:center;min-height:60px;background:#0b1014;border-bottom:1px solid #2c3a43}
+  body.site-layout.ui-theme.research-console.reference-design .site-header-main{display:flex;flex:0 0 200px;width:200px;min-height:60px;padding:0 22px}
+  body.site-layout.ui-theme.research-console.reference-design .site-brand{position:static;top:auto;left:auto;display:flex;gap:8px;font-size:22px;white-space:nowrap}
+  body.site-layout.ui-theme.research-console.reference-design .site-brand img{width:27px;height:27px;border:0;border-radius:6px;box-shadow:none}
+  body.site-layout.ui-theme.research-console.reference-design .site-header-bar{position:static;display:flex;flex:1 1 auto;min-width:0;width:auto;max-width:none;height:60px;min-height:60px;padding:0 16px 0 0;border:0;background:#0b1014;overflow:hidden}
+  body.site-layout.ui-theme.research-console.reference-design .site-rail-content{display:flex;flex:1;flex-direction:row;align-items:center;gap:5px;min-height:0;overflow-x:auto;overflow-y:hidden;white-space:nowrap;scrollbar-width:thin}
+  body.site-layout.ui-theme.research-console.reference-design .site-navigation{display:flex;flex-direction:row;align-items:center;gap:3px;width:auto}
+  body.site-layout.ui-theme.research-console.reference-design :is(.site-nav-link,.site-overview-link,.site-tracker){display:inline-flex;flex:0 0 auto;width:auto;align-items:center;justify-content:center;gap:7px;min-height:59px;height:59px;padding:0 11px;border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;color:#b5c4cb;font-size:12px;white-space:nowrap}
+  body.site-layout.ui-theme.research-console.reference-design :is(.site-nav-link,.site-overview-link,.site-tracker):hover{background:#162129;color:#f4f8fa}
+  body.site-layout.ui-theme.research-console.reference-design :is(.site-nav-link,.site-overview-link,.site-tracker)[aria-current=page]{border-bottom:2px solid #43baf1;background:#12222b;color:#eef9ff}
+  body.site-layout.ui-theme.research-console.reference-design :is(.site-nav-link,.site-overview-link,.site-tracker) .ui-icon{width:16px;height:16px;color:#88a4b3}
+  body.site-layout.ui-theme.research-console.reference-design :is(.site-nav-link,.site-overview-link,.site-tracker)[aria-current=page] .ui-icon{color:#54c4f6}
+  body.site-layout.ui-theme.research-console.reference-design .site-personal{margin:0 0 0 auto;padding:0;border:0}
+  body.site-layout.ui-theme.research-console.reference-design main{width:100%;max-width:none;margin:0;padding:0 0 32px}
+  body.site-layout.ui-theme.research-console.reference-design .workspace-masthead{min-height:112px;padding:15px 30px 12px;border:0;border-radius:0;background:var(--hero-fill);grid-template-rows:42px 28px}
+}
+body.site-layout.ui-theme.research-console.reference-design .workspace-masthead h1{font-size:25px;font-weight:680;letter-spacing:-.035em}
+body.site-layout.ui-theme.research-console.reference-design .workspace-masthead>.site-sports a{color:#bfd0d9}
+body.site-layout.ui-theme.research-console.reference-design .workspace-masthead>.site-sports a[aria-current=page]{background:#2c637a66;color:#f6fbfd}
+body.site-layout.ui-theme.research-console.reference-design .workspace-masthead :is(.masthead-actions,.site-header-actions)>:is(button,a){--button-fill:#17232c;--button-border:#39505e;--button-ink:#e3eef3}
+body.site-layout.ui-theme.research-console.reference-design :is(.desk-toolbar,.workspace-controlbar,.home-toolbar){background:#0c1216;border-bottom:1px solid #2b3943}
+body.site-layout.ui-theme.research-console.reference-design :is(.page-tools,.results-heading,.home-board-heading,.home-secondary-toolbar){background:#0b1014;border-color:#293740}
+body.site-layout.ui-theme.research-console.reference-design .research-board{background:#11181d;border:1px solid #2c3942;border-radius:7px;margin:0 20px}
+body.site-layout.ui-theme.research-console.reference-design .research-columns{background:#10171b;color:#b6c5cd;border-bottom:1px solid #2d3a43;font-weight:600}
+body.site-layout.ui-theme.research-console.reference-design .research-row{background:#151d22;border-bottom:1px solid #27333a}
+body.site-layout.ui-theme.research-console.reference-design .research-row:nth-child(odd){background:#121a1f}
+body.site-layout.ui-theme.research-console.reference-design .research-row:hover{background:#20303a}
+body.site-layout.ui-theme.research-console.reference-design .research-player small{color:#a2b0b8}
+body.site-layout.ui-theme.research-console.reference-design .research-row .research-probability{background:#10251f}
+body.site-layout.ui-theme.research-console.reference-design .research-row .research-probability>strong{color:#70dfa1}
+body.site-layout.ui-theme.research-console.reference-design .research-row :is(.research-line,.research-odds,.research-estimate,.research-result)>strong{color:#d7e2e7}
+body.site-layout.ui-theme.research-console.reference-design .trend-table-scroll{background:#11181d;border:1px solid #2c3942;border-radius:7px;margin:0 20px}
+body.site-layout.ui-theme.research-console.reference-design .trend-table thead th{background:#10171b;color:#b6c5cd;border-color:#2d3a43}
+body.site-layout.ui-theme.research-console.reference-design .trend-table tbody tr{background:#151d22}
+body.site-layout.ui-theme.research-console.reference-design .trend-table tbody tr:nth-child(even){background:#121a1f}
+body.site-layout.ui-theme.research-console.reference-design .trend-table tbody :is(th,td){border-bottom-color:#27333a}
+body.site-layout.ui-theme.research-console.reference-design .trend-table .trend-rate.high{color:#70dfa1;background:#113127}
+body.site-layout.ui-theme.reference-design :is(.summary-card,.performance-stat,.sports-card,.mlb-card,.live-card,.method-card,.matchup,.live-directory-card){border-color:#2c3942;border-radius:8px;background:#121a1f}
+body.site-layout.ui-theme.reference-design :is(.ui-choice .td-choice-menu,.calendar-popover){border-color:#394954!important;border-radius:8px!important;background:#141e24!important}
+body.site-layout.ui-theme.reference-design :is(.filter-dialog-header,.model-filter-dialog .sheet-header,.filter-dialog-footer,.model-filter-dialog .sheet-footer){background:#111a20}
+body.site-layout.ui-theme.reference-design :is(.filter-dialog-body,.model-filter-dialog .sheet-body,.filter-category-nav,.filter-editors,.model-filter-editors){background:#111a20}
+body.site-layout.ui-theme.reference-design .filter-category-nav button[aria-selected=true]{background:#dceef7!important;color:#0b1820!important}
+body.site-layout.ui-theme.reference-design .player-research-dialog.pr-redesign{background:#0b1116!important;border-color:#3a4952;border-radius:9px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-hero{background:#11232d;border-bottom:1px solid #304451}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-primary{background:#0b1116}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-sidebar{background:#0e161b;border-left-color:#30404a}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-panel{background:#142027;border:1px solid #2c3b44;border-radius:8px}
+body.site-layout.ui-theme.reference-design .pr-redesign :is(.pr-markets,.pr-mode-tabs){background:#0d151a;border-color:#2b3a44}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-aside-tabs{background:#10191f;border:1px solid #34434d;border-radius:7px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-aside-tabs button[aria-pressed=true]{background:#273b48!important;color:#eff9fc!important}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-chart-heading h3{color:#75dca4}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-sample-splits b{color:#75dca4}
+body.site-layout.ui-theme.reference-design .pr-redesign .reference-movement table{background:#101920;border-radius:7px}
+
+@media(max-width:1050px) and (min-width:701px){
+  body.site-layout.ui-theme.research-console.reference-design .site-header-main{flex-basis:158px;width:158px;padding-inline:16px}
+  body.site-layout.ui-theme.research-console.reference-design .site-brand{font-size:19px}
+  body.site-layout.ui-theme.research-console.reference-design :is(.site-nav-link,.site-overview-link,.site-tracker){padding-inline:9px;font-size:11px}
+}
+@media(max-width:700px){
+  body.landing-page :is(.landing-product-section,.landing-workflow-section,.landing-paths-section,.landing-compare-section,.landing-outcomes-section,.landing-receipts-section,.landing-sports-section,.landing-questions){padding-block:62px}
+  body.landing-page .landing-compare-card{min-height:0}
+  body.landing-page .landing-receipt-card{min-height:230px}
+  body.site-layout.ui-theme.research-console.reference-design .site-header{height:53px;min-height:53px;background:#0b1014;border-bottom:1px solid #2c3a43}
+  body.site-layout.ui-theme.research-console.reference-design .site-header-main{height:52px;min-height:52px;padding:10px 16px}
+  body.site-layout.ui-theme.research-console.reference-design .site-brand{display:flex;font-size:19px}
+  body.site-layout.ui-theme.research-console.reference-design .site-brand img{border-radius:6px;box-shadow:none}
+  body.site-layout.ui-theme.research-console.reference-design .workspace-masthead{background:var(--hero-fill);min-height:125px;padding:15px 16px 11px;border-radius:0}
+  body.site-layout.ui-theme.research-console.reference-design .workspace-masthead h1{font-size:clamp(23px,6vw,28px)}
+  body.site-layout.ui-theme.research-console.reference-design .workspace-masthead>.site-sports a{border-color:#39505c;border-radius:6px}
+  body.site-layout.ui-theme.research-console.reference-design .mobile-navigation{background:#0b1116f7;border-top:1px solid #34444f}
+  body.site-layout.ui-theme.research-console.reference-design .mobile-navigation [aria-current=page]{color:#75d0fa!important}
+  body.site-layout.ui-theme.research-console.reference-design .research-board,
+  body.site-layout.ui-theme.research-console.reference-design .trend-table-scroll{margin-inline:10px;border-radius:7px}
+  body.site-layout.ui-theme.research-console.reference-design .research-row{background:#151e24!important;border-color:#34414a}
+  body.site-layout.ui-theme.research-console.reference-design .research-row .research-probability{background:#10251f}
+}
