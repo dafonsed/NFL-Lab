@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#08080a"><meta name="description" content="Explore player trends, game logs, hit rates and sportsbook lines in Sports Lab.">
+  <title>Trends &amp; Lines · Sports Lab</title><link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/trends.css"><script type="module" src="/trends.js"></script>
+</head>
+<body class="trends-workspace">
+  <a class="skip" href="#main">Skip to player trends</a>
+  <!--site-header-->
+  <main id="main" tabindex="-1">
+    <div class="page-heading"><div><div class="eyebrow">THE NUMBERS BEHIND THE LINE</div><h1>Trends &amp; Lines<span class="accent">.</span></h1><p>Player history, hit rates, and sportsbook lines.</p></div><button id="trend-refresh" class="button subtle" aria-label="Refresh data">↻ Refresh data</button></div>
+    <section class="td-toolbar" aria-label="Schedule filters">
+      <div id="td-week-label"><span class="sr-only">NFL week</span><select id="td-week"><option value="">Latest week · automatic</option></select></div>
+      <label id="td-date-label" hidden><span class="sr-only">Game date</span><input type="date" id="td-date" aria-label="Game date" required></label>
+      <div id="td-league-label" hidden><span class="sr-only">League</span><select id="td-league"><option value="eng.1">Premier League</option><option value="esp.1">La Liga</option><option value="ger.1">Bundesliga</option><option value="ita.1">Serie A</option><option value="fra.1">Ligue 1</option><option value="usa.1">MLS</option><option value="uefa.champions">Champions League</option></select></div>
+      <div class="td-game-label"><span class="sr-only">Matchup</span><select id="td-game"><option value="">All matchups</option></select></div>
+      <div id="td-status" class="sr-only" role="status">Loading player data…</div>
+    </section>
+    <nav id="td-markets" class="td-markets" aria-label="Player prop market"></nav>
+    <div id="td-notice" role="status"></div>
+    <section class="td-filters" aria-label="Player filters">
+      <label class="td-search"><span aria-hidden="true">⌕</span><input type="search" id="td-search" placeholder="Search players or teams" aria-label="Search players or teams" autocomplete="off"></label>
+      <label class="sr-only" for="td-sort">Sort players</label><select id="td-sort"><option value="rate">Highest L10 hit rate</option><option value="average">Highest L10 average</option><option value="change">Biggest form change</option><option value="name">Player name</option></select>
+      <button id="td-posted" aria-pressed="false">Posted lines only</button><button id="td-saved" aria-pressed="false">☆ Watchlist</button>
+      <div class="td-side" aria-label="Comparison side"><button data-side="over" aria-pressed="true">Over</button><button data-side="under" aria-pressed="false">Under</button></div>
+    </section>
+    <nav id="td-detail-nav" class="td-detail-nav" aria-label="Player navigation" hidden><button class="button" data-back-board>← Back to Trends</button><div class="td-player-pager"><span id="td-current-player"></span><button class="button" data-step-player="-1" aria-label="Previous player">←</button><button class="button" data-step-player="1" aria-label="Next player">→</button></div></nav>
+    <div class="td-workbench" id="td-workbench" aria-busy="true">
+      <section class="td-players" id="td-players" aria-label="Players"><div class="td-panel-heading"><h2>Player trends</h2><span id="td-count">Loading</span></div><div id="td-player-list"><div class="td-empty"><div class="loader"></div><h3>Building your board</h3><p>Loading game history and available lines.</p></div></div></section>
+      <section class="td-detail" id="td-detail" aria-label="Selected player analysis" hidden></section>
+    </div>
+  </main>
+  <noscript>Enable JavaScript to load player data and charts.</noscript>
+</body>
+</html>

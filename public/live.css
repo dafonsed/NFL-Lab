@@ -1,0 +1,93 @@
+.live-main { max-width: 1440px; }
+.game-model-teams { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 20px 0; }
+.game-model-teams article { padding: 20px; border: 1px solid rgb(var(--muted-rgb) / 0.267); border-radius: 12px; background: linear-gradient(130deg,var(--panel),var(--bg)); }
+.game-model-teams article > strong { display: block; font: 32px var(--mono); color: var(--secondary); margin-top: 12px; }
+.game-model-teams p { font-size: 13px; margin: 10px 0 6px; }
+.game-model-teams b,.fair-price { color: var(--bright); }
+.game-model-teams small,.game-model-intro,.game-model-reasons { color: var(--muted); font-size: 12px; line-height: 1.7; }
+.game-model-verdict { font-size: 13px; line-height: 1.8; }
+.game-model-reasons { border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; }
+.game-model-reasons summary { color: var(--text); cursor: pointer; font-weight: 600; }
+.game-model-reasons li { margin: 10px 0; padding-left: 4px; }
+.game-books-heading { margin: 28px 0 16px; }
+.game-book h3 { font-size: 15px; margin: 20px 0 12px; }
+.game-market-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; justify-content: space-between; }
+.game-market-heading h4 { font-size: 12px; margin: 12px 0; text-transform: uppercase; letter-spacing: 1px; }
+.game-market-heading span { color: var(--muted); font-size: 11px; }
+.game-odds-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 9px; margin-bottom: 10px; }
+.game-odds-table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 12px; }
+.game-odds-table th,.game-odds-table td { padding: 12px 14px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.game-odds-table tr:last-child td,.game-odds-table tr:last-child th { border-bottom: 0; }
+.game-odds-table thead th { color: var(--muted); font-weight: 400; font-size: 10px; background: var(--bg); }
+.game-odds-table th:first-child { text-align: left; }
+.game-odds-table td { font-family: var(--mono); }
+.game-odds-table small { display: block; color: var(--muted); font-size: 9px; margin-top: 4px; }
+.live-odds.is-stale .book-price { color: var(--muted); }
+.live-odds [hidden] { display: none !important; }
+@media(max-width:720px) { .game-model-teams { grid-template-columns: repeat(2,minmax(0,1fr)); }.game-model-total { grid-column: 1 / -1; }.game-model-teams article { padding: 15px; }.game-model-teams article > strong { font-size: 27px; } }
+@media(max-width:620px) {
+  .game-odds-table { min-width: 0; }
+  .game-odds-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .game-odds-table tbody { display: block; }
+  .game-odds-table tbody tr { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); border-bottom: 1px solid var(--line); padding: 6px; }
+  .game-odds-table tbody tr:last-child { border-bottom: 0; }
+  .game-odds-table tbody th { grid-column: 1 / -1; color: var(--text); font-size: 14px; }
+  .game-odds-table th,.game-odds-table td { border: 0; text-align: left; padding: 10px; }
+  .game-odds-table td::before { content: attr(data-label); display: block; color: var(--muted); font: 10px var(--font); margin-bottom: 6px; }
+}
+.live-odds { padding: 22px; margin-bottom: 26px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+.live-odds-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.live-odds h2 { font-size: 17px; margin: 16px 0 12px; }
+.live-odds-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+.live-odds-market { border: 1px solid var(--line); border-radius: 9px; padding: 14px; background: var(--bg); }
+.live-odds-market h3 { font-size: 11px; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; letter-spacing: .8px; }
+.live-odds-market div { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 13px; }
+.live-odds-market strong { font-family: var(--mono); color: var(--bright); }
+.live-odds.is-stale .live-odds-market strong { color: var(--muted); }
+.live-odds-note,.live-odds > p { color: var(--muted); font-size: 12px; line-height: 1.7; }
+.live-odds-note a { color: var(--accent); }
+.live-bases { text-align: center; color: var(--accent); font-size: 12px; margin: 0 0 10px; }
+@media(max-width:620px) { .live-odds { padding: 16px; }.live-odds-grid { grid-template-columns: 1fr; } }
+.live-main .heading-actions { flex-wrap: wrap; }
+.topbar #navigation { overflow-x: auto; min-width: 0; max-width: 100%; justify-content: flex-start; }
+.live-orb { display: inline-block; width: 7px; height: 7px; background: var(--bright); border-radius: 50%; margin-right: 7px; box-shadow: 0 0 14px rgb(var(--bright-rgb) / 0.4); }
+.live-disclosure { display: flex; gap: 18px; align-items: center; padding: 15px 20px; border: 1px solid rgb(var(--muted-rgb) / 0.231); background: rgb(var(--muted-rgb) / 0.063); border-radius: 12px; color: var(--muted); }
+.live-disclosure strong { color: var(--accent); white-space: nowrap; font-size: 12px; }
+.live-toolbar { display: flex; align-items: end; gap: 14px; padding: 25px 0 12px; flex-wrap: wrap; }
+.live-toolbar label:not(.auto-control) { display: grid; gap: 6px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .8px; }
+.live-toolbar input[type=date], .live-toolbar select { background: var(--panel); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 11px 12px; font: 13px var(--font); min-height: 42px; }
+.game-select-label { flex: 1; min-width: 220px; }
+.auto-control { display: flex; align-items: center; gap: 7px; align-self: center; color: var(--muted); font-size: 12px; }
+.feed-status { color: var(--muted); font: 11px var(--mono); margin: 4px 0 20px; }
+.feed-status.is-stale { color: var(--warning); }
+.live-warning { margin: 8px 0; padding: 12px 16px; color: var(--warning); background: #e8be860c; border: 1px solid #e8be862b; border-radius: 8px; }
+.live-scoreboard { border: 1px solid var(--line); background: linear-gradient(115deg,var(--panel),var(--control)); border-radius: 16px; padding: 24px 28px; margin: 0 0 26px; }
+.live-score-top { display: flex; justify-content: space-between; gap: 16px; color: var(--muted); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+.live-score-teams { display: flex; align-items: center; justify-content: center; gap: 32px; margin: 14px 0; }
+.live-score-team { display: flex; gap: 15px; align-items: center; font-weight: 650; font-size: 22px; }
+.live-score-team b { font: 42px var(--mono); color: var(--text); }
+.live-score-divider { color: var(--muted); font-size: 20px; }
+.live-last-play { color: var(--muted); font-size: 12px; text-align: center; margin: 0; }
+.live-filter-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin: 22px 0 8px; }
+.live-filter-row h2 { margin: 0; font-size: 20px; }
+.live-filter-row p { color: var(--muted); font-size: 12px; margin: 6px 0; }
+.live-filter-row .searchbox { max-width: 310px; }
+.live-line-note { font-size: 12px; color: var(--muted); margin: 12px 0 18px; }
+.live-player-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.live-card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.live-card-header { padding: 20px 22px 14px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.live-card h3 { margin: 0; font-size: 18px; }.live-card-header p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.live-tag { color: var(--accent); font-size: 9px; padding: 5px 7px; border: 1px solid rgb(var(--secondary-rgb) / 0.2); border-radius: 5px; letter-spacing: .6px; white-space: nowrap; }
+.live-tag.withheld { color: var(--warning); border-color: #e8be862b; }
+.live-values { display: grid; grid-template-columns: 1fr 1fr 1.15fr; margin: 0 22px 18px; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.live-values div { padding: 13px 12px; }.live-values div+div { border-left: 1px solid var(--line); }.live-values small { display: block; color: var(--muted); font-size: 10px; margin-bottom: 4px; }.live-values strong { font: 25px var(--mono); }.live-values .projected { background: rgb(var(--muted-rgb) / 0.063); color: var(--accent); }
+.live-inputs { padding: 0 22px 18px; }.live-inputs form { display: flex; gap: 8px; align-items: end; }.live-inputs label { flex: 1; font-size: 11px; color: var(--muted); }.live-inputs input[type=number] { display: block; width: 100%; padding: 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 7px; color: var(--text); margin-top: 6px; font: 16px var(--mono); }.live-inputs .button { min-height: 42px; font-size: 11px; }
+.live-comparison { min-height: 34px; font-size: 11px; line-height: 1.6; margin: 9px 0; color: var(--muted); padding: 0; border: 0; border-radius: 0; background: transparent; text-align: left; }.live-comparison.current { color: var(--bright); }.live-comparison.expired,.live-comparison.paused { color: var(--warning); }
+.pause-player { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--muted); }
+.live-breakdown { border-top: 1px solid var(--line); padding: 14px 22px; }.live-breakdown summary { cursor: pointer; color: var(--accent); font-size: 12px; }.live-breakdown p { color: var(--muted); font-size: 12px; }.live-breakdown dl { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 15px; font-size: 11px; }.live-breakdown dt { color: var(--muted); }.live-breakdown dd { margin: 0; text-align: right; font-family: var(--mono); }.live-equation { padding: 10px 12px; border-radius: 7px; background: rgb(var(--secondary-rgb) / 0.035); color: var(--text) !important; }
+.live-empty { grid-column: 1/-1; text-align: center; padding: 60px 20px; background: var(--panel); border: 1px dashed var(--line); border-radius: 14px; }.live-empty h2 { font-size: 20px; }.live-empty p { color: var(--muted); max-width: 580px; margin: 10px auto; }
+.live-method { margin-top: 40px; border: 1px solid var(--line); background: var(--panel); border-radius: 16px; padding: 30px; scroll-margin-top: 20px; }.live-method h2 { margin: 5px 0 16px; }.live-formula { font: 15px/1.7 var(--mono); color: var(--accent); padding: 18px; border-radius: 8px; background: rgb(var(--secondary-rgb) / 0.031); }.live-method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 30px; margin-top: 24px; }.live-method-grid h3 { margin: 0 0 5px; font-size: 14px; }.live-method-grid p,.live-method-note { color: var(--muted); font-size: 12px; line-height: 1.8; margin: 0; }.live-method-note { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
+.live-sources { margin-top: 18px; padding: 18px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); font-size: 12px; }.live-sources summary { cursor: pointer; }.live-sources a { color: var(--accent); }.live-sources p { overflow-wrap: anywhere; }
+@media(max-width:900px) { .live-player-grid { grid-template-columns: 1fr; } .live-disclosure { align-items: flex-start; flex-direction: column; gap: 5px; } .topbar #navigation .nav-link { flex: 0 0 auto; } }
+@media(max-width:620px) { .live-main .page-heading { flex-direction: column; align-items: stretch; } .live-main .heading-actions { position: static; width: 100%; justify-content: flex-start; } .live-main .heading-actions .button { padding: 10px 12px; } }
+@media(max-width:620px) { .live-main .page-heading { gap: 16px; } .live-toolbar { gap: 10px; }.game-select-label { flex-basis: 100%; }.auto-control { margin: 4px 0; }.live-scoreboard { padding: 18px 14px; }.live-score-teams { gap: 18px; }.live-score-team { font-size: 15px; gap: 9px; }.live-score-team b { font-size: 32px; }.live-filter-row { align-items: stretch; flex-direction: column; gap: 8px; }.live-filter-row .searchbox { max-width: none; }.live-method { padding: 22px 18px; }.live-method-grid { grid-template-columns: 1fr; gap: 18px; }.live-card-header,.live-inputs { padding-left: 16px; padding-right: 16px; }.live-values { margin-left: 16px; margin-right: 16px; }.live-values strong { font-size: 22px; }.live-values small { font-size: 9px; }.live-values div { padding: 12px 9px; }.live-score-top { font-size: 9px; letter-spacing: .2px; } }

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#08080a"><meta name="description" content="Research games, player props and recent results across six sports. Inspect Sportslab sources and experimental models.">
+<title>Research today · Sportslab</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css"><script type="module" src="/home.js"></script>
+</head>
+<body class="product-home"><a class="skip" href="#main">Skip to research</a><!--site-header-->
+<main id="main" tabindex="-1">
+<div class="home-contextbar"><header class="product-page-heading"><div><h1>Research overview</h1><p id="home-context">Schedules, recorded results and experimental projections.</p></div><a id="full-research" class="button primary" href="/mlb">Open model <span data-ui-icon="arrow" aria-hidden="true"></span></a></header>
+<div class="home-toolbar"><label id="home-date-label">Date<input type="date" id="home-date"></label><label id="home-week-label" hidden>Season / week<select id="home-week"><option value="">Latest available week</option></select></label><label>Prop<select id="home-market" aria-label="Player prop"></select></label><button class="button subtle" id="home-refresh"><span data-ui-icon="refresh" aria-hidden="true"></span>Refresh</button></div></div>
+<label class="home-search-label home-player-search">Find a player<input type="search" id="home-search" placeholder="Player or team" autocomplete="off"></label>
+<div class="home-secondary-toolbar"><details class="home-schedule"><summary>Games on this date <span aria-hidden="true">⌄</span></summary><section id="home-games" aria-label="Game schedule"></section></details>
+<div class="home-board-heading"><div><h2 id="home-board-title">Player props</h2><span id="home-count"></span></div><nav aria-label="Research views"><a id="home-trends" href="/mlb?view=trends"><span data-ui-icon="trends" aria-hidden="true"></span>Trends &amp; charts</a><a id="home-live" href="/mlb/live"><span data-ui-icon="live" aria-hidden="true"></span>Live games</a></nav></div>
+<details class="home-data-context"><summary>Data &amp; historical context</summary><p id="home-disclosure" class="board-disclosure">Model estimates are experimental. Historical results and final outcomes are labeled separately.</p></details></div>
+<p id="home-status" class="home-status" role="status"></p><section id="home-board" aria-label="Player research" aria-busy="true"></section>
+<div class="home-board-footer"><span id="home-source"></span><a id="home-all" href="/mlb">Open the full board →</a></div>
+
+</main></body></html>

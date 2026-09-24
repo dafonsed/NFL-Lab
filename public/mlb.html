@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head><script src="/context-ui.js" defer></script>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#08080a"><meta name="description" content="Daily MLB player props, official baseball statistics, public sportsbook lines, and transparent recent-form research.">
+  <title>MLB model · Sports Lab</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/mlb.css"><script type="module" src="/mlb.js"></script>
+<link rel="stylesheet" href="/context.css"></head>
+<body class="mlb-app">
+  <a class="skip" href="#main">Skip to analytics</a>
+  <!--site-header-->
+  <main id="main" tabindex="-1">
+    <div class="page-heading"><div><div class="eyebrow">✧ DAILY BASEBALL RESEARCH</div><h1>MLB model<span class="accent">.</span></h1><p>Player projections, model probabilities, and sportsbook comparisons.</p></div><div class="heading-actions"><button class="button subtle" id="export-button">↓ Export</button><button class="button primary" id="refresh-button">↻ Refresh data</button></div></div>
+    <div class="page-tools"><nav id="mlb-navigation" class="section-tabs" aria-label="MLB views"><button class="nav-link active" data-view="board"><span data-ui-icon="research"></span> Projections</button><button class="nav-link" data-view="games"><span data-ui-icon="home"></span> Matchups</button><button class="nav-link" data-view="saved"><span data-ui-icon="bookmark"></span> Watchlist</button><button class="nav-link" data-action="model" data-dev-only><span data-ui-icon="performance"></span> Model & evidence</button></nav><button id="data-button" class="connection"><span class="dot"></span><span id="connection-label">Connecting to MLB</span></button></div>
+    <section class="season-bar" aria-label="MLB date"><div class="season-label"><span class="live-mark"></span><strong>MLB DAILY BOARD</strong><span class="separator">/</span><span id="date-label">Today · automatic</span></div><div class="date-controls"><button class="icon-button" id="previous-day" aria-label="Previous day">‹</button><label class="sr-only" for="game-date">Game date</label><input type="date" id="game-date" min="2000-01-01" max="2100-12-31"><button class="icon-button" id="next-day" aria-label="Next day">›</button><button class="button subtle" id="today-button">Today</button></div></section>
+    <section class="market-picker" aria-label="MLB prop markets"><div class="market-label">BATTERS</div><nav id="batter-markets" aria-label="Batter markets"></nav><div class="market-label">PITCHERS</div><nav id="pitcher-markets" aria-label="Pitcher markets"></nav></section>
+    <div id="notice" role="status"></div>
+    <section id="summary" class="summary-grid" aria-label="Daily overview"></section>
+    <section id="line-source" class="line-source" aria-label="Line sources"></section>
+    <section class="research-controls" aria-label="Player filters"><div class="searchbox"><span aria-hidden="true">⌕</span><input type="search" id="search" placeholder="Search players or teams…" aria-label="Search players or teams" autocomplete="off"><kbd>/</kbd></div><label class="sr-only" for="matchup">Matchup</label><select id="matchup"><option value="">All matchups</option></select><label class="sr-only" for="lineup">Lineup</label><select id="lineup"><option value="">All players</option><option value="starters">Confirmed / probable starters</option></select><label class="sr-only" for="sort">Sort players</label><select id="sort"><option value="score">Model probability</option><option value="form">Form rating</option><option value="rate">Historical over rate</option><option value="name">Player name</option></select><button id="lines-only" class="filter-chip" aria-pressed="false">Posted lines</button><div class="side-toggle" role="group" aria-label="Result side"><button data-side="over" aria-pressed="true">Over</button><button data-side="under" aria-pressed="false">Under</button></div></section>
+    <div class="results-heading"><h2 id="results-title">Home runs</h2><span id="results-count"></span></div>
+    <p class="board-caption" id="board-caption">Experimental projections and probabilities; production accuracy is unverified. Inspect Model & evidence for historical tests.</p>
+    <section id="content" aria-live="polite" aria-busy="true"><div class="loading"><div class="loader"></div><h2>Building the daily board</h2><p>Reading official MLB game logs and public lines…</p></div></section>
+    <footer><span>SPORTS LAB <span class="muted">/ Baseball research</span></span><span id="footer-status">Official MLB statistics · Independent calculations</span><button id="about-button" data-dev-only>Data & methodology ↗</button></footer>
+  </main>
+  <div id="compare-tray" class="compare-tray" hidden></div>
+  <dialog id="mlb-dialog"><div id="dialog-content"></div><button id="close-dialog" class="dialog-close" aria-label="Close dialog">×</button></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <noscript>Enable JavaScript to load the MLB board.</noscript>
+</body>
+</html>

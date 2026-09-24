@@ -1,0 +1,818 @@
+/* Visual reproduction of the supplied dark Outlier screens.
+   Board: clipboard-087db619; research: clipboard-84ed070f;
+   games: web-031; filters: web-045; picks: web-118 + mobile picks.
+   Data, product names and supported actions remain the application's own.
+   This is the final visual authority, after the legacy functional styles. */
+@font-face{font-family:Reference Sans;src:url('/assets/fonts/InterVariable.woff2') format('woff2');font-weight:100 900;font-display:swap}
+:root{--ui-accent-rgb:44 204 186;--ui-accent-light-rgb:98 213 197;--control-size:32px;--control-radius:7px}
+body.reference-design{--font:-apple-system,BlinkMacSystemFont,'Reference Sans',Arial,sans-serif;--bg:#000;--panel:#101010;--panel2:#151515;--control:#171717;--surface-sunken:#000;--surface-hover:#222;--line:#242424;--border-strong:#343434;--text:#eee;--secondary:#c4c4c4;--muted:#858585;--accent:#2cccba;--bright:#62d5c5;--positive:#1bde91;--red:#ca3215;--warning:#dba921;--accent-wash:#2cccba14;--violet-wash:#2cccba14;--ui-fill:#171717;--ui-hover:#242424;--ui-selected:#e0e0e0;--ui-selected-text:#111;--selected:#e0e0e0;--ui-selection-wash:#202020;--action-fill:#2cccba;--trend:#13d993;--trend-dim:#13d99314;--tracker-accent:#2cccba;--tracker-positive:#13d993;--desk-canvas:#000;--desk-panel:#101010;--desk-row:#121212;--desk-row-alt:#141414;--desk-rule:#1b1b1b;--desk-heading:#0b0b0b;--desk-hover:#1c1c1c;--hero-fill:linear-gradient(180deg,#0000 0%,#000a 68%,#000 100%),linear-gradient(105deg,#17786d,#4c6253 51%,#853d23);background:#000;color:#eee;font-family:var(--font);font-size:13px;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+body.reference-design :is(button,input,select,textarea){font-family:var(--font)}
+body.reference-design :is(h1,h2,h3,h4){font-family:var(--font);letter-spacing:-.02em}
+body.reference-design *{scrollbar-width:thin;scrollbar-color:#373737 transparent}
+body.reference-design :is(.ui-icon,[data-ui-icon] svg){stroke-linecap:round;stroke-linejoin:round}
+
+/* Ref: desktop Props, fixed 224px rail, shallow 110px masthead. */
+body.site-layout.ui-theme.research-console.reference-design{--rail:224px;--site-gutter:0px;background:#000;padding-left:0}
+body.site-layout.ui-theme.research-console.reference-design main{padding:6px 0 24px;margin-left:var(--rail);max-width:none;width:calc(100% - var(--rail))}
+body.site-layout.ui-theme.research-console.reference-design .site-header-bar{width:224px;background:#0e0e0e;border:0;padding:66px 6px 20px}
+body.site-layout.ui-theme.research-console.reference-design .site-brand{top:24px;left:17px;font-size:23px;letter-spacing:-1.1px;gap:7px}
+body.site-layout.ui-theme.research-console.reference-design .site-brand img{width:24px;height:24px}
+body.site-layout.ui-theme.research-console.reference-design .site-brand small{display:none}
+body.site-layout.ui-theme.research-console.reference-design .site-rail-content{gap:1px}
+body.site-layout.ui-theme.research-console.reference-design .site-sport-context{display:none}
+body.site-layout.ui-theme.research-console.reference-design .site-navigation{gap:1px}
+body.site-layout.ui-theme.research-console.reference-design :is(.site-nav-link,.site-overview-link,.site-tracker){border:0;min-height:37px;padding:9px 12px;gap:14px;font-size:12px;font-weight:650;color:#929292;background:none;border-radius:22px}
+body.site-layout.ui-theme.research-console.reference-design :is(.site-nav-link,.site-overview-link,.site-tracker)[aria-current=page]{background:#1c1c1c;color:#f1f1f1;border:0}
+body.site-layout.ui-theme.research-console.reference-design :is(.site-nav-link,.site-overview-link,.site-tracker) .ui-icon{width:18px;height:18px;color:#999}
+body.site-layout.ui-theme.research-console.reference-design :is(.site-nav-link,.site-overview-link,.site-tracker)[aria-current=page] .ui-icon{color:#62c9bd}
+body.site-layout.ui-theme.research-console.reference-design .site-personal{border:0;margin-top:14px;padding:0}
+body.site-layout.ui-theme.research-console.reference-design .rail-picks-arrow{display:none}
+body.site-layout.ui-theme.research-console.reference-design .workspace-masthead{background:var(--hero-fill);min-height:110px;grid-template-rows:40px 28px;gap:6px;padding:12px 32px 16px;border-radius:10px 10px 0 0;border:0;margin:0;box-shadow:none}
+body.site-layout.ui-theme.research-console.reference-design .workspace-masthead h1{font-size:24px;line-height:1.2;letter-spacing:-.6px;font-weight:750}
+body.site-layout.ui-theme.research-console.reference-design .workspace-masthead>.site-sports{gap:2px}
+body.site-layout.ui-theme.research-console.reference-design .workspace-masthead>.site-sports a{height:28px;min-height:28px;padding:4px 9px;gap:6px;border-radius:7px;color:#8b8e8c;font-size:12px;font-weight:700;background:none}
+body.site-layout.ui-theme.research-console.reference-design .workspace-masthead>.site-sports a[aria-current=page]{background:#ffffff18;color:#eee}
+body.site-layout.ui-theme.research-console.reference-design .workspace-masthead>.site-sports .league-mark{width:18px;height:19px;min-width:18px}
+body.site-layout.ui-theme.research-console.reference-design .workspace-masthead>.site-sports .league-mark img{max-width:18px;max-height:19px}
+body.site-layout.ui-theme.research-console.reference-design .workspace-masthead .masthead-actions{gap:5px}
+body.site-layout.ui-theme.research-console.reference-design .workspace-masthead :is(.masthead-actions,.site-header-actions)>:is(button,a){--button-fill:#111;--button-border:#252525;--button-ink:#b0b0b0;height:30px!important;min-height:30px!important;padding:0 9px;font-size:11px}
+body.site-layout.ui-theme.research-console.reference-design .workspace-masthead :is(.site-settings-toggle,.workspace-help){height:28px!important;min-height:28px!important;width:28px;min-width:28px;border-radius:7px}
+
+/* The reference has neutral controls, white selections and teal actions. */
+body.reference-design [data-ui-control]{--button-fill:#171717;--button-border:#252525;--button-ink:#c5c5c5;--button-radius:7px;min-height:32px;padding:7px 10px;font-size:12px;font-weight:600;box-shadow:none!important;transform:none!important}
+body.reference-design [data-ui-control]:hover:not(:disabled){--button-fill:#252525;--button-border:#333;--button-ink:#eee}
+body.reference-design [data-ui-control][aria-expanded=true]{--button-fill:#262626;--button-border:#3a3a3a;--button-ink:#eee}
+body.reference-design [data-ui-control=primary]{--button-fill:#2cccba;--button-ink:#071411;--button-border:#2cccba}
+body.reference-design [data-ui-control=primary]:hover:not(:disabled){--button-fill:#52d5c5;--button-border:#52d5c5;--button-ink:#071411}
+body.reference-design [data-ui-control=segment]{--button-fill:transparent;--button-border:transparent;--button-ink:#8a8a8a;--button-radius:6px;min-height:26px;padding:5px 12px}
+body.reference-design [data-ui-control=segment]:is(.active,[aria-pressed=true],[aria-selected=true]){--button-fill:#e0e0e0;--button-ink:#111;--button-border:transparent;box-shadow:none!important}
+body.reference-design [data-ui-control=tab]{--button-fill:transparent;--button-border:transparent;--button-ink:#858585;--button-radius:0;border:0;border-bottom:2px solid transparent!important}
+body.reference-design [data-ui-control=tab]:is(.active,[aria-pressed=true],[aria-selected=true]){--button-fill:transparent;--button-ink:#eee;border-bottom-color:#eee!important}
+body.reference-design [data-ui-control=option]{--button-fill:transparent;--button-border:transparent;--button-ink:#b0b0b0}
+body.reference-design [data-ui-control=option][aria-selected=true]{--button-fill:#2a2a2a;--button-border:transparent;--button-ink:#eee}
+body.reference-design [data-ui-control=ghost]{--button-fill:transparent;--button-border:transparent;--button-ink:#969696}
+body.reference-design :is(.pr-segmented,.td-windows,.td-side,.side-toggle,.td-stat-method,.filter-segments){background:#030303;border:1px solid #232323;border-radius:8px;padding:3px;gap:2px;box-shadow:none}
+body.reference-design :is(input,textarea,select){border-color:#242424!important;background-color:#111!important;color:#ddd;box-shadow:none}
+body.reference-design input::placeholder{color:#777}
+body.reference-design :is(button,a,input,select,textarea,summary):focus-visible{outline:2px solid #62c9bd;outline-offset:2px}
+body.reference-design :is(input[type=checkbox],input[type=radio],input[type=range]){accent-color:#2cccba}
+body.reference-design :is(.td-sportsbook-logo,.sportsbook-symbol){filter:none;opacity:1}
+body.reference-design :is(.td-sportsbook-logo,.sportsbook-symbol):hover{filter:none;opacity:1}
+body.reference-design .pr-bar.hit,body.reference-design .board-history .hit{fill:#1bde91!important}
+body.reference-design .pr-bar.miss,body.reference-design .board-history .miss{fill:#c83213!important}
+body.reference-design .pr-bar.push{fill:#dca720!important}
+body.site-layout.ui-theme.reference-design .pr-bar-label{fill:#13d993;font-size:12px;font-weight:650}
+body.site-layout.ui-theme.reference-design .pr-bar.miss~.pr-bar-label{fill:#c83213}
+body.reference-design .pr-gridline{stroke:#ffffff05;stroke-width:1}
+body.reference-design .pr-axis{fill:#7e7e7e;font-size:10px}
+body.reference-design .pr-threshold{stroke:#608078;stroke-dasharray:5 4;stroke-width:1.3}
+body.reference-design .pr-line-control .pr-line-pill{fill:#262626;stroke:transparent}
+body.reference-design .pr-line-control .pr-line-hitbox{fill:transparent;stroke:transparent}
+body.reference-design .pr-line-control text{fill:#eee}
+body.reference-design .pr-line-grip{display:none}
+
+/* Ref: Props. One short toolbar immediately precedes the data. */
+body.site-layout.ui-theme.research-console.reference-design :is(.desk-toolbar,.workspace-controlbar,.home-toolbar){background:#050505;border:0;border-bottom:1px solid #292929;border-radius:0;min-height:54px;padding:10px 30px;gap:6px;margin:0}
+body.site-layout.ui-theme.research-console.reference-design :is(.desk-toolbar,.workspace-controlbar) :is(button,summary,.calendar-trigger,.td-choice-trigger){height:32px!important;min-height:32px!important;border-radius:7px;font-size:11px;padding:0 10px}
+body.site-layout.ui-theme.research-console.reference-design .desk-toolbar .filter-open{--button-fill:#e0e0e0;--button-ink:#111;--button-border:transparent}
+body.site-layout.ui-theme.research-console.reference-design .desk-toolbar .td-side{height:32px;min-height:32px;padding:2px;overflow:visible}
+body.site-layout.ui-theme.research-console.reference-design .desk-toolbar .td-side button{height:26px!important;min-height:26px!important;padding-block:0}
+body.site-layout.ui-theme.research-console.reference-design .desk-toolbar :is(.searchbox,.td-search){height:32px;min-height:32px;max-width:200px;border:1px solid #242424;background:#131313}
+body.site-layout.ui-theme.research-console.reference-design .desk-toolbar :is(.searchbox,.td-search) input{height:30px;min-height:30px;font-size:11px;background:transparent!important}
+body.site-layout.ui-theme.research-console.reference-design :is(.page-tools,.results-heading,.home-board-heading,.home-secondary-toolbar){margin:0;border-color:#1b1b1b;padding:0 30px;background:#000}
+body.site-layout.ui-theme.research-console.reference-design :is(.results-heading,.home-board-heading){min-height:29px;font-size:10px}
+body.site-layout.ui-theme.research-console.reference-design :is(.page-tools .connection,.home-data-context){display:none}
+body.site-layout.ui-theme.research-console.reference-design :is(.section-tabs,.sports-views){gap:20px}
+body.site-layout.ui-theme.research-console.reference-design :is(.section-tabs,.sports-views)>:is(a,button){height:34px!important;min-height:34px!important;font-size:11px}
+body.site-layout.ui-theme.research-console.reference-design .research-board{border:0;border-radius:9px 9px 0 0;margin:0 14px;background:#101010;overflow:hidden}
+body.site-layout.ui-theme.research-console.reference-design :is(.research-columns,.research-row){grid-template-columns:minmax(230px,2.8fr) 65px 100px 100px 105px 100px 48px;gap:0;padding-left:14px;padding-right:12px}
+body.site-layout.ui-theme.research-console.reference-design .research-columns{height:34px;min-height:34px;background:#0c0c0c;border:0;font-size:10px;font-weight:450;color:#808080}
+body.site-layout.ui-theme.research-console.reference-design .research-row{height:48px;min-height:48px;background:#151515;border:0;border-bottom:1px solid #0c0c0c;border-radius:0;box-shadow:none}
+body.site-layout.ui-theme.research-console.reference-design .research-row:nth-child(odd){background:#121212}
+body.site-layout.ui-theme.research-console.reference-design .research-row:hover{background:#1d1d1d}
+body.site-layout.ui-theme.research-console.reference-design .research-player{gap:9px}
+body.site-layout.ui-theme.research-console.reference-design .research-player .player-portrait{--portrait-size:30px;--crest-size:13px}
+body.site-layout.ui-theme.research-console.reference-design .research-player strong{font-size:12px;line-height:16px;font-weight:650}
+body.site-layout.ui-theme.research-console.reference-design .research-player small{font-size:10px;line-height:14px;color:#858585}
+body.site-layout.ui-theme.research-console.reference-design .research-row :is(.research-line,.research-odds,.research-estimate,.research-probability,.research-result)>strong{font-size:11px;font-weight:550;background:none;border:0;padding:0;color:#aaa}
+body.site-layout.ui-theme.research-console.reference-design .research-row .research-probability>strong{color:#13d993}
+body.site-layout.ui-theme.research-console.reference-design .research-row .research-odds{display:flex;flex-direction:row;align-items:center;gap:7px;flex-wrap:nowrap}
+body.site-layout.ui-theme.research-console.reference-design .research-row :is(.research-line,.research-estimate,.research-probability,.research-result)>small{display:none}
+body.site-layout.ui-theme.research-console.reference-design .research-row .research-actions button{min-height:22px;width:22px;min-width:22px;height:22px;padding:4px;--button-radius:5px;--button-fill:#1c1c1c;--button-border:#242424}
+body.site-layout.ui-theme.research-console.reference-design .trend-table-scroll{margin:0 14px;border-radius:9px 9px 0 0;background:#0c0c0c}
+body.site-layout.ui-theme.research-console.reference-design .trend-table thead th{height:34px;padding:7px 10px;font-size:10px;background:#0c0c0c;border-color:#1a1a1a}
+body.site-layout.ui-theme.research-console.reference-design .trend-table tbody tr{height:48px;background:#151515}
+body.site-layout.ui-theme.research-console.reference-design .trend-table tbody tr:nth-child(even){background:#121212}
+body.site-layout.ui-theme.research-console.reference-design .trend-table tbody :is(th,td){height:48px;padding:5px 10px;border-bottom:1px solid #0c0c0c}
+body.site-layout.ui-theme.research-console.reference-design .trend-player-link .player-portrait{--portrait-size:30px;--crest-size:13px}
+@media(min-width:701px){body.site-layout.ui-theme.research-console.reference-design .trend-player-link{min-height:36px}}
+body.site-layout.ui-theme.research-console.reference-design .trend-player-topline strong{font-size:12px}
+body.site-layout.ui-theme.research-console.reference-design .trend-player-topline small{font-size:10px;color:#818181}
+body.site-layout.ui-theme.research-console.reference-design .trend-table .trend-rate.high{color:#1bde91;background:linear-gradient(0deg,#1bde9130,#1bde9106)}
+body.site-layout.ui-theme.research-console.reference-design .trend-table .trend-rate.mid{color:#dba921;background:transparent}
+body.site-layout.ui-theme.research-console.reference-design .trend-table .trend-rate.low{color:#ce3f27;background:transparent}
+body.site-layout.ui-theme.research-console.reference-design .trend-save{--button-fill:#1c1c1c;--button-border:#242424;--button-radius:5px;min-width:22px;width:22px;height:22px;min-height:22px}
+
+/* Ref: horizontal schedule strip, not individual dashboard cards. */
+body.site-layout.ui-theme.research-console.reference-design .game-strip{padding:10px 0;gap:0;background:#0d0d0d;border-bottom:1px solid #202020}
+body.site-layout.ui-theme.research-console.reference-design .game-strip .game-chip{height:58px;min-height:58px;min-width:106px;flex-basis:106px;grid-template-columns:1fr;gap:1px;padding:3px 15px;border:0;border-right:1px solid #222;border-radius:0;background:none!important;color:#ddd}
+body.site-layout.ui-theme.research-console.reference-design .game-strip .game-chip[aria-pressed=true]{box-shadow:inset 0 -2px #eee!important}
+body.site-layout.ui-theme.research-console.reference-design .game-chip-status{font-size:9px!important;margin:0!important;line-height:12px!important;color:#858585!important}
+body.site-layout.ui-theme.research-console.reference-design .game-chip-team{grid-template-columns:16px 1fr auto!important;gap:6px!important;line-height:17px!important}
+body.site-layout.ui-theme.research-console.reference-design .game-chip-team b{font-size:10px!important;color:#bbb!important}
+body.site-layout.ui-theme.research-console.reference-design .game-strip .game-chip-all{grid-template-columns:1fr;min-width:92px;flex-basis:92px}
+body.site-layout.ui-theme.research-console.reference-design .game-chip-all-icon{display:none!important}
+body.site-layout.ui-theme.research-console.reference-design .game-chip-all strong{font-size:11px!important}
+body.site-layout.ui-theme.research-console.reference-design .game-chip-all small{font-size:9px!important;color:#888!important}
+
+/* Ref: menu and filter editor anatomy. */
+body.reference-design .ui-choice .td-choice-menu{border:1px solid #303030!important;border-radius:10px!important;background:#191919!important;padding:6px!important;box-shadow:0 12px 28px #0008!important}
+body.reference-design .ui-choice .td-choice-menu .choice-heading{font-size:11px!important;font-weight:600!important;color:#888!important;padding:7px 10px!important}
+body.reference-design .ui-choice .td-choice-menu .choice-search{border:1px solid #303030!important;border-radius:7px!important;background:#101010!important;margin:2px 5px 7px;height:34px}
+body.reference-design .ui-choice .td-choice-menu .choice-search input{background:transparent!important;border:0!important}
+body.reference-design .ui-choice .td-choice-menu .td-choice-option{height:35px!important;min-height:35px!important;border-radius:6px!important;padding:0 10px!important;color:#aaa!important;font-size:12px!important;font-weight:550}
+body.reference-design .ui-choice .td-choice-menu .td-choice-option[aria-selected=true]{background:#2c2c2c!important;color:#fff!important}
+body.reference-design .ui-choice .td-choice-menu .td-choice-option .ui-icon{color:#2cccba}
+body.reference-design :is(.trend-filter-dialog,.model-filter-dialog){width:min(900px,calc(100vw - 40px));border:1px solid #282828;border-radius:18px;background:#101010;padding:0}
+body.reference-design :is(.filter-dialog-header,.model-filter-dialog .sheet-header){height:78px;min-height:78px;padding:20px 26px;border-bottom:1px solid #242424;background:#101010}
+body.reference-design :is(.filter-dialog-header,.model-filter-dialog .sheet-header) h2{font-size:22px;letter-spacing:-.3px}
+body.reference-design .filter-title-icon,body.reference-design .model-filter-dialog .sheet-eyebrow{display:none}
+body.reference-design :is(.filter-dialog-body,.model-filter-dialog .sheet-body){grid-template-columns:280px minmax(0,1fr);padding:0;gap:0;background:#101010}
+body.reference-design .filter-category-nav{background:#101010;padding:18px 10px;border-right:1px solid #262626;gap:3px}
+body.reference-design .filter-category-nav button{min-height:56px!important;padding:13px 18px!important;gap:15px!important;border:0!important;border-radius:13px!important;color:#aaa!important;font-size:14px!important;text-align:left;background:none!important}
+body.reference-design .filter-category-nav button[aria-selected=true]{background:#e0e0e0!important;color:#111!important}
+body.reference-design .filter-category-nav .ui-icon{width:22px!important;height:22px!important;color:currentColor}
+body.reference-design :is(.filter-editors,.model-filter-editors){padding:24px;min-height:390px;background:#101010}
+body.reference-design .filter-panel-title h3{font-size:17px}
+body.reference-design .filter-quick{display:none}
+body.reference-design .filter-team-grid{display:flex;flex-direction:column;gap:3px}
+body.reference-design .filter-team-grid button{min-height:48px!important;padding:10px 12px!important;border:0!important;border-radius:8px!important;background:none!important;color:#ddd!important;font-size:13px!important}
+body.reference-design .filter-team-grid button[aria-pressed=true]{background:#1e1e1e!important;box-shadow:0 1px 4px #0004!important}
+body.reference-design .filter-team-grid button>.ui-icon{width:22px;height:22px;border:1px solid #454545;border-radius:5px;color:transparent}
+body.reference-design .filter-team-grid button[aria-pressed=true]>.ui-icon{background:#2cccba;border-color:#2cccba;color:#111}
+body.reference-design :is(.filter-dialog-footer,.model-filter-dialog .sheet-footer){padding:18px 24px;border-top:1px solid #262626;background:#111}
+body.reference-design .calendar-popover{border-color:#303030;background:#151515;border-radius:12px;box-shadow:0 12px 28px #0008}
+
+/* Ref: desktop research header occupies the main column. Line movement begins
+   at the top of the right column. The chart, not stacked KPI boxes, dominates. */
+body.site-layout.ui-theme.reference-design .player-research-dialog.pr-redesign{width:min(1080px,calc(100vw - 32px));max-height:calc(100dvh - 16px);height:fit-content;min-height:0;margin:auto;inset:0;padding:0;border:1px solid #242424;border-radius:12px;background:#000;display:grid;grid-template-columns:minmax(0,1fr) 31%;grid-template-rows:auto auto 1fr auto;gap:0;overflow:auto}
+body.site-layout.ui-theme.reference-design .player-research-dialog:not([open]):not(.player-research-inline){display:none}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-hero{grid-column:1;grid-row:1;height:140px;min-height:140px;position:relative;padding:22px 36px 14px;background:transparent;display:grid;grid-template-columns:1fr auto;align-content:start;gap:11px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-identity{grid-column:1/-1;display:flex;align-items:center;gap:12px;min-height:48px}
+body.site-layout.ui-theme.reference-design .pr-redesign .portrait-hero{--portrait-size:44px;--crest-size:24px;margin-right:8px;flex-shrink:0}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-identity-copy{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-identity-copy>.pr-player-meta{flex-basis:100%;font-size:10px;color:#b4bfb8;font-weight:550}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-identity-copy h2{flex-basis:auto;font-size:15px;letter-spacing:-.3px;line-height:1.3;margin:0;font-weight:700}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-identity-copy h2 small{font-size:9px;color:#9ba59e;margin-left:3px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-identity-copy p{font-size:12px;color:#a4aaa5;margin:0;line-height:1.3}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-header-quote{margin:0;padding:0;grid-row:2;grid-column:1}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-priced-quote{min-height:31px;padding:5px 9px;border:1px solid #348d81;border-radius:9px;background:#071814;display:inline-flex;align-items:center;gap:6px;color:#ddd}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-priced-quote>a{color:#c2d7cf;font-size:13px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-hero-actions{grid-column:2;grid-row:2;display:flex;gap:5px;align-items:center}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-save{background:#2cccba!important;color:#061a15!important;border:0!important;min-height:32px;height:32px;font-size:11px;box-shadow:none!important}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-close{position:absolute;right:8px;top:7px;min-width:24px;width:24px;min-height:24px;height:24px;background:#0003!important;border:0;--button-fill:#0003;padding:4px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-compare{min-width:28px;width:28px;height:30px;min-height:30px}
+body.site-layout.ui-theme.reference-design .pr-redesign :is(.pr-markets,.pr-mode-tabs){grid-column:1;background:#000;border-bottom:1px solid #171717;min-height:38px;padding:0 30px;gap:21px;margin:0}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-markets{grid-row:2;min-height:44px;padding-inline:36px;gap:16px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-mode-tabs{grid-row:4;grid-column:1/-1;position:static;bottom:0;z-index:5;min-height:42px;padding:0 24px;border-top:1px solid #222;background:#030303;justify-content:center}
+body.site-layout.ui-theme.reference-design .pr-redesign :is(.pr-markets,.pr-mode-tabs) button{font-size:10px;color:#858585;height:38px;min-height:38px;padding:0;background:transparent!important;border-bottom:2px solid transparent!important}
+body.site-layout.ui-theme.reference-design .pr-redesign :is(.pr-markets,.pr-mode-tabs) button[aria-pressed=true]{color:#eee!important;border-bottom-color:#eee!important}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-layout{display:contents}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-primary{grid-column:1;grid-row:3;padding:19px 14px 12px;display:flex;flex-direction:column;gap:8px;background:#000;min-width:0}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-sidebar{grid-column:2;grid-row:1/4;border-left:1px solid #262626;display:flex;flex-direction:column;gap:8px;padding:0 12px 12px;background:transparent;min-width:0}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-panel{background:#0e0e0e;border:0;padding:16px;border-radius:14px;min-height:0;margin:0}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-panel h3{font-size:13px;line-height:1.4;font-weight:700;color:#e2e2e2}
+body.site-layout.ui-theme.reference-design .pr-redesign #pr-results{padding:16px 14px 8px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-filters{order:-1;display:flex;flex-direction:row;flex-wrap:nowrap;margin:0;padding:0 22px 8px;gap:8px;border:0;min-width:0}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-filters>.pr-segmented{flex:1;min-width:0;width:auto;display:flex;height:34px;min-height:34px;background:#000;border:1px solid #202020;padding:3px;gap:2px;overflow:auto}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-filters button{flex:1;min-width:36px;font-size:10px;padding:0 6px;height:26px;min-height:26px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-segmented button[aria-pressed=true]{background:#e0e0e0!important;color:#111!important}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-chart-heading{display:grid;grid-template-columns:1fr auto;gap:16px;padding:0 0 14px;margin:0;border:0;border-bottom:1px solid #1d1d1d;align-items:end}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-chart-heading .pr-kicker{display:block;font-size:12px;font-weight:700;letter-spacing:0;color:#ddd;margin:0 0 13px;text-transform:none}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-chart-heading h3{font-size:16px;color:#13d993;line-height:1.3;display:inline;margin:0}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-chart-heading h3 small{font-size:10px;color:#888;font-weight:450}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-chart-heading p{display:inline;font-size:10px;color:#888;margin:0 0 0 4px;line-height:1.3}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-sample-splits{display:grid;grid-template-columns:repeat(2,80px);gap:6px 15px;align-self:end}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-sample-splits span{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:10px;color:#818181;background:none;border:0;padding:0}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-sample-splits b{font-size:10px;color:#13d993}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-chart-scroll{margin:12px 0 0;padding:0}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-chart-scroll svg{width:100%;height:auto;min-height:0;max-height:none;display:block}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-chart-scroll:after{display:none}
+body.site-layout.ui-theme.reference-design .pr-redesign :is(.pr-chart-legend,.pr-chart-summary,.pr-drag-hint,.pr-reference,.pr-sample-note>span){display:none}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-comparison{margin:6px 0 0;padding:7px 0 0;gap:6px;border-top:1px solid #202020;font-size:10px;flex-wrap:wrap}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-comparison :is(button,input,.td-choice-trigger){height:28px!important;min-height:28px!important;font-size:10px!important;padding:0 8px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-comparison label{font-size:10px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-comparison input{width:62px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-support-panel{padding:15px 18px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-support{display:flex;gap:18px;justify-content:space-between;padding:0;border:0}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-support>div{padding:0;border:0;background:none}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-support dt{font-size:10px;line-height:14px;color:#888;margin:0 0 4px;min-height:0}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-support dd{font-size:12px;line-height:16px;font-weight:550;margin:0;color:#aaa;min-height:0}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-support-panel .pr-section-heading{margin:0 0 24px;height:24px;min-height:24px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-support-panel .pr-section-heading p{display:none}
+body.site-layout.ui-theme.reference-design .pr-redesign :is(.pr-explainer,.pr-sample-note){font-size:10px;border:0;padding-top:10px;margin:0;color:#777}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-text-button{font-size:10px;padding:6px 0;color:#888}
+body.site-layout.ui-theme.reference-design .pr-redesign #pr-movement{order:-2;background:none;padding:18px 4px 12px;border-bottom:1px solid #262626;border-radius:0;height:214px;min-height:214px}
+body.site-layout.ui-theme.reference-design .pr-redesign #pr-movement h3{padding:0 10px;margin:0 0 15px}
+body.reference-design .reference-movement{font-size:11px;color:#999}
+body.reference-design .reference-movement table{width:100%;background:#0c0c0c;border-collapse:collapse;border-radius:12px;overflow:hidden}
+body.reference-design .reference-movement :is(td,th){font-size:10px!important;padding:10px 12px!important;height:35px!important;min-height:0;text-align:left;border:0!important;border-bottom:1px solid #1c1c1c!important;background:none!important;font-weight:500}
+body.reference-design .reference-movement th{color:#777}
+body.reference-design .reference-movement td:last-child{text-align:right;color:#ddd;white-space:nowrap}
+body.reference-design .reference-movement td span{font-size:9px;color:#777;margin-left:8px}
+body.reference-design .reference-movement summary{padding:12px;text-align:center;cursor:pointer;text-transform:uppercase;list-style:none;font-size:10px;font-weight:650;color:#909090}
+body.reference-design .reference-movement p{font-size:11px;line-height:1.5}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-aside-tabs{width:calc(100% + 28px);max-width:none;height:42px;min-height:38px;padding:4px;background:linear-gradient(#262626,#161616);border:1px solid #282828;border-radius:12px;margin:6px -14px 14px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-aside-tabs button{font-size:10px;height:28px;min-height:28px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-aside-tabs button[aria-pressed=true]{background:linear-gradient(#414141,#2d2d2d)!important;color:#eee!important}
+body.site-layout.ui-theme.reference-design .pr-redesign #pr-matchup{padding:0 14px 14px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-matchup-teams{padding:12px 0;margin:0 0 10px;border-color:#222}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-matchup-teams .team-mark{width:22px;height:22px;min-width:22px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-fact{min-height:34px;padding:10px 0;font-size:10px;border-color:#202020}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-context-comparison dl{display:block;margin:8px 0}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-context-comparison dl>div{display:flex;justify-content:space-between;align-items:center;border:0;padding:8px 0;background:none;gap:12px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-context-comparison :is(dt,p){font-size:10px;color:#888}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-context-comparison dd{font-size:12px;color:#ddd;margin:0;font-weight:650}
+body.site-layout.ui-theme.reference-design .pr-redesign :is(.pr-context-note,.pr-context-sample,.pr-game-context){font-size:10px;color:#888}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-model-panel{padding:14px 10px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-model-panel .pr-section-heading{gap:6px;margin-bottom:10px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-model-status{font-size:9px;color:#888;margin:0}
+body.site-layout.ui-theme.reference-design .pr-redesign .reference-model-table{width:100%;border-collapse:collapse;table-layout:fixed}
+body.site-layout.ui-theme.reference-design .pr-redesign .reference-model-table :is(td,th){font-size:10px;height:32px;padding:8px 0;border-bottom:1px solid #202020;text-align:left;background:none;line-height:1.4}
+body.site-layout.ui-theme.reference-design .pr-redesign .reference-model-table th{font-weight:450;color:#919191}
+body.site-layout.ui-theme.reference-design .pr-redesign .reference-model-table td{text-align:right;color:#ddd;font-weight:650}
+body.site-layout.ui-theme.reference-design .pr-redesign[data-panel=matchup] .pr-sidebar,body.site-layout.ui-theme.reference-design .pr-redesign[data-panel=movement] .pr-sidebar{grid-column:1/-1;grid-row:3;background:#000;border:0;max-width:650px;width:100%;justify-self:center;padding-top:16px}
+body.site-layout.ui-theme.reference-design .pr-redesign[data-panel=notes] .pr-primary{grid-column:1/-1}
+body.site-layout.ui-theme.reference-design .pr-redesign:is([data-panel=matchup],[data-panel=movement],[data-panel=notes]) :is(.pr-hero,.pr-markets){grid-column:1/-1}
+body.site-layout.ui-theme.reference-design .player-research-dialog.pr-redesign:is([data-panel=matchup],[data-panel=movement],[data-panel=notes]){background-size:100% 184px}
+body.site-layout.ui-theme.reference-design .pr-chart-small :is(.pr-game-date,.pr-opponent-code){font-size:8px}
+
+/* Same composition for the inline Trends player page. */
+body.site-layout.ui-theme.research-console.reference-design[data-research-view=player] .workspace-masthead{min-height:40px;padding:5px 25px;grid-template-rows:30px;background:#000;border-radius:0}
+body.site-layout.ui-theme.research-console.reference-design .td-detail-nav{background:#000;min-height:30px;padding:0 30px}
+body.site-layout.ui-theme.research-console.reference-design #td-workbench #td-detail:not([hidden]){display:grid;grid-template-columns:minmax(0,1fr) 32%;gap:0;background:#000}
+body.site-layout.ui-theme.research-console.reference-design .td-detail[hidden]{display:none}
+body.site-layout.ui-theme.research-console.reference-design .td-player-hero{grid-column:1;grid-row:1;background:var(--hero-fill);min-height:130px;padding:20px 30px 16px;border:0}
+body.site-layout.ui-theme.research-console.reference-design .td-player-heading{min-height:48px;align-items:center;gap:14px}
+body.site-layout.ui-theme.research-console.reference-design .td-player-identity .portrait-hero{--portrait-size:44px;--crest-size:23px}
+body.site-layout.ui-theme.research-console.reference-design .td-player-identity h2{font-size:16px;margin:2px 0;line-height:1.3}
+body.site-layout.ui-theme.research-console.reference-design .td-player-identity :is(.td-kicker,p){font-size:10px;color:#b3bcb7}
+body.site-layout.ui-theme.research-console.reference-design .td-player-heading>button{min-height:32px;height:32px;--button-fill:#2cccba;--button-border:#2cccba;--button-ink:#081714;border-radius:7px;font-size:11px;align-self:end}
+body.site-layout.ui-theme.research-console.reference-design .td-quote-bar{padding:12px 0 0;background:none;border:0;gap:8px}
+body.site-layout.ui-theme.research-console.reference-design .td-quote-selection{background:#081a14;border-color:#38877d;border-radius:9px;min-height:30px;padding:5px 9px;color:#eee}
+body.site-layout.ui-theme.research-console.reference-design .td-quote-prices{background:#050505;border-color:#242424;border-radius:7px}
+body.site-layout.ui-theme.research-console.reference-design .td-quote-prices>span{padding:6px 10px;min-width:78px;font-size:10px}
+body.site-layout.ui-theme.research-console.reference-design .td-research-grid{display:contents}
+body.site-layout.ui-theme.research-console.reference-design .reference-chart-controls{grid-column:1;grid-row:3;display:flex;align-items:center;gap:9px;padding:18px 30px 16px;min-width:0}
+body.site-layout.ui-theme.research-console.reference-design .reference-chart-controls .td-chart-toolbar{flex:1;padding:0;margin:0;border:0;min-width:0}
+body.site-layout.ui-theme.research-console.reference-design .reference-chart-controls .td-windows{display:flex;width:100%;height:34px;border:1px solid #232323;border-radius:8px;padding:3px;background:#000;gap:2px}
+body.site-layout.ui-theme.research-console.reference-design .reference-chart-controls .td-windows button{flex:1;height:26px;min-height:26px;font-size:11px;padding:0 8px;--button-radius:6px}
+body.site-layout.ui-theme.research-console.reference-design .td-venue-control .td-choice-trigger{height:34px;min-height:34px;--button-fill:#171717;font-size:10px;padding:0 9px}
+body.site-layout.ui-theme.research-console.reference-design .td-chart-card{grid-column:1;grid-row:4;padding:18px 16px 8px;margin:0 14px 8px;background:#0e0e0e;border-radius:14px;border:0;min-width:0}
+body.site-layout.ui-theme.research-console.reference-design .td-chart-card-heading{padding:0 2px 18px;margin:0}
+body.site-layout.ui-theme.research-console.reference-design .td-chart-card-heading h3{font-size:13px;font-weight:700;color:#ddd;gap:10px}
+body.site-layout.ui-theme.research-console.reference-design .td-chart-card-heading .ui-icon{width:18px;color:#2cccba}
+body.site-layout.ui-theme.research-console.reference-design .td-chart-card .td-summary-stats{display:flex;align-items:end;justify-content:space-between;gap:18px;background:none;border:0;border-bottom:1px solid #1c1c1c;padding:0 2px 14px;margin:0;border-radius:0}
+body.site-layout.ui-theme.research-console.reference-design .td-summary-stats>div:not(.td-hit-stat){display:none}
+body.site-layout.ui-theme.research-console.reference-design .td-chart-card .td-summary-stats>.td-hit-stat{display:grid;grid-template-columns:auto auto;gap:3px 6px;min-height:0;padding:0;background:none;border:0}
+body.site-layout.ui-theme.research-console.reference-design .td-hit-stat>span{grid-column:1/-1;font-size:10px;color:#bbb}
+body.site-layout.ui-theme.research-console.reference-design .td-hit-stat>strong{font-size:16px!important;line-height:1.2;color:#13d993!important;letter-spacing:0;font-weight:650}
+body.site-layout.ui-theme.research-console.reference-design .td-chart-card .td-hit-stat>small{display:block;font-size:10px!important;color:#888;align-self:center}
+body.site-layout.ui-theme.research-console.reference-design .td-stat-meter{display:none}
+body.site-layout.ui-theme.research-console.reference-design .td-summary-stats .td-splits-section{display:block;margin:0;padding:0;border:0}
+body.site-layout.ui-theme.research-console.reference-design .td-summary-stats .td-rate-splits{display:grid;grid-template-columns:repeat(3,85px);gap:7px 18px;margin:0;padding:0;border:0;background:none;border-radius:0}
+body.site-layout.ui-theme.research-console.reference-design .td-summary-stats .td-split{display:flex;flex-direction:row;align-items:center;justify-content:space-between;padding:0;min-height:14px;border:0;background:none!important;box-shadow:none!important;border-radius:0;gap:12px}
+body.site-layout.ui-theme.research-console.reference-design .td-summary-stats .td-split>span{font-size:10px;color:#777}
+body.site-layout.ui-theme.research-console.reference-design .td-summary-stats .td-split>strong{font-size:10px;color:#13d993}
+body.site-layout.ui-theme.research-console.reference-design .td-summary-stats .td-split>:is(small,i){display:none}
+body.site-layout.ui-theme.research-console.reference-design .td-main-chart{padding:14px 0 0;margin:0}
+body.site-layout.ui-theme.research-console.reference-design .td-main-chart svg{max-height:none;height:auto;width:100%}
+body.site-layout.ui-theme.research-console.reference-design :is(.td-legend,.td-chart-explainer,.pr-drag-hint){display:none}
+body.site-layout.ui-theme.research-console.reference-design .td-chart-bottom{padding:8px 0;margin:4px 0 0;border-top:1px solid #202020;gap:8px;min-height:34px}
+body.site-layout.ui-theme.research-console.reference-design .td-chart-bottom :is(button,input){min-height:26px;height:26px;font-size:10px}
+body.site-layout.ui-theme.research-console.reference-design .td-context-modern{grid-column:2;grid-row:1/7;padding:0 14px 14px;border-left:1px solid #252525;gap:8px;position:static;display:flex;flex-direction:column;background:transparent;align-self:stretch;min-width:0}
+body.site-layout.ui-theme.research-console.reference-design .td-context-modern>.reference-line-movement{height:214px;min-height:214px;padding:22px 0 12px;border:0;border-bottom:1px solid #252525;margin-bottom:6px;background:none;border-radius:0}
+body.site-layout.ui-theme.research-console.reference-design .reference-line-movement h3{font-size:13px;margin:0 10px 14px}
+body.site-layout.ui-theme.research-console.reference-design .td-context-tabs{background:linear-gradient(#292929,#151515);border:1px solid #282828;border-radius:12px;padding:4px;gap:3px;display:flex;min-height:38px}
+body.site-layout.ui-theme.research-console.reference-design .td-context-tabs button{min-height:28px;height:28px;padding:0 8px;font-size:11px}
+body.site-layout.ui-theme.research-console.reference-design .td-context-tabs button[aria-selected=true]{--button-fill:#363636;--button-ink:#eee;--button-border:#383838}
+body.site-layout.ui-theme.research-console.reference-design .td-context-panel{padding:16px 14px;border:0;background:#0f0f0f;border-radius:14px}
+body.site-layout.ui-theme.research-console.reference-design .td-context-heading{padding:0;margin:0 0 12px}
+body.site-layout.ui-theme.research-console.reference-design .td-context-panel h3{font-size:13px}
+body.site-layout.ui-theme.research-console.reference-design .td-matchup-teams{padding:12px 0;border-color:#222}
+body.site-layout.ui-theme.research-console.reference-design .td-matchup-teams .team-mark{width:25px;height:25px;min-width:25px}
+body.site-layout.ui-theme.research-console.reference-design .td-matchup-data{padding:15px 0 10px}
+body.site-layout.ui-theme.research-console.reference-design .td-matchup-data h4{font-size:12px;margin-bottom:12px}
+body.site-layout.ui-theme.research-console.reference-design .td-context-table :is(td,th){background:none;border-color:#202020;padding:8px 0;font-size:10px;height:32px}
+body.site-layout.ui-theme.research-console.reference-design .td-rate-comparison i:first-child{background:#2cccba}
+body.site-layout.ui-theme.research-console.reference-design .td-context-caption{font-size:9px;color:#777}
+body.site-layout.ui-theme.research-console.reference-design #td-support-section{grid-column:1;grid-row:5;margin:0 14px 8px}
+body.site-layout.ui-theme.research-console.reference-design .td-support-card{padding:16px 20px;border:0;border-radius:14px;background:#0e0e0e;margin:0}
+body.site-layout.ui-theme.research-console.reference-design .td-support-card h3{font-size:13px}
+body.site-layout.ui-theme.research-console.reference-design .td-support-tiles{display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between;border:0;background:none;padding:18px 0 4px}
+body.site-layout.ui-theme.research-console.reference-design .td-support-tile{border:0;padding:0;background:none;flex:1;min-width:60px}
+body.site-layout.ui-theme.research-console.reference-design .td-support-tile h4{font-size:10px;color:#888;white-space:nowrap;font-weight:550;margin-bottom:5px}
+body.site-layout.ui-theme.research-console.reference-design .td-support-tile strong{font-size:12px;font-weight:550;color:#aaa}
+body.site-layout.ui-theme.research-console.reference-design .td-support-tile :is(svg,span){display:none}
+body.site-layout.ui-theme.research-console.reference-design .td-records-card{grid-column:1;grid-row:6;margin:0 14px;background:#0e0e0e;border:0;border-radius:14px;padding:14px 20px}
+body.site-layout.ui-theme.research-console.reference-design .td-stat-method{height:24px;min-height:24px;border:0;padding:2px;background:none}
+body.site-layout.ui-theme.research-console.reference-design .td-stat-method button{height:20px;min-height:20px;padding:2px 6px;font-size:10px}
+body.site-layout.ui-theme.research-console.reference-design .td-stat-method button[aria-pressed=true]{--button-fill:#2b2b2b;--button-ink:#eee}
+
+/* Ref: game research and picks comparison tables (031 / 118). */
+body.site-layout.ui-theme.research-console.reference-design .live-main :is(#feed-status,.live-caveat){display:none}
+body.site-layout.ui-theme.research-console.reference-design .live-matchup-header{background:var(--hero-fill);border:0;border-radius:0;padding:20px 30px;min-height:120px}
+body.site-layout.ui-theme.research-console.reference-design .live-matchup-pair{justify-content:center;gap:30px}
+body.site-layout.ui-theme.research-console.reference-design .live-matchup-side .team-mark{width:40px;height:40px}
+body.site-layout.ui-theme.research-console.reference-design .live-matchup-side strong{font-size:16px}
+body.site-layout.ui-theme.research-console.reference-design .live-matchup-side>div>span{font-size:10px;color:#aaa}
+body.site-layout.ui-theme.research-console.reference-design .live-panel-tabs{border:0;border-bottom:1px solid #242424;background:none;gap:24px;padding:0 30px;border-radius:0;min-height:42px}
+body.site-layout.ui-theme.research-console.reference-design .live-panel-tabs button{height:42px;min-height:42px;padding:0;border:0;border-radius:0;--button-fill:transparent;--button-ink:#888;border-bottom:2px solid transparent!important;font-size:12px}
+body.site-layout.ui-theme.research-console.reference-design .live-panel-tabs button[aria-selected=true]{--button-fill:transparent;--button-ink:#eee;border-bottom-color:#eee!important}
+body.site-layout.ui-theme.research-console.reference-design .live-odds{padding:20px 30px;background:#000;border:0;border-radius:0;margin:0}
+body.site-layout.ui-theme.research-console.reference-design .live-odds-heading{margin:0 0 14px;padding:0}
+body.site-layout.ui-theme.research-console.reference-design .live-odds-heading h2{font-size:17px}
+body.site-layout.ui-theme.research-console.reference-design .odds-market-grid{display:block;border:1px solid #202020;border-radius:12px;overflow:hidden;background:#0e0e0e}
+body.site-layout.ui-theme.research-console.reference-design .odds-market-block{border:0;border-bottom:1px solid #202020;background:none;border-radius:0;padding:0}
+body.site-layout.ui-theme.research-console.reference-design .odds-market-block>h3{font-size:13px;padding:14px 16px 10px;margin:0}
+body.site-layout.ui-theme.research-console.reference-design .odds-matrix{table-layout:fixed;width:100%;background:none}
+body.site-layout.ui-theme.research-console.reference-design .odds-matrix :is(th,td){height:42px!important;padding:10px 16px!important;background:none!important;border-color:#1b1b1b!important;font-size:12px!important}
+body.site-layout.ui-theme.research-console.reference-design .odds-matrix thead th{height:27px!important;padding:3px 16px!important;font-size:10px!important;font-weight:500;color:#777}
+body.site-layout.ui-theme.research-console.reference-design .odds-matrix tbody th{font-weight:650;width:45%}
+body.site-layout.ui-theme.research-console.reference-design .odds-quote{display:inline-flex;gap:9px;padding:5px 10px;border-radius:6px;background:#181818;border:0;min-width:75px;justify-content:center}
+body.site-layout.ui-theme.research-console.reference-design .live-tag{background:none;border:0;color:#888;font-size:10px;padding:0}
+body.site-layout.ui-theme.research-console.reference-design :is(.live-model-disclosure,.odds-definitions){font-size:11px;border-color:#232323;padding:12px 0;background:none}
+body.site-layout.ui-theme.research-console.reference-design .live-warning{border:0;background:none;padding:8px 0;color:#aaa;font-size:12px}
+body.site-layout.ui-theme.research-console.reference-design :is(.live-card,.sim-card,.bet-ticket,.performance-card){background:#0e0e0e;border:0;border-radius:14px}
+body.site-layout.ui-theme.research-console.reference-design .simulator-workspace{grid-template-columns:minmax(0,1fr) 30%;gap:12px;padding:14px 20px}
+body.site-layout.ui-theme.research-console.reference-design .simulator-setup{background:#0f0f0f;border:0;border-radius:14px;padding:20px}
+body.site-layout.ui-theme.research-console.reference-design .sim-setup-heading .ui-icon{color:#2cccba}
+body.site-layout.ui-theme.research-console.reference-design .simulator-setup #sim-run{background:#2cccba!important;color:#071611!important;border:0}
+body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-start{min-height:100px;padding:22px;background:#0e0e0e;border:0;border-radius:12px;margin-top:8px}
+body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-start .sim-ready-icon{display:none}
+body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-start h2{font-size:14px}
+body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-outcome{background:var(--hero-fill);padding:18px 24px;border:0;border-radius:12px}
+body.site-layout.ui-theme.research-console.reference-design .sim-score-title{margin-bottom:15px}
+body.site-layout.ui-theme.research-console.reference-design .sim-score-title h2{font-size:13px}
+body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-team{grid-template-columns:34px 1fr auto!important;gap:6px 10px!important}
+body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-team .team-mark{width:34px;height:34px;min-width:34px}
+body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-team>strong{grid-column:3;grid-row:1;font-size:28px!important;letter-spacing:-1px}
+body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-team>.sim-team-chance{grid-column:2/4;grid-row:2;font-size:12px}
+body.site-layout.ui-theme.research-console.reference-design .sim-prob-bar{height:3px;margin-top:18px}
+body.site-layout.ui-theme.research-console.reference-design .sim-prob-labels{font-size:9px}
+body.site-layout.ui-theme.research-console.reference-design .sim-result-tabs [data-sim-view][aria-pressed=false]{border-bottom-color:transparent!important;color:#888!important}
+body.site-layout.ui-theme.research-console.reference-design .sim-result-tabs [data-sim-view][aria-pressed=true]{border-bottom-color:#eee!important;color:#eee!important}
+body.site-layout.ui-theme.research-console.reference-design .sim-prop-grid{display:block;border-radius:12px;overflow:hidden}
+body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-prop-card{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:12px;padding:14px 16px;background:#121212;border:0;border-bottom:1px solid #242424;border-radius:0}
+body.site-layout.ui-theme.research-console.reference-design .sim-prop-card>header{border:0;padding:0;align-items:center}
+body.site-layout.ui-theme.research-console.reference-design .sim-prop-card .sim-prop-availability{display:none}
+body.site-layout.ui-theme.research-console.reference-design .sim-prop-card .sim-prop-numbers{padding:0;margin:0;gap:12px;align-items:center}
+body.site-layout.ui-theme.research-console.reference-design .sim-prop-card .sim-prop-numbers>div{border:0;padding:0}
+body.site-layout.ui-theme.research-console.reference-design .sim-prop-card .sim-prop-numbers strong{font-size:14px;color:#ddd}
+body.site-layout.ui-theme.research-console.reference-design .sim-prop-card .sim-prop-probabilities{border:0;padding:0;align-items:center}
+body.site-layout.ui-theme.research-console.reference-design .sim-prop-card .sim-prop-probabilities b{font-size:13px;color:#13d993}
+body.site-layout.ui-theme.research-console.reference-design .sim-prop-card>.sim-prop-range{grid-column:1/3;margin:0;font-size:10px}
+body.site-layout.ui-theme.research-console.reference-design .sim-prop-card>details{grid-column:3;border:0;margin:0;padding:0}
+body.site-layout.ui-theme.research-console.reference-design .sim-prop-card>.sim-prop-unposted{grid-column:1/-1}
+body.site-layout.ui-theme.research-console.reference-design .sim-advanced input{border-color:#292929;background:#111}
+body.site-layout.ui-theme.research-console.reference-design :is(.sim-scoreboard,.sim-matchup-preview){background:var(--hero-fill);border:0;border-radius:12px;padding:22px}
+body.site-layout.ui-theme.research-console.reference-design .sim-score-team>strong{font-size:19px}
+body.site-layout.ui-theme.research-console.reference-design .sim-team-probability{font-size:24px;color:#13d993}
+body.site-layout.ui-theme.research-console.reference-design .sim-stats{background:none;border:0;border-bottom:1px solid #222;border-radius:0;padding:12px 0;margin-bottom:14px}
+body.site-layout.ui-theme.research-console.reference-design .sim-stats strong{font-size:18px;color:#eee}
+body.site-layout.ui-theme.research-console.reference-design .sim-charts{gap:8px}
+body.site-layout.ui-theme.research-console.reference-design .sim-charts>section{background:#0e0e0e;border:0;border-radius:14px}
+/* Keep market controls legible as tabs and give the simulation plot a real x axis. */
+body.site-layout.ui-theme.research-console.reference-design .market-tabs{display:flex;align-items:stretch;flex-wrap:nowrap;gap:2px;padding:0;margin-block:14px;overflow-x:auto;border-bottom:1px solid #303030;background:transparent}
+body.site-layout.ui-theme.research-console.reference-design .market-tabs>.market-tab{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;box-shadow:none;color:#a9a9a9;font-size:13px;line-height:18px;white-space:nowrap}
+body.site-layout.ui-theme.research-console.reference-design .market-tabs>.market-tab:is(:hover,:focus-visible){background:#ffffff0a;color:#fff}
+body.site-layout.ui-theme.research-console.reference-design .market-tabs>.market-tab.active{border-bottom-color:#2cccba;background:#2cccba12;color:#e8fffa}
+body.site-layout.ui-theme.research-console.reference-design .market-tabs>.more-markets{align-self:center;padding:0;margin-left:auto}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-markets{display:flex;align-items:stretch;gap:4px;min-height:44px;padding:0 12px;overflow-x:auto;border-bottom:1px solid #303030;background:#0c0c0c}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-markets button{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;height:44px;min-height:44px;padding:0 14px!important;border:0!important;border-bottom:2px solid transparent!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#a9a9a9!important;font-size:12px;line-height:18px;white-space:nowrap}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-markets button:is(:hover,:focus-visible){background:#ffffff0a!important;color:#fff!important}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-markets button[aria-pressed=true]{border-bottom-color:#2cccba!important;background:#2cccba12!important;color:#e8fffa!important}
+body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-charts{padding:18px 22px}
+body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-chart-heading{margin-bottom:10px}
+body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-panel>p{margin:0 0 12px}
+body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-histogram{height:190px;min-width:620px;margin:0;gap:6px;align-items:end;border-bottom:0}
+body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-bin{height:auto;min-width:44px;gap:5px;color:#b9b9b9}
+body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-bin i{min-height:2px}
+body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-bin small{display:block;width:100%;padding-top:7px;border-top:1px solid #444;color:#909090;font-size:10px;line-height:14px;text-align:center;white-space:nowrap}
+body.site-layout.ui-theme.research-console.reference-design .tracker-ledger-section{padding:10px 22px}
+body.site-layout.ui-theme.research-console.reference-design .bet-row{padding:16px 20px;border-color:#202020;background:none}
+body.site-layout.ui-theme.research-console.reference-design .ticket-leg{background:#121212;border:1px solid #1e1e1e;border-radius:10px}
+body.site-layout.ui-theme.research-console.reference-design .bet-ticket{margin-bottom:12px;padding:0;overflow:hidden}
+body.site-layout.ui-theme.research-console.reference-design .workspace-view-tabs button[aria-selected=true]{background:#343434;color:#eee}
+
+/* Ref: live outlier.bet homepage inspected in browser at 1265px. */
+body.landing-page.reference-design{background:#000;--font:-apple-system,BlinkMacSystemFont,'Reference Sans',Arial,sans-serif;--accent:#2cccba;--bright:#62d5c5}
+body.landing-page.reference-design .landing-header{background:#030303;border:0;position:relative}
+body.landing-page.reference-design .landing-header-inner{min-height:78px;max-width:none;padding:0 32px}
+body.landing-page.reference-design .landing-nav{gap:24px}
+body.landing-page.reference-design .landing-nav a{font-size:13px;color:#999;font-weight:650}
+body.landing-page.reference-design .landing-brand{font-size:27px;letter-spacing:-1px}
+body.landing-page.reference-design .landing-brand img{width:30px;height:30px}
+body.landing-page.reference-design .landing-button-small{border:1px solid #2c796e;border-radius:15px;height:42px;background:#050505;font-size:13px;color:#eee!important}
+body.landing-page.reference-design .landing-hero{padding:120px 0 100px;position:relative;background:radial-gradient(ellipse at 90% 100%,#06372f75,transparent 42%),radial-gradient(ellipse at 3% 100%,#251a4550,transparent 42%),#000}
+body.landing-page.reference-design .landing-hero:before,body.landing-page.reference-design .landing-hero:after{display:none}
+body.landing-page.reference-design .landing-hero .landing-container{max-width:1160px;text-align:center;display:block}
+body.landing-page.reference-design .landing-hero-mark{display:flex;align-items:center;justify-content:center;margin:0 auto 36px;width:80px;height:80px;background:none;border:0;border-radius:0;box-shadow:none}
+body.landing-page.reference-design .landing-hero-mark img{width:78px;height:78px}
+body.landing-page.reference-design .landing-hero-label{display:none}
+body.landing-page.reference-design .landing-hero h1{font-size:68px;line-height:1.05;font-weight:800;letter-spacing:-2px;max-width:900px;margin:0 auto;background:linear-gradient(100deg,#48cfc4,#b0c4a6 50%,#f28b6b 85%);background-clip:text;-webkit-text-fill-color:transparent}
+body.landing-page.reference-design .landing-hero h1 span{background:none;color:inherit}
+body.landing-page.reference-design .landing-hero-description{font-size:24px;line-height:1.5;font-weight:450;color:#9e9e9e;max-width:900px;margin:38px auto 32px!important}
+body.landing-page.reference-design .landing-hero-description br{display:block}
+body.landing-page.reference-design .landing-hero-actions{justify-content:center;gap:0}
+body.landing-page.reference-design .landing-hero-actions>.landing-text-link{display:none}
+body.landing-page.reference-design .landing-hero-actions .landing-button{height:48px;padding:0 21px;background:linear-gradient(100deg,#49c9c0,#b7b496 60%,#e5785c);border:0;border-radius:14px;color:#101010!important;font-size:14px;font-weight:750;box-shadow:none}
+body.landing-page.reference-design .landing-showcase{border:1px solid #262626;background:#070707;border-radius:14px;max-width:1100px;margin:auto;box-shadow:none}
+body.landing-page.reference-design .landing-showcase-toolbar{background:var(--hero-fill);height:46px;border:0}
+body.landing-page.reference-design .landing-preview-tabs button[aria-selected=true]{border-bottom-color:#eee;color:#eee}
+body.landing-page.reference-design .demo-player-header{background:var(--hero-fill)!important;padding:15px!important;border:0!important}
+body.landing-page.reference-design .demo-player-identity,body.landing-page.reference-design .demo-player-identity>div{background:transparent!important;border:0!important}
+body.landing-page.reference-design :is(.demo-panel,.demo-stats-panel,.demo-chart-panel){background:#0e0e0e;border:0;border-radius:12px}
+body.landing-page.reference-design .demo-notice{background:#080808;color:#858585;border-color:#202020}
+body.landing-page.reference-design .landing-feature-board{background:#0e0e0e;border:1px solid #202020;border-radius:16px;box-shadow:none}
+body.landing-page.reference-design .landing-button{background:#2cccba;border-color:#2cccba;color:#071713!important}
+body.landing-page.reference-design .landing-button-outline{background:#060606;color:#eee!important;border-color:#2f7067}
+body.landing-page.reference-design :is(.landing-feature-copy h2,.landing-tools-intro h2,.landing-closing h2){font-size:46px;letter-spacing:-1.6px;color:#eee}
+body.landing-page.reference-design :is(.landing-feature-copy h2 span,.landing-tools-intro h2 span){color:#888}
+body.landing-page.reference-design .landing-tool{border-color:#242424;background:#0b0b0b;border-radius:14px}
+body.landing-page.reference-design .landing-closing{background:#101010;border:0;border-radius:20px}
+
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-current-window{display:block;font-size:10px;line-height:15px;color:#b4b4b4;margin-bottom:4px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-support>div{min-height:0;display:block}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-support-panel .pr-segmented{border:0;background:none;padding:0}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-support-panel .pr-segmented button{height:23px;min-height:23px;padding:3px 7px;font-size:10px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-support-panel .pr-segmented button[aria-pressed=true]{background:#2d2d2d!important;color:#eee!important}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-support-panel .pr-explainer{margin-top:14px;padding-top:0}
+body.site-layout.ui-theme.research-console.reference-design #td-workbench #td-detail:not([hidden]){background-color:#000;background-image:linear-gradient(180deg,#0000,#0008 125px,#000 214px),linear-gradient(105deg,#20796e,#535c48 53%,#8b4025);background-size:100% 214px;background-repeat:no-repeat}
+body.site-layout.ui-theme.research-console.reference-design .td-player-hero{background:transparent}
+body.site-layout.ui-theme.research-console.reference-design .reference-player-markets{grid-column:1;grid-row:2;display:flex;align-items:center;gap:20px;height:44px;padding:0 30px;overflow-x:auto;scrollbar-width:none;background:#000;border-bottom:1px solid #1b1b1b}
+body.site-layout.ui-theme.research-console.reference-design .reference-player-markets button{font-size:11px;font-weight:650;padding:0;height:44px;min-height:44px;border:0;border-bottom:2px solid transparent;border-radius:0;background:none;color:#888;white-space:nowrap}
+body.site-layout.ui-theme.research-console.reference-design .reference-player-markets button[aria-pressed=true]{border-bottom-color:#eee;color:#eee}
+/* Measurements from the supplied 1024px board and 1080px research canvas. */
+body.site-layout.ui-theme.research-console.reference-design #td-workbench{margin-top:0}
+body.site-layout.ui-theme.research-console.reference-design .trend-table-scroll{border-radius:0}
+body.site-layout.ui-theme.research-console.reference-design .trend-table thead th{height:36px}
+body.site-layout.ui-theme.research-console.reference-design .trend-table .trend-player-link b{margin-top:0;font-weight:650;line-height:14px}
+body.site-layout.ui-theme.research-console.reference-design .trend-table .trend-player-topline{gap:5px}
+body.site-layout.ui-theme.research-console.reference-design .trend-table .trend-rate.high strong{color:#1bde91}
+body.site-layout.ui-theme.research-console.reference-design .trend-table .trend-rate.low strong{color:#c83213}
+body.site-layout.ui-theme.research-console.reference-design .trend-player-topline strong{font-size:11px;line-height:15px}
+body.site-layout.ui-theme.research-console.reference-design .trend-player-topline small{font-size:9px}
+body.site-layout.ui-theme.reference-design .player-research-dialog.pr-redesign{background-color:#000;background-image:linear-gradient(180deg,#0000,#0008 125px,#000 214px),linear-gradient(105deg,#20796e,#535c48 53%,#8b4025);background-size:100% 214px;background-repeat:no-repeat}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-identity-copy h2{font-size:16px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-markets button{height:44px;min-height:44px;font-size:11px;font-weight:650}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-mode-tabs button{font-size:11px;height:42px;min-height:42px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-records{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:8px 14px;gap:8px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-records .pr-table-scroll{flex-basis:100%}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-records .pr-sample-note{padding:0}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-chart-heading .pr-kicker{display:flex;align-items:center;gap:10px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-chart-heading .pr-kicker:before{content:'%';font-size:20px;line-height:18px;color:#2cccba}
+body.reference-design .reference-chart-filter{position:relative;flex:none;align-self:flex-start;margin:0;border:0;padding:0}
+body.reference-design .reference-chart-filter>summary{display:flex;align-items:center;justify-content:center;gap:8px;width:64px;height:34px;padding:0 12px;list-style:none;cursor:pointer;background:#2cccba;color:#09211c;border:1px solid #2cccba;border-radius:10px;font-size:12px;font-weight:600}
+body.reference-design .reference-chart-filter>summary::-webkit-details-marker{display:none}
+body.reference-design .reference-chart-filter>summary .ui-icon{width:16px;height:16px}
+body.reference-design .reference-chart-filter[open]>summary{background:#74dbcb}
+body.reference-design .reference-chart-filter-panel{position:absolute;top:calc(100% + 8px);right:0;z-index:25;width:290px;max-width:calc(100vw - 24px);padding:18px;border:1px solid #303030;border-radius:12px;background:#161616;box-shadow:0 15px 45px #000a;color:#ddd}
+body.reference-design .reference-chart-filter-panel h4{font-size:14px;line-height:20px;margin:0 0 16px}
+body.site-layout.ui-theme.reference-design .pr-redesign .reference-chart-filter-panel .pr-comparison,body.site-layout.ui-theme.research-console.reference-design .reference-chart-filter-panel .td-chart-bottom{display:flex;flex-direction:column;align-items:stretch;border:0;margin:0;padding:0;gap:14px;min-height:0}
+body.reference-design .reference-chart-filter-panel :is(.pr-venue-label,.td-venue-control){display:block;margin:0 0 14px;width:100%}
+body.reference-design .reference-chart-filter-panel :is(.pr-segmented,.td-side){width:100%;display:flex;margin:0}
+body.reference-design .reference-chart-filter-panel :is(.pr-segmented,.td-side) button{flex:1;min-height:30px!important}
+body.reference-design .reference-chart-filter-panel :is(.td-choice,.td-choice-trigger){width:100%;min-height:34px!important}
+body.reference-design .reference-chart-filter-panel form{display:flex;align-items:end;justify-content:space-between;gap:8px;width:100%}
+body.reference-design .reference-chart-filter-panel label{display:flex;flex-direction:column;gap:6px;color:#aaa;font-size:11px}
+body.reference-design .reference-chart-filter-panel input{height:32px!important;min-height:32px!important}
+body.reference-design .reference-chart-filter-panel form button{height:32px!important;min-height:32px!important}
+body.reference-design .reference-chart-filter-panel .td-line-stepper{margin-left:auto}
+body.site-layout.ui-theme.research-console.reference-design .td-chart-card-heading>div>span{display:none}
+@media(min-width:901px){
+ body.site-layout.ui-theme.research-console.reference-design .desk-toolbar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+ body.site-layout.ui-theme.research-console.reference-design .desk-toolbar>*{flex-shrink:0}
+ body.site-layout.ui-theme.research-console.reference-design .trend-table{min-width:940px}
+ body.site-layout.ui-theme.research-console.reference-design .trend-table thead th:first-child{width:46px}
+ body.site-layout.ui-theme.research-console.reference-design .trend-table thead th:nth-child(2){width:230px}
+ body.site-layout.ui-theme.research-console.reference-design .trend-table thead th:nth-child(3){width:50px}
+ body.site-layout.ui-theme.research-console.reference-design .trend-table thead th:nth-child(4){width:220px}
+}
+
+/* Ref: mobile Props cards + player detail, not a shrunken desktop page. */
+@media(max-width:900px) and (min-width:701px){
+ body.site-layout.ui-theme.research-console.reference-design{--rail:184px}
+ body.site-layout.ui-theme.research-console.reference-design .site-header-bar{width:184px}
+ body.site-layout.ui-theme.research-console.reference-design .workspace-masthead{padding-left:20px;padding-right:20px}
+ body.site-layout.ui-theme.research-console.reference-design .desk-toolbar{padding-left:14px;padding-right:14px;flex-wrap:wrap}
+ body.site-layout.ui-theme.reference-design .player-research-dialog.pr-redesign{grid-template-columns:minmax(0,1fr) 31%;width:calc(100vw - 28px)}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-hero{padding-left:18px;padding-right:18px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-sample-splits{grid-template-columns:65px 65px;gap:5px 8px}
+ body.site-layout.ui-theme.research-console.reference-design .td-summary-stats .td-rate-splits{grid-template-columns:70px 70px;gap:5px 8px}
+}
+@media(max-width:700px){
+ body.site-layout.ui-theme.research-console.reference-design{--rail:0px}
+ body.site-layout.ui-theme.research-console.reference-design main{width:100%;margin:0;padding:0 0 84px}
+ body.site-layout.ui-theme.research-console.reference-design .site-header-bar{display:none}
+ body.site-layout.ui-theme.research-console.reference-design .site-brand{display:none}
+ body.site-layout.ui-theme.research-console.reference-design .workspace-masthead{padding:25px 16px 12px;min-height:136px;border-radius:0;grid-template-rows:45px 36px;gap:6px}
+ body.site-layout.ui-theme.research-console.reference-design .workspace-masthead h1{font-size:29px;letter-spacing:-.7px}
+ body.site-layout.ui-theme.research-console.reference-design .workspace-masthead>.site-sports{gap:4px;margin-top:6px}
+ body.site-layout.ui-theme.research-console.reference-design .workspace-masthead>.site-sports a{height:32px;min-height:32px;font-size:13px;border:1px solid #ffffff13;border-radius:11px;padding:5px 10px}
+ body.site-layout.ui-theme.research-console.reference-design .workspace-masthead>.site-sports a[aria-current=page]{background:#ffffff10;border-color:#ffffff24}
+ body.site-layout.ui-theme.research-console.reference-design .workspace-masthead .site-header-actions{grid-column:3}
+ body.site-layout.ui-theme.research-console.reference-design .workspace-masthead :is(.masthead-actions,.site-header-actions)>:is(button,a){font-size:0;width:28px;min-width:28px;padding:6px}
+ body.site-layout.ui-theme.research-console.reference-design :is(.desk-toolbar,.workspace-controlbar,.home-toolbar){padding:9px 10px;flex-wrap:wrap;gap:6px;min-height:48px}
+ body.site-layout.ui-theme.research-console.reference-design :is(.desk-toolbar,.workspace-controlbar) :is(button,summary,.calendar-trigger,.td-choice-trigger){height:34px!important;min-height:34px!important}
+ body.site-layout.ui-theme.research-console.reference-design .desk-toolbar .td-side{height:34px;min-height:34px}
+ body.site-layout.ui-theme.research-console.reference-design .desk-toolbar .td-side button{height:28px!important;min-height:28px!important}
+ body.site-layout.ui-theme.research-console.reference-design .desk-toolbar :is(.td-search,.searchbox){max-width:none;flex:1 1 110px}
+ body.site-layout.ui-theme.research-console.reference-design :is(.page-tools,.results-heading,.home-board-heading,.home-secondary-toolbar){padding-left:12px;padding-right:12px}
+ body.site-layout.ui-theme.research-console.reference-design .research-board{margin:8px 0;border:0;background:none;border-radius:0;overflow:visible}
+ body.site-layout.ui-theme.research-console.reference-design .research-columns{display:none}
+ body.site-layout.ui-theme.research-console.reference-design .research-row{height:auto;min-height:106px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:0;background:#111!important;border:0;border-radius:12px;overflow:hidden;margin:0 0 8px}
+ body.site-layout.ui-theme.research-console.reference-design .research-row .research-identity{grid-column:1/3;grid-row:1;padding:13px 10px 4px;min-width:0}
+ body.site-layout.ui-theme.research-console.reference-design .research-player strong{font-size:13px;line-height:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ body.site-layout.ui-theme.research-console.reference-design .research-player small{font-size:10px}
+ body.site-layout.ui-theme.research-console.reference-design .research-row .research-odds{grid-column:3;grid-row:1;justify-content:flex-end;padding:12px 10px 0 0;gap:5px}
+ body.site-layout.ui-theme.research-console.reference-design .research-row .research-odds strong{font-size:13px;background:#191919;border-radius:5px;padding:4px 6px}
+ body.site-layout.ui-theme.research-console.reference-design .research-row .research-line{grid-column:1/3;grid-row:2;padding:0 10px 10px 49px;display:flex;gap:6px;min-height:23px}
+ body.site-layout.ui-theme.research-console.reference-design .research-row .research-actions{grid-column:3;grid-row:2;padding:0 10px 8px 0}
+ body.site-layout.ui-theme.research-console.reference-design .research-row :is(.research-estimate,.research-probability,.research-result){grid-row:3;display:flex;gap:5px;min-height:33px;padding:8px 3px;border-top:1px solid #252525;border-right:1px solid #202020;background:linear-gradient(0deg,#13d9930c,transparent)}
+ body.site-layout.ui-theme.research-console.reference-design .research-row .research-estimate{grid-column:1}
+ body.site-layout.ui-theme.research-console.reference-design .research-row .research-probability{grid-column:2}
+ body.site-layout.ui-theme.research-console.reference-design .research-row .research-result{grid-column:3}
+ body.site-layout.ui-theme.research-console.reference-design .research-row .row-field-label{font-size:9px}
+ body.site-layout.ui-theme.research-console.reference-design .trend-table-scroll{margin:8px 0;background:none;overflow:visible;border:0}
+ body.site-layout.ui-theme.research-console.reference-design .trend-table{min-width:0}
+ body.site-layout.ui-theme.research-console.reference-design .trend-table tbody tr{height:auto;min-height:115px;margin-bottom:8px;border:0;border-radius:12px;background:#111!important;overflow:hidden}
+ body.site-layout.ui-theme.research-console.reference-design .trend-table tbody :is(th,td){height:auto;border:0}
+ body.site-layout.ui-theme.research-console.reference-design .trend-player-topline strong{font-size:13px}
+ body.site-layout.ui-theme.research-console.reference-design .trend-player-topline small{font-size:10px}
+ body.site-layout.ui-theme.research-console.reference-design .trend-player-link b{font-size:12px;color:#aaa}
+ body.site-layout.ui-theme.research-console.reference-design .trend-table .trend-rate{border-top:1px solid #28483b!important;padding:8px 4px!important;min-height:31px;border-right:1px solid #202020!important}
+ body.site-layout.ui-theme.research-console.reference-design .trend-table .trend-rate strong{font-size:11px}
+ body.reference-design .mobile-navigation{background:#0b0b0bf5;border-top:1px solid #262626;padding:8px 6px 14px;box-shadow:none;min-height:66px}
+ body.reference-design .mobile-navigation :is(a,button){font-size:10px;color:#808080;gap:5px;background:none!important;border:0}
+ body.reference-design .mobile-navigation .ui-icon{width:23px;height:23px}
+ body.reference-design .mobile-navigation [aria-current=page]{color:#62c9bd!important}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-mode-tabs{position:sticky;bottom:0}
+ body.site-layout.ui-theme.reference-design .player-research-dialog.pr-redesign{inset:0;width:100%;max-width:100%;max-height:100dvh;height:100dvh;margin:0;border:0;border-radius:0;display:block;overflow-y:auto}
+ body.site-layout.ui-theme.reference-design .player-research-dialog:not([open]):not(.player-research-inline){display:none}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-hero{height:auto;display:flex;flex-direction:column;align-items:center;text-align:center;padding:28px 16px 14px;min-height:198px;gap:12px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-identity{display:flex;flex-direction:column;gap:12px;align-items:center;width:100%}
+ body.site-layout.ui-theme.reference-design .pr-redesign .portrait-hero{--portrait-size:54px;--crest-size:26px;margin:0}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-identity-copy{display:block;text-align:center}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-player-meta{font-size:10px;margin-bottom:5px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-identity-copy h2{font-size:22px;margin:4px 0;font-weight:750}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-identity-copy h2 small{font-size:12px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-identity-copy p{font-size:14px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-hero-actions{position:absolute;right:12px;top:14px;gap:5px;margin:0}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-save{font-size:0;min-width:32px;width:32px;height:32px;padding:8px;border-radius:8px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-save span{display:none}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-close{position:fixed;left:12px;right:auto;top:14px;width:32px;height:32px;min-height:32px;border:1px solid #ffffff14;background:#ffffff06!important}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-compare{display:none}
+ body.site-layout.ui-theme.reference-design .pr-redesign :is(.pr-markets,.pr-mode-tabs){padding:0 15px;min-height:42px;gap:22px}
+ body.site-layout.ui-theme.reference-design .pr-redesign :is(.pr-markets,.pr-mode-tabs) button{height:42px;min-height:42px;font-size:12px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-primary{padding:12px 0;gap:8px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-filters{padding:0 12px 4px;overflow:visible;flex-direction:row;flex-wrap:nowrap}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-filters>.pr-segmented{flex:1;min-width:0;width:auto;height:36px;min-height:36px;padding:3px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-filters button{min-width:32px;font-size:11px;height:28px;min-height:28px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-panel{border-radius:12px;padding:16px 14px}
+ body.site-layout.ui-theme.reference-design .pr-redesign #pr-results{padding:16px 10px 10px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-chart-heading{gap:9px;padding:0 4px 12px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-chart-heading .pr-kicker{font-size:12px;margin-bottom:16px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-sample-splits{grid-template-columns:57px 57px;gap:5px 9px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-sample-splits span{font-size:9px;gap:5px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-support{flex-wrap:wrap;gap:16px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-support>div{flex:1 1 25%}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-sidebar{padding:0;border:0;background:#000;gap:8px}
+ body.site-layout.ui-theme.reference-design .pr-redesign #pr-movement{height:auto;order:3;background:#101010;padding:18px 14px;border:0;min-height:0;border-radius:12px}
+ body.site-layout.ui-theme.research-console.reference-design #td-workbench #td-detail:not([hidden]){display:flex;flex-direction:column}
+ body.site-layout.ui-theme.research-console.reference-design .td-player-hero{padding:24px 16px 16px;min-height:176px;text-align:center}
+ body.site-layout.ui-theme.research-console.reference-design .td-player-heading{display:block;position:relative}
+ body.site-layout.ui-theme.research-console.reference-design .td-player-identity{flex-direction:column;gap:12px}
+ body.site-layout.ui-theme.research-console.reference-design .td-player-identity .portrait-hero{--portrait-size:54px;--crest-size:26px}
+ body.site-layout.ui-theme.research-console.reference-design .td-player-identity h2{font-size:22px;margin:5px 0}
+ body.site-layout.ui-theme.research-console.reference-design .td-player-identity p{font-size:14px}
+ body.site-layout.ui-theme.research-console.reference-design .td-player-heading>button{position:absolute;right:0;top:0;width:32px;padding:7px}
+ body.site-layout.ui-theme.research-console.reference-design .td-player-heading>button span{display:none}
+ body.site-layout.ui-theme.research-console.reference-design .td-quote-bar{justify-content:center;flex-wrap:nowrap;gap:6px}
+ body.site-layout.ui-theme.research-console.reference-design .td-quote-prices{width:auto}
+ body.site-layout.ui-theme.research-console.reference-design .td-quote-selection strong{font-size:11px}
+ body.site-layout.ui-theme.research-console.reference-design .reference-chart-controls{padding:12px 10px;gap:6px}
+ body.site-layout.ui-theme.research-console.reference-design .reference-chart-controls .td-windows button{min-width:25px;font-size:10px;padding:0 5px}
+ body.site-layout.ui-theme.research-console.reference-design .reference-chart-controls>.td-venue-control .td-choice-trigger{font-size:0;width:34px;min-width:34px;padding:8px}
+ body.site-layout.ui-theme.research-console.reference-design .td-venue-control .td-choice-trigger>.ui-icon:first-child{display:block;width:16px;height:16px}
+ body.site-layout.ui-theme.research-console.reference-design .td-venue-control .td-choice-trigger>.ui-icon:last-child{display:none}
+ body.site-layout.ui-theme.research-console.reference-design .td-chart-card{margin:0 0 8px;padding:16px 10px 8px;border-radius:12px}
+ body.site-layout.ui-theme.research-console.reference-design .td-summary-stats .td-rate-splits{grid-template-columns:56px 56px;gap:5px 12px}
+ body.site-layout.ui-theme.research-console.reference-design .td-hit-stat>strong{font-size:16px!important}
+ body.site-layout.ui-theme.research-console.reference-design .td-hit-stat>small{font-size:9px!important}
+ body.site-layout.ui-theme.research-console.reference-design .td-context-modern{padding:0;border:0;background:#000;order:5}
+ body.site-layout.ui-theme.research-console.reference-design .reference-line-movement{height:auto;order:5;min-height:0;background:#101010;border:0;border-radius:12px;padding:18px 14px}
+ body.site-layout.ui-theme.research-console.reference-design #td-support-section{margin:0 0 8px;order:3}
+ body.site-layout.ui-theme.research-console.reference-design .td-records-card{order:4;margin:0 0 8px}
+ body.site-layout.ui-theme.research-console.reference-design .td-support-tiles{gap:15px;justify-content:start}
+ body.site-layout.ui-theme.research-console.reference-design .td-support-tile{min-width:80px;flex:1 1 25%}
+ body.site-layout.ui-theme.research-console.reference-design .live-matchup-header{padding:18px 12px}
+ body.site-layout.ui-theme.research-console.reference-design .live-matchup-pair{gap:10px}
+ body.site-layout.ui-theme.research-console.reference-design .live-matchup-side strong{font-size:12px}
+ body.site-layout.ui-theme.research-console.reference-design .live-matchup-side .team-mark{width:28px;height:28px}
+ body.site-layout.ui-theme.research-console.reference-design .live-panel-tabs{padding:0 15px}
+ body.site-layout.ui-theme.research-console.reference-design .live-odds{padding:16px 10px}
+ body.site-layout.ui-theme.research-console.reference-design .simulator-workspace{display:flex;flex-direction:column;padding:12px 0;gap:10px}
+ body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-team{grid-template-columns:26px 1fr!important}
+ body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-team>strong{grid-column:2;grid-row:2}
+ body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-team>.sim-team-chance{grid-column:1/-1;grid-row:3}
+ body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-prop-card{grid-template-columns:1fr 1fr;border-radius:12px;margin-bottom:8px}
+ body.site-layout.ui-theme.research-console.reference-design .sim-prop-card>header{grid-column:1/-1}
+ body.site-layout.ui-theme.research-console.reference-design .sim-prop-card>.sim-prop-range{grid-column:1/-1}
+ body.site-layout.ui-theme.research-console.reference-design .sim-prop-card>details{grid-column:1/-1}
+ body.site-layout.ui-theme.research-console.reference-design .simulator-setup{order:-1;width:100%;padding:16px;border-radius:12px;position:static}
+ body.site-layout.ui-theme.research-console.reference-design .simulator-main{width:100%}
+ body.site-layout.ui-theme.research-console.reference-design .tracker-ledger-section{padding:10px 0}
+ body.site-layout.ui-theme.research-console.reference-design .bet-row{padding:14px;grid-template-columns:1fr 1fr}
+ body.reference-design :is(.trend-filter-dialog,.model-filter-dialog){width:100%;max-width:100%;max-height:96dvh;border:0;border-radius:18px 18px 0 0;margin:auto 0 0}
+ body.reference-design :is(.filter-dialog-header,.model-filter-dialog .sheet-header){height:65px;min-height:65px;padding:18px}
+ body.reference-design :is(.filter-dialog-body,.model-filter-dialog .sheet-body){display:flex;flex-direction:column}
+ body.reference-design .filter-category-nav{display:flex;flex-direction:row;overflow:auto;gap:6px;padding:10px;border:0;border-bottom:1px solid #242424}
+ body.reference-design .filter-category-nav button{min-height:38px!important;padding:8px 12px!important;font-size:12px!important;white-space:nowrap;flex:none;border-radius:8px!important}
+ body.reference-design .filter-category-nav .ui-icon{width:16px!important;height:16px!important}
+ body.reference-design :is(.filter-editors,.model-filter-editors){padding:20px 16px;min-height:330px}
+ body.reference-design .filter-dialog-footer{padding:16px}
+ body.landing-page.reference-design .landing-header-inner{min-height:70px;padding:0 18px}
+ body.landing-page.reference-design .landing-brand{font-size:24px}
+ body.landing-page.reference-design .landing-hero{padding:68px 0 65px}
+ body.landing-page.reference-design .landing-hero-mark{width:60px;height:60px;margin-bottom:28px}
+ body.landing-page.reference-design .landing-hero-mark img{width:60px;height:60px}
+ body.landing-page.reference-design .landing-hero h1{font-size:39px;line-height:1.1;letter-spacing:-1.3px}
+ body.landing-page.reference-design .landing-hero-description{font-size:17px;line-height:1.5;margin:25px auto!important}
+ body.landing-page.reference-design :is(.landing-feature-copy h2,.landing-tools-intro h2,.landing-closing h2){font-size:34px}
+}
+
+/* Shared scale. Preserve the reference composition while giving each control
+   role a consistent box, text baseline and icon size across all workspaces. */
+body.reference-design{--size-control:36px;--size-compact:28px;--size-action:32px;--size-row-action:28px;--size-icon:16px;--size-control-text:12px;--radius-control:8px;--space-control:8px}
+body.site-layout.ui-theme.research-console.reference-design :is(.site-nav-link,.site-overview-link,.site-tracker){font-size:13px;line-height:18px;min-height:40px;padding:10px 12px}
+body.site-layout.ui-theme.research-console.reference-design .workspace-masthead :is(.masthead-actions,.site-header-actions)>:is(button,a){height:var(--size-action)!important;min-height:var(--size-action)!important;padding:0 12px;font-size:12px;line-height:16px;gap:8px;--button-radius:var(--radius-control)}
+body.site-layout.ui-theme.research-console.reference-design .workspace-masthead :is(.site-settings-toggle,.workspace-help){width:var(--size-action)!important;min-width:var(--size-action)!important;height:var(--size-action)!important;padding:0!important;display:grid;place-items:center}
+body.site-layout.ui-theme.research-console.reference-design :is(.desk-toolbar,.workspace-controlbar,.home-toolbar){min-height:60px;padding-block:12px;gap:var(--space-control);align-items:center}
+body.site-layout.ui-theme.research-console.reference-design :is(.desk-toolbar,.workspace-controlbar,.home-toolbar,.tracker-filters,.sim-setup-form) :is(button,summary,.td-choice-trigger,.calendar-trigger){height:var(--size-control)!important;min-height:var(--size-control)!important;padding:0 12px;font-size:var(--size-control-text);line-height:18px;gap:8px;border-radius:var(--radius-control);--button-radius:var(--radius-control);box-sizing:border-box;flex-shrink:0}
+body.site-layout.ui-theme.research-console.reference-design :is(.desk-toolbar,.workspace-controlbar,.home-toolbar,.tracker-filters) :is(.searchbox,.td-search){height:var(--size-control);min-height:var(--size-control);padding:0 10px;display:flex;align-items:center;gap:8px;border-radius:var(--radius-control);box-sizing:border-box}
+body.site-layout.ui-theme.research-console.reference-design :is(.desk-toolbar,.workspace-controlbar,.home-toolbar,.tracker-filters) :is(.searchbox,.td-search)>input{height:calc(var(--size-control) - 2px)!important;min-height:0!important;padding:0!important;font-size:var(--size-control-text);line-height:18px}
+body.site-layout.ui-theme.research-console.reference-design :is(.desk-toolbar,.workspace-controlbar,.home-toolbar,.tracker-filters) :is(.ui-choice,.ui-calendar){min-width:0}
+body.site-layout.ui-theme.research-console.reference-design .desk-toolbar :is(.td-side,.side-toggle){height:var(--size-control);min-height:var(--size-control);padding:3px;gap:2px;box-sizing:border-box;align-items:center;overflow:visible;flex-shrink:0}
+body.site-layout.ui-theme.research-console.reference-design .desk-toolbar :is(.td-side,.side-toggle)>button{height:calc(var(--size-control) - 8px)!important;min-height:calc(var(--size-control) - 8px)!important;padding:0 12px;--button-radius:5px}
+body.site-layout.ui-theme.reference-design :is([data-ui-control],.calendar-trigger,.td-choice-trigger)>:is(.ui-icon,[data-ui-icon] svg){width:var(--size-icon);height:var(--size-icon);flex:0 0 var(--size-icon);vertical-align:middle}
+body.site-layout.ui-theme.reference-design :is(.td-choice-trigger,.calendar-trigger)>.ui-icon:last-child{width:12px;height:12px;flex-basis:12px}
+body.site-layout.ui-theme.reference-design :is(.td-sportsbook-logo,.sportsbook-symbol){width:16px;height:16px;min-width:16px;object-fit:contain}
+body.site-layout.ui-theme.reference-design :is(.sheet-close,.dialog-close){width:36px!important;min-width:36px!important;height:36px!important;min-height:36px!important;padding:0!important;display:grid;place-items:center;line-height:1}
+
+/* One row rhythm and legible numbers; portraits stay transparent. */
+body.site-layout.ui-theme.research-console.reference-design .research-row{height:52px;min-height:52px}
+body.site-layout.ui-theme.research-console.reference-design .research-player{min-height:36px;gap:10px}
+body.site-layout.ui-theme.research-console.reference-design :is(.research-player,.trend-player-link) .player-portrait{--portrait-size:32px;--crest-size:14px}
+body.site-layout.ui-theme.research-console.reference-design :is(.research-player strong,.trend-player-topline strong){font-size:13px;line-height:17px;font-weight:650}
+body.site-layout.ui-theme.research-console.reference-design :is(.research-player small,.trend-player-topline small){font-size:11px;line-height:15px}
+body.site-layout.ui-theme.research-console.reference-design .research-row :is(.research-line,.research-odds,.research-estimate,.research-probability,.research-result)>strong{font-size:12px;line-height:18px}
+body.site-layout.ui-theme.research-console.reference-design .research-row .research-actions{gap:4px;flex-wrap:nowrap;align-items:center}
+body.site-layout.ui-theme.research-console.reference-design :is(.research-row .research-actions button,.trend-save){width:var(--size-row-action);min-width:var(--size-row-action);height:var(--size-row-action);min-height:var(--size-row-action);padding:6px;--button-radius:6px}
+body.site-layout.ui-theme.research-console.reference-design :is(.research-actions,.trend-save) .ui-icon{width:14px;height:14px}
+body.site-layout.ui-theme.research-console.reference-design .trend-table tbody tr,body.site-layout.ui-theme.research-console.reference-design .trend-table tbody :is(th,td){height:52px}
+body.site-layout.ui-theme.research-console.reference-design .trend-table tbody :is(th,td){font-size:12px}
+body.site-layout.ui-theme.research-console.reference-design .trend-table :is(.trend-player-link b,.trend-rate strong){font-size:12px;line-height:17px}
+body.site-layout.ui-theme.research-console.reference-design :is(.research-columns,.trend-table thead th){font-size:11px;font-weight:500}
+body.site-layout.ui-theme.research-console.reference-design :is(.section-tabs,.sports-views,.workspace-view-tabs,.live-panel-tabs,.sim-result-tabs) :is(button,a){font-size:12px;line-height:18px;min-height:40px!important;padding-block:0}
+
+/* Research uses the same control scale as the board, with compact sub-tabs. */
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-hero{padding-top:18px;gap:10px}
+body.site-layout.ui-theme.reference-design .pr-redesign .portrait-hero,body.site-layout.ui-theme.research-console.reference-design .td-player-identity .portrait-hero{--portrait-size:52px;--crest-size:24px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-identity-copy h2,body.site-layout.ui-theme.research-console.reference-design .td-player-identity h2{font-size:18px;line-height:24px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-identity-copy>.pr-player-meta{font-size:11px;line-height:15px}
+body.site-layout.ui-theme.reference-design .pr-redesign :is(.pr-save,.pr-priced-quote,.pr-compare){height:var(--size-control);min-height:var(--size-control);box-sizing:border-box;font-size:12px;line-height:18px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-save{padding:0 14px;gap:8px;--button-radius:8px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-compare{width:var(--size-control);min-width:var(--size-control);padding:0}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-close{width:28px;min-width:28px;height:28px;min-height:28px;padding:6px;right:8px;top:8px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-filters>.pr-segmented,body.site-layout.ui-theme.research-console.reference-design .reference-chart-controls .td-windows{height:var(--size-control);min-height:var(--size-control);padding:3px;gap:2px;box-sizing:border-box;align-items:center}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-filters>.pr-segmented button,body.site-layout.ui-theme.research-console.reference-design .reference-chart-controls .td-windows button{height:calc(var(--size-control) - 8px);min-height:calc(var(--size-control) - 8px);font-size:12px;line-height:16px;padding:0 8px;--button-radius:5px}
+body.site-layout.ui-theme.reference-design .reference-chart-filter>summary{height:var(--size-control);min-height:var(--size-control);width:56px;min-width:56px;padding:0 12px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border-radius:8px}
+body.site-layout.ui-theme.reference-design .pr-redesign :is(.pr-aside-tabs,.pr-support-panel .pr-segmented),body.site-layout.ui-theme.research-console.reference-design :is(.td-context-tabs,.td-stat-method){min-height:36px;height:36px;box-sizing:border-box;padding:3px;gap:2px;align-items:center}
+body.site-layout.ui-theme.reference-design .pr-redesign :is(.pr-aside-tabs,.pr-support-panel .pr-segmented) button,body.site-layout.ui-theme.research-console.reference-design :is(.td-context-tabs,.td-stat-method) button{height:28px;min-height:28px;padding:0 8px;font-size:11px;line-height:16px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-support-panel .pr-section-heading{height:auto;min-height:36px;margin-bottom:18px;gap:8px}
+body.site-layout.ui-theme.reference-design .pr-redesign :is(.pr-panel h3,.pr-chart-heading .pr-kicker),body.site-layout.ui-theme.research-console.reference-design :is(.td-chart-card-heading h3,.td-support-card h3,.td-context-panel h3){font-size:14px;line-height:20px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-chart-heading h3{font-size:20px;line-height:25px}
+body.site-layout.ui-theme.reference-design .pr-redesign :is(.pr-current-window,.pr-chart-heading p,.pr-sample-splits span,.pr-sample-splits b,.pr-support dt,.pr-fact,.reference-model-table th,.reference-model-table td){font-size:11px;line-height:16px}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-support dd{font-size:13px;line-height:18px}
+body.site-layout.ui-theme.research-console.reference-design .td-hit-stat>strong{font-size:20px!important}
+body.site-layout.ui-theme.research-console.reference-design :is(.td-hit-stat>span,.td-summary-stats .td-split>span,.td-summary-stats .td-split>strong,.td-support-tile h4,.td-context-table th,.td-context-table td){font-size:11px;line-height:16px}
+body.site-layout.ui-theme.research-console.reference-design .td-support-tile strong{font-size:13px}
+body.site-layout.ui-theme.reference-design .reference-chart-filter-panel :is(.td-choice-trigger,input,form button){height:36px!important;min-height:36px!important;font-size:12px!important}
+body.site-layout.ui-theme.reference-design .reference-chart-filter-panel :is(.td-side,.pr-segmented){padding:3px;min-height:36px;box-sizing:border-box}
+body.site-layout.ui-theme.reference-design .reference-chart-filter-panel :is(.td-side,.pr-segmented) button{height:28px!important;min-height:28px!important;font-size:12px!important}
+
+/* Menu, calendar and form controls follow the same geometry. */
+body.site-layout.ui-theme.reference-design .ui-choice .td-choice-menu .td-choice-option{height:38px!important;min-height:38px!important;font-size:13px!important;line-height:18px!important;padding-inline:12px!important}
+body.site-layout.ui-theme.reference-design .ui-choice .td-choice-menu .choice-search{height:36px;min-height:36px;margin:4px 4px 8px}
+body.site-layout.ui-theme.reference-design .ui-choice .td-choice-menu .choice-search input{font-size:13px;min-height:0;padding:0;height:34px}
+body.site-layout.ui-theme.research-console.reference-design .desk-market-menu>[popover] :is(button,a){min-height:38px!important;height:38px!important;font-size:13px!important;line-height:18px!important;padding:0 12px!important}
+body.site-layout.ui-theme.reference-design .calendar-popover :is(.calendar-day,.calendar-heading button,.calendar-shortcuts button){height:36px!important;min-height:36px!important;font-size:12px;line-height:18px;padding-block:0}
+body.site-layout.ui-theme.reference-design :is(.filter-dialog-footer,.sheet-footer,.bet-form-actions,.tracker-dialog-footer) button{min-height:40px;height:40px;font-size:13px;padding:0 16px;--button-radius:8px}
+body.site-layout.ui-theme.reference-design .filter-category-nav button{min-height:48px!important;padding:12px 16px!important;font-size:13px!important;border-radius:10px!important}
+body.site-layout.ui-theme.reference-design :is(.filter-segments,.display-segments)>button{min-height:32px;font-size:12px;line-height:18px;padding:0 12px}
+body.site-layout.ui-theme.research-console.reference-design .sim-setup-form{align-items:end;gap:12px}
+body.site-layout.ui-theme.research-console.reference-design .simulator-setup #sim-run{height:var(--size-control);min-height:var(--size-control);padding:0 14px;font-size:12px;line-height:18px}
+body.site-layout.ui-theme.research-console.reference-design .sim-setup-form label{font-size:12px;line-height:18px;gap:8px}
+body.site-layout.ui-theme.research-console.reference-design .tracker-filters{gap:8px;align-items:center}
+body.site-layout.ui-theme.research-console.reference-design .picks-tabs button{height:36px;min-height:36px;line-height:18px;font-size:12px;padding:0 12px}
+body.site-layout.ui-theme.research-console.reference-design .bet-empty-actions :is(button,a){min-height:40px;padding:0 14px;font-size:13px;gap:8px}
+body.landing-page.reference-design .landing-button{min-height:48px;padding:0 24px;border-radius:12px;font-size:15px;line-height:20px;gap:12px}
+body.landing-page.reference-design .landing-button-small{min-height:40px;height:40px;padding:0 16px;font-size:13px;border-radius:10px}
+
+@media(min-width:701px){
+ body.site-layout.ui-theme.research-console.reference-design :is(.research-columns,.research-row){grid-template-columns:minmax(210px,2.8fr) 65px 100px 100px 105px 100px 100px}
+}
+@media(max-width:1100px) and (min-width:701px){
+ body.site-layout.ui-theme.research-console.reference-design :is(.research-columns,.research-row){grid-template-columns:minmax(180px,2.8fr) 55px 85px 85px 85px 75px 96px}
+ body.site-layout.ui-theme.research-console.reference-design .desk-toolbar :is(.searchbox,.td-search){max-width:180px}
+}
+@media (min-width:701px) and (max-width:900px){
+ body.site-layout.ui-theme.research-console.reference-design .model-board{background:none;overflow:visible}
+ body.site-layout.ui-theme.research-console.reference-design .model-board .research-columns{display:none}
+ body.site-layout.ui-theme.research-console.reference-design .model-board article.research-row{height:auto;min-height:128px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(110px,1fr);padding:0;margin:0 0 8px;gap:0;background:#141414!important;border:0;border-radius:11px;overflow:hidden}
+ body.site-layout.ui-theme.research-console.reference-design .model-board .research-identity{grid-column:1/3;grid-row:1;padding:14px 8px 6px 14px;min-width:0}
+ body.site-layout.ui-theme.research-console.reference-design .model-board .research-odds{grid-column:3;grid-row:1;justify-content:flex-end;padding:14px 12px 6px 4px}
+ body.site-layout.ui-theme.research-console.reference-design .model-board .research-odds>.row-field-label{display:none}
+ body.site-layout.ui-theme.research-console.reference-design .model-board .research-line{grid-column:1/3;grid-row:2;display:flex;align-items:center;gap:6px;padding:0 12px 10px 55px}
+ body.site-layout.ui-theme.research-console.reference-design .model-board .research-line>.row-field-label{display:inline;font-size:10px;color:var(--muted)}
+ body.site-layout.ui-theme.research-console.reference-design .model-board .research-actions{grid-column:3;grid-row:2;display:flex;justify-content:flex-end;align-items:center;gap:5px;padding:0 12px 10px 0}
+ body.site-layout.ui-theme.research-console.reference-design .model-board .research-actions .row-open{display:none}
+ body.site-layout.ui-theme.research-console.reference-design .model-board .research-actions button{width:32px;min-width:32px;height:32px;min-height:32px;padding:7px}
+ body.site-layout.ui-theme.research-console.reference-design .model-board :is(.research-estimate,.research-probability,.research-result){grid-row:3;display:flex;align-items:center;justify-content:center;flex-direction:row;gap:6px;min-height:38px;padding:9px 4px;border-top:1px solid #252525;border-right:1px solid #202020}
+ body.site-layout.ui-theme.research-console.reference-design .model-board .research-estimate{grid-column:1}
+ body.site-layout.ui-theme.research-console.reference-design .model-board .research-probability{grid-column:2}
+ body.site-layout.ui-theme.research-console.reference-design .model-board .research-result{grid-column:3;border-right:0}
+ body.site-layout.ui-theme.research-console.reference-design .model-board :is(.research-estimate,.research-probability,.research-result)>.row-field-label{display:inline;font-size:10px;color:var(--muted)}
+ body.site-layout.ui-theme.research-console.reference-design .model-board .research-result>small,body.site-layout.ui-theme.research-console.reference-design .model-board .player-status{display:none}
+}
+@media(max-width:700px){
+ body.reference-design{--size-control:44px;--size-compact:36px;--size-action:36px;--size-row-action:36px;--size-icon:18px;--size-control-text:13px}
+ body.site-layout.ui-theme.research-console.reference-design .workspace-masthead{padding:20px 16px 12px;min-height:136px;grid-template-rows:40px 36px;gap:8px}
+ body.site-layout.ui-theme.research-console.reference-design .workspace-masthead h1{font-size:clamp(23px,6.5vw,28px);line-height:1.2}
+ body.site-layout.ui-theme.research-console.reference-design .workspace-masthead .masthead-title h1{white-space:normal;overflow-wrap:normal;max-width:100%}
+ body.site-layout.ui-theme.research-console.reference-design .workspace-masthead :is(.masthead-actions,.site-header-actions)>:is(button,a){font-size:0;min-width:36px;width:36px;padding:0;display:grid;place-items:center}
+ body.site-layout.ui-theme.research-console.reference-design .workspace-masthead .masthead-actions #full-research{font-size:0!important;line-height:0;overflow:hidden}
+ body.site-layout.ui-theme.research-console.reference-design .workspace-masthead .masthead-actions #full-research .ui-icon{width:18px;height:18px;flex:0 0 18px}
+ body.site-layout.ui-theme.research-console.reference-design .workspace-masthead :is(.masthead-actions,.site-header-actions){gap:4px}
+ body.site-layout.ui-theme.research-console.reference-design .workspace-masthead>.site-sports a{height:36px;min-height:36px;padding:6px 10px;font-size:13px;gap:7px}
+ body.site-layout.ui-theme.research-console.reference-design :is(.desk-toolbar,.workspace-controlbar,.home-toolbar){padding:10px 12px;gap:8px}
+ body.site-layout.ui-theme.research-console.reference-design .desk-toolbar :is(.td-search,.searchbox){max-width:none;flex:1 1 150px}
+ body.site-layout.ui-theme.research-console.reference-design :is(.desk-toolbar,.workspace-controlbar,.home-toolbar,.tracker-filters) :is(.td-search,.searchbox)>input{font-size:16px}
+ body.site-layout.ui-theme.research-console.reference-design .desk-toolbar .td-side{margin-left:0}
+ body.site-layout.ui-theme.research-console.reference-design .research-row{height:auto;min-height:128px;margin-bottom:8px;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(96px,1fr)}
+ body.site-layout.ui-theme.research-console.reference-design .research-row .research-identity{padding:14px 10px 6px 12px;min-width:0;grid-column:1/3}
+ body.site-layout.ui-theme.research-console.reference-design .research-player{min-width:0;gap:9px}
+ body.site-layout.ui-theme.research-console.reference-design .research-player strong{font-size:13px;line-height:18px}
+ body.site-layout.ui-theme.research-console.reference-design .research-row .research-line{padding:0 10px 10px 53px;align-items:center}
+ body.site-layout.ui-theme.research-console.reference-design .research-row .research-actions{position:static;inset:auto;grid-column:3;grid-row:2;justify-self:end;align-self:center;width:auto;padding:0 12px 8px 0;flex-direction:row;gap:6px}
+ body.site-layout.ui-theme.research-console.reference-design .research-row .research-actions .row-open{display:none}
+ body.site-layout.ui-theme.research-console.reference-design .research-row .research-odds{padding:14px 12px 0 0;gap:5px}
+ body.site-layout.ui-theme.research-console.reference-design .research-row :is(.research-estimate,.research-probability,.research-result){min-height:38px;padding:9px 4px;gap:5px}
+ body.site-layout.ui-theme.research-console.reference-design .research-row .row-field-label{font-size:10px;line-height:15px}
+ body.site-layout.ui-theme.research-console.reference-design .trend-table tbody tr,body.site-layout.ui-theme.research-console.reference-design .trend-table tbody :is(th,td){height:auto}
+ body.site-layout.ui-theme.research-console.reference-design .trend-table tbody tr{min-height:112px}
+ body.site-layout.ui-theme.research-console.reference-design .trend-table .trend-rate{min-height:38px;padding:9px 4px!important}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-identity-copy h2,body.site-layout.ui-theme.research-console.reference-design .td-player-identity h2{font-size:23px;line-height:28px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-hero{padding:28px 16px 16px;gap:12px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .portrait-hero,body.site-layout.ui-theme.research-console.reference-design .td-player-identity .portrait-hero{--portrait-size:60px;--crest-size:26px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-save{width:36px;min-width:36px;height:36px;min-height:36px;padding:9px;font-size:0}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-close{height:36px;min-height:36px;width:36px;min-width:36px;padding:9px;top:14px;left:12px;right:auto}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-filters{padding:0 12px 4px;gap:8px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-filters>.pr-segmented button{font-size:11px;padding:0 4px;min-width:28px}
+ body.site-layout.ui-theme.reference-design .reference-chart-filter>summary{width:44px;min-width:44px;padding:0 10px}
+ body.site-layout.ui-theme.reference-design .pr-redesign :is(.pr-aside-tabs,.pr-support-panel .pr-segmented),body.site-layout.ui-theme.research-console.reference-design :is(.td-context-tabs,.td-stat-method){height:40px;min-height:40px}
+ body.site-layout.ui-theme.reference-design .pr-redesign :is(.pr-aside-tabs,.pr-support-panel .pr-segmented) button,body.site-layout.ui-theme.research-console.reference-design :is(.td-context-tabs,.td-stat-method) button{height:32px;min-height:32px;font-size:12px}
+ body.site-layout.ui-theme.reference-design .pr-redesign :is(.pr-markets,.pr-mode-tabs) button{min-height:44px;height:44px;font-size:12px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-support{gap:16px 12px}
+ body.site-layout.ui-theme.reference-design .pr-redesign .pr-support>div{flex:1 1 27%;min-width:0}
+ body.site-layout.ui-theme.reference-design .reference-chart-filter-panel{width:292px;padding:16px}
+ body.site-layout.ui-theme.reference-design .reference-chart-filter-panel :is(.td-choice-trigger,input,form button){min-height:40px!important;height:40px!important;font-size:14px!important}
+ body.site-layout.ui-theme.reference-design .reference-chart-filter-panel input{font-size:16px!important}
+ body.site-layout.ui-theme.reference-design .reference-chart-filter-panel :is(.td-side,.pr-segmented) button{height:34px!important;min-height:34px!important}
+ body.site-layout.ui-theme.reference-design .ui-choice .td-choice-menu .td-choice-option{min-height:44px!important;height:44px!important;font-size:14px!important}
+ body.site-layout.ui-theme.reference-design .ui-choice .td-choice-menu .choice-search{min-height:40px;height:40px}
+ body.site-layout.ui-theme.reference-design .ui-choice .td-choice-menu .choice-search input{height:38px;font-size:16px}
+ body.site-layout.ui-theme.research-console.reference-design .desk-market-menu>[popover] :is(button,a){min-height:44px!important;height:44px!important;font-size:14px!important}
+ body.site-layout.ui-theme.reference-design .calendar-popover .calendar-day{min-height:38px!important;height:38px!important;font-size:13px}
+ body.site-layout.ui-theme.reference-design .calendar-popover :is(.calendar-heading button,.calendar-shortcuts button){min-height:40px!important;height:40px!important}
+ body.site-layout.ui-theme.reference-design :is(.filter-category-nav button,.filter-dialog-footer button,.sheet-footer button,.bet-form-actions button,.tracker-dialog-footer button){min-height:44px!important;font-size:13px!important}
+ body.site-layout.ui-theme.research-console.reference-design .tracker-filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ body.site-layout.ui-theme.research-console.reference-design .tracker-filters .searchbox{grid-column:1/-1}
+ body.site-layout.ui-theme.research-console.reference-design .tracker-filters :is(.calendar-trigger,.td-choice-trigger){width:100%}
+ body.site-layout.ui-theme.research-console.reference-design .sim-setup-form{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:end}
+ body.site-layout.ui-theme.research-console.reference-design :is(.live-panel-tabs,.sim-result-tabs){gap:22px;overflow-x:auto;flex-wrap:nowrap}
+ body.site-layout.ui-theme.research-console.reference-design .live-matchup-pair{gap:12px}
+ body.site-layout.ui-theme.research-console.reference-design .live-matchup-side strong{font-size:13px;line-height:18px}
+ body.landing-page.reference-design .landing-button{min-height:48px;font-size:14px;padding:0 20px}
+}

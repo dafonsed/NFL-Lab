@@ -1,0 +1,80 @@
+import {icon} from './ui-icons.js';
+
+// Keep the existing selects and their data handlers as the source of truth.
+const enhanced=new WeakSet();
+const selectors='#td-week,#td-league,#td-game,#td-sort,#td-venue';
+const labels={'td-week':'NFL week','td-league':'League','td-game':'Matchup','td-sort':'Sort players','td-venue':'Game venue'};
+const symbols={'td-week':'calendar','td-league':'soccer','td-game':'calendar','td-sort':'settings','td-venue':'filter'};
+let active;
+let sequence=0;
+
+export function enhanceTrendControls(root=document,selector=selectors) {
+  const selects=[...(root.matches?.(selector)?[root]:[]),...root.querySelectorAll(selector)];
+  for(const select of selects) {
+    if(enhanced.has(select))continue;
+    enhanced.add(select);
+    if(!select.id)select.id='ui-select-'+(++sequence);
+    const label=labels[select.id]||select.getAttribute('aria-label')||[...select.labels||[]].map(el=>{const copy=el.cloneNode(true);copy.querySelectorAll('select,input,button,small,.field-help,.field-hint').forEach(child=>child.remove());return copy.textContent.trim();}).find(Boolean)||'Select option';
+    const wrap=document.createElement('div');wrap.className='td-choice ui-choice';wrap.dataset.control=select.id;
+    if(select.classList.contains('filter-desktop-control')&&!['sort','td-sort'].includes(select.id))wrap.classList.add('filter-desktop-control');
+    select.before(wrap);wrap.append(select);select.dataset.choiceNative='true';
+    const trigger=document.createElement('button');trigger.type='button';trigger.className='td-choice-trigger';
+    trigger.setAttribute('aria-haspopup','listbox');trigger.setAttribute('aria-expanded','false');
+    const menu=document.createElement('div');menu.className='td-choice-menu';menu.id=select.id+'-choices';menu.hidden=true;
+    menu.popover='manual';trigger.setAttribute('aria-controls',menu.id);
+    const sync=()=>{
+      wrap.hidden=select.hidden;
+      const value=select.selectedOptions[0]?.textContent||'Select';
+      trigger.innerHTML=(symbols[select.id]?icon(symbols[select.id]):'')+`<span></span>`+icon('chevron');
+      trigger.querySelector('span').textContent=value;
+      trigger.setAttribute('aria-label',label+': '+value);trigger.disabled=select.disabled;
+    };
+    const close=(focus=false)=>{if(menu.matches(':popover-open'))menu.hidePopover();menu.hidden=true;trigger.setAttribute('aria-expanded','false');if(active?.wrap===wrap)active=null;if(focus)trigger.focus();};
+    const open=()=>{
+      active?.close();menu.replaceChildren();
+      const heading=document.createElement('div');heading.className='choice-heading';heading.textContent=label;menu.append(heading);
+      let search;
+      if(select.options.length>7){
+        const field=document.createElement('label');field.className='choice-search';field.innerHTML=icon('search');
+        search=document.createElement('input');search.type='search';search.placeholder='Search…';search.setAttribute('aria-label','Search '+label.toLowerCase());field.append(search);menu.append(field);
+      }
+      const list=document.createElement('div');list.className='choice-options';list.setAttribute('role','listbox');list.setAttribute('aria-label',label);menu.append(list);
+      for(const option of select.options){
+        const item=document.createElement('button');item.type='button';item.className='td-choice-option';item.tabIndex=-1;
+        item.setAttribute('role','option');item.setAttribute('aria-selected',String(option.selected));item.disabled=option.disabled||option.parentElement.matches('optgroup:disabled');
+        const text=document.createElement('span');text.textContent=option.textContent;item.append(text);item.insertAdjacentHTML('beforeend',icon('check'));
+        item.addEventListener('click',()=>{select.value=option.value;close(true);sync();select.dispatchEvent(new Event('change',{bubbles:true}));});
+        list.append(item);
+      }
+      const empty=document.createElement('div');empty.className='choice-empty';empty.textContent='No matches';empty.hidden=true;menu.append(empty);
+      search?.addEventListener('input',()=>{const q=search.value.trim().toLowerCase();for(const item of list.children)item.hidden=!item.textContent.toLowerCase().includes(q);empty.hidden=[...list.children].some(item=>!item.hidden);});
+      menu.hidden=false;trigger.setAttribute('aria-expanded','true');active={wrap,close};
+      menu.showPopover();
+      const bounds=trigger.getBoundingClientRect(),below=innerHeight-bounds.bottom-12,above=bounds.top-12;
+      const opensAbove=below<180&&above>below;
+      menu.style.maxHeight=Math.max(100,Math.min(336,opensAbove?above:below))+'px';menu.style.width=Math.min(Math.max(bounds.width,240),320,innerWidth-24)+'px';menu.style.minWidth='0';
+      const box=menu.getBoundingClientRect();menu.style.left=Math.max(12,Math.min(bounds.left,innerWidth-box.width-12))+'px';menu.style.top=(opensAbove?Math.max(12,bounds.top-box.height-6):bounds.bottom+6)+'px';
+      (search||menu.querySelector('[aria-selected=true]:not(:disabled)')||menu.querySelector('button:not(:disabled)'))?.focus();
+    };
+    trigger.addEventListener('click',()=>menu.hidden?open():close());
+    trigger.addEventListener('keydown',e=>{if(['ArrowDown','ArrowUp'].includes(e.key)){e.preventDefault();open();}});
+    menu.addEventListener('keydown',e=>{
+      if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close(true);return;}
+      if(e.key==='Tab'){close(true);return;}
+      if(e.target.matches('input')&&!['ArrowDown','ArrowUp'].includes(e.key))return;
+      const items=[...menu.querySelectorAll('button:not(:disabled):not([hidden])')],index=items.indexOf(document.activeElement);
+      let next=e.key==='ArrowDown'?(index+1)%items.length:e.key==='ArrowUp'?(index<0?items.length-1:(index-1+items.length)%items.length):e.key==='Home'?0:e.key==='End'?items.length-1:-1;
+      if(next<0&&e.key.length===1)next=items.findIndex((item,i)=>i>index&&item.textContent.trim().toLowerCase().startsWith(e.key.toLowerCase()));
+      if(next>=0){e.preventDefault();items[next]?.focus();}
+    });
+    wrap.append(trigger,menu);select.addEventListener('change',sync);
+    select.addEventListener('invalid',e=>{e.preventDefault();trigger.focus();open();});
+    select.form?.addEventListener('reset',()=>queueMicrotask(sync));
+    new MutationObserver(sync).observe(select,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled','selected','hidden']});sync();
+  }
+}
+
+document.addEventListener('click',e=>{if(active&&!active.wrap.contains(e.target))active.close();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&active){e.preventDefault();active.close(true);}});
+window.addEventListener('resize',()=>active?.close());
+document.addEventListener('scroll',e=>{if(active&&!active.wrap.contains(e.target))active.close();},true);
