@@ -24,11 +24,12 @@ test('recent result charts retain negative game values, pushes and comparison di
  const $=load(miniHistory(p,'under'));assert.equal($('rect.hit').length,1);assert.equal($('rect.push').length,1);assert.equal($('rect.miss').length,1);assert.match($('svg').attr('aria-label'),/-2/);assert.ok(Number($('rect.hit').attr('y'))>Number($('rect.miss').attr('y')));
 });
 
-test('future NFL TD board distinguishes the fitted chance from workload',()=>{
+test('future NFL TD overview shows the fitted chance without workload',()=>{
  const p={key:'td',sport:'nfl',market:'any_td',name:'Player',team:'SEA',opponent:'HOU',rows:[],forecast:{point:.56,probability:{over:.45},sampleCount:5},prop:{line:.5,bookmaker:'Book'},raw:{modelScore:72,tdProb:.61,tdProbMethod:'historical-score-calibration'}};
  const $=load(propBoard([p]));
  assert.equal($('.research-estimate strong').text(),'61%');
  assert.match($('.research-estimate .row-field-label').text(),/Score TD chance/);
- assert.equal($('.research-probability strong').text(),'45%');
- assert.match($('.research-probability .row-field-label').text(),/Workload 1\+ TD chance/);
+ assert.equal($('.research-probability').length,0);
+ assert.equal($('.research-columns span').length,6);
+ assert.doesNotMatch($('.research-board').text(),/Workload/);
 });
