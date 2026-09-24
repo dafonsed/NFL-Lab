@@ -10,6 +10,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preload" href="/assets/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/landing-home.css?v=1">
+  <link rel="stylesheet" href="/landing-header.css?v=1">
   <script type="module" src="/landing.js?v=2"></script>
 </head>
 <body class="landing-page">
@@ -20,10 +21,23 @@
     <a class="home-button home-header-action" href="/research">Open workspace <span aria-hidden="true">↗</span></a>
   </div></header>
   <main id="main">
-    <section class="home-hero home-section" id="product" aria-labelledby="hero-title"><div class="home-wide home-split home-hero-grid">
-      <div class="home-copy"><h1 id="hero-title">See the game.<br>Read the line.</h1><p class="home-lede">Player research starts with completed games, a comparison line, and the matchup behind each result.</p><div class="home-actions"><a class="home-button" href="/research">Open player research <span aria-hidden="true">↗</span></a><a class="home-text-link" href="#live-games">Explore live games <span aria-hidden="true">↓</span></a></div><p class="home-fine">Historical results describe the selected games. They are not a forecast for the next game.</p></div>
-      <div class="home-screen research-screen" id="workspace" role="group" aria-label="Interactive player research" aria-live="polite"><p class="home-loading">Loading completed player history…</p></div>
-    </div></section>
+    <section class="home-hero home-section" id="product" aria-labelledby="hero-title">
+      <div class="home-wide home-split home-hero-grid">
+        <div class="home-copy"><h1 id="hero-title">See the trend.<br><span>Track the result.</span></h1><p class="home-lede">Research the game, follow the action, and keep a clear record of every pick.</p><div class="home-actions"><a class="home-button" href="/research">Explore player research</a><a class="home-button home-button-secondary" href="/bets">Open My Picks</a></div><p class="home-fine">Your pick record stays in this browser. SportsLab does not place bets.</p></div>
+        <div class="hero-tracker" id="hero-tracker" aria-live="polite"><p class="home-loading">Loading your pick record…</p></div>
+      </div>
+      <div class="hero-brands" aria-label="Sportsbooks, fantasy apps, and prediction markets">
+        <div class="hero-brand-row"><span class="hero-brand-category">Sportsbooks</span><ul>
+          <li title="BetMGM"><img src="/assets/brands/betmgm.png" alt="BetMGM"></li><li title="bet365"><img src="/assets/brands/bet365.png" alt="bet365"></li><li title="BetRivers"><img src="/assets/brands/betrivers.png" alt="BetRivers"></li><li title="Caesars Sportsbook"><img src="/assets/brands/caesars.png" alt="Caesars Sportsbook"></li><li title="DraftKings Sportsbook"><img src="/assets/brands/draftkings.png" alt="DraftKings Sportsbook"></li><li title="Fanatics Sportsbook" class="brand-on-light"><img src="/assets/brands/fanatics.png" alt="Fanatics Sportsbook"></li><li title="FanDuel Sportsbook"><img src="/assets/brands/fanduel.png" alt="FanDuel Sportsbook"></li><li title="Hard Rock Bet"><img src="/assets/brands/hardrock.png" alt="Hard Rock Bet"></li><li title="theScore Bet"><img src="/assets/brands/thescore.png" alt="theScore Bet"></li><li title="Bally Bet"><img src="/assets/brands/bally.png" alt="Bally Bet"></li><li title="Desert Diamond Sports"><img src="/assets/brands/desertdiamond.png" alt="Desert Diamond Sports"></li>
+        </ul></div>
+        <div class="hero-brand-row"><span class="hero-brand-category">DFS &amp; pick’em</span><ul>
+          <li title="DraftKings Fantasy"><img src="/assets/brands/draftkings.png" alt="DraftKings Fantasy"></li><li title="FanDuel Fantasy"><img src="/assets/brands/fanduel.png" alt="FanDuel Fantasy"></li><li title="PrizePicks"><img src="/assets/brands/prizepicks.png" alt="PrizePicks"></li><li title="Underdog Fantasy" class="brand-on-light"><img src="/assets/brands/underdog.png" alt="Underdog Fantasy"></li><li title="Sleeper Picks"><img src="/assets/brands/sleeper.png" alt="Sleeper Picks"></li><li title="Betr Picks"><img src="/assets/brands/betr.png" alt="Betr Picks"></li><li title="Dabble"><img src="/assets/brands/dabble.png" alt="Dabble"></li><li title="Chalkboard"><img src="/assets/brands/chalkboard.png" alt="Chalkboard"></li><li title="ParlayPlay"><img src="/assets/brands/parlayplay.png" alt="ParlayPlay"></li><li title="OwnersBox"><img src="/assets/brands/ownersbox.png" alt="OwnersBox"></li><li title="Boom Fantasy"><img src="/assets/brands/boom.png" alt="Boom Fantasy"></li><li title="Vivid Picks"><img src="/assets/brands/vivid.png" alt="Vivid Picks"></li>
+        </ul></div>
+        <div class="hero-brand-row"><span class="hero-brand-category">Prediction markets</span><ul>
+          <li title="Novig"><img src="/assets/brands/novig.png" alt="Novig"></li><li title="ProphetX"><img src="/assets/brands/prophetx.png" alt="ProphetX"></li><li title="Sporttrade"><img src="/assets/brands/sporttrade.png" alt="Sporttrade"></li><li title="BettorEdge"><img src="/assets/brands/bettoredge.png" alt="BettorEdge"></li><li title="Kalshi"><img src="/assets/brands/kalshi.png" alt="Kalshi"></li><li title="Polymarket"><img src="/assets/brands/polymarket.png" alt="Polymarket"></li>
+        </ul></div>
+      </div>
+    </section>
     <section class="home-section home-live" id="live-games" aria-labelledby="live-title"><div class="home-wide home-split">
       <div class="home-copy"><h2 id="live-title">Follow the game<br>as it changes.</h2><p class="home-lede">Move from a matchup to its score, game state, and available markets. Feed timing stays beside the data.</p><ul class="home-points"><li>Choose a sport and scheduled game.</li><li>Read the score or upcoming state in context.</li><li>Check when the public feed last updated.</li></ul><a class="home-text-link" href="/live">Open live game center <span aria-hidden="true">↗</span></a></div>
       <div class="home-screen live-screen" id="home-live-panel" aria-live="polite"><p class="home-loading">Connecting to the game feed…</p></div>

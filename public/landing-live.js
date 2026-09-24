@@ -29,6 +29,7 @@ export function mountLandingResearch() {
 
   function renderResearch() {
     if (!payload) return;
+    if (!research) { renderSources(); return; }
     const p = player(), games = rows(), result = split(games, r.line, r.side);
     const max = Math.max(r.line, ...games.map(game => game.value), 1);
     const game = p.games.find(item => item.id === r.gameId);
@@ -70,14 +71,14 @@ export function mountLandingResearch() {
   document.querySelector('.home-tool-tabs').addEventListener('keydown', event => { if (!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return; const tabs=[...document.querySelectorAll('[data-home-tool]')], current=tabs.indexOf(event.target.closest('[data-home-tool]')); if(current<0)return; event.preventDefault(); const next=event.key==='Home'?0:event.key==='End'?tabs.length-1:(current+(['ArrowDown','ArrowRight'].includes(event.key)?1:-1)+tabs.length)%tabs.length; selectTool(tabs[next].dataset.homeTool); tabs[next].focus(); });
   tools.addEventListener('input', event => { if (event.target.matches('[data-board-search]')) { r.search=event.target.value; const board=tools.querySelector('.tool-board'); if(board) { const start=event.target.selectionStart; renderTool(); tools.querySelector('[data-board-search]')?.focus(); tools.querySelector('[data-board-search]')?.setSelectionRange(start,start); } } });
   tools.addEventListener('change', event => { if (event.target.matches('[data-board-sort]')) { r.sort=event.target.value; renderTool(); } });
-  tools.addEventListener('click', event => { const button=event.target.closest('[data-board-player]'); if(!button)return; r.playerId=button.dataset.boardPlayer; r.line=player().line; r.gameId=''; renderResearch(); document.querySelector('#product').scrollIntoView({behavior:'smooth'}); });
-  research.addEventListener('click', event => { const target=event.target.closest('[data-research-window],[data-research-side],[data-research-game],[data-research-reset]'); if(!target)return; if(target.dataset.researchWindow)r.window=Number(target.dataset.researchWindow); if(target.dataset.researchSide)r.side=target.dataset.researchSide; if(target.dataset.researchGame)r.gameId=target.dataset.researchGame; if(target.hasAttribute('data-research-reset'))r.line=player().line; renderResearch(); });
-  research.addEventListener('input', event => { if(event.target.matches('[data-research-line]')){const value=Number(event.target.value);if(Number.isFinite(value)&&value>=0&&value<=350)r.line=value;} });
-  research.addEventListener('focusout', event => { if(event.target.matches('[data-research-line]'))renderResearch(); });
-  research.addEventListener('change', event => { if(event.target.matches('[data-research-player]')){r.playerId=event.target.value;r.line=player().line;r.gameId='';renderResearch();} if(event.target.matches('[data-research-line]')){const value=Number(event.target.value);if(Number.isFinite(value)&&value>=0&&value<=350){r.line=value;r.gameId='';renderResearch();}} });
+  tools.addEventListener('click', event => { const button=event.target.closest('[data-board-player]'); if(!button)return; r.playerId=button.dataset.boardPlayer; window.location.href=researchUrl(player()); });
+  research?.addEventListener('click', event => { const target=event.target.closest('[data-research-window],[data-research-side],[data-research-game],[data-research-reset]'); if(!target)return; if(target.dataset.researchWindow)r.window=Number(target.dataset.researchWindow); if(target.dataset.researchSide)r.side=target.dataset.researchSide; if(target.dataset.researchGame)r.gameId=target.dataset.researchGame; if(target.hasAttribute('data-research-reset'))r.line=player().line; renderResearch(); });
+  research?.addEventListener('input', event => { if(event.target.matches('[data-research-line]')){const value=Number(event.target.value);if(Number.isFinite(value)&&value>=0&&value<=350)r.line=value;} });
+  research?.addEventListener('focusout', event => { if(event.target.matches('[data-research-line]'))renderResearch(); });
+  research?.addEventListener('change', event => { if(event.target.matches('[data-research-player]')){r.playerId=event.target.value;r.line=player().line;r.gameId='';renderResearch();} if(event.target.matches('[data-research-line]')){const value=Number(event.target.value);if(Number.isFinite(value)&&value>=0&&value<=350){r.line=value;r.gameId='';renderResearch();}} });
   async function loadResearch() {
     const latest = readJson('/api/landing/research');
-    try { payload = await readJson('/landing-research-snapshot.json'); } catch { try { payload = await latest; } catch { research.innerHTML='<p class="screen-error">Player history is unavailable. <a href="/research">Open the workspace ↗</a></p>'; sources.innerHTML='<p>Source links are temporarily unavailable.</p>'; return; } }
+    try { payload = await readJson('/landing-research-snapshot.json'); } catch { try { payload = await latest; } catch { if(research)research.innerHTML='<p class="screen-error">Player history is unavailable. <a href="/research">Open the workspace ↗</a></p>'; sources.innerHTML='<p>Source links are temporarily unavailable.</p>'; return; } }
     r.playerId=payload.players[0].id;r.line=player().line;renderResearch();if(tool==='research')renderTool();
     latest.then(next => { const newer=Date.parse(next.boardFetchedAt||'')>Date.parse(payload.boardFetchedAt||'');if(!newer)return;const oldLine=player().line;payload=next;if(!payload.players.some(item=>item.id===r.playerId))r.playerId=payload.players[0].id;if(r.line===oldLine)r.line=player().line;renderResearch();if(tool==='research')renderTool(); }).catch(()=>{});
   }
