@@ -63,14 +63,17 @@ export async function mountLandingResearch() {
       </div></div></div>`;
   };
   function renderHero() {
-    const p = player(), rows = games(p, 20), s = summary(rows, p.line, 'over');
+    const p = player(), rows = games(p, 10), s = summary(rows, p.line, 'over');
+    const atOrBelow = s.n - s.hits;
+    const highest = Math.max(...rows.map(row => row.value), p.line, 1);
     hero.classList.remove('real-loading');
-    hero.innerHTML = `<div class="hero-score-badge"><small>PAST ${s.n} GAMES · ABOVE ${fmt(p.line)}</small><strong>${s.hits} / ${s.n}</strong></div>
-      <div class="hero-product-top">${headshot(p, 'hero-player-avatar')}<div><strong>${escapeHtml(p.name)}</strong><small>Actual NFL receiving yard results</small></div></div>
-      <div class="hero-product-body"><div class="hero-game-heading"><span>${escapeHtml(payload.period || 'NFL RESEARCH')}</span><span>COMPLETED GAMES</span></div>
-        <div class="hero-game-grid" role="img" aria-label="${escapeHtml(p.name)} exceeded ${fmt(p.line)} receiving yards in ${s.hits} of ${s.n} completed games">${rows.map(row => `<div class="${row.value > p.line ? 'is-over' : ''}"><span>${escapeHtml(row.opponent)}</span><strong>${fmt(row.value)}</strong></div>`).join('')}</div>
-        <div class="hero-product-bottom"><span>Latest result ${date(p.games[0]?.date)} · captured line</span><a href="#workspace">Inspect the games <span aria-hidden="true">↗</span></a></div>
-      </div>`;
+    hero.innerHTML = `<div class="hero-preview-top"><span>NFL / ${escapeHtml(payload.period || 'PLAYER RESEARCH')}</span><span>COMPLETED GAME HISTORY</span></div>
+      <div class="hero-preview-player">${headshot(p, 'hero-player-avatar')}<div class="hero-preview-identity"><small>${escapeHtml(p.team)} vs ${escapeHtml(p.opponent)} · ${escapeHtml(p.position)}</small><strong>${escapeHtml(p.name)}</strong><span>Receiving yards · captured ${escapeHtml(p.quote.book || 'public comparison')} line</span></div><div class="hero-preview-line"><small>LINE</small><strong>${fmt(p.line)}</strong></div></div>
+      <div class="hero-preview-comparison"><div><small>ABOVE ${fmt(p.line)} YARDS</small><strong>${s.hits}<span> / ${s.n}</span></strong><p>Completed games above the captured line</p></div><div><small>AT OR BELOW ${fmt(p.line)}</small><strong>${atOrBelow}<span> / ${s.n}</span></strong><p>Completed games at or below the line</p></div></div>
+      <div class="hero-preview-chart-heading"><span>LAST ${s.n} COMPLETED GAMES</span><span>${escapeHtml(payload.market || 'Receiving yards')}</span></div>
+      <div class="hero-preview-chart" role="img" aria-label="${escapeHtml(p.name)} receiving yards in the last ${s.n} completed games, oldest to newest: ${escapeHtml(rows.map(row => fmt(row.value)).join(', '))}. Captured comparison line ${fmt(p.line)}"><div class="hero-preview-bars">${rows.map(row => `<span class="${row.value > p.line ? 'is-above' : ''}" title="${escapeHtml(date(row.date))} · ${escapeHtml(row.opponent)} · ${fmt(row.value)} yards"><b>${fmt(row.value)}</b><i style="height:${Math.max(8,row.value / highest * 100).toFixed(1)}%"></i><small>${escapeHtml(row.opponent)}</small></span>`).join('')}</div></div>
+      <div class="hero-preview-summary"><span><small>AVERAGE</small><strong>${fmt(s.average)} yd</strong></span><span><small>MEDIAN</small><strong>${fmt(s.median)} yd</strong></span><span><small>RANGE</small><strong>${fmt(s.min)}–${fmt(s.max)} yd</strong></span></div>
+      <div class="hero-preview-foot"><span>${escapeHtml(p.quote.book || 'Public comparison')} · captured ${dateTime(p.quote.capturedAt)}${p.quote.stale ? ' · refresh delayed' : ''}</span><a href="${researchUrl(p)}">Open player research ↗</a></div>`;
   }
   function renderInsight() {
     const p = player(), rows = games(p, 10), s = summary(rows, p.line, 'over');
@@ -96,7 +99,7 @@ export async function mountLandingResearch() {
   function renderPathDetail() {
     const p = player(), rows = games(p, 10), s = summary(rows, state.line, 'over');
     pathDetail.classList.remove('real-loading');
-    document.querySelectorAll('[data-home-path]').forEach(button => { button.setAttribute('aria-selected', String(button.dataset.homePath === state.path)); });
+    document.querySelectorAll('[data-home-path]').forEach(button => { const active = button.dataset.homePath === state.path; button.setAttribute('aria-selected', String(active)); button.tabIndex = active ? 0 : -1; });
     const shared = `<div class="landing-path-panel-meta"><span>SPORTSLAB / ${escapeHtml(state.path.toUpperCase())}</span><span>EXPLORE THE WORKSPACE ↗</span></div>`;
     if (state.path === 'research') pathDetail.innerHTML = `${shared}<div class="landing-path-panel-content"><div class="landing-path-panel-title"><div><h3>Player research</h3><p>Put completed games next to the number you want to examine.</p></div><a class="landing-button landing-button-small" href="${researchUrl(p)}">Open research ↗</a></div><div class="landing-path-research-surface"><div class="landing-path-player"><span class="landing-path-player-mark">${escapeHtml(initials(p.name))}</span><div><small>NFL · ${escapeHtml(p.team)} · RECEIVING YARDS</small><strong>${escapeHtml(p.name)}</strong><span>${s.n} completed games · captured line ${fmt(p.line)}</span></div><b>${s.hits}/${s.n}<small>ABOVE ${fmt(state.line)}</small></b></div><div class="landing-path-mini-chart">${rows.map(row => `<span class="${row.value > state.line ? 'is-above' : ''}" title="${escapeHtml(date(row.date))}: ${fmt(row.value)} yards"><b>${fmt(row.value)}</b><i style="height:${Math.max(10,Math.min(100,row.value / Math.max(...rows.map(item => item.value),1) * 100)).toFixed(1)}%"></i><small>${escapeHtml(row.opponent)}</small></span>`).join('')}</div><div class="landing-path-surface-foot"><span>Historical results · ${escapeHtml(captured(p))}</span><a href="#workspace">Move the line ↗</a></div></div></div>`;
     if (state.path === 'live') pathDetail.innerHTML = `${shared}<div class="landing-path-panel-content"><div class="landing-path-panel-title"><div><h3>Live game view</h3><p>Follow the current game with feed timing alongside the score and markets when available.</p></div><a class="landing-button landing-button-small" href="/live">Open live games ↗</a></div><div class="landing-path-feature-surface"><div><span class="landing-path-feature-icon">◉</span><small>GAME CENTER</small><strong>Find today’s matchup</strong><p>Choose a sport, then open a scheduled game to see available score, state, and market data.</p></div><div class="landing-path-feature-list"><a href="/live?sport=nfl">NFL <b>↗</b></a><a href="/live?sport=nba">NBA <b>↗</b></a><a href="/live?sport=wnba">WNBA <b>↗</b></a><a href="/live?sport=mlb">MLB <b>↗</b></a></div></div><p class="landing-path-footnote">Live data depends on public feed availability. The game view labels its last update.</p></div>`;
@@ -169,6 +172,17 @@ export async function mountLandingResearch() {
     else if (button.dataset.homeSide) { state.side = button.dataset.homeSide; renderWorkspace(); }
     else if (button.hasAttribute('data-home-reset')) { state.line = player().line; renderWorkspace(); renderPathDetail(); renderOutcome(); }
     else if (button.dataset.homeGame) { state.gameId = button.dataset.homeGame; const result = workspace.querySelector('.real-selected-game'); const game = player().games.find(item => item.id === state.gameId); if (game && result) result.innerHTML = `<strong>${date(game.date)} · ${game.home ? 'vs' : '@'} ${escapeHtml(game.opponent)}</strong><span>${fmt(game.value)} receiving yards</span>${game.url ? `<a href="${safeUrl(game.url)}" target="_blank" rel="noreferrer">Box score ↗</a>` : ''}`; }
+  });
+  document.querySelector('.landing-paths-select')?.addEventListener('keydown', event => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    const tabs = [...document.querySelectorAll('[data-home-path]')];
+    const current = tabs.indexOf(event.target.closest('[data-home-path]'));
+    if (current < 0) return;
+    event.preventDefault();
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    state.path = tabs[next].dataset.homePath;
+    renderPathDetail();
+    tabs[next].focus();
   });
   workspace.addEventListener('change', event => {
     if (event.target.matches('[data-home-select]')) { state.playerId = event.target.value; state.line = player().line; state.gameId = null; renderAll(); }
