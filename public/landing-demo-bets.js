@@ -8,10 +8,14 @@ const tickets = [
   [16, 50, -110, 'won'], [17, 30, 120, 'lost'], [18, 45, 110, 'won'],
   [19, 40, 115, 'won'], [20, 50, -105, 'lost'], [21, 30, 100, 'won'],
   [22, 45, -120, 'won'], [23, 50, 105, 'won'], [24, 40, 130, 'won'],
+  [25, 70, 110, 'won'], [26, 45, -120, 'won'], [27, 60, 100, 'won'],
+  [28, 55, 120, 'won'], [29, 40, 100, 'lost'], [30, 50, 130, 'won'],
+  [31, 65, 100, 'won'],
 ];
 
-export function demoRecord(now = new Date()) {
-  const month = new Date(now.getFullYear(), now.getMonth() - (now.getDate() < 24 ? 1 : 0), 1);
+export function demoRecord() {
+  // A completed sample month keeps the illustration free of future results.
+  const month = new Date(2026, 6, 1);
   const prefix = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`;
   const books = ['FanDuel', 'DraftKings', 'BetMGM', 'bet365'];
   const sports = ['NFL', 'NBA', 'MLB', 'WNBA'];
