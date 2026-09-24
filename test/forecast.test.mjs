@@ -81,6 +81,40 @@ test('grading uses the frozen line and keeps pending and missing stats out of lo
  bundle.games.get(game.game_id).complete=true;report=await store.performance(2026,1,bundle);assert.equal(report.summary.missingStats,1);assert.equal(report.summary.leanLosses,0);
  bundle.games.get(game.game_id).players.set('p1',{rushing_yards:35,statsAvailable:true});report=await store.performance(2026,1,bundle);assert.equal(report.rows[0].outcome,'over');assert.equal(report.rows[0].hit,'hit');assert.equal(report.summary.leanWins,1);
 });
+test('prospective TD score evaluation uses saved probabilities and rushing or receiving TDs',async t=>{
+ const store=await temporaryStore(t),b=board();b.market='any_td';
+ b.players[0].prop={...prop,line:.5};b.players[0].tdProb=.7;b.players[0].tdProbMethod='historical-score-calibration';b.players[0].tdCalibrationId='fit-2025';
+ b.players.push({...b.players[0],playerId:'p2',player:'Player Two',prop:null,tdProb:.25});
+ await store.capture(b,[game],artifact);
+ const saved=(await store.batches(2026,1))[0];assert.equal(saved.records[0].original.tdProb,.7);assert.equal(saved.records[0].original.tdCalibrationId,'fit-2025');
+ const finalGame={...game,complete:true,plays:[],players:new Map([['p1',{rushing_tds:1,receiving_tds:0,statsAvailable:true,offense_snaps:30}],['p2',{rushing_tds:0,receiving_tds:0,statsAvailable:true,offense_snaps:20}]])};
+ const report=await store.performance(2026,1,{games:new Map([[game.game_id,finalGame]]),datasets:[]});
+ assert.equal(report.summary.profileTd.n,2);assert.ok(Math.abs(report.summary.profileTd.brier-.07625)<1e-12);
+ assert.deepEqual(report.rows.map(r=>r.profileTdActual),[1,0]);
+ finalGame.players.get('p2').receiving_tds=null;
+ const missing=await store.performance(2026,1,{games:new Map([[game.game_id,finalGame]]),datasets:[]});
+ assert.equal(missing.summary.profileTd.n,1);
+});
+test('a new TD calibration is captured alongside an earlier same-day model snapshot',async t=>{
+ const store=await temporaryStore(t),b=board();b.market='any_td';b.players[0].prop={...prop,line:.5};b.players[0].tdProb=.4;
+ await store.capture(b,[game],artifact);
+ b.players[0].tdProb=.7;b.players[0].tdProbMethod='historical-score-calibration';b.players[0].tdCalibrationId='fit-2025';
+ await store.capture(b,[game],artifact);
+ const batches=await store.batches(2026,1);
+ assert.equal(batches.length,2);assert.deepEqual(batches.map(x=>x.records[0].original.tdProb).sort(),[.4,.7]);
+ assert.ok(batches.some(x=>x.profileCalibrationId==='fit-2025'));
+});
+test('TD accuracy uses the latest calibrated snapshot even when an older line stays eligible',async t=>{
+ const store=await temporaryStore(t),b=board();b.market='any_td';b.players[0].prop={...prop,line:.5};b.players[0].tdProb=.4;
+ await store.capture(b,[game],artifact);
+ b.players[0].prop=null;b.players[0].tdProb=.7;b.players[0].tdProbMethod='historical-score-calibration';b.players[0].tdCalibrationId='fit-2025';
+ b.players.push({...b.players[0],playerId:'p2',prop:{...prop,line:.5},tdProbMethod:null,tdCalibrationId:null});
+ await store.capture(b,[game],artifact);
+ const finalGame={...game,complete:true,plays:[],players:new Map([['p1',{rushing_tds:1,receiving_tds:0,statsAvailable:true,offense_snaps:30}],['p2',{rushing_tds:0,receiving_tds:0,statsAvailable:true,offense_snaps:20}]])};
+ const report=await store.performance(2026,1,{games:new Map([[game.game_id,finalGame]]),datasets:[]});
+ assert.equal(report.rows.find(r=>r.playerId==='p1').original.tdProb,.4);
+ assert.equal(report.summary.profileTd.n,1);assert.ok(Math.abs(report.summary.profileTd.brier-.09)<1e-12);
+});
 test('a later exclusion does not erase a real earlier eligible prediction',async t=>{
  const store=await temporaryStore(t),b=board();await store.capture(b,[game],artifact);const batch=(await store.batches(2026,1))[0];
  await store.append(store.prefix(2026,1)+'rush_yds/later.json',{...batch,createdAt:'2026-09-13T16:00:00Z',records:batch.records.map(r=>({...r,eligible:false,prop:null}))});store.cache.clear();

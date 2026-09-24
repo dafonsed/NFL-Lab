@@ -43,9 +43,11 @@ test('profile excludes selected and future games, deduplicates games, and preser
   assert.equal(p.rows.length, 1); assert.equal(p.rows[0].value, 2); assert.deepEqual(p.rows[0].parts, []);
   assert.ok(!p.markets.pass_yds);
 });
-test('one TD probability is presented when calibrated probability differs from the base point', () => {
+test('TD summary distinguishes the score fit from the separate workload estimate', () => {
   const summary = forecastSummary({ sport: 'nfl', market: 'any_td', forecast: { point: .56, probability: { over: .45 } } });
   assert.match(summary.title, /45%/); assert.ok(!summary.title.includes('56%'));
+  const score=forecastSummary({sport:'nfl',market:'any_td',raw:{tdProb:.61,tdProbMethod:'historical-score-calibration'},forecast:{point:.56,probability:{over:.45}},availability:{}});
+  assert.match(score.title,/61%/);assert.match(score.text,/conditional on playing/);
 });
 test('quote history separates bookmakers and games, rejects stale/out-of-order quotes, and records genuine flat checks', () => {
   const now = Date.parse('2026-09-22T20:00Z'), quote = { line: 20.5, bookmaker: 'Book A', basis: 'captured_pregame', fetchedAt: '2026-09-22T18:00Z' };

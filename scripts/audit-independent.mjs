@@ -6,7 +6,7 @@ const report={checkedAt:new Date().toISOString(),selectedWeek:board.current,prov
 const assertNear=(a,b)=>{assert.ok(Math.abs(a-b)<.0011,`${a} != ${b}`);report.formulas.assertions++;};
 for(const b of boards)for(const p of b.players){const sample=p.details.sample,s=p.details.stats,total=k=>sample.reduce((v,g)=>v+g[k],0),per=k=>total(k)/sample.length;
  assert.ok(sample.every(g=>g.season<b.current.season||g.week<b.current.week));assert.ok(Number.isFinite(p.modelScore)&&p.modelScore>=0&&p.modelScore<=100);report.formulas.assertions+=2;
- if(b.market==='any_td'){assertNear(s.touches_pg,per('carries')+per('receptions'));assertNear(p.details.cheat_code.td_debt.actual,total('rushing_tds')+total('receiving_tds'));assertNear(p.tdProb,1-Math.exp(-p.details.cheat_code.td_debt.expected/sample.length));}
+ if(b.market==='any_td'){assertNear(s.touches_pg,per('carries')+per('receptions'));assertNear(p.details.cheat_code.td_debt.actual,total('rushing_tds')+total('receiving_tds'));assertNear(p.poissonTdProb??p.tdProb,1-Math.exp(-p.details.cheat_code.td_debt.expected/sample.length));}
  if(b.market==='pass_yds'){assertNear(s.attempts_pg,per('attempts'));assertNear(s.pass_ypg,per('passing_yards'));}
  if(b.market==='pass_tds')assertNear(s.pass_tds_pg,per('passing_tds'));
  if(b.market==='rush_yds'){assertNear(s.carries_pg,per('carries'));assertNear(s.rush_ypg,per('rushing_yards'));}

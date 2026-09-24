@@ -21,6 +21,7 @@
     "audit:props": "node scripts/audit-props.mjs",
     "audit:mlb": "node scripts/audit-mlb.mjs",
     "evaluate:nfl": "node scripts/evaluate-nfl.mjs",
+    "train:td": "node scripts/train-td-calibration.mjs",
     "evaluate:standard": "node scripts/evaluate-standard.mjs",
     "evaluate:live": "node scripts/evaluate-live-game.mjs",
     "evaluate:simulation": "node scripts/evaluate-simulation.mjs",

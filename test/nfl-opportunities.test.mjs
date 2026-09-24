@@ -86,6 +86,15 @@ test('injury workload changes actual forecast and same-weight rating, preserving
  assert.ok(Math.abs(p.modelScore-(p.details.components.volume*.5+p.details.components.baseline*.3+40*.2))<.0001);
 });
 
+test('teammate opportunity scenario leaves a calibrated TD chance at its trained base role',()=>{
+ const components={rz_role:60,volume:50,goal_line:50,target_share:40,td_rate:30,implied_total_score:70,matchup_score:50};
+ const impact={applied:true,adjustments:{targets:2,carries:0},channels:[{field:'targets',delta:2,teamWorkload:20}],donors:[{player:'Absent Teammate'}]};
+ const player={modelScore:55,baselineScore:50,opportunityScore:60,projected:.6,tdProb:.61,tdProbMethod:'historical-score-calibration',tdProbSourceScore:55,reason:'Recorded history.',details:{components},forecast:{teammateImpact:impact,sample:[{targets:5,receptions:3,receiving_tds:1,carries:0,rushing_tds:0}]}};
+ applyOpportunityRating(player,'any_td');
+ assert.equal(player.baseRating.tdProb,.61);assert.equal(player.tdProb,.61);assert.equal(player.tdProbSourceScore,55);
+ assert.ok(player.modelScore>55);
+});
+
 test('stale or injured recipients never apply an injected opportunity scenario',()=>{
  const {input}=forecastFixture();for(const changes of [{stale:true},{availability:{status:'Questionable',concern:true}},{availability:{...ready,stale:true}},{availability:{status:'historical_unavailable'}},{availability:{status:'unavailable'}},{availability:null}]){const a=forecast({...input,...changes}),b=forecast({...input,...changes,teammateImpact:null});assert.equal(a.point,b.point);assert.equal(a.teammateImpact.applied,false);}
  assert.equal(forecast({...input,availability:out}).point,null);
@@ -104,6 +113,8 @@ test('board integration changes teammate rating on Out and restores it when the 
  const bundle={games:new Map([...f.games,game].map(g=>[g.game_id,g])),rosters:[...f.rosters.values()],weeklyRosters:f.weeklyRosters,snaps:f.snaps,rates:buildRates([]),ngs:{},datasets:[],loadedAt:now};
  const store=new SourceStore({now:()=>now,availability,props:{enrich:async()=>({})},weather:{nfl:async()=>({status:'unavailable'})},predictions:{capture:async()=>({state:'waiting'})},paper:{capturePaper:async()=>({state:'waiting'})}});
  store.catalog=async()=>({current:{season:2026,week:9},weeks:[{season:2026,week:9}],schedule:{rows:[game],meta:{fetchedAt:new Date(now).toISOString()}}});store.bundle=async()=>bundle;store.trackLines=async()=>[];
+ const tdBoard=await store.board({season:2026,week:9,market:'any_td'},true),tdPlayer=tdBoard.players.find(p=>p.playerId==='receiver');
+ assert.equal(tdPlayer.tdProbMethod,'historical-score-calibration');assert.equal(tdPlayer.tdCalibrationId,tdBoard.model.tdCalibration.id);
  const input={season:2026,week:9,market:'rec'};const initial=await store.board(input,true),before=initial.players.find(p=>p.playerId==='receiver');status='Out';
  const updated=await store.board(input,true),after=updated.players.find(p=>p.playerId==='receiver');assert.ok(after.modelScore>before.modelScore);assert.ok(after.forecast.point>before.forecast.point);assert.equal(after.baseRating.score,before.modelScore);assert.ok(!updated.players.some(p=>p.playerId==='donor'));assert.deepEqual(after.details.stats,before.details.stats);
  status='Active';const cleared=(await store.board(input,true)).players.find(p=>p.playerId==='receiver');assert.equal(cleared.modelScore,before.modelScore);assert.equal(cleared.forecast.point,before.forecast.point);

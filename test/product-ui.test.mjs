@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {load} from 'cheerio';
-import {requestData,propRow,miniHistory} from '../public/product-ui.js';
+import {requestData,propBoard,propRow,miniHistory} from '../public/product-ui.js';
 
 test('request boundary times out, distinguishes caller cancellation, and keeps returned values intact',async()=>{
  const original=globalThis.fetch;
@@ -22,4 +22,13 @@ test('comparison rows preserve zeroes, archive and stale provenance, and histori
 test('recent result charts retain negative game values, pushes and comparison direction',()=>{
  const p={rows:[{date:'2026-01-03',value:2},{date:'2026-01-02',value:0},{date:'2026-01-01',value:-2}],prop:{line:0}};
  const $=load(miniHistory(p,'under'));assert.equal($('rect.hit').length,1);assert.equal($('rect.push').length,1);assert.equal($('rect.miss').length,1);assert.match($('svg').attr('aria-label'),/-2/);assert.ok(Number($('rect.hit').attr('y'))>Number($('rect.miss').attr('y')));
+});
+
+test('future NFL TD board distinguishes the fitted chance from workload',()=>{
+ const p={key:'td',sport:'nfl',market:'any_td',name:'Player',team:'SEA',opponent:'HOU',rows:[],forecast:{point:.56,probability:{over:.45},sampleCount:5},prop:{line:.5,bookmaker:'Book'},raw:{modelScore:72,tdProb:.61,tdProbMethod:'historical-score-calibration'}};
+ const $=load(propBoard([p]));
+ assert.equal($('.research-estimate strong').text(),'61%');
+ assert.match($('.research-estimate .row-field-label').text(),/Score TD chance/);
+ assert.equal($('.research-probability strong').text(),'45%');
+ assert.match($('.research-probability .row-field-label').text(),/Workload 1\+ TD chance/);
 });

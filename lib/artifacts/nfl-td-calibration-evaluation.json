@@ -1,0 +1,527 @@
+{
+  "version": "score-td-logistic-v1",
+  "artifactId": "ef0caaa67f904c99c3a052be0366ca76e3470cf2b8ea3781566562830859ab2a",
+  "generatedAt": "2026-09-24T19:05:53.591Z",
+  "split": {
+    "training": 2024,
+    "validation": 2025,
+    "finalTraining": [
+      2024,
+      2025
+    ],
+    "earlyHoldout": "2026 weeks 1–2"
+  },
+  "selection": {
+    "rule": "Position terms require ≥0.001 lower 2025 Brier and no higher log loss.",
+    "withPosition": false,
+    "validationScore": {
+      "n": 5406,
+      "brier": 0.14051457707825152,
+      "logLoss": 0.44637980143647754,
+      "bins": [
+        {
+          "from": 0,
+          "to": 0.1,
+          "n": 625,
+          "predicted": 0.08612305538634489,
+          "observed": 0.0736
+        },
+        {
+          "from": 0.1,
+          "to": 0.2,
+          "n": 2545,
+          "predicted": 0.1456990048729483,
+          "observed": 0.11552062868369352
+        },
+        {
+          "from": 0.2,
+          "to": 0.3,
+          "n": 1333,
+          "predicted": 0.24426147603168688,
+          "observed": 0.24081020255063765
+        },
+        {
+          "from": 0.3,
+          "to": 0.4,
+          "n": 504,
+          "predicted": 0.34250835869626123,
+          "observed": 0.3551587301587302
+        },
+        {
+          "from": 0.4,
+          "to": 0.5,
+          "n": 228,
+          "predicted": 0.44482237635856287,
+          "observed": 0.4298245614035088
+        },
+        {
+          "from": 0.5,
+          "to": 0.6,
+          "n": 104,
+          "predicted": 0.5452665607187264,
+          "observed": 0.5096153846153846
+        },
+        {
+          "from": 0.6,
+          "to": 0.7,
+          "n": 56,
+          "predicted": 0.6432998850801461,
+          "observed": 0.5892857142857143
+        },
+        {
+          "from": 0.7,
+          "to": 0.8,
+          "n": 10,
+          "predicted": 0.7225714845508416,
+          "observed": 0.8
+        },
+        {
+          "from": 0.8,
+          "to": 0.9,
+          "n": 1,
+          "predicted": 0.8175365197236141,
+          "observed": 1
+        },
+        {
+          "from": 0.9,
+          "to": 1,
+          "n": 0,
+          "predicted": null,
+          "observed": null
+        }
+      ]
+    },
+    "validationPosition": {
+      "n": 5406,
+      "brier": 0.13959337255553195,
+      "logLoss": 0.4429613646213922,
+      "bins": [
+        {
+          "from": 0,
+          "to": 0.1,
+          "n": 728,
+          "predicted": 0.08501549050542972,
+          "observed": 0.06868131868131869
+        },
+        {
+          "from": 0.1,
+          "to": 0.2,
+          "n": 2407,
+          "predicted": 0.1450068233997651,
+          "observed": 0.11715828832571666
+        },
+        {
+          "from": 0.2,
+          "to": 0.3,
+          "n": 1311,
+          "predicted": 0.24408522831464877,
+          "observed": 0.2334096109839817
+        },
+        {
+          "from": 0.3,
+          "to": 0.4,
+          "n": 538,
+          "predicted": 0.3418807895379946,
+          "observed": 0.362453531598513
+        },
+        {
+          "from": 0.4,
+          "to": 0.5,
+          "n": 247,
+          "predicted": 0.4423080958434266,
+          "observed": 0.41700404858299595
+        },
+        {
+          "from": 0.5,
+          "to": 0.6,
+          "n": 105,
+          "predicted": 0.5455206959428949,
+          "observed": 0.5142857142857142
+        },
+        {
+          "from": 0.6,
+          "to": 0.7,
+          "n": 50,
+          "predicted": 0.6475313219601734,
+          "observed": 0.56
+        },
+        {
+          "from": 0.7,
+          "to": 0.8,
+          "n": 19,
+          "predicted": 0.7284597708196096,
+          "observed": 0.7368421052631579
+        },
+        {
+          "from": 0.8,
+          "to": 0.9,
+          "n": 1,
+          "predicted": 0.8482983631110745,
+          "observed": 1
+        },
+        {
+          "from": 0.9,
+          "to": 1,
+          "n": 0,
+          "predicted": null,
+          "observed": null
+        }
+      ]
+    },
+    "validationPoisson": {
+      "n": 5406,
+      "brier": 0.14075509592956945,
+      "logLoss": 0.46833842336166204,
+      "bins": [
+        {
+          "from": 0,
+          "to": 0.1,
+          "n": 2094,
+          "predicted": 0.03889823433543589,
+          "observed": 0.07497612225405921
+        },
+        {
+          "from": 0.1,
+          "to": 0.2,
+          "n": 1265,
+          "predicted": 0.14534129074591556,
+          "observed": 0.1707509881422925
+        },
+        {
+          "from": 0.2,
+          "to": 0.3,
+          "n": 866,
+          "predicted": 0.24540037367872958,
+          "observed": 0.2390300230946882
+        },
+        {
+          "from": 0.3,
+          "to": 0.4,
+          "n": 549,
+          "predicted": 0.3457400055857528,
+          "observed": 0.3224043715846995
+        },
+        {
+          "from": 0.4,
+          "to": 0.5,
+          "n": 340,
+          "predicted": 0.4456041917196751,
+          "observed": 0.3764705882352941
+        },
+        {
+          "from": 0.5,
+          "to": 0.6,
+          "n": 181,
+          "predicted": 0.5457356612963341,
+          "observed": 0.44751381215469616
+        },
+        {
+          "from": 0.6,
+          "to": 0.7,
+          "n": 92,
+          "predicted": 0.645435022912646,
+          "observed": 0.6086956521739131
+        },
+        {
+          "from": 0.7,
+          "to": 0.8,
+          "n": 17,
+          "predicted": 0.7416755961111927,
+          "observed": 0.5882352941176471
+        },
+        {
+          "from": 0.8,
+          "to": 0.9,
+          "n": 2,
+          "predicted": 0.8181585010922616,
+          "observed": 0.5
+        },
+        {
+          "from": 0.9,
+          "to": 1,
+          "n": 0,
+          "predicted": null,
+          "observed": null
+        }
+      ]
+    }
+  },
+  "earlyHoldout": {
+    "calibrated": {
+      "n": 625,
+      "brier": 0.13501651918274846,
+      "logLoss": 0.432048744644212,
+      "bins": [
+        {
+          "from": 0,
+          "to": 0.1,
+          "n": 109,
+          "predicted": 0.08238224428112574,
+          "observed": 0.06422018348623854
+        },
+        {
+          "from": 0.1,
+          "to": 0.2,
+          "n": 302,
+          "predicted": 0.14551284541536635,
+          "observed": 0.12582781456953643
+        },
+        {
+          "from": 0.2,
+          "to": 0.3,
+          "n": 121,
+          "predicted": 0.241836878644621,
+          "observed": 0.24793388429752067
+        },
+        {
+          "from": 0.3,
+          "to": 0.4,
+          "n": 53,
+          "predicted": 0.3408061024211251,
+          "observed": 0.33962264150943394
+        },
+        {
+          "from": 0.4,
+          "to": 0.5,
+          "n": 21,
+          "predicted": 0.4443896653544406,
+          "observed": 0.47619047619047616
+        },
+        {
+          "from": 0.5,
+          "to": 0.6,
+          "n": 10,
+          "predicted": 0.5598202085422146,
+          "observed": 0.7
+        },
+        {
+          "from": 0.6,
+          "to": 0.7,
+          "n": 9,
+          "predicted": 0.6443744212584273,
+          "observed": 0.4444444444444444
+        },
+        {
+          "from": 0.7,
+          "to": 0.8,
+          "n": 0,
+          "predicted": null,
+          "observed": null
+        },
+        {
+          "from": 0.8,
+          "to": 0.9,
+          "n": 0,
+          "predicted": null,
+          "observed": null
+        },
+        {
+          "from": 0.9,
+          "to": 1,
+          "n": 0,
+          "predicted": null,
+          "observed": null
+        }
+      ]
+    },
+    "poisson": {
+      "n": 625,
+      "brier": 0.136578136542217,
+      "logLoss": 0.4599229621044729,
+      "bins": [
+        {
+          "from": 0,
+          "to": 0.1,
+          "n": 246,
+          "predicted": 0.0411260403070804,
+          "observed": 0.07723577235772358
+        },
+        {
+          "from": 0.1,
+          "to": 0.2,
+          "n": 153,
+          "predicted": 0.14777745381137458,
+          "observed": 0.1895424836601307
+        },
+        {
+          "from": 0.2,
+          "to": 0.3,
+          "n": 102,
+          "predicted": 0.24557425457450496,
+          "observed": 0.20588235294117646
+        },
+        {
+          "from": 0.3,
+          "to": 0.4,
+          "n": 64,
+          "predicted": 0.348714367500741,
+          "observed": 0.265625
+        },
+        {
+          "from": 0.4,
+          "to": 0.5,
+          "n": 27,
+          "predicted": 0.4432888631167805,
+          "observed": 0.37037037037037035
+        },
+        {
+          "from": 0.5,
+          "to": 0.6,
+          "n": 21,
+          "predicted": 0.5513465218109661,
+          "observed": 0.6190476190476191
+        },
+        {
+          "from": 0.6,
+          "to": 0.7,
+          "n": 12,
+          "predicted": 0.631803916428027,
+          "observed": 0.4166666666666667
+        },
+        {
+          "from": 0.7,
+          "to": 0.8,
+          "n": 0,
+          "predicted": null,
+          "observed": null
+        },
+        {
+          "from": 0.8,
+          "to": 0.9,
+          "n": 0,
+          "predicted": null,
+          "observed": null
+        },
+        {
+          "from": 0.9,
+          "to": 1,
+          "n": 0,
+          "predicted": null,
+          "observed": null
+        }
+      ]
+    }
+  },
+  "sources": [
+    {
+      "type": "schedule",
+      "season": null,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv.gz",
+      "sha256": "366ca0d5b5db00eeee65a2bc5390e09922d92bc7b708853584c787110e00a233",
+      "fetchedAt": "2026-09-24T17:03:03.280Z"
+    },
+    {
+      "type": "pbp",
+      "season": 2024,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2024.csv.gz",
+      "sha256": "23370d5d10f8104d80d46a1fc5e61f4f6f5a3263fe96fe2dd629913cfcb08c06",
+      "fetchedAt": "2026-09-21T06:06:59.717Z"
+    },
+    {
+      "type": "weekly",
+      "season": 2024,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2024.csv.gz",
+      "sha256": "61fc9a44706522218a4448001706e3fec65ebbb97c1d9c5746ceef364989125d",
+      "fetchedAt": "2026-09-21T06:06:58.767Z"
+    },
+    {
+      "type": "roster",
+      "season": 2024,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/rosters/roster_2024.csv.gz",
+      "sha256": "5216d909f929d57de0a4db158a93e53f15a82df5bc3c464240c728849332939f",
+      "fetchedAt": "2026-09-21T06:06:58.006Z"
+    },
+    {
+      "type": "weeklyRoster",
+      "season": 2024,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/weekly_rosters/roster_weekly_2024.csv.gz",
+      "sha256": "330b9e00241091958d1667e6df02f57d4a7049530865aacbb7859b4db114cd72",
+      "fetchedAt": "2026-09-21T06:06:58.002Z"
+    },
+    {
+      "type": "snaps",
+      "season": 2024,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2024.csv.gz",
+      "sha256": "fe1d819db55d6e333057a8efcec52e8506ef111c7961b0e0411310393bb912bb",
+      "fetchedAt": "2026-09-21T06:06:58.062Z"
+    },
+    {
+      "type": "pbp",
+      "season": 2025,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2025.csv.gz",
+      "sha256": "2f135887790a013fd004e609e37096bb4816d5cc80b9f19122e1bad478961978",
+      "fetchedAt": "2026-09-21T05:42:17.030Z"
+    },
+    {
+      "type": "weekly",
+      "season": 2025,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2025.csv.gz",
+      "sha256": "c7401e321bdb369443f3280b9acd74ba6e16d82e710383bf1c01acabfebeac0b",
+      "fetchedAt": "2026-09-21T05:43:25.631Z"
+    },
+    {
+      "type": "roster",
+      "season": 2025,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/rosters/roster_2025.csv.gz",
+      "sha256": "1b7c7d006dcc7297f6d30273d07461ac83a47fba77becf21d8a701664da6b53c",
+      "fetchedAt": "2026-09-21T05:42:16.181Z"
+    },
+    {
+      "type": "weeklyRoster",
+      "season": 2025,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/weekly_rosters/roster_weekly_2025.csv.gz",
+      "sha256": "f3fbe6bb1b56a0f51c4b6d5793f8bc3b46da2d54c070572144b8771912eeaaec",
+      "fetchedAt": "2026-09-21T05:42:16.259Z"
+    },
+    {
+      "type": "snaps",
+      "season": 2025,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2025.csv.gz",
+      "sha256": "700bef40cc5db8917b49e2eca93d7091dbd4a3cd740b2fd4dfa1795f7b9187db",
+      "fetchedAt": "2026-09-21T05:42:16.126Z"
+    },
+    {
+      "type": "pbp",
+      "season": 2026,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2026.csv.gz",
+      "sha256": "6643f82adb1158c8367fb806cfc531a079ce321ca8e2e21012d196dc1a51ece8",
+      "fetchedAt": "2026-09-24T16:47:03.784Z"
+    },
+    {
+      "type": "weekly",
+      "season": 2026,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2026.csv.gz",
+      "sha256": "805704a6f6be028387e4531e234e8e6a3b6431bc1a4b7034fc4a3c15257bea84",
+      "fetchedAt": "2026-09-24T16:47:03.355Z"
+    },
+    {
+      "type": "roster",
+      "season": 2026,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/rosters/roster_2026.csv.gz",
+      "sha256": "3571d66c53957537a9f9f5432224c18bcf5e690ed3f02094c80e5c2b7338f12c",
+      "fetchedAt": "2026-09-24T16:47:03.470Z"
+    },
+    {
+      "type": "weeklyRoster",
+      "season": 2026,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/weekly_rosters/roster_weekly_2026.csv.gz",
+      "sha256": "92ec66d1cd7c1e29dd2d928480a8515327f129e18cbb2cda82236510b1ed5721",
+      "fetchedAt": "2026-09-24T16:47:03.474Z"
+    },
+    {
+      "type": "snaps",
+      "season": 2026,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz",
+      "sha256": "4a2f7f3cf6b7e8077737489cb5ec94bce0f06bdc3eb76b63e777df7f6f443f9d",
+      "fetchedAt": "2026-09-24T16:47:03.357Z"
+    }
+  ],
+  "limitations": [
+    "Historical boards are reconstructed from revised public datasets, not frozen pregame snapshots.",
+    "Historical schedule spreads and totals may be closing lines; their exact pregame availability is unverified.",
+    "The evaluation is conditional on a completed game and recorded offensive participation, not an unconditional active-roster forecast.",
+    "The outcome is a rushing or receiving touchdown, excluding special-teams and rare fumble-recovery touchdowns.",
+    "Early 2026 has only two completed weeks and is a small, previously observable test; more prospective weeks are needed.",
+    "No reference-app outputs, displayed percentages, or private data are used for fitting."
+  ]
+}

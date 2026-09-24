@@ -1,0 +1,19 @@
+# NFL profile touchdown calibration
+
+The anytime-TD ranking starts with this app's own player and matchup score: 60% baseline, 40% opportunity. The player baseline weights red-zone share, touches per game, goal-line carries, target share and observed TD rate. Opportunity weights implied team points and opponent TDs allowed to the player's position over its last eight completed games. Player score inputs use up to five completed appearances before the selected game. The score itself is not a probability.
+
+For 2026 and later boards, `lib/td-calibration.mjs` converts that score to a rushing/receiving TD chance with ridge logistic regression:
+
+`p = logistic(coefficient[0] + coefficient[1] × (score − 50) / 20)`
+
+The checked-in coefficients are fitted only to this app's nflverse-based 2024–2025 reconstructed boards and actual rushing/receiving TD outcomes. The reference site's displayed percentages were never used as labels or targets. `lib/artifacts/nfl-td-calibration.json` stores the fit. The score-to-probability mapping is monotone. The previous `1 − exp(−sample xTD / appearances)` is retained as `poissonTdProb` for comparison. Historical boards within the fit period retain that older estimate so a trained probability is not applied to its own outcomes.
+
+## Chronological check
+
+Run `node scripts/train-td-calibration.mjs` with the cached public schedule, play-by-play, weekly statistics, rosters and snaps for 2024–2026. It rebuilds scores for completed regular-season games, requiring five earlier appearances and recorded offensive participation. The outcome is at least one rushing or receiving touchdown in the target game. Incomplete games, DNPs and missing TD totals are excluded.
+
+The candidate was trained on 3,520 eligible 2024 player-games and checked on 5,406 2025 player-games. We compared five versus eight opponent games and a candidate +8/+5 drought bonus based on the reference site's description; its exact thresholds are unpublished, so our bonus rule is an inference. The eight-game window had slightly lower 2025 Brier error (0.14051 versus 0.14062); the drought candidate made it worse (0.14066). The eight-game window is used for TD scoring, and no drought bonus is applied. A position-specific calibration candidate must improve validation Brier by at least 0.001 without increasing log loss; otherwise the simpler score-only fit is used. The final coefficients were fitted to all 8,926 eligible 2024–2025 player-games. On the 625 eligible games in 2026 weeks 1–2, its Brier score was 0.13502 versus 0.13658 for the earlier Poisson estimate. These differences are small, and the 2026 sample is short. Full Brier and log loss results, reliability bins and source hashes are in `lib/artifacts/nfl-td-calibration-evaluation.json` and the Performance page.
+
+This is a retrospective reconstruction from revised public data. Historical schedule totals and spreads may be closing lines; there is no frozen pregame feed archive for the fit. Participation is known after the game in this evaluation, while a future player can sit out. Future pregame captures now freeze the calibrated chance and artifact ID, and the Performance page checks those saved chances against later rushing/receiving TD outcomes when available. The separate workload forecast and teammate injury scenarios are not calibrated by this score fit. This is not a sportsbook price or a validated betting edge.
+
+The reference app does not disclose its score normalization, exact player-game selection, data vendor, or calibration coefficients. Its visible Week 3 inputs differ materially from our public-source inputs for some players, so identical percentages are not achievable from its published formula alone. This model is independently fitted and can produce future-week probabilities without reading or copying any reference percentage.

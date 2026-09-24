@@ -1,0 +1,17 @@
+{
+  "version": "score-td-logistic-v1",
+  "method": "ridge-logistic",
+  "withPosition": false,
+  "coefficients": [
+    -0.668236391763413,
+    1.1555340836400692
+  ],
+  "trainingCount": 8926,
+  "trainingSeasons": [
+    2024,
+    2025
+  ],
+  "opponentWindow": 8,
+  "droughtBonus": false,
+  "id": "ef0caaa67f904c99c3a052be0366ca76e3470cf2b8ea3781566562830859ab2a"
+}

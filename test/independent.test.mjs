@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { buildRates, buildPlayers, chooseCurrent, impliedPoints, prepareData, rushPlay, targetPlay, number, zoneFor } from '../lib/model.mjs';
+import { TD_CALIBRATION_VERSION, calibratedTdProbability } from '../lib/td-calibration.mjs';
 import { Provider, DATASETS, datasetUrl } from '../lib/providers.mjs';
 import { validateQuery, SourceStore } from '../lib/source.mjs';
 const play=(changes={})=>({game_id:'2025_18_A_B',season:'2025',week:'18',play_id:'1',play_type:'run',posteam:'A',defteam:'B',rush_attempt:'1',rusher_player_id:'p1',rush_touchdown:'0',rushing_yards:'4',yardline_100:'3',...changes});
@@ -27,6 +28,18 @@ test('automatic week remains through Monday and advances Tuesday',()=>{const {sc
 test('January belongs to the prior NFL season and playoffs are selectable',()=>{const games=[{season:'2026',week:'19',game_type:'WC',gameday:'2027-01-09'}];assert.deepEqual(chooseCurrent(games,new Date('2027-01-08')),{season:2026,week:19});});
 test('UTC Tuesday during Monday Night Football stays in the current week',()=>{assert.equal(chooseCurrent(fixture().schedule,new Date('2026-09-22T01:00:00Z')).week,2);assert.equal(chooseCurrent(fixture().schedule,new Date('2026-09-22T09:59:00Z')).week,2);assert.equal(chooseCurrent(fixture().schedule,new Date('2026-09-22T10:00:00Z')).week,3);});
 test('current-week results cannot enter the sample',()=>{const p=boardFixture()[0];assert.equal(p.details.sample.length,2);assert.equal(p.details.stats.touches_pg,18);assert.equal(p.details.cheat_code.td_debt.actual,1);assert.ok(p.details.sample.every(g=>g.gameId!=='2026_02_B_A'));});
+test('future touchdown chance uses the frozen score fit without reading target-game touchdowns',()=>{
+ const calibration={version:TD_CALIBRATION_VERSION,withPosition:false,coefficients:[-1,1],trainingSeasons:[2024,2025],id:'fixture-fit'};
+ const original=boardFixture({tdCalibration:calibration})[0],f=fixture();f.weekly.at(-1).rushing_tds='99';
+ const changed=boardFixture({tdCalibration:calibration,weekly:f.weekly})[0];
+ assert.equal(original.tdProbMethod,'historical-score-calibration');
+ assert.equal(original.tdProb,calibratedTdProbability(original.modelScore,original.position,calibration,2026));
+ assert.equal(original.tdProb,changed.tdProb);
+ assert.equal(original.poissonTdProb,changed.poissonTdProb);
+ assert.equal(original.tdProbSourceScore,original.modelScore);
+ assert.equal(original.tdCalibrationId,'fixture-fit');
+ assert.equal(calibratedTdProbability(original.modelScore,original.position,calibration,2025),null);
+});
 test('new rushing and receiving markets separate historical inputs from selected-week results',()=>{
  const f=fixture();f.weekly.forEach((r,i)=>r.receiving_yards=String([20,60,500][i]));
  for(const [market,projected,actual] of [['rush_attempts',15,90],['rec_yds',40,500],['rush_rec_yds',110,1499]]){
