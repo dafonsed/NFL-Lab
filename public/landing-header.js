@@ -1,4 +1,5 @@
 import { BET_STORAGE_KEY, betReturns, readBets, summarizeBets } from './bet-utils.js';
+import { demoRecord } from './landing-demo-bets.js';
 
 const dollars = amount => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 const dailyAmount = amount => {
@@ -10,8 +11,7 @@ const dailyAmount = amount => {
 export function mountHeroTracker() {
   const root = document.querySelector('#hero-tracker');
   if (!root) return;
-  let month = new Date();
-  month = new Date(month.getFullYear(), month.getMonth(), 1);
+  let month = null, wasDemo = null;
 
   function render() {
     let bets;
@@ -20,11 +20,19 @@ export function mountHeroTracker() {
       root.innerHTML = '<p class="hero-tracker-error">Your pick record is unavailable in this browser. <a href="/bets">Open My Picks</a></p>';
       return;
     }
-    const total = summarizeBets(bets);
+    const demo = bets.length === 0;
+    const example = demoRecord();
+    if (month === null || demo !== wasDemo) {
+      const latest = demo ? null : bets.reduce((date, bet) => bet.date > date ? bet.date : date, '');
+      month = demo ? example.month : new Date(Number(latest.slice(0, 4)), Number(latest.slice(5, 7)) - 1, 1);
+    }
+    wasDemo = demo;
+    const record = demo ? example.bets : bets;
+    const total = summarizeBets(record);
     const year = month.getFullYear();
     const monthNumber = month.getMonth();
     const key = `${year}-${String(monthNumber + 1).padStart(2, '0')}`;
-    const monthly = bets.filter(bet => bet.date.startsWith(key));
+    const monthly = record.filter(bet => bet.date.startsWith(key));
     const dayTotals = new Map();
     for (const bet of monthly) {
       const record = dayTotals.get(bet.date) || { count: 0, settled: 0, cents: 0 };
@@ -41,18 +49,18 @@ export function mountHeroTracker() {
       const item = dayTotals.get(date);
       const profit = (item?.cents || 0) / 100;
       const status = item ? (profit > 0 ? 'positive' : profit < 0 ? 'negative' : item.settled ? '' : 'open') : '';
-      const value = item ? (item.settled ? dailyAmount(profit) : `${item.count} open`) : '';
-      const label = item ? `${date}: ${item.count} saved ${item.count === 1 ? 'pick' : 'picks'}, ${item.settled} settled, ${dollars(profit)} net` : `${date}: no saved picks`;
-      cells.push(`<span class="hero-tracker-day ${status}" aria-label="${label}" title="${label}"><small>${day}</small><strong>${value}</strong></span>`);
+      const value = item ? (item.settled ? dailyAmount(profit) : 'Open') : '';
+      const label = item ? `${date}: ${item.count} ${demo ? 'demo ' : ''}${item.count === 1 ? 'pick' : 'picks'}, ${item.settled} settled, ${dollars(profit)} net` : `${date}: no ${demo ? 'demo ' : 'saved '}picks`;
+      cells.push(`<span class="hero-tracker-day ${item ? 'has-picks ' : ''}${status}" aria-label="${label}" title="${label}">${item ? '' : `<small>${day}</small>`}<strong>${value}</strong></span>`);
     }
     const totalTone = total.profit > 0 ? 'positive' : total.profit < 0 ? 'negative' : '';
     const totalLabel = total.profit > 0 ? '+' + dollars(total.profit) : dollars(total.profit);
     const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(month);
-    root.innerHTML = `<div class="hero-tracker-profit ${totalTone}"><small>Total net profit</small><strong>${totalLabel}</strong></div>
-      <div class="hero-tracker-head"><strong>My Picks</strong><small>Your personal betting record · saved in this browser</small></div>
+    root.innerHTML = `<div class="hero-tracker-profit ${totalTone}"><small>${demo ? 'Demo net profit' : 'Total net profit'}</small><strong>${totalLabel}</strong></div>
+      <div class="hero-tracker-head"><span class="hero-tracker-avatar"><img src="/favicon.svg" alt=""></span><div><strong>${demo ? 'SportsLab demo' : 'My Picks'}</strong><small>${demo ? 'Illustrative tickets · not actual results' : 'Personal record · saved in this browser'}</small></div></div>
       <div class="hero-tracker-body"><div class="hero-tracker-month"><strong>${monthLabel}</strong><div><button type="button" data-tracker-month="-1" aria-label="Previous month">‹</button><button type="button" data-tracker-month="1" aria-label="Next month">›</button></div></div>
       <div class="hero-tracker-weekdays" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div><div class="hero-tracker-grid">${cells.join('')}</div></div>
-      <div class="hero-tracker-foot"><span>${monthly.length ? `${monthly.length} saved ${monthly.length === 1 ? 'pick' : 'picks'} this month` : 'No picks logged this month'}</span><a href="/bets">Open full tracker ↗</a></div>`;
+      <div class="hero-tracker-foot"><span>${demo ? 'Demo data · add your picks to see your record' : monthly.length ? `${monthly.length} saved ${monthly.length === 1 ? 'pick' : 'picks'} this month` : 'No picks logged this month'}</span><a href="/bets">${demo ? 'Start your record' : 'Open full tracker'} ↗</a></div>`;
   }
 
   root.addEventListener('click', event => {
