@@ -78,8 +78,8 @@ const isDue=p=>p.dueSignal===true;
 const signatureCount=p=>Object.values(p.signatures||{}).reduce((n,t)=>n+(Array.isArray(t)?t.length:0),0);
 function renderSummary() {
   const ps=state.data?.players||[],matchups=new Set(ps.filter(p=>p.opponent).map(p=>[p.team,p.opponent].sort().join('-'))),top=ps.length?ps.reduce((a,b)=>a.modelScore>b.modelScore?a:b):null;
-  const items=[['Players analyzed',ps.length,'Independent NFL data'],['Matchups',matchups.size,'This week’s game coverage'],['Opportunity signals',ps.filter(isDue).length,'Usage ahead of results'],['Leading score',top?num(top.modelScore):'—',top?.player||'Awaiting NFL data']];
-  $('#summary').innerHTML=items.map(([name,val,note],i)=>`<div class="summary-card ${i===3?'highlight':''}"><div class="label">${name}</div><div class="summary-value">${val}${i===3&&top?'<small>/ 100</small>':''}</div><div class="summary-note">${esc(note)}</div></div>`).join('');
+  const items=[['Players analyzed',ps.length,'Independent NFL data'],['Matchups',matchups.size,'This week’s game coverage'],['Opportunity signals',ps.filter(isDue).length,'Usage ahead of results'],['Leading model strength',top?num(top.modelScore)+'%':'—',top?.player||'Awaiting NFL data']];
+  $('#summary').innerHTML=items.map(([name,val,note],i)=>`<div class="summary-card ${i===3?'highlight':''}"><div class="label">${name}</div><div class="summary-value">${val}</div><div class="summary-note">${esc(note)}</div></div>`).join('');
 }
 function filteredPlayers() {
   const q=state.search.trim().toLowerCase();let ps=(state.data?.players||[]).filter(p=>(!q||`${p.player} ${p.team} ${p.opponent} ${p.reason}`.toLowerCase().includes(q))&&(!state.position||p.position===state.position)&&(!state.matchup||p.gameId===state.matchup)&&(!state.due||isDue(p))&&(!state.savedOnly||state.saved.has(p.playerId)));

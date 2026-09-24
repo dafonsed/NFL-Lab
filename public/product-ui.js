@@ -61,13 +61,12 @@ export function propRow(profile, {open='data-player', id=profile.key, save='data
   const resultLabel={did_not_play:'Did not play',did_not_bat:'No plate appearance',did_not_start:'Did not start',needs_regulation_stats:'Regulation stats needed',no_stats:'Result unavailable',missing:'Result unavailable',unsettled:'Postponed / unsettled',no_line:'Final · line unverified'}[outcome?.status]||(final?'Final'+(['over','under','push'].includes(outcome.status)?' · '+outcome.status:''):p.raw?.gameState||'Not settled');
   const probabilityText=probability===null?'—':`${Math.round(probability*100)}%`;
   const tdChance=p.market==='any_td'&&p.sport==='nfl';
-  const calibrated=tdChance&&p.raw?.tdProbMethod==='historical-score-calibration'&&finite(p.raw.tdProb)!==null&&!p.availability?.unavailable;
-  const label=calibrated?'Score TD chance':tdChance?'TD estimate':'Projection';
-  const modelValue=tdChance?(finite(p.raw?.tdProb)!==null&&!p.availability?.unavailable?`${Math.round(p.raw.tdProb*100)}%`:'—'):num(f.point,p.sport==='mlb'?2:1);
+  const label=tdChance?'Model strength':'Projection';
+  const modelValue=tdChance?(finite(p.raw?.modelScore)!==null&&!p.availability?.unavailable?`${num(p.raw.modelScore)}%`:'—'):num(f.point,p.sport==='mlb'?2:1);
   const status=p.availability?.concern||p.availability?.unavailable?p.availability.status:p.lineup==='confirmed'?`Batting ${p.battingOrder}`:p.lineup==='probable'?'Probable starter':'';
   return `<article class="research-row ${kind}" data-research-row="${esc(p.key)}"><header class="research-identity"><button class="research-player player-detail-link" ${open}="${esc(id)}" aria-haspopup="dialog">${p.image?`<img src="${safeUrl(p.image)}" alt="" loading="lazy" width="38" height="38">`:`<span class="research-initial" aria-hidden="true">${esc(p.name.split(' ').map(n=>n[0]).slice(0,2).join(''))}</span>`}<span><strong>${esc(p.name)}</strong><small><span class="position">${esc(p.position||p.sport.toUpperCase())}</span> · ${esc(p.team)} vs ${esc(p.opponent||'TBD')}${p.raw?.gameNumber>1?' · Game '+p.raw.gameNumber:''}</small>${status?`<small class="player-status">${esc(status)}</small>`:''}</span></button></header>
   <div class="research-line"><span class="row-field-label">Line / book</span><strong>${quote?`${p.market==='any_td'?'1+ TD':num(quote.line)}`:'—'}</strong><small>${quote?esc(quote.bookmaker):'No posted line'}</small><span class="quote-kind">${source}</span></div>
-  <div class="research-estimate"><span class="row-field-label">${label}</span><strong>${modelValue}</strong><small>${calibrated?'2024–2025 outcome fit · if playing':finite(f.point)===null?'Withheld':`${f.sampleCount??p.rows.length} prior games`}</small>${finite(p.raw?.modelScore)!==null?`<small class="row-rating">Rating ${num(p.raw.modelScore)} / 100</small>`:''}</div>
+  <div class="research-estimate"><span class="row-field-label">${label}</span><strong>${modelValue}</strong><small>${tdChance?'0–100 ranking score':finite(f.point)===null?'Withheld':`${f.sampleCount??p.rows.length} prior games`}</small>${!tdChance&&finite(p.raw?.modelScore)!==null?`<small class="row-rating">Rating ${num(p.raw.modelScore)} / 100</small>`:''}</div>
   ${tdChance?'':`<div class="research-probability"><span class="row-field-label">Model ${esc(side)}</span><strong>${probabilityText}</strong><small>${probability===null?'Not priced':'Experimental'}</small></div>`}
   <div class="research-history"><span class="row-field-label">Last ${stats.n||10} games</span>${miniHistory(p,side)}<small>${stats.rate===null?`${stats.n} recorded games`:`${stats.hits}/${stats.n} ${side==='over'?'above':'below'} line${stats.pushes?' · '+stats.pushes+' tied':''}`}</small></div>
   <div class="research-result"><span class="row-field-label">Result</span><strong>${final?num(outcome.actual):'—'}</strong><small>${esc(resultLabel)}</small></div>
@@ -76,8 +75,7 @@ export function propRow(profile, {open='data-player', id=profile.key, save='data
 
 export function propBoard(rows, options={}) {
   const tdChance=rows[0]?.sport==='nfl'&&rows[0]?.market==='any_td';
-  const calibrated=tdChance&&rows.some(p=>p.raw?.tdProbMethod==='historical-score-calibration');
-  const estimate=calibrated?'Score TD chance':tdChance?'TD estimate':'Projection';
+  const estimate=tdChance?'Model strength %':'Projection';
   return `<div class="research-board${tdChance?' td-chance-board':''}"><div class="research-columns" aria-hidden="true"><span>Player / matchup</span><span>Line / sportsbook</span><span>${estimate}</span>${tdChance?'':`<span>Model ${esc(options.side||'over')}</span>`}<span>Recent results</span><span>Final result</span><span></span></div>${rows.map(p=>propRow(p,typeof options.row==='function'?{...options,...options.row(p)}:options)).join('')}</div>`;
 }
 

@@ -42,10 +42,12 @@ test('under estimates retain their side and ranges are not confidence intervals'
   assert.doesNotMatch($.text(),/confidence interval/i);
 });
 
-test('touchdown presentation uses the existing calibrated chance instead of expected count',()=>{
-  const $=load(projectionPanel(profile({market:'any_td',label:'Anytime TD',forecast:{point:.7,probability:{over:.55}},prop:{line:.5,bookmaker:'Test book'}})));
-  assert.equal($('.pr-model-metrics dd').first().text(),'55%');
-  assert.match($('.pr-model-metrics').text(),/1\+ rushing, receiving or special-teams TD/);
+test('touchdown presentation separates model strength from TD chance and workload estimate',()=>{
+  const $=load(projectionPanel(profile({market:'any_td',label:'Anytime TD',raw:{modelScore:83.4,tdProb:.61,tdProbMethod:'historical-score-calibration'},forecast:{point:.7,probability:{over:.55}},prop:{line:.5,bookmaker:'Test book'}})));
+  const metric=label=>$('.pr-model-metrics > div').filter((_,el)=>$(el).find('dt').text()===label).find('dd').text();
+  assert.equal(metric('Model strength'),'83.4%');
+  assert.equal(metric('Fitted TD chance'),'61%');
+  assert.equal(metric('Workload TD estimate'),'55%');
 });
 
 test('supporting stats preserve metric-specific missingness and average/median selection',()=>{
