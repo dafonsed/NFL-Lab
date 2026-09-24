@@ -5,7 +5,7 @@ const dollars = amount => new Intl.NumberFormat('en-US', { style: 'currency', cu
 const dailyAmount = amount => {
   const absolute = Math.abs(amount);
   const compact = absolute >= 1000 ? '$' + (absolute / 1000).toFixed(absolute >= 10000 ? 0 : 1) + 'k' : dollars(absolute).replace(/\.00$/, '');
-  return (amount > 0 ? '+' : amount < 0 ? '−' : '') + compact;
+  return (amount < 0 ? '−' : '') + compact;
 };
 
 export function mountHeroTracker() {
@@ -56,11 +56,10 @@ export function mountHeroTracker() {
     const totalTone = total.profit > 0 ? 'positive' : total.profit < 0 ? 'negative' : '';
     const totalLabel = total.profit > 0 ? '+' + dollars(total.profit) : dollars(total.profit);
     const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(month);
-    root.innerHTML = `<div class="hero-tracker-profit ${totalTone}"><small>${demo ? 'Demo net profit' : 'Total net profit'}</small><strong>${totalLabel}</strong></div>
-      <div class="hero-tracker-head"><span class="hero-tracker-avatar"><img src="/favicon.svg" alt=""></span><div><strong>${demo ? 'SportsLab demo' : 'My Picks'}</strong><small>${demo ? 'Illustrative tickets · not actual results' : 'Personal record · saved in this browser'}</small></div></div>
+    root.innerHTML = `<div class="hero-tracker-profit ${totalTone}" aria-label="${demo ? 'Demo net profit' : 'Net profit'}: ${totalLabel}"><small>Net profit</small><strong>${totalLabel}</strong></div>
+      <div class="hero-tracker-head"><span class="hero-tracker-avatar"><img src="/favicon.svg" alt=""></span><strong>${demo ? 'SportsLab' : 'My Picks'}</strong>${demo ? '<span class="hero-tracker-demo-tag" aria-label="Demo data: illustrative tickets, not actual results" title="Illustrative tickets, not actual results">Demo</span>' : ''}</div>
       <div class="hero-tracker-body"><div class="hero-tracker-month"><strong>${monthLabel}</strong><div><button type="button" data-tracker-month="-1" aria-label="Previous month">‹</button><button type="button" data-tracker-month="1" aria-label="Next month">›</button></div></div>
-      <div class="hero-tracker-weekdays" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div><div class="hero-tracker-grid">${cells.join('')}</div></div>
-      <div class="hero-tracker-foot"><span>${demo ? 'Demo data · add your picks to see your record' : monthly.length ? `${monthly.length} saved ${monthly.length === 1 ? 'pick' : 'picks'} this month` : 'No picks logged this month'}</span><a href="/bets">${demo ? 'Start your record' : 'Open full tracker'} ↗</a></div>`;
+      <div class="hero-tracker-weekdays" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div><div class="hero-tracker-grid">${cells.join('')}</div></div>`;
   }
 
   root.addEventListener('click', event => {

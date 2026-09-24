@@ -17,34 +17,32 @@
 .home-hero .home-button-secondary{border-color:#344249;background:#1d2a30;color:#e5eef1}
 .home-hero .home-button-secondary:hover{background:#293940;color:#fff}
 .home-hero .home-fine{margin-top:12px;color:#8d9da4;font-size:12px}
-.hero-tracker{position:relative;width:min(100%,490px);justify-self:center;border:1px solid #2a373e;border-radius:12px;background:#111619;box-shadow:0 32px 70px #0008}
-.hero-tracker-head{display:flex;align-items:center;gap:11px;min-height:77px;padding:19px 172px 13px 19px;border-bottom:1px solid #27343a}
-.hero-tracker-avatar{display:grid;place-items:center;flex:none;width:34px;height:34px;border:1px solid #34434c;border-radius:50%;background:#1b2b33}
-.hero-tracker-avatar img{width:23px;height:23px}
-.hero-tracker-head strong{display:block;font-size:15px;letter-spacing:-.025em;white-space:nowrap}
-.hero-tracker-head small{display:block;margin-top:4px;color:#9fadb6;font-size:10px;line-height:1.3;white-space:nowrap}
-.hero-tracker-profit{position:absolute;top:-17px;right:19px;min-width:145px;padding:9px 17px 10px;border:1px solid #355b38;border-radius:26px;background:#080c0c;text-align:center;box-shadow:0 9px 20px #0007;font-variant-numeric:tabular-nums}
-.hero-tracker-profit small{display:block;color:#abb8b9;font-size:9px;font-weight:750;letter-spacing:.045em;text-transform:uppercase}
-.hero-tracker-profit strong{display:block;margin-top:1px;color:#edf4f5;font-size:25px;font-weight:760;letter-spacing:-.05em;line-height:1}
+.hero-tracker{position:relative;width:min(100%,490px);justify-self:center;overflow:visible;border:1px solid #2c383e;border-radius:14px;background:#0b0e10;box-shadow:0 28px 68px #0008}
+.hero-tracker-head{display:flex;align-items:center;gap:10px;min-height:68px;padding:15px 177px 14px 18px;border-bottom:1px solid #263238;background:#151a1e;border-radius:14px 14px 0 0}
+.hero-tracker-avatar{display:grid;place-items:center;flex:none;width:32px;height:32px;border:1px solid #35454d;border-radius:50%;background:#1d2d35}
+.hero-tracker-avatar img{width:22px;height:22px}
+.hero-tracker-head strong{display:block;color:#f3f6f7;font-size:15px;font-weight:720;letter-spacing:-.025em;white-space:nowrap}
+.hero-tracker-demo-tag{padding:3px 6px;border:1px solid #3b484d;border-radius:4px;color:#a8b6bd;font-size:10px;font-weight:650;line-height:1;white-space:nowrap}
+.hero-tracker-profit{position:absolute;z-index:1;top:-18px;right:18px;min-width:150px;padding:10px 16px 9px;border:1px solid #34532b;border-radius:30px;background:#070a08;text-align:center;box-shadow:0 8px 22px #0009;font-variant-numeric:tabular-nums}
+.hero-tracker-profit small{display:block;color:#b5c0bb;font-size:10px;font-weight:710;letter-spacing:.025em;text-transform:uppercase}
+.hero-tracker-profit strong{display:block;margin-top:2px;color:#edf4f5;font-size:27px;font-weight:730;letter-spacing:-.045em;line-height:1}
 .hero-tracker-profit.positive strong{color:#88cb61}.hero-tracker-profit.negative{border-color:#6d3e38}.hero-tracker-profit.negative strong{color:#e17a6a}
-.hero-tracker-body{padding:13px 19px 18px;background:#080b0c}
-.hero-tracker-month{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:10px}
-.hero-tracker-month strong{font-size:15px;letter-spacing:-.015em}
-.hero-tracker-month div{display:flex;gap:5px}
-.hero-tracker-month button{display:grid;place-items:center;width:28px;height:27px;border:1px solid #2d3a40;border-radius:5px;background:#171f23;color:#d5e4e9;font-size:20px;line-height:1}
-.hero-tracker-month button:hover{background:#27383f}
+.hero-tracker-body{padding:12px 18px 17px;background:#0b0e10;border-radius:0 0 14px 14px}
+.hero-tracker-month{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:9px}
+.hero-tracker-month strong{color:#9cabb3;font-size:11px;font-weight:600;letter-spacing:.005em}
+.hero-tracker-month div{display:flex;gap:4px}
+.hero-tracker-month button{display:grid;place-items:center;width:23px;height:23px;border:0;border-radius:4px;background:transparent;color:#a7b8c0;font-size:19px;line-height:1}
+.hero-tracker-month button:hover{background:#26343a;color:#fff}
 .hero-tracker-weekdays,.hero-tracker-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
 .hero-tracker-weekdays{margin-bottom:7px;color:#8d9da7;text-align:center;font-size:10px;font-weight:680}
-.hero-tracker-day{display:flex;flex-direction:column;justify-content:space-between;min-width:0;min-height:48px;padding:5px 6px;border:1px solid #273237;border-radius:5px;background:#121719;font-variant-numeric:tabular-nums}
+.hero-tracker-day{display:flex;flex-direction:column;justify-content:space-between;min-width:0;min-height:49px;padding:5px 6px;border:1px solid #2c372f;border-radius:5px;background:#121914;font-variant-numeric:tabular-nums}
 .hero-tracker-day.has-picks{align-items:center;justify-content:center}
 .hero-tracker-day.empty{border-color:transparent;background:transparent}
 .hero-tracker-day small{color:#8797a0;font-size:9px}
 .hero-tracker-day strong{overflow:hidden;color:#b2c1c7;font-size:11px;font-weight:680;text-overflow:ellipsis;white-space:nowrap}
-.hero-tracker-day.positive{border-color:#3d582d;background:#1b2a18}.hero-tracker-day.positive strong{color:#98cf69}
+.hero-tracker-day.positive{border-color:#3d592d;background:#1c2c19}.hero-tracker-day.positive strong{color:#99cd68}
 .hero-tracker-day.negative{border-color:#6a3e37;background:#301d1b}.hero-tracker-day.negative strong{color:#ec927b}
 .hero-tracker-day.open{border-color:#31546a;background:#15242b}.hero-tracker-day.open strong{color:#7ecce9}
-.hero-tracker-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:45px;padding:10px 19px;border-top:1px solid #29343a;color:#95a6ad;font-size:10px}
-.hero-tracker-foot a{color:#82d0f0;font-size:11px;font-weight:680;white-space:nowrap}
 .hero-tracker-error{padding:70px 25px;color:#bdcbd0;text-align:center}
 /* A single continuous strip: marks sit directly on the page canvas. */
 .hero-brands{width:100%;margin:auto 0 34px;overflow:hidden;mask-image:linear-gradient(to right,transparent,#000 3%,#000 97%,transparent)}
@@ -57,5 +55,5 @@
 @keyframes brand-drift{to{transform:translateX(-50%)}}
 @media(max-width:1050px){.home-hero-grid{gap:35px}}
 @media(max-width:900px){.home-hero{min-height:0;padding-top:62px}.home-hero-grid{grid-template-columns:1fr;gap:54px;min-height:0}.home-hero .home-copy{max-width:660px}.hero-tracker{justify-self:start}.hero-brands{margin-top:75px}.home-nav{margin-left:auto}.home-header-action{display:none}}
-@media(max-width:650px){.home-header-inner{width:calc(100% - 32px);min-height:55px;padding-top:9px}.home-nav{margin:4px 0 0}.home-header-action{display:inline-flex}.home-hero{padding-top:58px}.home-hero-grid{width:calc(100% - 36px);gap:57px}.home-hero .home-copy h1{font-size:clamp(43px,10.5vw,56px);line-height:1.07}.home-hero .home-lede{font-size:16px}.home-hero .home-actions{align-items:stretch}.home-hero .home-button{min-height:42px}.hero-tracker{width:100%}.hero-tracker-head{padding-right:145px}.hero-tracker-head small{white-space:normal}.hero-tracker-profit{right:12px;min-width:121px;padding:9px 10px}.hero-tracker-profit strong{font-size:21px}.hero-tracker-body{padding-inline:13px}.hero-tracker-day{min-height:40px;padding:4px}.hero-tracker-day strong{font-size:9px}.hero-tracker-foot{padding-inline:13px}.hero-brands{margin-top:66px;margin-bottom:31px}.hero-brand-set{gap:18px;padding-right:18px}.hero-brand-set li{width:48px;height:46px}.hero-brand-set img{width:42px;height:42px}}
+@media(max-width:650px){.home-header-inner{width:calc(100% - 32px);min-height:55px;padding-top:9px}.home-nav{margin:4px 0 0}.home-header-action{display:inline-flex}.home-hero{padding-top:58px}.home-hero-grid{width:calc(100% - 36px);gap:57px}.home-hero .home-copy h1{font-size:clamp(43px,10.5vw,56px);line-height:1.07}.home-hero .home-lede{font-size:16px}.home-hero .home-actions{align-items:stretch}.home-hero .home-button{min-height:42px}.hero-tracker{width:100%}.hero-tracker-head{gap:8px;padding-right:128px;padding-left:15px}.hero-tracker-avatar{width:29px;height:29px}.hero-tracker-avatar img{width:20px;height:20px}.hero-tracker-head strong{font-size:13px}.hero-tracker-profit{right:11px;min-width:126px;padding:9px 11px}.hero-tracker-profit strong{font-size:22px}.hero-tracker-body{padding-inline:13px}.hero-tracker-day{min-height:41px;padding:4px}.hero-tracker-day strong{font-size:9px}.hero-brands{margin-top:66px;margin-bottom:31px}.hero-brand-set{gap:18px;padding-right:18px}.hero-brand-set li{width:48px;height:46px}.hero-brand-set img{width:42px;height:42px}}
 @media(prefers-reduced-motion:reduce){.hero-brand-track{animation:none}.hero-brands{overflow-x:auto;mask-image:none}.hero-brand-set[aria-hidden="true"]{display:none}}
