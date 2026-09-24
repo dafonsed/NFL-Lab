@@ -55,8 +55,12 @@ export function mountHeroTracker() {
     }
     const totalTone = total.profit > 0 ? 'positive' : total.profit < 0 ? 'negative' : '';
     const totalLabel = total.profit > 0 ? '+' + dollars(total.profit) : dollars(total.profit);
+    const [wholeProfit, centsProfit] = totalLabel.split('.');
+    const profitDisplay = demo
+      ? (total.profit > 0 ? '+' : '') + new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(total.profit)
+      : `${wholeProfit}${centsProfit && centsProfit !== '00' ? `<span class="hero-tracker-cents">.${centsProfit}</span>` : ''}`;
     const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(month);
-    root.innerHTML = `<div class="hero-tracker-profit ${totalTone}" aria-label="${demo ? 'Demo net profit' : 'Net profit'}: ${totalLabel}"><small>Net profit</small><strong>${totalLabel}</strong></div>
+    root.innerHTML = `<div class="hero-tracker-profit ${totalTone}" aria-label="${demo ? 'Demo net profit' : 'Net profit'}: ${totalLabel}"><small>Net profit</small><strong>${profitDisplay}</strong></div>
       <div class="hero-tracker-head"><span class="hero-tracker-avatar"><img src="/favicon.svg" alt=""></span><strong>${demo ? 'SportsLab' : 'My Picks'}</strong>${demo ? '<span class="hero-tracker-demo-tag" aria-label="Demo data: illustrative tickets, not actual results" title="Illustrative tickets, not actual results">Demo</span>' : ''}</div>
       <div class="hero-tracker-body"><div class="hero-tracker-month"><strong>${monthLabel}</strong><div><button type="button" data-tracker-month="-1" aria-label="Previous month">‹</button><button type="button" data-tracker-month="1" aria-label="Next month">›</button></div></div>
       <div class="hero-tracker-weekdays" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div><div class="hero-tracker-grid">${cells.join('')}</div></div>`;
