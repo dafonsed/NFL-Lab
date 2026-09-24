@@ -11,8 +11,6 @@ const dailyAmount = amount => {
 export function mountHeroTracker() {
   const root = document.querySelector('#hero-tracker');
   if (!root) return;
-  let month = null, wasDemo = null;
-
   function render() {
     let bets;
     try { bets = readBets(localStorage); }
@@ -22,11 +20,8 @@ export function mountHeroTracker() {
     }
     const demo = bets.length === 0;
     const example = demoRecord();
-    if (month === null || demo !== wasDemo) {
-      const latest = demo ? null : bets.reduce((date, bet) => bet.date > date ? bet.date : date, '');
-      month = demo ? example.month : new Date(Number(latest.slice(0, 4)), Number(latest.slice(5, 7)) - 1, 1);
-    }
-    wasDemo = demo;
+    const latest = demo ? null : bets.reduce((date, bet) => bet.date > date ? bet.date : date, '');
+    const month = demo ? example.month : new Date(Number(latest.slice(0, 4)), Number(latest.slice(5, 7)) - 1, 1);
     const record = demo ? example.bets : bets;
     const total = summarizeBets(record);
     const year = month.getFullYear();
@@ -62,19 +57,11 @@ export function mountHeroTracker() {
       ? (total.profit > 0 ? '+' : '') + new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(total.profit)
       : `${wholeProfit}${centsProfit && centsProfit !== '00' ? `<span class="hero-tracker-cents">.${centsProfit}</span>` : ''}`;
     const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(month);
-    root.innerHTML = `<div class="hero-tracker-profit ${totalTone}" aria-label="${demo ? 'Demo net profit' : 'Net profit'}: ${totalLabel}"><small>Net profit</small><strong>${profitDisplay}</strong></div>
-      <div class="hero-tracker-head"><span class="hero-tracker-avatar"><img src="/favicon.svg" alt=""></span><div class="hero-tracker-identity"><div class="hero-tracker-name"><strong>${demo ? 'SportsLab' : 'My Picks'}</strong>${demo ? '<span class="hero-tracker-demo-tag" aria-label="Demo data: illustrative tickets, not actual results" title="Illustrative tickets, not actual results">Demo</span>' : ''}</div><div class="hero-tracker-month"><button type="button" data-tracker-month="-1" aria-label="Previous month">‹</button><strong>${monthLabel}</strong><button type="button" data-tracker-month="1" aria-label="Next month">›</button></div></div></div>
-      <div class="hero-tracker-body"><div class="hero-tracker-weekdays" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div><div class="hero-tracker-grid">${cells.join('')}</div></div>`;
+    root.innerHTML = `<div class="hero-tracker-profit ${totalTone}" aria-label="${demo ? 'Demo net profit' : 'Net profit'}: ${totalLabel}"><small>${demo ? 'Demo net profit' : 'Net profit'}</small><strong>${profitDisplay}</strong></div>
+      <div class="hero-tracker-head"><span class="hero-tracker-avatar"><img src="/favicon.svg" alt=""></span><strong>SportsLab</strong></div>
+      <div class="hero-tracker-body"><div class="hero-tracker-weekdays" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div><div class="hero-tracker-grid" role="group" aria-label="${monthLabel} ${demo ? 'demo' : 'saved picks'} calendar">${cells.join('')}</div></div>`;
   }
 
-  root.addEventListener('click', event => {
-    const button = event.target.closest('[data-tracker-month]');
-    if (!button) return;
-    const direction = Number(button.dataset.trackerMonth);
-    month = new Date(month.getFullYear(), month.getMonth() + direction, 1);
-    render();
-    root.querySelector(`[data-tracker-month="${direction}"]`)?.focus();
-  });
   window.addEventListener('storage', event => { if (event.key === BET_STORAGE_KEY) render(); });
   render();
 }

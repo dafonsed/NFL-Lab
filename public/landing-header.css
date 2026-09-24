@@ -18,23 +18,16 @@
 .home-hero .home-button-secondary:hover{background:#293940;color:#fff}
 .home-hero .home-fine{margin-top:12px;color:#8d9da4;font-size:12px}
 .hero-tracker{position:relative;width:min(100%,490px);justify-self:center;overflow:visible;border:1px solid #29353c;border-radius:13px;background:#090c0d;box-shadow:0 28px 68px #0008}
-.hero-tracker-head{display:flex;align-items:center;gap:10px;min-height:72px;padding:12px 177px 11px 18px;border-bottom:1px solid #29343a;background:#15191d;border-radius:13px 13px 0 0}
+.hero-tracker-head{display:flex;align-items:center;gap:10px;min-height:64px;padding:12px 177px 12px 18px;border-bottom:1px solid #29343a;background:#15191d;border-radius:13px 13px 0 0}
 .hero-tracker-avatar{display:grid;place-items:center;flex:none;width:32px;height:32px;border:1px solid #35454d;border-radius:50%;background:#1d2d35}
 .hero-tracker-avatar img{width:22px;height:22px}
-.hero-tracker-identity{min-width:0}
-.hero-tracker-name{display:flex;align-items:center;gap:7px}
-.hero-tracker-name strong{display:block;color:#f3f6f7;font-size:15px;font-weight:720;letter-spacing:-.025em;white-space:nowrap}
-.hero-tracker-demo-tag{padding:3px 6px;border:1px solid #3b484d;border-radius:4px;color:#a8b6bd;font-size:10px;font-weight:650;line-height:1;white-space:nowrap}
+.hero-tracker-head>strong{display:block;color:#f3f6f7;font-size:15px;font-weight:720;letter-spacing:-.025em;white-space:nowrap}
 .hero-tracker-profit{position:absolute;z-index:1;top:-20px;right:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:165px;min-height:68px;padding:9px 16px 10px;border:1px solid #344c21;border-radius:999px;background:#080a08;text-align:center;box-shadow:0 9px 24px #000a;font-variant-numeric:tabular-nums}
 .hero-tracker-profit small{display:block;color:#aab8b6;font-size:10px;font-weight:700;letter-spacing:.035em;line-height:1.1;text-transform:uppercase}
 .hero-tracker-profit strong{display:block;margin-top:3px;color:#edf4f5;font-size:31px;font-weight:750;letter-spacing:-.055em;line-height:.95;white-space:nowrap}
 .hero-tracker-cents{font-size:.58em;font-weight:700;letter-spacing:-.04em;vertical-align:baseline}
 .hero-tracker-profit.positive strong{color:#8bca59}.hero-tracker-profit.negative{border-color:#6d3e38}.hero-tracker-profit.negative strong{color:#e17a6a}
 .hero-tracker-body{padding:9px 19px 16px;background:#090c0d;border-radius:0 0 13px 13px}
-.hero-tracker-month{display:flex;align-items:center;gap:4px;margin-top:3px}
-.hero-tracker-month strong{color:#a3b0b9;font-size:10px;font-weight:550;letter-spacing:0;white-space:nowrap}
-.hero-tracker-month button{display:grid;place-items:center;flex:none;width:20px;height:20px;border:0;border-radius:4px;background:transparent;color:#96a8b1;font-size:17px;line-height:1}
-.hero-tracker-month button:hover{background:#26343a;color:#fff}
 .hero-tracker-weekdays,.hero-tracker-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
 .hero-tracker-weekdays{margin-bottom:8px;color:#87939d;text-align:center;font-size:10px;font-weight:650}
 .hero-tracker-day{display:flex;flex-direction:column;justify-content:space-between;min-width:0;aspect-ratio:1;padding:5px 6px;border:1px solid #222d25;border-radius:5px;background:#101512;font-variant-numeric:tabular-nums}
@@ -57,5 +50,5 @@
 @keyframes brand-drift{to{transform:translateX(-50%)}}
 @media(max-width:1050px){.home-hero-grid{gap:35px}}
 @media(max-width:900px){.home-hero{min-height:0;padding-top:62px}.home-hero-grid{grid-template-columns:1fr;gap:54px;min-height:0}.home-hero .home-copy{max-width:660px}.hero-tracker{justify-self:start}.hero-brands{margin-top:75px}.home-nav{margin-left:auto}.home-header-action{display:none}}
-@media(max-width:650px){.home-header-inner{width:calc(100% - 32px);min-height:55px;padding-top:9px}.home-nav{margin:4px 0 0}.home-header-action{display:inline-flex}.home-hero{padding-top:58px}.home-hero-grid{width:calc(100% - 36px);gap:57px}.home-hero .home-copy h1{font-size:clamp(43px,10.5vw,56px);line-height:1.07}.home-hero .home-lede{font-size:16px}.home-hero .home-actions{align-items:stretch}.home-hero .home-button{min-height:42px}.hero-tracker{width:100%}.hero-tracker-head{gap:8px;min-height:64px;padding-right:130px;padding-left:15px}.hero-tracker-avatar{width:29px;height:29px}.hero-tracker-avatar img{width:20px;height:20px}.hero-tracker-name strong{font-size:13px}.hero-tracker-month button{width:17px;height:18px}.hero-tracker-profit{top:-18px;right:11px;min-width:130px;min-height:59px;padding:8px 10px}.hero-tracker-profit small{font-size:9px}.hero-tracker-profit strong{font-size:25px}.hero-tracker-body{padding:8px 10px 11px}.hero-tracker-weekdays{margin-bottom:5px;font-size:9px}.hero-tracker-day{padding:4px}.hero-tracker-day strong{font-size:10px}.hero-brands{margin-top:66px;margin-bottom:31px}.hero-brand-set{gap:18px;padding-right:18px}.hero-brand-set li{width:48px;height:46px}.hero-brand-set img{width:42px;height:42px}}
+@media(max-width:650px){.home-header-inner{width:calc(100% - 32px);min-height:55px;padding-top:9px}.home-nav{margin:4px 0 0}.home-header-action{display:inline-flex}.home-hero{padding-top:58px}.home-hero-grid{width:calc(100% - 36px);gap:57px}.home-hero .home-copy h1{font-size:clamp(43px,10.5vw,56px);line-height:1.07}.home-hero .home-lede{font-size:16px}.home-hero .home-actions{align-items:stretch}.home-hero .home-button{min-height:42px}.hero-tracker{width:100%}.hero-tracker-head{gap:8px;min-height:60px;padding-right:130px;padding-left:15px}.hero-tracker-avatar{width:29px;height:29px}.hero-tracker-avatar img{width:20px;height:20px}.hero-tracker-head>strong{font-size:13px}.hero-tracker-profit{top:-18px;right:11px;min-width:130px;min-height:59px;padding:8px 10px}.hero-tracker-profit small{font-size:9px}.hero-tracker-profit strong{font-size:25px}.hero-tracker-body{padding:8px 10px 11px}.hero-tracker-weekdays{margin-bottom:5px;font-size:9px}.hero-tracker-day{padding:4px}.hero-tracker-day strong{font-size:10px}.hero-brands{margin-top:66px;margin-bottom:31px}.hero-brand-set{gap:18px;padding-right:18px}.hero-brand-set li{width:48px;height:46px}.hero-brand-set img{width:42px;height:42px}}
 @media(prefers-reduced-motion:reduce){.hero-brand-track{animation:none}.hero-brands{overflow-x:auto;mask-image:none}.hero-brand-set[aria-hidden="true"]{display:none}}
