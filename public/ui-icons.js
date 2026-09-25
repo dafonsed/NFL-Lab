@@ -12,6 +12,7 @@ const paths = {
   picks: '<path d="M8 4H5v17l7-4 7 4V4h-3M9 3h6v4H9Z"/>',
   home: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
   settings: '<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="currentColor"/><circle cx="15" cy="17" r="3" fill="currentColor"/>',
+  gear: '<path d="M10.4 2.8h3.2l.6 2.1c.6.2 1.2.4 1.7.7l2-.9 2.3 2.3-.9 2c.3.5.6 1.1.7 1.7l2.1.6v3.2l-2.1.6c-.2.6-.4 1.2-.7 1.7l.9 2-2.3 2.3-2-.9c-.5.3-1.1.6-1.7.7l-.6 2.1h-3.2l-.6-2.1c-.6-.2-1.2-.4-1.7-.7l-2 .9-2.3-2.3.9-2c-.3-.5-.6-1.1-.7-1.7l-2.1-.6v-3.2l2.1-.6c.2-.6.4-1.2.7-1.7l-.9-2 2.3-2.3 2 .9c.5-.3 1.1-.6 1.7-.7Z"/><circle cx="12" cy="12" r="3"/>',
   palette: '<path d="M12 3a9 9 0 1 0 0 18h1.5a2 2 0 0 0 1.4-3.4 1.5 1.5 0 0 1 1.1-2.6h1.5A3.5 3.5 0 0 0 21 11.5 8.5 8.5 0 0 0 12 3Z"/><circle cx="7" cy="10" r=".8" fill="currentColor"/><circle cx="10" cy="6.8" r=".8" fill="currentColor"/><circle cx="14.5" cy="7" r=".8" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".8" fill="currentColor"/>',
   bookmark: '<path d="M6 3h12v18l-6-4-6 4Z"/>',
   calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18m-14 4h3m4 0h3"/>',

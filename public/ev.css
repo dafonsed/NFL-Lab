@@ -30,7 +30,7 @@ body.ev-page .ev-header{display:flex;align-items:center;justify-content:space-be
 body.ev-page .ev-heading h1{margin:0;color:var(--ev-ink);font-size:clamp(34px,3.15vw,52px);line-height:1.04;letter-spacing:-.045em;font-weight:760}
 .ev-data-badge{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid #23785b;border-radius:999px;color:var(--ev-green);font-size:11px;white-space:nowrap}
 .ev-data-badge::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ev-green)}
-.ev-header-actions{display:flex;align-items:center;gap:8px}
+.ev-header-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 body.ev-page .ev-header-actions .button,body.ev-page .ev-header-actions #ev-view-actions button{min-height:36px;padding:7px 13px;color:#c9d4d8!important;background:#161e21!important;border:1px solid #334145!important;border-radius:7px;font-size:12px;font-weight:600;box-shadow:none!important;cursor:pointer}
 body.ev-page .ev-header-actions .button.primary{background:#14392e!important;border-color:#21845f!important;color:#bdf6dc!important}
 .ev-bookbar{display:flex;align-items:center;gap:13px;min-height:76px;padding:7px 14px;margin-bottom:11px;background:#12191c;border:1px solid var(--ev-line);border-radius:15px}
@@ -376,4 +376,94 @@ body.ev-page[data-ev-screen^="ev-"] .ev-row-more>div button:hover{background:#24
   body.ev-page[data-ev-screen^="ev-"] .ev-reference-filters label{flex:none;min-width:130px;height:43px}
   body.ev-page[data-ev-screen^="ev-"] .ev-search-label{top:76px;right:15px;width:min(340px,calc(100vw - 30px))}
   body.ev-page[data-ev-screen^="ev-"] .ev-positive-screen .ev-table{min-width:1410px}
+}
+
+/* One workspace rail across every dashboard screen. The active section is a
+   quiet emerald capsule, matching the supplied dashboard header composition. */
+body.ev-page.site-layout.ui-theme.reference-design .ev-site-header,
+body.ev-page[data-ev-screen^="ev-"] .ev-site-header{
+  height:112px!important;min-height:112px!important;padding:0 34px!important;
+  background:linear-gradient(180deg,#111719 0%,#101618 100%)!important;
+  border-bottom:1px solid #263236!important;
+}
+body.ev-page .ev-site-header-inner,
+body.ev-page[data-ev-screen^="ev-"] .ev-site-header-inner{
+  display:flex;align-items:center;flex-wrap:nowrap;gap:27px;
+  width:100%;max-width:1800px;min-height:111px;padding:0;margin:0 auto;
+  border:0;
+}
+body.ev-page .ev-site-brand,
+body.ev-page[data-ev-screen^="ev-"] .ev-site-brand{
+  position:static;top:auto;flex:none;width:238px;min-height:44px;
+  padding:0 29px 0 0;border-right:1px solid #445057;
+  gap:16px;font-size:22px;letter-spacing:.045em;
+}
+body.ev-page .ev-site-brand img,
+body.ev-page[data-ev-screen^="ev-"] .ev-site-brand img{width:36px;height:36px}
+body.ev-page .ev-top-heading,
+body.ev-page[data-ev-screen^="ev-"] .ev-top-heading{display:none}
+body.ev-page .ev-primary-nav,
+body.ev-page[data-ev-screen^="ev-"] .ev-primary-nav{
+  display:flex;flex:1;align-items:center;gap:7px;min-width:0;
+  padding:0;border:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;
+}
+body.ev-page .ev-primary-nav a{
+  height:52px;min-height:52px;padding:0 16px;border:1px solid transparent;
+  border-radius:14px;color:#b6c0c7;font-size:clamp(13px,1vw,17px);
+  font-weight:480;letter-spacing:0;transition:color .16s,border-color .16s,background-color .16s;
+}
+body.ev-page .ev-primary-nav a:hover{color:#f4f7f8;background:#182224}
+body.ev-page .ev-primary-nav a[aria-current="page"]{
+  color:#37e1b2;border-color:#138a65;border-radius:14px;
+  background:linear-gradient(180deg,#172622,#13201e);font-weight:640;
+}
+body.ev-page .ev-site-actions,
+body.ev-page[data-ev-screen^="ev-"] .ev-site-actions{
+  position:static;top:auto;gap:20px;margin-left:auto;
+}
+body.ev-page .ev-site-actions button,
+body.ev-page[data-ev-screen^="ev-"] .ev-site-actions button{
+  width:50px;height:50px;border-color:#2c393e;
+  background:linear-gradient(180deg,#1a2225,#141b1e);
+}
+body.ev-page .ev-site-actions button:first-child{margin:0}
+body.ev-page .ev-site-menu summary{width:106px;height:50px;border-color:#2c393e;font-size:16px}
+body.ev-page .ev-action-rule{height:39px;background:#3d484d}
+body.ev-page[data-ev-screen^="ev-"] .ev-header{
+  display:flex;min-height:71px;margin:4px 0 0;
+}
+body.ev-page[data-ev-screen^="ev-"] .ev-header .ev-heading h1{font-size:clamp(35px,3vw,47px)}
+@media(max-width:1450px){
+  body.ev-page .ev-site-header-inner,body.ev-page[data-ev-screen^="ev-"] .ev-site-header-inner{gap:16px}
+  body.ev-page .ev-site-brand,body.ev-page[data-ev-screen^="ev-"] .ev-site-brand{width:205px;padding-right:18px;font-size:19px}
+  body.ev-page .ev-primary-nav a{padding:0 12px;font-size:13px}
+  body.ev-page .ev-site-actions,body.ev-page[data-ev-screen^="ev-"] .ev-site-actions{gap:10px}
+  body.ev-page .ev-site-actions button,body.ev-page[data-ev-screen^="ev-"] .ev-site-actions button{width:43px;height:43px}
+  body.ev-page .ev-site-menu summary{width:83px;height:43px;font-size:13px}
+}
+@media(max-width:800px){
+  body.ev-page.site-layout.ui-theme.reference-design .ev-site-header,
+  body.ev-page[data-ev-screen^="ev-"] .ev-site-header{height:112px!important;min-height:112px!important;padding:0 15px!important}
+  body.ev-page .ev-site-header-inner,body.ev-page[data-ev-screen^="ev-"] .ev-site-header-inner{
+    display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:56px 55px;
+    gap:0;min-height:111px;padding:0;
+  }
+  body.ev-page .ev-site-brand,body.ev-page[data-ev-screen^="ev-"] .ev-site-brand{
+    grid-column:1;grid-row:1;width:auto;padding:0;border:0;gap:9px;font-size:17px;
+  }
+  body.ev-page .ev-site-brand img,body.ev-page[data-ev-screen^="ev-"] .ev-site-brand img{width:30px;height:30px}
+  body.ev-page .ev-site-actions,body.ev-page[data-ev-screen^="ev-"] .ev-site-actions{
+    grid-column:2;grid-row:1;gap:7px;
+  }
+  body.ev-page .ev-site-actions button,body.ev-page[data-ev-screen^="ev-"] .ev-site-actions button{width:36px;height:36px}
+  body.ev-page .ev-site-menu summary{width:58px;height:36px;padding:0 6px;font-size:11px}
+  body.ev-page .ev-action-rule{display:none}
+  body.ev-page .ev-primary-nav,body.ev-page[data-ev-screen^="ev-"] .ev-primary-nav{
+    grid-column:1/-1;grid-row:2;align-self:stretch;gap:4px;width:100%;padding:3px 0 7px;
+    border:0;overflow-x:auto;
+  }
+  body.ev-page .ev-primary-nav a{height:39px;min-height:39px;padding:0 13px;border-radius:10px;font-size:12px}
+  body.ev-page .ev-primary-nav a[aria-current="page"]{border-radius:10px}
+  body.ev-page[data-ev-screen^="ev-"] .ev-header{min-height:59px;margin-top:2px}
+  body.ev-page[data-ev-screen^="ev-"] .ev-header .ev-heading h1{font-size:32px}
 }
