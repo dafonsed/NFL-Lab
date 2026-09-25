@@ -76,4 +76,14 @@
 .learn-pagination[hidden]{display:none}
 @media(max-width:800px){.learn-topic-tabs{justify-content:flex-start;gap:10px}.learn-topic-tabs .topic-filter{flex:0 0 auto;min-height:46px;padding:0 18px}}
 @media(max-width:560px){.learn-topic-tabs{gap:7px;padding-bottom:12px}.learn-topic-tabs .topic-filter{min-height:43px;padding:0 14px;font-size:12px}.learn-pagination{flex-wrap:wrap;gap:7px}.learn-page-numbers{order:3;flex:1 0 100%;justify-content:center}.learn-page-status{order:4;flex:1 0 100%;text-align:center}.learn-pagination a,.learn-page-step{min-height:42px}.learn-page-status{margin:0}}
+
+/* Keep the guide controls together as one compact toolbar. */
+.learn-toolbar{display:grid;grid-template-columns:minmax(190px,215px) minmax(260px,1fr) auto;align-items:center;gap:14px;width:min(100%,980px);margin:18px auto 22px;padding:10px 12px;border:1px solid #1e3039;border-radius:8px;background:#0c141a}
+.learn-toolbar .learn-type-filter{justify-content:space-between;gap:9px;min-width:0;min-height:42px;color:var(--edu-muted)}
+.learn-toolbar .learn-type-filter select{width:148px;max-width:none;min-width:0;min-height:42px;padding:0 30px 0 11px;border-radius:6px}
+.learn-toolbar .learn-search{grid-column:2;width:100%;max-width:none;min-width:0;min-height:44px;margin:0;border-radius:6px}
+.learn-toolbar .catalog-count{grid-column:3;justify-self:end;margin:0;padding:7px 9px;border:1px solid #20313b;border-radius:6px;background:#101920;text-align:center;white-space:nowrap}
+.learn-toolbar .catalog-count strong{font-size:13px}
+@media(max-width:720px){.learn-toolbar{grid-template-columns:minmax(0,1fr) auto;gap:10px;width:100%;margin:14px 0 19px;padding:10px}.learn-toolbar .learn-type-filter{grid-column:1;justify-content:flex-start;gap:8px}.learn-toolbar .learn-type-filter select{width:clamp(150px,52vw,210px);max-width:100%}.learn-toolbar .learn-search{grid-column:1/-1;grid-row:2;order:0;width:100%;max-width:none}.learn-toolbar .catalog-count{grid-column:2;grid-row:1;justify-self:end}}
+@media(max-width:380px){.learn-toolbar .learn-type-filter select{width:145px}.learn-toolbar .catalog-count{padding-inline:7px;font-size:10px}}
 @media(prefers-reduced-motion:reduce){.learn-topic-tabs .topic-filter{transition:none}}
