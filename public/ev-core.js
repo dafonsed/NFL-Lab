@@ -6,6 +6,11 @@ export const decimal = odds => {
 };
 export const implied = odds => 1 / decimal(odds);
 export const expectedReturn = (probability, odds) => probability * decimal(odds) - 1;
+export function fractionalKellyStake(bankroll, multiplier, probability, odds) {
+  const payout = decimal(odds), capital = Number(bankroll), fraction = Number(multiplier), p = Number(probability);
+  if (!(capital > 0) || !(fraction >= 0 && fraction <= 1) || !(p > 0 && p < 1) || !Number.isFinite(payout)) return NaN;
+  return capital * fraction * Math.max(0, Math.min(1, (p * payout - 1) / (payout - 1)));
+}
 export const money = n => Number.isFinite(n) ? (n < 0 ? '-$' : '$') + Math.abs(n).toFixed(2) : '—';
 export const percent = n => Number.isFinite(n) ? (100 * n).toFixed(1) + '%' : '—';
 export const signed = n => Number.isFinite(n) ? (n > 0 ? '+' : '') + (100 * n).toFixed(1) + '%' : '—';

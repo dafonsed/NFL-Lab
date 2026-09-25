@@ -1,4 +1,4 @@
-import { decimal, implied, expectedReturn, money, percent, signed, oddsLabel, probabilityToAmerican, fairProbability, fresh, groups, evRows, holdRows, arbitrage, arbitrageRows, middleRows, promoConversion, parlay, fantasySlip, closingLineValue, gradedBet, pearson, sharpMatches, alertMatches, validateWorkspace } from './ev-core.js';
+import { decimal, implied, expectedReturn, money, percent, signed, oddsLabel, probabilityToAmerican, fairProbability, fresh, groups, marketKey, evRows, fractionalKellyStake, holdRows, arbitrage, arbitrageRows, middleRows, promoConversion, parlay, fantasySlip, closingLineValue, gradedBet, pearson, sharpMatches, alertMatches, validateWorkspace } from './ev-core.js?v=2';
 import { exampleWorkspace } from './ev-demo.js';
 
 const $ = selector => document.querySelector(selector);
@@ -31,7 +31,7 @@ function load() {
     const parsed = JSON.parse(localStorage.getItem(STORE));
     if (parsed?.version === 1) return normalize(parsed);
   } catch { /* Browser storage can be disabled. */ }
-  return normalize(exampleWorkspace());
+  return normalize({ version: 1, example: false });
 }
 function normalize(data) {
   for (const key of arrays) if (!Array.isArray(data[key])) data[key] = [];
@@ -43,10 +43,16 @@ function normalize(data) {
   return data;
 }
 let state = load();
-let active = toolMeta[location.hash.slice(1)] ? location.hash.slice(1) : 'odds';
+let active = toolMeta[location.hash.slice(1)] ? location.hash.slice(1) : 'ev-pre';
 let search = '';
+let bookmaker = '', marketType = '', showAllBooks = false, bankroll = 5000, kelly = .25, evSort = 'ev', detailQuoteId = '';
+try {
+  const saved = JSON.parse(localStorage.getItem('sportslab-ev-display-v1'));
+  if (Number(saved?.bankroll) > 0) bankroll = Number(saved.bankroll);
+  if (Number(saved?.kelly) >= 0 && Number(saved?.kelly) <= 1) kelly = Number(saved.kelly);
+} catch { /* Keep usable defaults when storage is unavailable. */ }
 const initialSport = new URLSearchParams(location.search).get('sport')?.toUpperCase();
-let sport = ['NFL','MLB','NBA','WNBA','NHL','SOCCER'].includes(initialSport) ? initialSport === 'SOCCER' ? 'Soccer' : initialSport : 'NFL';
+let sport = initialSport === 'ALL' ? '' : ['NFL','MLB','NBA','WNBA','NHL','SOCCER'].includes(initialSport) ? initialSport === 'SOCCER' ? 'Soccer' : initialSport : 'NFL';
 let parlayIds = [], fantasyIds = [], fantasyApp = '', stake = 100, fantasyStake = 10;
 let promoInput = { stake: 100, promoOdds: 150, hedgeOdds: -130, kind: 'bonus', boost: 0 };
 let trendA = '', trendB = '', traderName = '';
@@ -65,7 +71,7 @@ const fmtLine = line => line === '' || line == null ? '—' : esc(line);
 const oddsCell = q => `<strong>${oddsLabel(q.odds)}</strong><small>${esc(q.book)}</small>`;
 const button = (label, attributes = '') => `<button type="button" ${attributes}>${label}</button>`;
 const empty = (title, body) => `<div class="ev-empty"><strong>${esc(title)}</strong>${esc(body)}</div>`;
-const table = (headings, rows) => rows.length ? `<div class="ev-table-wrap"><table class="ev-table"><thead><tr>${headings.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>` : '';
+const table = (headings, rows) => rows.length ? `<div class="ev-table-wrap"><table class="ev-table"><thead><tr>${headings.map(h => `<th scope="col">${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>` : '';
 const metric = (label, value, cls = '') => `<div class="ev-metric ${cls}"><span>${esc(label)}</span><strong>${value}</strong></div>`;
 function persist() {
   try { localStorage.setItem(STORE, JSON.stringify(state)); $('#ev-notice').textContent = state.example ? 'Example market data. Add or import your own prices; no live feed is connected.' : 'Manual workspace saved in this browser. No market feed is connected.'; }
@@ -95,18 +101,24 @@ function renderNav() {
   }).join('');
   $('#ev-tool-select').innerHTML = TOOLS.map(([group, key, label]) => `<option value="${key}">${group} / ${label}</option>`).join('');
   $('#ev-tool-select').value = active;
+  document.querySelectorAll('.ev-quick-tools [data-tool]').forEach(button => button.setAttribute('aria-current', button.dataset.tool === active ? 'page' : 'false'));
 }
-function setTool(key) { if (!toolMeta[key]) return; active = key; history.replaceState(null, '', location.pathname + location.search + '#' + key); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function setTool(key) { if (!toolMeta[key]) return; active = key; $('.ev-tool-details').open = false; history.replaceState(null, '', location.pathname + location.search + '#' + key); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 function action(label, type, extra = '') { return button(label, `data-add="${type}" ${extra}`); }
 function render() {
   renderNav();
   $('#ev-sport').value = sport;
   $('#ev-search').value = search;
+  $('#ev-market-type').value = marketType;
+  $('#ev-ev-bankroll').value = bankroll;
+  $('#ev-kelly').value = kelly;
+  $('#ev-data-kind').textContent = state.example ? 'Example prices included' : 'Manual prices';
+  renderBooks();
   $('#ev-record-count').textContent = `${state.quotes.length} prices · ${state.dfs.length} DFS props · ${state.contracts.length} contracts`;
   $('#ev-title').textContent = toolMeta[active][2];
   $('#ev-description').textContent = toolMeta[active][3];
   const viewActions = {
-    odds: action('Add price', 'quote') + (state.example ? button('Remove examples', 'data-remove-examples') : button('Load examples', 'data-load-examples')), 'ev-pre': action('Add price', 'quote'), 'ev-live': action('Add live price', 'quote', 'data-live="true"') + (state.example ? button('Replay live examples', 'data-replay-live') : ''),
+    odds: action('Add price', 'quote') + (state.example ? button('Remove examples', 'data-remove-examples') : button('Load examples', 'data-load-examples')), 'ev-pre': state.example ? button('Remove examples', 'data-remove-examples') : button('Load examples', 'data-load-examples'), 'ev-live': action('Add live price', 'quote', 'data-live="true"') + (state.example ? button('Replay live examples', 'data-replay-live') : ''),
     'arb-pre': action('Add price', 'quote'), 'arb-live': action('Add live price', 'quote', 'data-live="true"') + (state.example ? button('Replay live examples', 'data-replay-live') : ''), middles: action('Add price', 'quote') + (state.example ? button('Replay live examples', 'data-replay-live') : ''), holds: action('Add price', 'quote'),
     sharp: action('Add exchange price', 'quote', 'data-exchange="true"') + (state.example ? button('Replay live examples', 'data-replay-live') : ''), fantasy: action('Add DFS prop', 'dfs'), optimizer: action('Add DFS prop', 'dfs'), slip: action('Add DFS prop', 'dfs'),
     'fantasy-alerts': action('New alert', 'alert', 'data-kind="fantasy-new"'), prediction: action('Add contract', 'contract'), tracker: action('Add bet', 'bet'), trends: action('Add result', 'result'), 'line-alerts': action('New alert', 'alert')
@@ -114,6 +126,18 @@ function render() {
   $('#ev-view-actions').innerHTML = viewActions[active] || '';
   const views = { odds: renderOdds, 'ev-pre': () => renderEv(false), 'ev-live': () => renderEv(true), 'arb-pre': () => renderArb(false), 'arb-live': () => renderArb(true), middles: renderMiddles, holds: renderHolds, promo: renderPromo, parlay: renderParlay, sharp: renderSharp, fantasy: renderFantasy, optimizer: renderOptimizer, slip: renderSlip, 'fantasy-alerts': renderFantasyAlerts, prediction: renderPrediction, tracker: renderTracker, trends: renderTrends, 'line-alerts': renderLineAlerts };
   $('#ev-view').innerHTML = views[active]();
+}
+
+function renderBooks() {
+  const books = [...new Set(state.quotes.filter(q => !sport || q.sport === sport).map(q => q.book))].sort((a,b) => a.localeCompare(b));
+  const shown = showAllBooks ? books : books.slice(0, 9);
+  $('#ev-books').innerHTML = `<button type="button" data-book="" aria-pressed="${!bookmaker}">All books</button>` + (books.length ? shown.map(book => `<button type="button" data-book="${esc(book)}" aria-pressed="${bookmaker === book}" title="Filter ${esc(book)}"><span class="ev-book-mark" aria-hidden="true">${esc(book.replace(/[^\p{L}\p{N}]/gu,'').slice(0,2).toUpperCase())}</span><span>${esc(book)}</span></button>`).join('') : '<span class="ev-book-empty">Books appear here after you add or import prices.</span>');
+  $('#ev-books-more').hidden = books.length <= 9;
+  $('#ev-books-more').textContent = showAllBooks ? 'Show fewer' : `+ ${books.length - 9} more`;
+  $('#ev-books-more').setAttribute('aria-expanded', String(showAllBooks));
+  const relevant = ['ev-pre','ev-live','odds'].includes(active);
+  $('.ev-bookbar').hidden = !relevant;
+  $('.ev-stake-panel').hidden = !['ev-pre','ev-live'].includes(active);
 }
 
 function renderOdds() {
@@ -136,9 +160,31 @@ function renderOdds() {
 }
 
 function renderEv(live) {
-  const rows = evRows(quotes(), live);
-  const positives = rows.filter(x => x.ev > 0);
-  return `<div class="ev-stack"><div class="ev-metrics">${metric('Priced selections', rows.length)}${metric('Positive EV', positives.length, 'positive')}${metric('Best estimate', rows.length ? signed(rows[0].ev) : '—', rows[0]?.ev > 0 ? 'positive' : '')}${metric('Freshness limit', live ? '90 sec' : 'Pregame')}</div>${live ? '<p class="ev-caption ev-warning">Live entries expire after 90 seconds. Update the price manually to recalculate; no feed is connected.</p>' : ''}${table(['Selection', 'Book price', 'Implied', 'Other books fair', 'EV / $100', 'Action'], rows.map(({quote:q,fair,ev}) => `<tr><td><strong>${esc(qName(q))}</strong><small>${esc(q.sport)} · ${qStatus(q)}</small></td><td>${oddsCell(q)}</td><td data-num>${percent(implied(q.odds))}</td><td data-num>${percent(fair)}</td><td data-num class="${ev > 0 ? 'ev-positive' : 'ev-negative'}">${signed(ev)}<small>${money(100 * ev)}</small></td><td class="ev-actions">${button('Edit', `data-edit="quote" data-id="${esc(q.id)}"`) }${live ? '' : button('Parlay', `data-parlay="${esc(q.id)}"`)}</td></tr>`)) || empty('No comparable markets', 'Enter both sides at two books. EV requires another book with a complete opposing pair.')}<p class="ev-caption">Fair probability averages no-vig pairs from other books at the exact same line. EV = fair probability × decimal payout − 1. It does not include limits, fees or correlated outcomes.</p></div>`;
+  const pool = state.quotes.filter(q => !sport || q.sport === sport);
+  const all = evRows(pool, live);
+  const rows = all.filter(({quote:q,ev}) => ev > 0 && (!bookmaker || q.book === bookmaker) && (!marketType || q.type === marketType) && (!search || [q.event,q.market,q.book,q.side,q.sport].some(value => filterText(value))));
+  if (evSort === 'event') rows.sort((a,b) => a.quote.event.localeCompare(b.quote.event) || b.ev - a.ev);
+  else if (evSort === 'odds') rows.sort((a,b) => decimal(b.quote.odds) - decimal(a.quote.odds));
+  else rows.sort((a,b) => b.ev - a.ev);
+  const heading = (label,key) => `<button type="button" class="ev-sort" data-sort="${key}" aria-label="Sort by ${label}" ${evSort === key ? 'aria-current="true"' : ''}>${label}${evSort === key ? ' ↓' : ''}</button>`;
+  const body = rows.map(({quote:q,fair,ev}) => `<tr><td class="ev-value">${signed(ev)}</td><td class="ev-event"><strong>${esc(q.event)}</strong><small>${esc(q.sport)} · ${q.live ? 'Live entry' : 'Pregame'} · ${age(q.ts)}</small></td><td><span>${esc(q.market)}</span><small>${esc(q.type)}${q.line !== '' && q.line != null ? ' · ' + fmtLine(q.line) : ''}</small></td><td><span class="ev-book-cell"><span class="ev-book-mark" aria-hidden="true">${esc(q.book.replace(/[^\p{L}\p{N}]/gu,'').slice(0,2).toUpperCase())}</span>${esc(q.book)}</span></td><td><strong>${esc(q.side)}${q.line !== '' && q.line != null ? ' ' + fmtLine(q.line) : ''}</strong></td><td>${oddsLabel(q.odds)}</td><td>${percent(fair)}<small>No-vig consensus</small></td><td>${money(fractionalKellyStake(bankroll,kelly,fair,q.odds))}</td><td class="ev-actions">${button('Details', `data-detail="${esc(q.id)}"`)}${button('Edit', `data-edit="quote" data-id="${esc(q.id)}"`)}${live ? '' : button('Parlay', `data-parlay="${esc(q.id)}"`)}</td></tr>`);
+  const emptyTitle = !pool.length ? 'No prices for this sport yet' : 'No positive EV selections match these filters';
+  const emptyBody = !pool.length ? 'Add or import prices to compare. You can also load clearly labeled examples.' : 'Add complete opposing prices from at least two books, or clear a filter. No price feed is connected.';
+  return `<div class="ev-stack"><div class="ev-results-context"><div><strong>${rows.length} positive ${rows.length === 1 ? 'selection' : 'selections'}</strong><span> from ${all.length} comparable prices</span></div><span>${live ? 'Live entries expire after 90 seconds' : state.example ? 'Pregame · manual and example prices' : 'Pregame · manual prices'}</span></div>${rows.length ? '<p class="ev-swipe-hint">Scroll sideways to view odds, probability and actions →</p>' + table([heading('EV','ev'),heading('Event','event'),'Market','Bookmaker','Selection',heading('Odds','odds'),'Fair probability','Rec. bet','Actions'],body) : empty(emptyTitle,emptyBody)}<p class="ev-caption ev-method-note">Fair probability averages no-vig pairs from other complete books at the same line. EV = fair probability × decimal payout − 1. Recommended bet uses the selected fractional Kelly multiplier and is an estimate, not an instruction to wager. Confirm price, limits and freshness independently.</p></div>`;
+}
+
+function openDetail(id) {
+  const quote = state.quotes.find(q => q.id === id);
+  if (!quote) return;
+  detailQuoteId = id;
+  const peers = groups(state.quotes).find(rows => rows.some(q => q.id === id)) || [quote];
+  const fair = fairProbability(quote, peers), estimate = expectedReturn(fair, quote.odds);
+  $('#ev-detail-title').textContent = quote.market;
+  const sameSide = peers.filter(q => q.side === quote.side).sort((a,b) => decimal(b.odds) - decimal(a.odds));
+  const otherSide = peers.filter(q => q.side !== quote.side).sort((a,b) => decimal(b.odds) - decimal(a.odds));
+  const priceRows = (list) => list.length ? list.map(q => `<tr><th scope="row">${esc(q.book)}${q.id === quote.id ? ' <span class="ev-detail-selected">Selected</span>' : ''}</th><td>${oddsLabel(q.odds)}</td><td>${percent(implied(q.odds))}</td><td>${origin(q)}</td></tr>`).join('') : '<tr><td colspan="4">No opposing price entered</td></tr>';
+  $('#ev-detail-body').innerHTML = `<div class="ev-detail-summary"><div><span>Estimated EV</span><strong class="${estimate > 0 ? 'ev-positive' : 'ev-negative'}">${signed(estimate)}</strong></div><div><span>Selection</span><strong>${esc(quote.side)} ${fmtLine(quote.line)}</strong></div><div><span>Fair probability</span><strong>${percent(fair)}</strong></div></div><p class="ev-detail-event">${esc(quote.event)} · ${esc(quote.sport)} · ${quote.live ? 'Live entry' : 'Pregame'}</p><div class="ev-detail-comparison"><h3>Implied probability by book</h3><div class="ev-detail-bars">${sameSide.map(q => `<div><span>${esc(q.book)}</span><div class="ev-bar-track"><i style="width:${Math.max(0,Math.min(100,implied(q.odds)*100))}%"></i></div><strong>${oddsLabel(q.odds)}</strong></div>`).join('')}</div></div><div class="ev-detail-tables"><section><h3>${esc(quote.side)}${quote.line !== '' && quote.line != null ? ' ' + fmtLine(quote.line) : ''}</h3><table><thead><tr><th>Book</th><th>Odds</th><th>Implied</th><th>Source</th></tr></thead><tbody>${priceRows(sameSide)}</tbody></table></section><section><h3>Opposing side</h3><table><thead><tr><th>Book</th><th>Odds</th><th>Implied</th><th>Source</th></tr></thead><tbody>${priceRows(otherSide)}</tbody></table></section></div><p class="ev-detail-note">Selected price entered ${age(quote.ts)}. ${quote.live && !fresh(quote) ? 'This live entry is stale. ' : ''}This is a calculation from entered prices, not a live sportsbook quote.</p>`;
+  if (!$('#ev-detail').open) $('#ev-detail').showModal();
 }
 
 function renderArb(live) {
@@ -346,9 +392,19 @@ function deleteRecord() {
 
 $('#ev-tool-nav').addEventListener('click', event => { const key = event.target.closest('[data-tool]')?.dataset.tool; if (key) setTool(key); });
 $('#ev-tool-select').addEventListener('change', event => setTool(event.target.value));
+$('.ev-quick-tools').addEventListener('click', event => { const key = event.target.closest('[data-tool]')?.dataset.tool; if (key) setTool(key); });
+$('#ev-books').addEventListener('click', event => { const target = event.target.closest('[data-book]'); if (target) { bookmaker = target.dataset.book; render(); } });
+$('#ev-books-more').addEventListener('click', () => { showAllBooks = !showAllBooks; renderBooks(); });
+$('#ev-find').addEventListener('click', () => { if (!['ev-pre','ev-live'].includes(active)) setTool('ev-pre'); $('#ev-view').scrollIntoView({ behavior:'smooth', block:'start' }); });
+$('#ev-reset-filters').addEventListener('click', () => { bookmaker = ''; marketType = ''; search = ''; if (sport !== '') { sport = ''; history.replaceState(null, '', location.pathname + '?sport=all' + location.hash); } render(); });
+$('#ev-market-type').addEventListener('change', event => { marketType = event.target.value; render(); });
+const saveEvDisplay = () => { try { localStorage.setItem('sportslab-ev-display-v1', JSON.stringify({bankroll,kelly})); } catch { /* Display settings stay usable this session. */ } };
+$('#ev-ev-bankroll').addEventListener('change', event => { bankroll = Math.max(1, Number(event.target.value) || 5000); saveEvDisplay(); render(); });
+$('#ev-kelly').addEventListener('change', event => { kelly = Math.max(0, Math.min(1, Number(event.target.value) || 0)); saveEvDisplay(); render(); });
+$('#ev-detail-close').addEventListener('click', () => $('#ev-detail').close());
 $('#ev-sport').addEventListener('change', event => {
   sport = event.target.value;
-  location.assign(`${location.pathname}?sport=${encodeURIComponent(sport.toLowerCase())}${location.hash}`);
+  location.assign(`${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}${location.hash}`);
 });
 $('#ev-search').addEventListener('input', event => { search = event.target.value.toLowerCase().trim(); render(); });
 $('#ev-add-quote').addEventListener('click', () => openForm('quote'));
@@ -358,6 +414,8 @@ $('#ev-view-actions').addEventListener('click', event => { if (!event.target.clo
 $('#ev-view-actions').addEventListener('click', event => { if (!event.target.closest('[data-replay-live]')) return; for (const quote of state.quotes.filter(q => q.live && q.source === 'example')) { quote.ts = now(); snapshotQuote(quote); } commit(); });
 $('#ev-view').addEventListener('click', event => {
   const target = event.target.closest('button'); if (!target) return;
+  if (target.dataset.sort) { evSort = target.dataset.sort; return render(); }
+  if (target.dataset.detail) return openDetail(target.dataset.detail);
   if (target.dataset.tool) return setTool(target.dataset.tool);
   if (target.dataset.add) return openForm(target.dataset.add, null, { kind:target.dataset.kind || 'price' });
   if (target.dataset.edit) return openForm(target.dataset.edit, target.dataset.id);
