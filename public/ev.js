@@ -190,11 +190,13 @@ function render() {
   $('#ev-market-type').innerHTML = options.map(([value,label]) => `<option value="${esc(value)}">${esc(label)}</option>`).join('');
   if (!options.some(([value]) => value === marketType)) marketType = '';
   $('#ev-market-type').value = marketType;
+  const positiveView = active === 'ev-pre' || active === 'ev-live';
+  $('#ev-reference-sport').options[0].textContent = positiveView ? 'Sports' : 'All sports';
   $('#ev-reference-sport').value = sport;
-  $('#ev-reference-market').innerHTML = options.map(([value,label]) => `<option value="${esc(value)}">${esc(label)}</option>`).join('');
+  $('#ev-reference-market').innerHTML = options.map(([value,label]) => `<option value="${esc(value)}">${esc(!value && positiveView ? 'Markets' : label)}</option>`).join('');
   $('#ev-reference-market').value = marketType;
   const leagues = [...new Set(state.quotes.map(q => q.league || q.sport).filter(Boolean))].sort();
-  $('#ev-reference-league').innerHTML = '<option value="">All leagues</option>' + leagues.map(value => `<option value="${esc(value)}">${esc(value)}</option>`).join('');
+  $('#ev-reference-league').innerHTML = `<option value="">${positiveView ? 'Leagues' : 'All leagues'}</option>` + leagues.map(value => `<option value="${esc(value)}">${esc(value)}</option>`).join('');
   if (!leagues.includes(evLeague)) evLeague = '';
   $('#ev-reference-league').value = evLeague;
   $('#ev-reference-date').value = evDateRange;
@@ -212,7 +214,7 @@ function render() {
   $('#ev-kelly').value = usesKelly ? kelly : flatMultiplier.toFixed(2);
   $('#ev-data-kind').textContent = state.example ? 'Example prices' : 'Manual prices';
   $('#ev-top-badge').textContent = state.example ? 'Example prices' : 'Manual prices';
-  $('#ev-multiplier-label').textContent = usesKelly ? 'Kelly multiplier' : 'Flat multiplier';
+  $('#ev-multiplier-label').textContent = usesKelly ? 'Kelly Multiplier' : 'Flat multiplier';
   $('#ev-kelly').disabled = !usesKelly && !usesFlat;
   $('#ev-kelly').min = usesKelly ? '0' : '0.05';
   $('#ev-kelly').max = usesKelly ? '1' : '10';
@@ -743,6 +745,24 @@ $('#ev-sharp-min').addEventListener('change', event => { localStorage.setItem('s
 const saveEvDisplay = () => { try { localStorage.setItem('sportslab-ev-display-v1', JSON.stringify({bankroll,kelly,flatMultiplier})); } catch { /* Display settings stay usable this session. */ } };
 $('#ev-ev-bankroll').addEventListener('change', event => { bankroll = Math.max(1, Number(event.target.value) || 5000); saveEvDisplay(); render(); });
 $('#ev-kelly').addEventListener('change', event => { if (['ev-pre','ev-live'].includes(active)) kelly = Math.max(0, Math.min(1, Number(event.target.value) || 0)); else flatMultiplier = Math.max(.05, Math.min(10, Number(event.target.value) || 1)); saveEvDisplay(); render(); });
+const kellyInput = $('#ev-kelly');
+const kellyWrap = kellyInput.parentElement;
+const kellyLabel = kellyWrap.parentElement;
+const kellyField = document.createElement('div');
+kellyField.className = 'ev-multiplier-field';
+kellyLabel.before(kellyField);
+kellyField.append(kellyLabel, kellyWrap);
+kellyLabel.htmlFor = 'ev-kelly';
+const kellyStepper = document.createElement('div');
+kellyStepper.className = 'ev-kelly-stepper';
+kellyStepper.innerHTML = '<button type="button" data-step="up" aria-label="Increase multiplier"></button><button type="button" data-step="down" aria-label="Decrease multiplier"></button>';
+kellyWrap.append(kellyStepper);
+kellyStepper.addEventListener('click', event => {
+  const button = event.target.closest('button[data-step]');
+  if (!button || kellyInput.disabled) return;
+  if (button.dataset.step === 'up') kellyInput.stepUp(); else kellyInput.stepDown();
+  kellyInput.dispatchEvent(new Event('change', { bubbles: true }));
+});
 $('#ev-detail-close').addEventListener('click', () => $('#ev-detail').close());
 $('#ev-sport').addEventListener('change', event => {
   sport = event.target.value;
