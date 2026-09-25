@@ -1,0 +1,129 @@
+/* SportsLab's compact site navigation. */
+body.landing-page .home-header {
+  position: relative;
+  z-index: 20;
+  border-top: 3px solid #afd8ad;
+  border-bottom: 0;
+  background: #130e1c;
+}
+.home-header-inner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 40px;
+  width: min(1320px, calc(100% - 64px));
+  min-height: 77px;
+  margin-inline: auto;
+  padding: 0;
+}
+.home-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  color: #fff;
+  font-size: 26px;
+  font-weight: 780;
+  letter-spacing: -.052em;
+  white-space: nowrap;
+}
+.home-brand img { width: 37px; height: 37px; }
+.home-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: clamp(20px, 1.7vw, 32px);
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  overflow: visible;
+}
+.home-nav a {
+  flex: none;
+  color: #f4f0f9;
+  font-size: 16px;
+  font-weight: 690;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.home-nav a:hover { color: #c6a7ff; }
+.home-nav a:focus-visible,
+.home-brand:focus-visible,
+.home-header-action:focus-visible,
+.home-menu-toggle:focus-visible { outline: 2px solid #bf9cff; outline-offset: 4px; }
+.home-header-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: end;
+  min-width: 164px;
+  min-height: 45px;
+  margin: 0;
+  padding: 10px 23px;
+  border: 0;
+  border-radius: 7px;
+  background: #925cf0;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 740;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+}
+.home-header-action:hover { border: 0; background: #a374f5; color: #fff; }
+.home-menu-toggle { display: none; }
+
+@media (max-width: 1180px) {
+  .home-header-inner {
+    position: relative;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 14px;
+    min-height: 72px;
+    padding: 0;
+  }
+  .home-brand { grid-column: 1; grid-row: 1; }
+  .home-header-action { grid-column: 3; grid-row: 1; }
+  .home-menu-toggle {
+    display: grid;
+    grid-column: 4;
+    grid-row: 1;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border: 1px solid #423b4b;
+    border-radius: 8px;
+    background: #201729;
+    color: #fff;
+    cursor: pointer;
+  }
+  .home-menu-toggle svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-width: 2; }
+  .home-nav {
+    display: none;
+    position: absolute;
+    top: calc(100% - 1px);
+    right: 0;
+    left: 0;
+    z-index: 30;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    padding: 13px;
+    border: 1px solid #3a3047;
+    border-radius: 0 0 12px 12px;
+    background: #1b1426;
+    box-shadow: 0 22px 40px #0008;
+  }
+  .home-nav[data-open="true"] { display: grid; }
+  .home-nav a { display: block; padding: 13px 12px; border-radius: 7px; font-size: 15px; }
+  .home-nav a:hover { background: #30233f; }
+}
+@media (max-width: 650px) {
+  .home-header-inner { grid-template-columns: 1fr auto auto; gap: 9px; width: calc(100% - 32px); min-height: 66px; }
+  .home-brand { font-size: 20px; gap: 7px; }
+  .home-brand img { width: 30px; height: 30px; }
+  .home-header-action { grid-column: 2; min-width: 0; min-height: 38px; padding: 8px 12px; font-size: 12px; }
+  .home-menu-toggle { grid-column: 3; width: 38px; height: 38px; }
+  .home-nav { grid-template-columns: 1fr 1fr; gap: 2px; padding: 10px; }
+  .home-nav a { padding: 12px 9px; font-size: 14px; }
+}

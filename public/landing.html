@@ -9,21 +9,24 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preload" href="/assets/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/landing-home.css?v=1">
+  <link rel="stylesheet" href="/landing-home.css?v=2">
   <link rel="stylesheet" href="/landing-header.css?v=10">
   <link rel="stylesheet" href="/landing-footer.css?v=1">
   <link rel="stylesheet" href="/landing-atmosphere.css?v=4">
   <link rel="stylesheet" href="/landing-pricing.css?v=1">
+  <link rel="stylesheet" href="/landing-nav.css?v=1">
   <script type="module" src="/landing.js?v=9"></script>
   <script type="module" src="/landing-reviews.js?v=2"></script>
   <script type="module" src="/landing-pricing.js?v=1"></script>
+  <script type="module" src="/landing-nav.js?v=1"></script>
 </head>
 <body class="landing-page">
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="home-header"><div class="home-header-inner">
-    <a class="home-brand" href="/" aria-label="SportsLab home"><img src="/favicon.svg" width="31" height="31" alt=""><span>sports<strong>lab</strong></span></a>
-    <nav class="home-nav" aria-label="Main navigation"><a href="/research">Player research</a><a href="/live">Live games</a><a href="/simulation">Simulation</a><a href="/bets">My picks</a><a href="/online-sportsbooks">Sportsbook guides</a></nav>
-    <a class="home-button home-header-action" href="/research">Open workspace <span aria-hidden="true">↗</span></a>
+    <a class="home-brand" href="/" aria-label="SportsLab home"><img src="/favicon.svg" width="37" height="37" alt=""><span>SportsLab</span></a>
+    <nav class="home-nav" id="home-nav" aria-label="Main navigation"><a href="/#explore">How it works</a><a href="/research">Product</a><a href="/#plans">Pricing</a><a href="/#reviews">Testimonials</a><a href="/online-sportsbooks">Sportsbooks</a><a href="/bets">My picks</a></nav>
+    <a class="home-button home-header-action" href="/research">Dashboard</a>
+    <button class="home-menu-toggle" type="button" aria-controls="home-nav" aria-expanded="false" aria-label="Open menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
   </div></header>
   <main id="main">
     <section class="home-hero home-section" id="product" aria-labelledby="hero-title">
@@ -71,7 +74,7 @@
       <div class="home-copy"><h2 id="tracker-title">Your picks,<br>day by day.</h2><p class="home-lede">Save a bet in My Picks and see its settled result on the date you entered. Your net profit updates from the record kept in this browser.</p><p class="home-fine">The calendar shows example results when no picks are saved.</p><a class="home-button" href="/bets">Open My Picks</a></div>
       <div class="hero-tracker" id="hero-tracker" aria-live="polite"><p class="home-loading">Loading your pick record…</p></div>
     </div></section>
-    <nav class="home-sports" id="sports" aria-label="Research by sport"><div class="home-narrow"><span>Explore a sport</span><a href="/research?sport=nfl">NFL</a><a href="/research?sport=nba">NBA</a><a href="/research?sport=wnba">WNBA</a><a href="/research?sport=mlb">MLB</a><a href="/research?sport=nhl">NHL</a><a href="/research?sport=soccer">Soccer</a></div></nav>
+    <nav class="home-sports" id="sports" aria-label="Research by sport"><div class="home-narrow"><span class="home-sports-heading">Explore a sport</span><a href="/research?sport=nfl" aria-label="Explore NFL research"><img src="/assets/leagues/nfl.png" width="68" height="52" alt="NFL" decoding="async"></a><a href="/research?sport=nba" aria-label="Explore NBA research"><img src="/assets/leagues/nba.png" width="68" height="52" alt="NBA" decoding="async"></a><a href="/research?sport=wnba" aria-label="Explore WNBA research"><img src="/assets/leagues/wnba.png" width="68" height="52" alt="WNBA" decoding="async"></a><a href="/research?sport=mlb" aria-label="Explore MLB research"><img src="/assets/leagues/mlb.png" width="68" height="52" alt="MLB" decoding="async"></a><a href="/research?sport=nhl" aria-label="Explore NHL research"><img src="/assets/leagues/nhl.png" width="68" height="52" alt="NHL" decoding="async"></a><a class="home-soccer-link" href="/research?sport=soccer" aria-label="Explore soccer research"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m12 7 5 4-2 5H9l-2-5Zm0-4v4M3.5 9l3.5 2m-1 8 3-3m9 3-3m5.5-7L17 11"/></svg><span>Soccer</span></a></div></nav>
     <section class="home-reviews" id="reviews" aria-labelledby="reviews-title">
       <div class="home-reviews-heading home-wide">
         <span class="home-reviews-kicker">Reviews</span>
