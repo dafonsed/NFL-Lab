@@ -8,6 +8,18 @@ export function smartMoneyDemoQuotes() {
   });
   const markets = [
     {
+      event:'Denver Broncos vs Kansas City Chiefs', market:'Moneyline', type:'moneyline',
+      exchange:['Kansas City Chiefs','','Sporttrade',-205,18420], opposite:['Denver Broncos','','ProphetX',195,9100], limit:50000,
+      depth:[['ProphetX',-208,11200],['Novig',-210,7200],['BettorEdge',-212,4100],['Sporttrade',-215,1800],['Novig',-218,740]],
+      books:[['DraftKings',203,-210],['FanDuel',200,-215],['BetMGM',198,-218],['Caesars',196,-220],['bet365',195,-215],['Fanatics',190,-225]]
+    },
+    {
+      event:'Arizona Cardinals vs San Francisco 49ers', market:'Point spread', type:'spread',
+      exchange:['San Francisco 49ers',-9.5,'Sporttrade',106,14200], opposite:['Arizona Cardinals',9.5,'ProphetX',-112,7800], limit:30000,
+      depth:[['ProphetX',104,8600],['Novig',102,5200],['BettorEdge',100,2500],['Sporttrade',-102,1200],['Novig',-105,610]],
+      books:[['FanDuel',-105,-110],['DraftKings',-108,-112],['BetMGM',-110,-110],['Caesars',-110,-115],['bet365',-112,-108],['Fanatics',-115,-105]]
+    },
+    {
       event:'Washington Commanders vs Los Angeles Chargers', market:'Point spread', type:'spread',
       exchange:['Washington Commanders',2.5,'Sporttrade',116,9995], opposite:['Los Angeles Chargers',-2.5,'ProphetX',-120,7200], limit:30000,
       depth:[['ProphetX',112,6600],['Novig',111,4100],['BettorEdge',110,2000],['Sporttrade',109,680],['ProphetX',108,420]],
