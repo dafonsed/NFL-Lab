@@ -1,0 +1,183 @@
+/* Positive EV filter rail: proportions and spacing from the supplied mockup. */
+body.ev-page[data-ev-screen^="ev-"] .ev-stake-panel {
+  height: 172px;
+  min-height: 172px;
+}
+
+body.ev-page[data-ev-screen^="ev-"] .ev-filter-panel {
+  height: 172px;
+  min-height: 172px;
+  padding: 21px 24px 24px;
+  border: 1px solid #303b40;
+  border-radius: 20px;
+  background: #171c1f !important;
+}
+
+body.ev-page[data-ev-screen^="ev-"] .ev-filter-heading {
+  height: 46px;
+  gap: 25px;
+  margin: 0 0 18px;
+}
+
+body.ev-page[data-ev-screen^="ev-"] .ev-filter-heading strong {
+  font-size: 20px;
+  font-weight: 620;
+}
+
+body.ev-page[data-ev-screen^="ev-"] .ev-recommend {
+  width: 201px;
+}
+
+body.ev-page[data-ev-screen^="ev-"] .ev-recommend .td-choice-trigger {
+  height: 46px;
+  min-height: 46px;
+  padding: 0 13px !important;
+  border-radius: 10px;
+  border-color: #138963 !important;
+  background: #121b1d !important;
+  color: #f1f5f7 !important;
+  font-size: 16px !important;
+}
+
+body.ev-page[data-ev-screen^="ev-"] .ev-filter-heading #ev-reset-filters {
+  min-width: 113px;
+  height: 46px;
+  padding: 0 16px;
+  border: 1px solid #34434a;
+  border-radius: 9px;
+  background: #1b2429;
+  color: #edf3f5;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+body.ev-page[data-ev-screen^="ev-"] .ev-reference-filters {
+  grid-template-columns: .78fr 1.12fr 1.12fr 1.6fr 1.43fr;
+  gap: 17px;
+}
+
+body.ev-page[data-ev-screen^="ev-"] .ev-reference-filters label {
+  height: 59px;
+  gap: 12px;
+  padding: 0 14px;
+  border: 1px solid #36444a;
+  border-radius: 11px;
+  background: #1a2226;
+  color: #f1f5f7;
+}
+
+body.ev-page[data-ev-screen^="ev-"] .ev-reference-filters label::after {
+  top: 17px;
+  right: 14px;
+  font-size: 20px;
+  color: #edf3f6;
+}
+
+body.ev-page[data-ev-screen^="ev-"] .ev-reference-filters label>span:first-child {
+  flex: none;
+  font-size: 21px;
+}
+
+body.ev-page[data-ev-screen^="ev-"] .ev-reference-filters label>span:nth-child(2) {
+  flex: none;
+  font-size: 15px;
+}
+
+body.ev-page[data-ev-screen^="ev-"] .ev-reference-filters .td-choice-trigger {
+  height: 57px;
+  min-height: 57px;
+  padding-right: 18px !important;
+  color: #f1f5f7 !important;
+  font-size: 15px !important;
+}
+
+body.ev-page[data-ev-screen^="ev-"] .ev-reference-filters .td-choice-trigger>.ui-icon:last-child {
+  display: none;
+}
+
+body.ev-page[data-ev-screen^="ev-"] :is(.ev-recommend,.ev-reference-filters) .td-choice-trigger:focus-visible,
+body.ev-page[data-ev-screen^="ev-"] .ev-filter-heading #ev-reset-filters:focus-visible {
+  outline: 2px solid #42d6ab;
+  outline-offset: 2px;
+}
+
+@media (max-width: 1430px) {
+  body.ev-page[data-ev-screen^="ev-"] .ev-control-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body.ev-page[data-ev-screen^="ev-"] .ev-stake-panel {
+    height: auto;
+    min-height: 125px;
+    width: min(100%, 494px);
+    grid-template-columns: 225px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  body.ev-page[data-ev-screen^="ev-"] .ev-stake-panel {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.ev-page[data-ev-screen^="ev-"] .ev-filter-panel {
+    height: auto;
+    min-height: 0;
+    padding: 18px;
+  }
+
+  body.ev-page[data-ev-screen^="ev-"] .ev-reference-filters {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 5px;
+    scrollbar-width: thin;
+  }
+
+  body.ev-page[data-ev-screen^="ev-"] .ev-reference-filters label {
+    flex: none;
+    height: 54px;
+    min-width: 155px;
+  }
+
+  body.ev-page[data-ev-screen^="ev-"] .ev-reference-filters :is(.ev-date-filter,.ev-odds-filter) {
+    min-width: 230px;
+  }
+
+  body.ev-page[data-ev-screen^="ev-"] .ev-reference-filters label>span:nth-child(2) {
+    display: inline;
+  }
+
+  body.ev-page[data-ev-screen^="ev-"] .ev-reference-filters .td-choice-trigger {
+    height: 52px;
+    min-height: 52px;
+  }
+
+  body.ev-page[data-ev-screen^="ev-"] .ev-reference-filters label::after {
+    top: 14px;
+  }
+}
+
+@media (max-width: 600px) {
+  body.ev-page[data-ev-screen^="ev-"] .ev-filter-heading {
+    gap: 10px;
+  }
+
+  body.ev-page[data-ev-screen^="ev-"] .ev-filter-heading strong {
+    font-size: 17px;
+  }
+
+  body.ev-page[data-ev-screen^="ev-"] .ev-recommend {
+    width: min(42vw, 180px);
+  }
+
+  body.ev-page[data-ev-screen^="ev-"] .ev-recommend .td-choice-trigger {
+    font-size: 14px !important;
+  }
+
+  body.ev-page[data-ev-screen^="ev-"] .ev-filter-heading #ev-reset-filters {
+    min-width: 82px;
+    padding: 0 8px;
+    font-size: 13px;
+  }
+}
