@@ -1,5 +1,5 @@
 import { decimal, implied, expectedReturn, money, percent, signed, oddsLabel, probabilityToAmerican, fairProbability, fresh, groups, marketKey, evRows, fractionalKellyStake, holdRows, arbitrage, arbitrageRows, middleRows, promoConversion, parlay, fantasySlip, closingLineValue, gradedBet, pearson, sharpMatches, alertMatches, validateWorkspace } from './ev-core.js?v=2';
-import { exampleWorkspace } from './ev-demo.js';
+import { exampleWorkspace } from './ev-demo.js?v=2';
 
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -29,7 +29,16 @@ const arrays = ['quotes', 'history', 'dfs', 'contracts', 'contractHistory', 'tra
 function load() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORE));
-    if (parsed?.version === 1) return normalize(parsed);
+    if (parsed?.version === 1) {
+      const saved = normalize(parsed);
+      if (saved.example && saved.quotes.some(q => q.source === 'example' && (/^Book [ABC]$/.test(q.book) || q.book === 'Exchange X'))) {
+        const demo = exampleWorkspace();
+        for (const key of arrays) saved[key] = [...saved[key].filter(item => item.source !== 'example'), ...demo[key]];
+        saved.paytables = { ...demo.paytables, ...saved.paytables };
+        localStorage.setItem(STORE, JSON.stringify(saved));
+      }
+      return saved;
+    }
   } catch { /* Browser storage can be disabled. */ }
   return normalize({ version: 1, example: false });
 }
@@ -58,7 +67,7 @@ const brandMarks = {
   bet365:'/assets/brands/bet365.png', DraftKings:'/assets/sportsbooks/draftkings.svg', FanDuel:'/assets/sportsbooks/fanduel.png',
   BetMGM:'/assets/brands/betmgm.png', Caesars:'/assets/brands/caesars.png', BetRivers:'/assets/brands/betrivers.png',
   Fanatics:'/assets/brands/fanatics.png', 'Hard Rock Bet':'/assets/brands/hardrock.png', 'theScore Bet':'/assets/brands/thescore.png',
-  'Bally Bet':'/assets/brands/bally.png', 'Desert Diamond Sports':'/assets/brands/desertdiamond.png',
+  'Bally Bet':'/assets/brands/bally.png', 'Desert Diamond Sports':'/assets/brands/desertdiamond.png', Sporttrade:'/assets/brands/sporttrade.png',
   PrizePicks:'/assets/brands/prizepicks.png', 'Underdog Fantasy':'/assets/brands/underdog.png',
   'Sleeper Picks':'/assets/brands/sleeper.png', ParlayPlay:'/assets/brands/parlayplay.png',
   Dabble:'/assets/brands/dabble.png', Chalkboard:'/assets/brands/chalkboard.png'
@@ -415,26 +424,34 @@ function openDetail(id) {
 }
 
 function renderArb(live) {
-  const opportunities = arbitrageRows(quotes().filter(q => sportsbookSelected(q.book)), live).filter(x => (!marketType || x.best[0].type === marketType) && arbitrage(x.best, 100).margin >= Number(designFilters.minEdge));
-  const totalStake = Math.min(Number(stake) * flatMultiplier, bankroll);
-  const cards = opportunities.map(x => {
-    const [a,b] = x.best, key = marketKey(a), result = arbitrage(x.best, totalStake), open = expandedArbKey === key;
+  const opportunities = arbitrageRows(quotes().filter(q => sportsbookSelected(q.book) && !q.exchange), live)
+    .flatMap(({ rows, best }) => rows.filter(q => q.side === best[0].side && fresh(q)).flatMap(a =>
+      rows.filter(b => b.side === best[1].side && b.book !== a.book && fresh(b)).map(b => [a,b])))
+    .filter(([a,b]) => (!marketType || a.type === marketType) && arbitrage([a,b], 100)?.margin >= Number(designFilters.minEdge))
+    .sort((left,right) => arbitrage(right, 100).margin - arbitrage(left, 100).margin);
+  const wholeDollars = value => '$' + Math.round(value).toLocaleString('en-US');
+  const cards = opportunities.map(([a,b]) => {
+    const key = `${marketKey(a)}|${a.id}|${b.id}`;
+    const hedgePerDollar = decimal(a.odds) / decimal(b.odds);
+    const anchorStake = Math.min(Number(stake) * flatMultiplier, bankroll / (1 + hedgePerDollar));
+    const totalStake = anchorStake * (1 + hedgePerDollar);
+    const result = arbitrage([a,b], totalStake), open = expandedArbKey === key;
     const edge = result.margin;
     const leg = (q, index) => `<div class="ev-arb-leg">
       <span class="ev-arb-book-logo" aria-hidden="true">${brandMark(q.book)}</span>
-      <div class="ev-arb-selection"><strong>${q.type === 'prop' ? esc(q.player || q.market) + ' ' : ''}${esc(q.side)}${q.line !== '' && q.line != null ? ' ' + fmtLine(q.line) : ''}</strong><small>${esc(q.book)}</small></div>
+      <div class="ev-arb-selection"><strong>${esc(q.type === 'prop' ? q.player || q.market : q.market)} ${esc(q.side)}${q.line !== '' && q.line != null ? ' ' + fmtLine(q.line) : ''} <span class="ev-arb-selection-arrow" aria-hidden="true">↗</span></strong><small>${esc(q.book)}</small></div>
       <div class="ev-arb-leg-figure ev-arb-odds"><strong>${oddsLabel(q.odds)}</strong><small>Odds</small></div>
-      <div class="ev-arb-leg-figure"><strong>${money(result.stakes[index])}</strong><small>Rec. bet</small></div>
-      <div class="ev-arb-leg-figure"><strong>${money(result.profit)}</strong><small>Profit</small></div>
+      <div class="ev-arb-leg-figure"><strong>${wholeDollars(result.stakes[index])}</strong><small>Rec. bet</small></div>
+      <div class="ev-arb-leg-figure"><strong>${wholeDollars(result.profit)}</strong><small>Profit</small></div>
     </div>`;
     const historyLine = q => state.history.filter(h => h.quoteId === q.id).slice(-4).map(h => oddsLabel(h.odds)).join(' → ') || oddsLabel(q.odds);
     const expanded = !open ? '' : `<div class="ev-arb-expanded"><div class="ev-expanded-grid ev-arb-detail">
-      <section class="ev-arb-side"><h3>Side A · ${esc(a.side)} ${fmtLine(a.line)}</h3><div class="ev-price-box"><span>${brandMark(a.book)} ${esc(a.book)}</span><strong>${oddsLabel(a.odds)}</strong></div><label>Total stake (USD)<input id="ev-bankroll" type="number" min="1" max="${bankroll}" step="0.01" value="${esc(stake)}"></label><div class="ev-arb-side-amount"><span>Allocated to side A</span><strong>${money(result.stakes[0])}</strong></div><div class="ev-arb-side-amount"><span>Return if side A wins</span><strong>${money(result.stakes[0] * decimal(a.odds))}</strong></div></section>
+      <section class="ev-arb-side"><h3>Side A · ${esc(a.side)} ${fmtLine(a.line)}</h3><div class="ev-price-box"><span>${brandMark(a.book)} ${esc(a.book)}</span><strong>${oddsLabel(a.odds)}</strong></div><label>Side A stake (USD)<input id="ev-bankroll" type="number" min="1" max="${bankroll}" step="0.01" value="${esc(stake)}"></label><div class="ev-arb-side-amount"><span>Allocated to side A</span><strong>${money(result.stakes[0])}</strong></div><div class="ev-arb-side-amount"><span>Return if side A wins</span><strong>${money(result.stakes[0] * decimal(a.odds))}</strong></div></section>
       <section class="ev-arb-side"><h3>Side B · ${esc(b.side)} ${fmtLine(b.line)}</h3><div class="ev-price-box"><span>${brandMark(b.book)} ${esc(b.book)}</span><strong>${oddsLabel(b.odds)}</strong></div><div class="ev-arb-side-amount"><span>Allocated to side B</span><strong>${money(result.stakes[1])}</strong></div><div class="ev-arb-side-amount"><span>Return if side B wins</span><strong>${money(result.stakes[1] * decimal(b.odds))}</strong></div></section>
       <section class="ev-arb-profit"><h3>Arbitrage calculated</h3><span>Equalized profit</span><strong>${money(result.profit)}</strong><span>${signed(edge)} ROI</span><div class="ev-arb-side-amount"><span>Total stake</span><strong>${money(totalStake)}</strong></div><div class="ev-arb-side-amount"><span>Total return</span><strong>${money(totalStake + result.profit)}</strong></div><p>Assumes both prices accept the full stake and settle as a two-outcome market.</p></section>
     </div><div class="ev-arb-history"><strong>Recorded price movement</strong><span>${esc(a.side)} (${esc(a.book)}) <b>${historyLine(a)}</b></span><span>${esc(b.side)} (${esc(b.book)}) <b>${historyLine(b)}</b></span><small>Edits add timestamped snapshots; these are entered prices, not a live feed.</small></div><p class="ev-caption">${live ? 'Only live entries under 90 seconds old are included. ' : ''}Confirm both quotes and limits before acting.</p></div>`;
     return `<article class="ev-arb-opportunity">
-      <div class="ev-arb-overview"><span class="ev-arb-edge">${signed(edge)}</span><div class="ev-arb-market"><strong>${esc(a.market)} <span>${esc(a.sport)}</span></strong><small>${esc(a.event)} · ${a.live ? 'Live' : 'Pregame'} · ${age(a.ts)}</small></div><button type="button" class="ev-arb-expand" data-arb-expand="${esc(key)}" aria-expanded="${open}" aria-label="${open ? 'Hide' : 'Show'} stake plan for ${esc(a.event)}">${open ? '⌃' : '⌄'}</button></div>
+      <button type="button" class="ev-arb-overview" data-arb-expand="${esc(key)}" aria-expanded="${open}" aria-label="${open ? 'Hide' : 'Show'} stake plan for ${esc(a.event)}"><span class="ev-arb-edge">${(edge * 100).toFixed(2)}%</span><span class="ev-arb-market"><strong>${esc(a.displayMarket || a.market)} <span class="ev-arb-league">${a.sport === 'MLB' ? '⚾' : a.sport === 'NFL' ? '🏈' : '●'} ${esc(a.sport)}</span></strong><small><span class="ev-arb-matchup">${esc(a.displayEvent || a.event)}</span><span class="ev-arb-event-time">${a.source === 'example' ? 'Demo' : a.live ? 'Live' : 'Pregame'} · ${esc(a.displayTime || age(a.ts))}</span></small></span></button>
       <div class="ev-arb-pair"><span class="ev-arb-pair-count" aria-label="Two opposing bets"><b>2</b><b>×</b><b>↗</b></span><div class="ev-arb-legs">${leg(a,0)}${leg(b,1)}</div></div>
       ${expanded}
     </article>`;
