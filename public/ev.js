@@ -415,22 +415,30 @@ function openDetail(id) {
 
 function renderArb(live) {
   const opportunities = arbitrageRows(quotes().filter(q => sportsbookSelected(q.book)), live).filter(x => (!marketType || x.best[0].type === marketType) && arbitrage(x.best, 100).margin >= Number(designFilters.minEdge));
-  if (!expandedArbKey && opportunities.length) expandedArbKey = marketKey(opportunities[0].best[0]);
   const totalStake = Math.min(Number(stake) * flatMultiplier, bankroll);
-  const rows = opportunities.flatMap(x => {
+  const cards = opportunities.map(x => {
     const [a,b] = x.best, key = marketKey(a), result = arbitrage(x.best, totalStake), open = expandedArbKey === key;
     const edge = result.margin;
-    const main = `<tr><td class="ev-value">${signed(edge)}</td><td><strong>${esc(a.event)}</strong><small>${esc(a.sport)} · ${a.live ? 'Live entries' : 'Pregame'} · ${age(a.ts)}</small></td><td><strong>${esc(a.market)}</strong><small>${fmtLine(a.line)}</small></td><td><div class="ev-price-box"><strong>${esc(a.side)} ${fmtLine(a.line)}</strong><span>${esc(a.book)} · ${oddsLabel(a.odds)}</span></div></td><td><div class="ev-price-box"><strong>${esc(b.side)} ${fmtLine(b.line)}</strong><span>${esc(b.book)} · ${oddsLabel(b.odds)}</span></div></td><td>${money(result.stakes[0])} / ${money(result.stakes[1])}<small>Total ${money(totalStake)}</small></td><td class="ev-positive"><strong>${money(result.profit)}</strong><small>${signed(edge)} ROI</small></td><td><button type="button" class="ev-expand-button" data-arb-expand="${esc(key)}" aria-expanded="${open}" aria-label="${open ? 'Collapse' : 'Expand'} ${esc(a.event)} arbitrage">${open ? '⌃' : '⌄'}</button></td></tr>`;
-    if (!open) return [main];
+    const leg = (q, index) => `<div class="ev-arb-leg">
+      <span class="ev-arb-book-logo" aria-hidden="true">${brandMark(q.book)}</span>
+      <div class="ev-arb-selection"><strong>${q.type === 'prop' ? esc(q.player || q.market) + ' ' : ''}${esc(q.side)}${q.line !== '' && q.line != null ? ' ' + fmtLine(q.line) : ''}</strong><small>${esc(q.book)}</small></div>
+      <div class="ev-arb-leg-figure ev-arb-odds"><strong>${oddsLabel(q.odds)}</strong><small>Odds</small></div>
+      <div class="ev-arb-leg-figure"><strong>${money(result.stakes[index])}</strong><small>Rec. bet</small></div>
+      <div class="ev-arb-leg-figure"><strong>${money(result.profit)}</strong><small>Profit</small></div>
+    </div>`;
     const historyLine = q => state.history.filter(h => h.quoteId === q.id).slice(-4).map(h => oddsLabel(h.odds)).join(' → ') || oddsLabel(q.odds);
-    const expanded = `<tr class="ev-expanded-row"><td colspan="8"><div class="ev-expanded-grid ev-arb-detail">
+    const expanded = !open ? '' : `<div class="ev-arb-expanded"><div class="ev-expanded-grid ev-arb-detail">
       <section class="ev-arb-side"><h3>Side A · ${esc(a.side)} ${fmtLine(a.line)}</h3><div class="ev-price-box"><span>${brandMark(a.book)} ${esc(a.book)}</span><strong>${oddsLabel(a.odds)}</strong></div><label>Total stake (USD)<input id="ev-bankroll" type="number" min="1" max="${bankroll}" step="0.01" value="${esc(stake)}"></label><div class="ev-arb-side-amount"><span>Allocated to side A</span><strong>${money(result.stakes[0])}</strong></div><div class="ev-arb-side-amount"><span>Return if side A wins</span><strong>${money(result.stakes[0] * decimal(a.odds))}</strong></div></section>
       <section class="ev-arb-side"><h3>Side B · ${esc(b.side)} ${fmtLine(b.line)}</h3><div class="ev-price-box"><span>${brandMark(b.book)} ${esc(b.book)}</span><strong>${oddsLabel(b.odds)}</strong></div><div class="ev-arb-side-amount"><span>Allocated to side B</span><strong>${money(result.stakes[1])}</strong></div><div class="ev-arb-side-amount"><span>Return if side B wins</span><strong>${money(result.stakes[1] * decimal(b.odds))}</strong></div></section>
       <section class="ev-arb-profit"><h3>Arbitrage calculated</h3><span>Equalized profit</span><strong>${money(result.profit)}</strong><span>${signed(edge)} ROI</span><div class="ev-arb-side-amount"><span>Total stake</span><strong>${money(totalStake)}</strong></div><div class="ev-arb-side-amount"><span>Total return</span><strong>${money(totalStake + result.profit)}</strong></div><p>Assumes both prices accept the full stake and settle as a two-outcome market.</p></section>
-    </div><div class="ev-arb-history"><strong>Recorded price movement</strong><span>${esc(a.side)} (${esc(a.book)}) <b>${historyLine(a)}</b></span><span>${esc(b.side)} (${esc(b.book)}) <b>${historyLine(b)}</b></span><small>Edits add timestamped snapshots; these are entered prices, not a live feed.</small></div><p class="ev-caption">${live ? 'Only live entries under 90 seconds old are included. ' : ''}Confirm both quotes and limits before acting.</p></td></tr>`;
-    return [main, expanded];
+    </div><div class="ev-arb-history"><strong>Recorded price movement</strong><span>${esc(a.side)} (${esc(a.book)}) <b>${historyLine(a)}</b></span><span>${esc(b.side)} (${esc(b.book)}) <b>${historyLine(b)}</b></span><small>Edits add timestamped snapshots; these are entered prices, not a live feed.</small></div><p class="ev-caption">${live ? 'Only live entries under 90 seconds old are included. ' : ''}Confirm both quotes and limits before acting.</p></div>`;
+    return `<article class="ev-arb-opportunity">
+      <div class="ev-arb-overview"><span class="ev-arb-edge">${signed(edge)}</span><div class="ev-arb-market"><strong>${esc(a.market)} <span>${esc(a.sport)}</span></strong><small>${esc(a.event)} · ${a.live ? 'Live' : 'Pregame'} · ${age(a.ts)}</small></div><button type="button" class="ev-arb-expand" data-arb-expand="${esc(key)}" aria-expanded="${open}" aria-label="${open ? 'Hide' : 'Show'} stake plan for ${esc(a.event)}">${open ? '⌃' : '⌄'}</button></div>
+      <div class="ev-arb-pair"><span class="ev-arb-pair-count" aria-label="Two opposing bets"><b>2</b><b>×</b><b>↗</b></span><div class="ev-arb-legs">${leg(a,0)}${leg(b,1)}</div></div>
+      ${expanded}
+    </article>`;
   });
-  return `<div class="ev-stack ev-arb-screen">${rows.length ? '<p class="ev-swipe-hint">Scroll sideways to inspect both sides and stake split →</p>' + table(['Edge','Event','Market','Side A (book / odds)','Side B (book / odds)','Stake split (A / B)','Calculated profit',''],rows) : empty('No arbitrage in these entries', 'Add opposing prices at different books with a combined implied probability below 100%.')}<p class="ev-caption ev-method-note">Stake split equalizes the return from either side. Amounts are calculations from entered prices; they are not verified offers.</p></div>`;
+  return `<div class="ev-stack ev-arb-screen">${cards.length ? `<div class="ev-arb-list">${cards.join('')}</div>` : empty('No arbitrage in these entries', 'Add opposing prices at different books with a combined implied probability below 100%.')}<p class="ev-caption ev-method-note">Stake split equalizes the return from either side. Amounts are calculations from entered prices; they are not verified offers.</p></div>`;
 }
 
 function renderMiddles() {
