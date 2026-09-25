@@ -245,7 +245,8 @@ body.ev-page[data-ev-screen^="ev-"] .ev-book-list button{width:60px;min-width:60
 body.ev-page[data-ev-screen^="ev-"] .ev-book-list button.ev-book-all{width:74px;min-width:74px;color:#55e8bc!important;background:#102420!important;border-color:#1bd596!important;font-size:17px}
 body.ev-page[data-ev-screen^="ev-"] .ev-book-symbol{display:grid;place-items:center;width:100%;height:100%;padding:5px;color:#e4eaf0;font-size:11px;font-weight:800;letter-spacing:-.045em;line-height:1;text-align:center}
 body.ev-page[data-ev-screen^="ev-"] .ev-book-name{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-body.ev-page[data-ev-screen^="ev-"] .ev-book-logo{width:29px;height:29px;filter:grayscale(1) brightness(2)}
+body.ev-page[data-ev-screen^="ev-"] .ev-book-logo{width:29px;height:29px;border-radius:50%;filter:grayscale(1) brightness(1.8)}
+body.ev-page[data-ev-screen^="ev-"] .ev-book-logo[src*="fanatics"]{filter:brightness(0) invert(1)}
 body.ev-page[data-ev-screen^="ev-"] .ev-book-more{width:60px;min-width:60px;height:60px;min-height:60px;padding:0 5px;border-radius:50%;font-size:15px}
 body.ev-page[data-ev-screen^="ev-"] .ev-book-divider{height:39px;margin:0 22px 0 25px;background:#465057}
 body.ev-page[data-ev-screen^="ev-"] .ev-find-button{width:220px;min-width:220px;height:60px;min-height:60px;border-radius:9px;background:linear-gradient(125deg,#23c88e,#20bc83)!important;border-color:#2acb91!important;color:#071916!important;font-size:20px;font-weight:650}

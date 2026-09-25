@@ -183,7 +183,18 @@ function renderBooks() {
   const books = [...new Set([...supported, ...entered])];
   const visibleCount = fantasyMode ? 6 : ['ev-pre','ev-live'].includes(active) ? 11 : 11;
   const shown = showAllBooks ? books : books.slice(0, visibleCount);
-  $('#ev-books').innerHTML = `<button type="button" class="ev-book-all" data-book="" aria-pressed="${!bookmaker}">All</button>` + shown.map(book => `<button type="button" data-book="${esc(book)}" aria-pressed="${bookmaker === book}" title="Filter ${esc(book)}"><span class="ev-book-symbol">${book === 'DraftKings' ? '<img src="/assets/sportsbooks/draftkings.svg" alt="" class="ev-book-logo">' : book === 'FanDuel' ? '<img src="/assets/sportsbooks/fanduel.png" alt="" class="ev-book-logo">' : esc(book === 'bet365' ? 'bet365' : book === 'BetMGM' ? 'MGM' : book === 'Caesars' ? 'C' : book === 'BetRivers' ? 'BR' : book === 'Fanatics' ? 'F' : book === 'Hard Rock Bet' ? 'HR' : book === 'theScore Bet' ? 'theScore' : book === 'Bally Bet' ? 'B' : book === 'Desert Diamond Sports' ? 'DD' : book.slice(0,3))}</span><span class="ev-book-name">${esc(book)}</span></button>`).join('');
+  const bookmakerMarks = {
+    DraftKings: '/assets/sportsbooks/draftkings.svg',
+    FanDuel: '/assets/sportsbooks/fanduel.png',
+    BetMGM: '/assets/brands/betmgm.png',
+    Caesars: '/assets/brands/caesars.png',
+    BetRivers: '/assets/brands/betrivers.png',
+    Fanatics: '/assets/brands/fanatics.png',
+    'Hard Rock Bet': '/assets/brands/hardrock.png',
+    'theScore Bet': '/assets/brands/thescore.png',
+    'Desert Diamond Sports': '/assets/brands/desertdiamond.png'
+  };
+  $('#ev-books').innerHTML = `<button type="button" class="ev-book-all" data-book="" aria-pressed="${!bookmaker}">All</button>` + shown.map(book => `<button type="button" data-book="${esc(book)}" aria-pressed="${bookmaker === book}" title="Filter ${esc(book)}"><span class="ev-book-symbol">${bookmakerMarks[book] ? `<img src="${bookmakerMarks[book]}" alt="" class="ev-book-logo">` : esc(book === 'bet365' ? 'bet365' : book === 'Bally Bet' ? 'B' : book.slice(0,3))}</span><span class="ev-book-name">${esc(book)}</span></button>`).join('');
   $('#ev-books-more').hidden = books.length <= visibleCount;
   $('#ev-books-more').textContent = showAllBooks ? '−' : ['ev-pre','ev-live'].includes(active) ? `+${books.length - shown.length}` : `+${books.length - shown.length} more`;
   $('#ev-books-more').setAttribute('aria-label', showAllBooks ? 'Show fewer bookmakers' : `Show ${books.length - shown.length} more bookmakers`);
