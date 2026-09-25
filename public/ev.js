@@ -47,9 +47,12 @@ let active = toolMeta[location.hash.slice(1)] ? location.hash.slice(1) : 'ev-pre
 let search = '';
 let bookmaker = '', marketType = '', showAllBooks = false, bankroll = 5000, kelly = .25, flatMultiplier = 1, evSort = 'ev', detailQuoteId = '';
 let evLeague = '', evDateRange = 'week', evMaxOdds = '200';
+let designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' };
+let designSort = 'recommended';
 let expandedOddsKey = '', expandedArbKey = '', expandedSharpKey = '';
 const sportsbookNames = ['bet365','DraftKings','FanDuel','BetMGM','Caesars','BetRivers','Fanatics','Hard Rock Bet','theScore Bet','Bally Bet','Desert Diamond Sports'];
 const fantasyNames = ['PrizePicks','Underdog Fantasy','Sleeper Picks','ParlayPlay','Dabble','Chalkboard','DraftKings Fantasy','FanDuel Fantasy','Betr Picks','OwnersBox','Boom Fantasy','Vivid Picks'];
+const canonicalPlatform = name => String(name || '').replace(/\s*\(example\)$/, '').replace(/^Underdog$/, 'Underdog Fantasy').replace(/^Sleeper$/, 'Sleeper Picks');
 const brandMarks = {
   bet365:'/assets/brands/bet365.png', DraftKings:'/assets/sportsbooks/draftkings.svg', FanDuel:'/assets/sportsbooks/fanduel.png',
   BetMGM:'/assets/brands/betmgm.png', Caesars:'/assets/brands/caesars.png', BetRivers:'/assets/brands/betrivers.png',
@@ -82,8 +85,10 @@ const qName = q => `${q.event} · ${q.market}${q.line !== '' && q.line != null ?
 const qStatus = q => q.live ? `<span class="ev-status${fresh(q) ? '' : ' stale'}">${fresh(q) ? 'Live entry' : 'Stale live'} · ${age(q.ts)}</span>` : `<span class="ev-caption">Pregame · ${age(q.ts)}</span>`;
 const filterText = value => String(value ?? '').toLowerCase().includes(search);
 const visible = (item, fields) => (!sport || !item.sport || item.sport === sport) && (!search || fields.some(key => filterText(item[key])));
-const quotes = () => state.quotes.filter(q => visible(q, ['event', 'market', 'book', 'side', 'sport']));
-const dfs = () => state.dfs.filter(q => visible(q, ['player', 'market', 'app', 'side']));
+const inDateRange = ts => designFilters.date === 'all' || (Number.isFinite(Date.parse(ts)) && (designFilters.date === 'today' ? new Date(ts).toDateString() === new Date().toDateString() : Date.parse(ts) >= Date.now() - 7 * 86_400_000));
+const quotePassesDesign = q => !['odds','arb-pre','arb-live','sharp'].includes(active) || ((!designFilters.league || (q.league || q.sport) === designFilters.league) && inDateRange(q.ts) && (designFilters.period === 'all' || (designFilters.period === 'live') === Boolean(q.live)) && (designFilters.maxOdds === 'all' || Number(q.odds) <= Number(designFilters.maxOdds)));
+const quotes = () => state.quotes.filter(q => visible(q, ['event', 'market', 'book', 'side', 'sport']) && quotePassesDesign(q));
+const dfs = () => state.dfs.filter(q => visible(q, ['player', 'market', 'app', 'side']) && (active !== 'fantasy' || ((!designFilters.league || (q.league || q.sport) === designFilters.league) && inDateRange(q.ts) && (!designFilters.side || q.side === designFilters.side))));
 const fmtLine = line => line === '' || line == null ? '—' : esc(line);
 const oddsCell = q => `<strong>${oddsLabel(q.odds)}</strong><small>${esc(q.book)}</small>`;
 const button = (label, attributes = '') => `<button type="button" ${attributes}>${label}</button>`;
@@ -120,8 +125,48 @@ function renderNav() {
   $('#ev-tool-select').value = active;
   document.querySelectorAll('.ev-quick-tools [data-tool]').forEach(button => button.setAttribute('aria-current', button.dataset.tool === active ? 'page' : 'false'));
 }
-function setTool(key) { if (!toolMeta[key]) return; active = key; bookmaker = ''; marketType = ''; showAllBooks = false; $('.ev-tool-details').open = false; history.replaceState(null, '', location.pathname + location.search + '#' + key); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function setTool(key) { if (!toolMeta[key]) return; active = key; bookmaker = ''; marketType = ''; showAllBooks = false; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; $('.ev-tool-details').open = false; history.replaceState(null, '', location.pathname + location.search + '#' + key); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 function action(label, type, extra = '') { return button(label, `data-add="${type}" ${extra}`); }
+const filterIcons = {
+  sport:'◉', platform:'▱', league:'♜', market:'▥', date:'▣', period:'◷', side:'↕', odds:'☷', liquidity:'≋', edge:'↗', stake:'$'
+};
+function designSelect(kind, title, options, value, prefix = '') {
+  const choices = options.map(([option,label]) => `<option value="${esc(option)}" ${String(option) === String(value) ? 'selected' : ''}>${esc(label)}</option>`).join('');
+  return `<label class="ev-design-filter"><span class="ev-design-icon" aria-hidden="true">${filterIcons[kind]}</span>${prefix ? `<span class="ev-design-prefix">${esc(prefix)}</span>` : ''}<select data-filter="${kind}" aria-label="${esc(title)}">${choices}</select></label>`;
+}
+function renderDesignFilters() {
+  const fantasy = active === 'fantasy', odds = active === 'odds', arb = ['arb-pre','arb-live'].includes(active), sharp = active === 'sharp';
+  let container = $('#ev-design-filters');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'ev-design-filters';
+    container.className = 'ev-design-filters';
+    container.setAttribute('aria-label', 'Workspace filters');
+    $('.ev-reference-filters').after(container);
+  }
+  if (!fantasy && !odds && !arb && !sharp) { container.innerHTML = ''; return; }
+  const records = fantasy ? state.dfs : state.quotes;
+  const leagues = [...new Set(records.map(item => item.league || item.sport).filter(Boolean))].sort();
+  const sports = [...new Set(records.map(item => item.sport).filter(Boolean))].sort();
+  const marketNames = [...new Set(records.map(item => fantasy ? item.market : item.type).filter(Boolean))].sort();
+  const availableBooks = [...new Set(records.map(item => fantasy ? canonicalPlatform(item.app) : item.book).filter(Boolean))].sort();
+  const sportControl = designSelect('sport','Sports', [['',arb ? 'All sports' : 'Sports'],...sports.map(value => [value,value])],sport,arb ? 'Sport' : '');
+  const leagueControl = designSelect('league','Leagues', [['','Leagues'],...leagues.map(value => [value,value])],designFilters.league,sharp ? 'Leagues' : '');
+  const marketControl = designSelect('market',fantasy ? 'Stat' : 'Markets', [['',fantasy ? 'Stat' : 'Markets'],...marketNames.map(value => [value,value])],marketType,arb ? 'Market' : sharp ? 'Markets' : '');
+  const dateControl = designSelect('date','Date range', [['all','Any'],['today','Today'],['week','7 days']],designFilters.date,'Date Range');
+  const bookControl = designSelect('platform',fantasy ? 'Platforms' : 'Sportsbooks', [['',fantasy ? 'Platforms' : 'Sportsbooks'],...availableBooks.map(value => [value,value])],bookmaker,sharp ? 'Sportsbooks' : '');
+  const periodControl = designSelect('period','Period', [['all','All games'],['pregame','Pregame'],['live','Live']],designFilters.period);
+  const oddsControl = designSelect('odds','Maximum odds', [['all','Any'],['200','+200'],['300','+300'],['500','+500']],designFilters.maxOdds,'Max Odds');
+  const liquidityControl = `<label class="ev-design-filter"><span class="ev-design-icon" aria-hidden="true">${filterIcons.liquidity}</span><span class="ev-design-prefix">Min Liquidity</span><input data-filter="liquidity" aria-label="Minimum liquidity" type="number" min="0" step="1" value="${esc(localStorage.getItem('sportslab-ev-sharp-min') || 1000)}"></label>`;
+  const edgeControl = designSelect('edge','Minimum edge', [['0','Any edge'],['0.005','0.5%'],['0.01','1%'],['0.02','2%']],designFilters.minEdge,'Minimum Edge');
+  const stakeControl = `<label class="ev-design-filter"><span class="ev-design-icon" aria-hidden="true">${filterIcons.stake}</span><span class="ev-design-prefix">Max Stake</span><input data-filter="stake" aria-label="Maximum stake" type="number" min="1" step="1" value="${esc(stake)}"></label>`;
+  const sideControl = designSelect('side','Over or Under', [['','Over/Under'],['Over','Over'],['Under','Under']],designFilters.side);
+  const controls = fantasy ? [sportControl,bookControl,leagueControl,marketControl,dateControl,sideControl]
+    : odds ? [sportControl,leagueControl,marketControl,periodControl,dateControl]
+    : arb ? [sportControl,marketControl,edgeControl,stakeControl,dateControl,periodControl]
+    : [bookControl,leagueControl,marketControl,oddsControl,liquidityControl,dateControl];
+  container.innerHTML = controls.join('');
+}
 function render() {
   renderNav();
   const titles = { odds:'Odds Screen', 'ev-pre':'Positive EV', 'ev-live':'Live EV', fantasy:'DFS Props', 'arb-pre':'Arbitrage', 'arb-live':'Live Arbitrage', sharp:'Smart Money', tracker:'Bet Tracker' };
@@ -152,7 +197,11 @@ function render() {
   $('#ev-reference-league').value = evLeague;
   $('#ev-reference-date').value = evDateRange;
   $('#ev-reference-max-odds').value = evMaxOdds;
-  $('#ev-sort-mode').value = evSort;
+  $('#ev-sort-mode').innerHTML = ['ev-pre','ev-live'].includes(active)
+    ? '<option value="ev">Recommended</option><option value="event">Event</option><option value="odds">Odds</option>'
+    : '<option value="recommended">Recommended</option><option value="event">Event</option><option value="time">Time</option>';
+  $('#ev-sort-mode').value = ['ev-pre','ev-live'].includes(active) ? evSort : designSort;
+  renderDesignFilters();
   $('#ev-sharp-filter').hidden = active !== 'sharp';
   $('#ev-sharp-min').value = localStorage.getItem('sportslab-ev-sharp-min') || 1000;
   $('#ev-ev-bankroll').value = bankroll;
@@ -165,7 +214,7 @@ function render() {
   $('#ev-kelly').disabled = !usesKelly && !usesFlat;
   $('#ev-kelly').min = usesKelly ? '0' : '0.05';
   $('#ev-kelly').max = usesKelly ? '1' : '10';
-  $('#ev-kelly').title = $('#ev-kelly').disabled ? 'Multiplier applies to Positive EV and Arbitrage only' : '';
+  $('#ev-kelly').title = usesKelly ? 'Fractional Kelly stake multiplier' : usesFlat ? 'Multiplier for the arbitrage stake split' : 'Saved display preference; this view has no stake calculation';
   $('#ev-odds-tabs').hidden = active !== 'odds';
   document.querySelectorAll('[data-odds-tab]').forEach(tab => tab.setAttribute('aria-pressed',String(tab.dataset.oddsTab === marketType)));
   renderBooks();
@@ -191,26 +240,15 @@ function render() {
 
 function renderBooks() {
   const fantasyMode = ['fantasy','optimizer','slip','fantasy-alerts'].includes(active);
-  const entered = fantasyMode ? state.dfs.map(item => item.app) : state.quotes.filter(q => !sport || q.sport === sport).map(q => q.book);
-  const supported = fantasyMode ? fantasyNames : sportsbookNames;
+  const entered = fantasyMode ? state.dfs.map(item => canonicalPlatform(item.app)) : state.quotes.filter(q => !sport || q.sport === sport).map(q => q.book);
+  const supported = fantasyMode ? fantasyNames : active === 'sharp' ? ['Pinnacle','DraftKings','FanDuel','bet365',...sportsbookNames.filter(name => !['DraftKings','FanDuel','bet365'].includes(name))] : sportsbookNames;
   const books = [...new Set([...supported, ...entered])];
-  const visibleCount = fantasyMode ? 6 : ['ev-pre','ev-live'].includes(active) ? 11 : 11;
+  const visibleCount = fantasyMode ? 6 : active === 'sharp' ? 4 : ['ev-pre','ev-live'].includes(active) ? 11 : 9;
   const shown = showAllBooks ? books : books.slice(0, visibleCount);
-  const bookmakerMarks = {
-    DraftKings: '/assets/sportsbooks/draftkings.svg',
-    FanDuel: '/assets/sportsbooks/fanduel.png',
-    BetMGM: '/assets/brands/betmgm.png',
-    Caesars: '/assets/brands/caesars.png',
-    BetRivers: '/assets/brands/betrivers.png',
-    Fanatics: '/assets/brands/fanatics.png',
-    'Hard Rock Bet': '/assets/brands/hardrock.png',
-    'theScore Bet': '/assets/brands/thescore.png',
-    'Desert Diamond Sports': '/assets/brands/desertdiamond.png'
-  };
-  $('#ev-books').innerHTML = `<button type="button" class="ev-book-all" data-book="" aria-pressed="${!bookmaker}">All</button>` + shown.map(book => `<button type="button" data-book="${esc(book)}" aria-pressed="${bookmaker === book}" title="Filter ${esc(book)}"><span class="ev-book-symbol">${bookmakerMarks[book] ? `<img src="${bookmakerMarks[book]}" alt="" class="ev-book-logo">` : esc(book === 'bet365' ? 'bet365' : book === 'Bally Bet' ? 'B' : book.slice(0,3))}</span><span class="ev-book-name">${esc(book)}</span></button>`).join('');
+  $('#ev-books').innerHTML = `<button type="button" class="ev-book-all" data-book="" aria-pressed="${!bookmaker}">All</button>` + shown.map(book => `<button type="button" data-book="${esc(book)}" aria-pressed="${bookmaker === book}" title="Filter ${esc(book)}"><span class="ev-book-symbol">${brandMarks[book] ? `<img src="${brandMarks[book]}" alt="" class="ev-book-logo">` : esc(book)}</span><span class="ev-book-name">${esc(book)}</span></button>`).join('');
   $('#ev-books-more').hidden = books.length <= visibleCount;
   $('#ev-books-more').textContent = showAllBooks ? '−' : ['ev-pre','ev-live'].includes(active) ? `+${books.length - shown.length}` : `+${books.length - shown.length} more`;
-  $('#ev-books-more').setAttribute('aria-label', showAllBooks ? 'Show fewer bookmakers' : `Show ${books.length - shown.length} more bookmakers`);
+  $('#ev-books-more').setAttribute('aria-label', showAllBooks ? `Show fewer ${fantasyMode ? 'platforms' : 'bookmakers'}` : `Show ${books.length - shown.length} more ${fantasyMode ? 'platforms' : 'bookmakers'}`);
   $('#ev-books-more').setAttribute('aria-expanded', String(showAllBooks));
   const relevant = ['ev-pre','ev-live','odds','arb-pre','arb-live','sharp','fantasy'].includes(active);
   $('.ev-bookbar').hidden = !relevant;
@@ -261,7 +299,10 @@ function renderOdds() {
   ].filter(category => !marketType || category.accepts({type:marketType}));
   const headerBooks = categories.map(category => `<th scope="colgroup" colspan="${displayBooks.length}">${category.title}</th>`).join('');
   const subheads = categories.map(() => displayBooks.map(book => `<th scope="col" title="${esc(book)}">${esc(book)}</th>`).join('')).join('');
-  const rows = [...eventGroups.entries()].map(([key, group]) => {
+  const orderedEvents = [...eventGroups.entries()];
+  if (designSort === 'event') orderedEvents.sort((a,b) => a[1][0].event.localeCompare(b[1][0].event));
+  else if (designSort === 'time') orderedEvents.sort((a,b) => String(a[1][0].startTime || '').localeCompare(String(b[1][0].startTime || '')));
+  const rows = orderedEvents.map(([key, group]) => {
     const first = group[0], open = expandedOddsKey === key;
     const perCategory = categories.map(category => {
       const matches = group.filter(category.accepts);
@@ -350,7 +391,7 @@ function openDetail(id) {
 }
 
 function renderArb(live) {
-  const opportunities = arbitrageRows(quotes(), live).filter(x => (!marketType || x.best[0].type === marketType) && (!bookmaker || x.best.some(q => q.book === bookmaker)));
+  const opportunities = arbitrageRows(quotes(), live).filter(x => (!marketType || x.best[0].type === marketType) && (!bookmaker || x.best.some(q => q.book === bookmaker)) && arbitrage(x.best, 100).margin >= Number(designFilters.minEdge));
   if (!expandedArbKey && opportunities.length) expandedArbKey = marketKey(opportunities[0].best[0]);
   const totalStake = Math.min(Number(stake) * flatMultiplier, bankroll);
   const rows = opportunities.flatMap(x => {
@@ -418,7 +459,7 @@ function renderSharp() {
 }
 
 function renderFantasy() {
-  const entries = dfs().filter(item => (!bookmaker || item.app === bookmaker) && (!marketType || item.market === marketType));
+  const entries = dfs().filter(item => (!bookmaker || canonicalPlatform(item.app) === bookmaker) && (!marketType || item.market === marketType));
   const platformLabel = name => name.replace(/\s*\(example\)$/,'').replace(/^Underdog$/,'Underdog Fantasy');
   const platformNames = [...new Set(entries.map(item => platformLabel(item.app)))];
   const platforms = [...new Set([...platformNames, 'PrizePicks','Underdog Fantasy','Sleeper Picks'])].slice(0,3);
@@ -428,7 +469,11 @@ function renderFantasy() {
     if (!grouped.has(key)) grouped.set(key,[]);
     grouped.get(key).push(item);
   }
-  const rows = [...grouped.values()].sort((a,b)=>a[0].player.localeCompare(b[0].player)).map(group => {
+  const orderedProps = [...grouped.values()];
+  if (designSort === 'event') orderedProps.sort((a,b)=>String(a[0].event || '').localeCompare(String(b[0].event || '')));
+  else if (designSort === 'time') orderedProps.sort((a,b)=>Date.parse(b[0].ts)-Date.parse(a[0].ts));
+  else orderedProps.sort((a,b)=>Number(b[0].probability)-Number(a[0].probability));
+  const rows = orderedProps.map(group => {
     const first = group[0], pick = group.reduce((best,item)=>Number(item.probability)>Number(best.probability)?item:best,first);
     const bestLine = first.side === 'Under' ? Math.max(...group.map(item=>Number(item.line))) : Math.min(...group.map(item=>Number(item.line)));
     const appCells = platforms.map(app => {
@@ -612,17 +657,36 @@ $('#ev-find').addEventListener('click', () => $('#ev-view').scrollIntoView({ beh
 document.querySelector('[data-ev-focus-search]')?.addEventListener('click', () => { document.body.classList.toggle('ev-search-open'); $('#ev-search').focus(); });
 $('#ev-search').addEventListener('keydown', event => { if (event.key === 'Escape') { document.body.classList.remove('ev-search-open'); document.querySelector('[data-ev-focus-search]')?.focus(); } });
 $('#ev-odds-tabs').addEventListener('click', event => { const tab = event.target.closest('[data-odds-tab]'); if (tab) { marketType = tab.dataset.oddsTab; render(); } });
-$('#ev-reset-filters').addEventListener('click', () => { bookmaker = ''; marketType = ''; search = ''; evLeague = ''; evDateRange = 'week'; evMaxOdds = '200'; evSort = 'ev'; if (sport !== '') { sport = ''; history.replaceState(null, '', location.pathname + '?sport=all' + location.hash); } render(); });
+$('#ev-reset-filters').addEventListener('click', () => { bookmaker = ''; marketType = ''; search = ''; evLeague = ''; evDateRange = 'week'; evMaxOdds = '200'; evSort = 'ev'; designSort = 'recommended'; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; if (sport !== '') { sport = ''; history.replaceState(null, '', location.pathname + '?sport=all' + location.hash); } render(); });
 $('#ev-market-type').addEventListener('change', event => { marketType = event.target.value; render(); });
 $('#ev-reference-market').addEventListener('change', event => { marketType = event.target.value; render(); });
 $('#ev-reference-league').addEventListener('change', event => { evLeague = event.target.value; render(); });
 $('#ev-reference-date').addEventListener('change', event => { evDateRange = event.target.value; render(); });
 $('#ev-reference-max-odds').addEventListener('change', event => { evMaxOdds = event.target.value; render(); });
-$('#ev-sort-mode').addEventListener('change', event => { evSort = event.target.value; render(); });
+$('#ev-sort-mode').addEventListener('change', event => { if (['ev-pre','ev-live'].includes(active)) evSort = event.target.value; else designSort = event.target.value; render(); });
+$('.ev-filter-panel').addEventListener('change', event => {
+  const control = event.target.closest('[data-filter]');
+  if (!control) return;
+  const value = control.value;
+  switch (control.dataset.filter) {
+    case 'sport': sport = value; history.replaceState(null, '', location.pathname + '?sport=' + encodeURIComponent((sport || 'all').toLowerCase()) + location.hash); break;
+    case 'platform': bookmaker = value; break;
+    case 'league': designFilters.league = value; break;
+    case 'market': marketType = value; break;
+    case 'date': designFilters.date = value; break;
+    case 'period': designFilters.period = value; break;
+    case 'side': designFilters.side = value; break;
+    case 'odds': designFilters.maxOdds = value; break;
+    case 'edge': designFilters.minEdge = value; break;
+    case 'liquidity': localStorage.setItem('sportslab-ev-sharp-min', String(Math.max(0, Number(value) || 0))); break;
+    case 'stake': stake = Math.max(1, Number(value) || 1); break;
+  }
+  render();
+});
 $('#ev-sharp-min').addEventListener('change', event => { localStorage.setItem('sportslab-ev-sharp-min', String(Math.max(0,Number(event.target.value)||0))); render(); });
 const saveEvDisplay = () => { try { localStorage.setItem('sportslab-ev-display-v1', JSON.stringify({bankroll,kelly,flatMultiplier})); } catch { /* Display settings stay usable this session. */ } };
 $('#ev-ev-bankroll').addEventListener('change', event => { bankroll = Math.max(1, Number(event.target.value) || 5000); saveEvDisplay(); render(); });
-$('#ev-kelly').addEventListener('change', event => { if (['arb-pre','arb-live'].includes(active)) flatMultiplier = Math.max(.05, Math.min(10, Number(event.target.value) || 1)); else kelly = Math.max(0, Math.min(1, Number(event.target.value) || 0)); saveEvDisplay(); render(); });
+$('#ev-kelly').addEventListener('change', event => { if (['ev-pre','ev-live'].includes(active)) kelly = Math.max(0, Math.min(1, Number(event.target.value) || 0)); else flatMultiplier = Math.max(.05, Math.min(10, Number(event.target.value) || 1)); saveEvDisplay(); render(); });
 $('#ev-detail-close').addEventListener('click', () => $('#ev-detail').close());
 $('#ev-sport').addEventListener('change', event => {
   sport = event.target.value;
@@ -691,7 +755,7 @@ $('#ev-import-apply').addEventListener('click', async () => {
     state = normalize(data); evaluateAlerts(); persist(); $('#ev-import-dialog').close(); render();
   } catch (error) { $('#ev-import-error').textContent = error.message; }
 });
-window.addEventListener('hashchange', () => { const key = location.hash.slice(1); if (toolMeta[key]) { active = key; bookmaker = ''; marketType = ''; showAllBooks = false; render(); } });
+window.addEventListener('hashchange', () => { const key = location.hash.slice(1); if (toolMeta[key]) { active = key; bookmaker = ''; marketType = ''; showAllBooks = false; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; render(); } });
 setInterval(() => { if (['ev-live','arb-live','odds','sharp','line-alerts'].includes(active) && !document.querySelector('dialog[open]')) render(); }, 15_000);
 $('.ev-header-actions').append($('.ev-sidebar'));
 $('#main').append($('#ev-notice'));
