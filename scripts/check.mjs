@@ -6,12 +6,13 @@ import { renderSportsbookGuideSitemapEntries } from '../lib/online-sportsbook-gu
 
 const entry = new URL('../dist/server/index.js', import.meta.url);
 const worker = (await import(entry.href + '?check=' + Date.now())).default;
-for (const route of ['/', '/research?sport=nfl', '/research?sport=mlb', '/nfl', '/nba', '/mlb', '/nfl?view=trends', '/live', '/nfl/live', '/simulation', '/bets']) {
+for (const route of ['/', '/research?sport=nfl', '/research?sport=mlb', '/nfl', '/nba', '/mlb', '/nfl?view=trends', '/live', '/nfl/live', '/simulation', '/bets', '/ev?sport=nfl']) {
   const response = await worker.fetch(new Request('https://sportslab.local' + route));
   assert.equal(response.status, 200, route);
   const html = await response.text();
   assert.match(html, /<main\b/, route);
   assert.doesNotMatch(html, /<!--site-header-->/, route);
+  if (route.startsWith('/ev?')) assert.match(html, /data-site-sport="nfl"/, route);
 }
 const sportsbookPaths = [...renderSportsbookGuideSitemapEntries({}).matchAll(/<loc>([^<]+)<\/loc>/g)].map(([, loc]) => new URL(loc).pathname);
 const newRoutes = [...new Set([...bettingPagePaths, '/betting-education', ...educationArticles.map(article => `/betting-education/${article.slug}`), ...marketGuidePaths, ...sportsbookPaths, '/odds-api'])];
@@ -36,7 +37,7 @@ for (const route of ['/robots.txt', '/sitemap.xml']) {
   assert.equal(response.status, 200, route);
   assert.match(await response.text(), /sportslab\.fnsd\.chatgpt\.site/, route);
 }
-for (const asset of ['/favicon.svg', '/landing.js', '/style.css', '/assets/fonts/InterVariable.woff2']) {
+for (const asset of ['/favicon.svg', '/landing.js', '/style.css', '/ev.js', '/ev.css', '/assets/fonts/InterVariable.woff2']) {
   const response = await worker.fetch(new Request('https://sportslab.local' + asset));
   assert.equal(response.status, 200, asset);
   assert.ok((await response.arrayBuffer()).byteLength > 0, asset);

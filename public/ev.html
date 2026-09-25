@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#08080a"><meta name="description" content="Sports Lab EV workbench for comparing manually entered sportsbook, exchange, fantasy and prediction market prices.">
+  <title>EV workbench · Sports Lab</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css"><script type="module" src="/ev.js"></script>
+</head>
+<body class="ev-page"><a class="skip" href="#main">Skip to EV workbench</a><!--site-header-->
+<main id="main" tabindex="-1">
+  <header class="ev-header"><div><h1>EV workbench</h1><p>Compare prices, calculate stakes and keep your market research in one place.</p></div><div class="ev-header-actions"><button type="button" id="ev-add-quote" class="button primary">Add price</button><button type="button" id="ev-import" class="button subtle">Import data</button><button type="button" id="ev-export" class="button subtle">Export</button></div></header>
+  <div id="ev-notice" class="ev-notice" role="status"></div>
+  <div class="ev-shell"><aside class="ev-sidebar" aria-label="EV tools"><label class="ev-mobile-picker">Choose tool<select id="ev-tool-select"></select></label><nav id="ev-tool-nav" aria-label="EV tools"></nav></aside>
+    <div class="ev-main"><div class="ev-toolbar"><label>Sport<select id="ev-sport"><option value="">All sports</option><option value="NFL">NFL</option><option value="MLB">MLB</option><option value="NBA">NBA</option><option value="WNBA">WNBA</option><option value="NHL">NHL</option><option value="Soccer">Soccer</option></select></label><label>Find a market<input id="ev-search" type="search" placeholder="Event, market, book, player…" autocomplete="off"></label><span id="ev-record-count"></span></div><header class="ev-view-header"><div><h2 id="ev-title"></h2><p id="ev-description"></p></div><div id="ev-view-actions"></div></header><section id="ev-view" aria-live="polite"></section></div>
+  </div>
+</main>
+<dialog id="ev-dialog" aria-labelledby="ev-dialog-title"><form id="ev-form" novalidate><header><h2 id="ev-dialog-title"></h2><button type="button" id="ev-close" aria-label="Close form">×</button></header><div id="ev-form-fields"></div><p id="ev-form-error" role="alert" hidden></p><footer><button type="button" id="ev-delete" class="button subtle" hidden>Delete</button><span></span><button type="button" id="ev-cancel" class="button subtle">Cancel</button><button type="submit" class="button primary">Save</button></footer></form></dialog>
+<dialog id="ev-import-dialog" aria-labelledby="ev-import-title"><div class="ev-import-content"><header><h2 id="ev-import-title">Import EV workspace</h2><button type="button" id="ev-import-close" aria-label="Close import">×</button></header><p>Choose a JSON export. Records replace the current browser workspace after validation.</p><input type="file" id="ev-file" accept=".json,application/json"><p id="ev-import-error" role="alert"></p><footer><button id="ev-import-cancel" class="button subtle">Cancel</button><button id="ev-import-apply" class="button primary">Import records</button></footer></div></dialog>
+</body></html>

@@ -6,10 +6,15 @@ export const decimal = odds => {
 };
 export const implied = odds => 1 / decimal(odds);
 export const expectedReturn = (probability, odds) => probability * decimal(odds) - 1;
-export const money = n => Number.isFinite(n) ? '$' + n.toFixed(2) : '—';
+export const money = n => Number.isFinite(n) ? (n < 0 ? '-$' : '$') + Math.abs(n).toFixed(2) : '—';
 export const percent = n => Number.isFinite(n) ? (100 * n).toFixed(1) + '%' : '—';
 export const signed = n => Number.isFinite(n) ? (n > 0 ? '+' : '') + (100 * n).toFixed(1) + '%' : '—';
 export const oddsLabel = odds => Number(odds) > 0 ? '+' + Number(odds) : String(Number(odds));
+export const probabilityToAmerican = probability => {
+  const p = Number(probability);
+  if (!(p > 0 && p < 1)) return NaN;
+  return Math.round(p >= .5 ? -100 * p / (1 - p) : 100 * (1 - p) / p);
+};
 export const marketKey = q => [q.event, q.market, q.line, q.live ? 'live' : 'pregame'].join('|');
 export const familyKey = q => [q.event, q.market, q.live ? 'live' : 'pregame'].join('|');
 export const validQuote = q => q && q.event && q.market && q.side && q.book && Number.isFinite(decimal(q.odds));
@@ -28,6 +33,7 @@ export function groups(quotes, mode = null) {
 
 export function opposingSides(rows) {
   const sides = [...new Set(rows.map(q => q.side))];
+  if (rows.some(q => q.type === 'future') && !sides.every(side => ['yes','no'].includes(side.toLowerCase()))) return [];
   return sides.length === 2 ? sides : [];
 }
 
@@ -72,9 +78,20 @@ export function arbitrage(best, bankroll) {
   return { margin: 1 / sum - 1, stakes, payout: bankroll / sum, profit: bankroll * (1 / sum - 1) };
 }
 
+export function arbitrageRows(quotes, mode) {
+  return groups(quotes, mode).map(rows => {
+    const sides = opposingSides(rows);
+    if (!sides.length) return null;
+    const pairs = rows.filter(q => q.side === sides[0] && fresh(q)).flatMap(a => rows.filter(b => b.side === sides[1] && b.book !== a.book && fresh(b)).map(b => [a,b]));
+    pairs.sort((a,b) => implied(a[0].odds) + implied(a[1].odds) - implied(b[0].odds) - implied(b[1].odds));
+    const best = pairs[0];
+    return best && implied(best[0].odds) + implied(best[1].odds) < 1 ? { rows, best } : null;
+  }).filter(Boolean).sort((a,b) => implied(a.best[0].odds) + implied(a.best[1].odds) - implied(b.best[0].odds) - implied(b.best[1].odds));
+}
+
 export function middleRows(quotes, mode) {
   const families = new Map();
-  for (const q of quotes.filter(validQuote).filter(q => q.type === 'total' && Boolean(q.live) === mode && fresh(q))) {
+  for (const q of quotes.filter(validQuote).filter(q => ['total','alternate'].includes(q.type) && Boolean(q.live) === mode && fresh(q))) {
     const key = familyKey(q);
     if (!families.has(key)) families.set(key, []);
     families.get(key).push(q);
@@ -149,18 +166,29 @@ export function pearson(pairs) {
 }
 
 export function sharpMatches(quotes, minimum = 1000) {
-  return groups(quotes).flatMap(rows => rows.filter(q => q.exchange && Number(q.liquidity) >= minimum && fresh(q)).flatMap(exchange =>
-    rows.filter(q => !q.exchange && q.side !== exchange.side && fresh(q)).map(sportsbook => ({ exchange, sportsbook, liquidity: Number(exchange.liquidity), opposingPrice: sportsbook.odds }))
-  ));
+  return groups(quotes).flatMap(rows => rows.filter(q => q.exchange && Number(q.liquidity) >= minimum && fresh(q)).map(exchange => {
+    const opposite = rows.filter(q => q.exchange && q.side !== exchange.side && fresh(q)).sort((a,b) => decimal(b.odds)-decimal(a.odds))[0];
+    const sportsbook = rows.filter(q => !q.exchange && q.side !== exchange.side && fresh(q)).sort((a,b) => decimal(b.odds)-decimal(a.odds))[0];
+    if (!sportsbook || (opposite && decimal(sportsbook.odds) <= decimal(opposite.odds))) return null;
+    return { exchange, opposite, sportsbook, liquidity:Number(exchange.liquidity), improvement:opposite ? decimal(sportsbook.odds)/decimal(opposite.odds)-1 : NaN };
+  }).filter(Boolean));
 }
 
 export function alertMatches(rule, state) {
-  if (rule.kind === 'fantasy-new') return state.dfs.filter(x => x.id !== rule.seenId && (!rule.market || x.market.toLowerCase().includes(rule.market.toLowerCase()))).map(x => ({ id: x.id, label: `${x.player} ${x.market} at ${x.app}` }));
+  if (rule.kind === 'fantasy-new') return state.dfs.filter(x => (!rule.market || x.market.toLowerCase().includes(rule.market.toLowerCase())) && (!Number.isFinite(Number(rule.threshold)) || Number(x.probability) * 100 >= Number(rule.threshold))).map(x => ({ id: x.id, label: `${x.player} ${x.market} ${Math.round(Number(x.probability) * 100)}% at ${x.app}` }));
   const rows = state.quotes.filter(q => (!rule.event || q.event.toLowerCase().includes(rule.event.toLowerCase())) && (!rule.market || q.market.toLowerCase().includes(rule.market.toLowerCase())) && (!rule.liveOnly || q.live));
-  if (rule.kind === 'price') return rows.filter(q => decimal(q.odds) >= decimal(rule.threshold)).map(q => ({ id: q.id, label: `${q.side} ${oddsLabel(q.odds)} at ${q.book}` }));
+  const observation = q => state.history.filter(h => h.quoteId === q.id).at(-1)?.id || q.id;
+  if (rule.kind === 'price') return rows.filter(q => decimal(q.odds) >= decimal(rule.threshold)).map(q => ({ id: observation(q), label: `${q.side} ${oddsLabel(q.odds)} at ${q.book}` }));
   if (rule.kind === 'ev') {
     const ids = new Set(evRows(state.quotes, rule.liveOnly ? true : null).filter(x => x.ev >= Number(rule.threshold) / 100).map(x => x.quote.id));
-    return rows.filter(q => ids.has(q.id)).map(q => ({ id: q.id, label: `${q.side} at ${q.book}` }));
+    return rows.filter(q => ids.has(q.id)).map(q => ({ id: observation(q), label: `${q.side} at ${q.book}` }));
   }
+  if (rule.kind === 'movement') return rows.flatMap(q => {
+    const observations = state.history.filter(h => h.quoteId === q.id);
+    if (observations.length < 2) return [];
+    const previous = observations.at(-2), current = observations.at(-1);
+    const change = Math.abs(Number(current.line) - Number(previous.line));
+    return Number.isFinite(change) && change >= Number(rule.threshold) && change > 0 ? [{ id: current.id, label: `${q.market} ${previous.line} → ${current.line} at ${q.book}` }] : [];
+  });
   return [];
 }

@@ -5,6 +5,7 @@ export function sportTools(sport) {
   if (!Object.hasOwn(SPORTS, sport)) return [{ key: 'live', label: 'Live sports', href: '/live' }];
   return [
     { key: 'research', label: 'Model', href: '/' + sport },
+    { key: 'ev', label: 'EV tools', href: '/ev?sport=' + sport },
     { key: 'trends', label: 'Trends', href: '/' + sport + '?view=trends' },
     ...(live.has(sport) ? [{ key: 'live', label: 'Live games', href: '/' + sport + '/live' }, { key: 'simulation', label: 'Simulation', href: '/' + sport + '/simulation' }] : []),
     ...(sport === 'nfl' ? [{ key: 'performance', label: 'Performance', href: '/performance', devOnly: true }] : []),
@@ -15,5 +16,6 @@ export function sportDestination(sport, section) {
   if (!Object.hasOwn(SPORTS, sport)) return '/research';
   if (section === 'home') return '/research?sport=' + sport;
   if (section === 'bets') return '/bets?sport=' + sport;
+  if (section === 'ev') return '/ev?sport=' + sport;
   return sportTools(sport).find(tool => tool.key === section)?.href || '/' + sport;
 }

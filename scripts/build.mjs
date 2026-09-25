@@ -40,6 +40,8 @@ await page('simulation', 'simulation.html', '/simulation');
 await page('paper:nfl', 'paper.html', '/paper', '?sport=nfl');
 await page('paper:mlb', 'paper.html', '/paper', '?sport=mlb');
 await page('performance', 'performance.html', '/performance');
+await page('ev', 'ev.html', '/ev');
+for (const sport of sports) await page(`ev:${sport}`, 'ev.html', '/ev', `?sport=${sport}`);
 
 // Keep the pages already available in the main SportsLab project on Sites.
 // These renderers produce standalone HTML and use the same public CSS/JS assets.
@@ -112,6 +114,7 @@ function htmlKey(url) {
   if (path === '/bets') return sports.has(sport) ? 'bets:' + sport : 'bets';
   if (path === '/paper') return sport === 'mlb' ? 'paper:mlb' : 'paper:nfl';
   if (path === '/performance') return 'performance';
+  if (path === '/ev') return sports.has(sport) ? 'ev:' + sport : 'ev';
   if (path === '/live') return 'live';
   if (path === '/simulation') return 'simulation';
   const live = /^\\/(nfl|mlb|nba|wnba)\\/live$/.exec(path);
