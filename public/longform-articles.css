@@ -1,0 +1,29 @@
+.longform-layout{display:grid;grid-template-columns:minmax(170px,210px) minmax(0,770px);align-items:start;gap:clamp(28px,5vw,72px);width:min(100%,1080px);margin:0 auto}
+.longform-toc{position:sticky;top:86px;max-height:calc(100vh - 108px);overflow:auto;padding:15px 14px;border:1px solid #223540;border-left:2px solid #6bd5df;border-radius:0 9px 9px 0;background:linear-gradient(145deg,#0e1920,#0a1218);scrollbar-width:thin}
+.longform-toc h2{margin:0 0 12px;color:#e6eef2;font-size:11px;font-weight:680;letter-spacing:.08em;text-transform:uppercase}
+.longform-toc ol{display:grid;gap:3px;margin:0;padding:0;list-style:none;counter-reset:article-section}
+.longform-toc li{counter-increment:article-section}
+.longform-toc a{display:block;padding:5px 6px;border-radius:4px;color:#9eb0bb;font-size:11px;line-height:1.45;text-decoration:none;transition:color .16s ease,background .16s ease}
+.longform-toc a::before{content:counter(article-section,decimal-leading-zero) "  ";color:#5c8793;font-size:9px;font-variant-numeric:tabular-nums}
+.longform-toc a:hover,.longform-toc a:focus-visible{background:#13232b;color:#d5f0f0;outline:none}
+.longform-toc-meta{display:flex;flex-wrap:wrap;gap:5px;margin:13px 6px 0;padding-top:11px;border-top:1px solid #223540;color:#7f939e;font-size:10px}
+.longform-copy{min-width:0;max-width:770px;color:inherit}
+.longform-copy>section,.longform-copy>.faq,.longform-copy>.market-sources{scroll-margin-top:28px}
+.longform-copy h2[id]{scroll-margin-top:28px}
+.article-reading-time{color:#a7cbd0;font-weight:600}
+.edu-article.has-longform{width:100%;max-width:min(100%,1120px)}
+.edu-article.has-longform>.article-content{max-width:none;margin:0;padding:0}
+.market-guide-site .market-article.has-longform{max-width:min(100%,1120px)}
+.market-guide-site .market-article.has-longform>.article-content{max-width:none}
+.sportsbook-guide-article.has-longform{max-width:min(100%,1120px)}
+.sportsbook-guide-article.has-longform>.article-content{max-width:none}
+.bet-article-meta{display:flex;align-items:center;gap:9px;margin:30px auto 12px;padding-top:15px;border-top:1px solid var(--bet-line);max-width:1080px;color:var(--bet-muted);font-size:11px}
+.bet-article.has-longform{max-width:1080px;margin:0 auto}
+.bet-article-content{min-width:0}
+.bet-article-content .longform-copy{max-width:770px}
+.bet-article.has-longform section{scroll-margin-top:28px}
+.bet-article.has-longform h2[id]{scroll-margin-top:28px}
+@media(max-width:900px){.longform-layout{grid-template-columns:180px minmax(0,1fr);gap:28px}}
+@media(max-width:720px){.longform-layout{grid-template-columns:minmax(0,1fr);gap:20px}.longform-toc{position:static;max-height:230px;padding:12px;border-radius:7px;order:0}.longform-toc h2{margin-bottom:7px}.longform-toc ol{grid-template-columns:repeat(2,minmax(0,1fr));gap:1px 6px}.longform-toc a{padding:5px 4px;font-size:10px}.longform-toc-meta{margin:8px 4px 0;padding-top:8px}.edu-article.has-longform{max-width:100%}.bet-article-meta{margin-top:24px}}
+@media(max-width:430px){.longform-toc ol{grid-template-columns:1fr}.longform-toc{max-height:220px}.longform-toc a{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.longform-toc a{transition:none}}
