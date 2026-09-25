@@ -3,6 +3,7 @@ const paths = {
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v.01"/>',
   players: '<circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 4v3"/>',
   research: '<path d="M4 19V9m5 10V4m6 15v-7m5 7V7"/>',
+  ev: '<path d="M3 17h4l3-10 4 13 3-8h4"/><path d="M3 4h18"/>',
   trends: '<path d="m3 16 6-6 4 4 8-10M15 4h6v6"/>',
   live: '<path d="M3 12h4l3-8 4 16 3-8h4"/>',
   simulation: '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8 8h.01M16 8h.01M12 12h.01M8 16h.01M16 16h.01" stroke-width="3"/>',

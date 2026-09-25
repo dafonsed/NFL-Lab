@@ -2,11 +2,18 @@ import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { renderSitePage } from '../lib/site-layout.mjs';
+import { educationArticles, renderEducationPage, renderEducationRobots, renderEducationSitemap } from '../lib/betting-education.mjs';
+import { bettingPagePaths, renderBettingPage, renderBettingSitemapEntries } from '../lib/betting-pages.mjs';
+import { marketGuidePaths, renderMarketGuidePage, renderMarketGuideSitemapEntries } from '../lib/online-sports-betting.mjs';
+import { renderSportsbookGuidePage, renderSportsbookGuideSitemapEntries } from '../lib/online-sportsbook-guides.mjs';
+import { renderOddsApiPage } from '../lib/odds-api-page.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const publicDir = path.join(root, 'public');
 const outDir = path.join(root, 'dist', 'server');
 const upstream = 'https://nfl-lab-xi.vercel.app';
+const origin = 'https://sportslab.fnsd.chatgpt.site';
+process.env.PUBLIC_SITE_URL = origin;
 const sports = ['nfl', 'mlb', 'nba', 'wnba', 'nhl', 'soccer'];
 const pages = {};
 
@@ -33,6 +40,33 @@ await page('simulation', 'simulation.html', '/simulation');
 await page('paper:nfl', 'paper.html', '/paper', '?sport=nfl');
 await page('paper:mlb', 'paper.html', '/paper', '?sport=mlb');
 await page('performance', 'performance.html', '/performance');
+
+// Keep the pages already available in the main SportsLab project on Sites.
+// These renderers produce standalone HTML and use the same public CSS/JS assets.
+const request = { headers: {} };
+const addRendered = (pathname, html) => {
+  if (!html) throw Error(`No page was rendered for ${pathname}`);
+  pages[pathname] = html;
+};
+for (const pathname of bettingPagePaths) addRendered(pathname, renderBettingPage(new URL(pathname, origin), origin));
+for (const pathname of ['/betting-education', ...educationArticles.map(article => `/betting-education/${article.slug}`)]) {
+  if (!pages[pathname]) addRendered(pathname, renderEducationPage(pathname, request));
+}
+for (let index = 2; ; index++) {
+  const pathname = `/betting-education/page-${index}`;
+  const html = renderEducationPage(pathname, request);
+  if (!html) break;
+  addRendered(pathname, html);
+}
+for (const pathname of marketGuidePaths) addRendered(pathname, renderMarketGuidePage(pathname, request));
+const sportsbookEntries = renderSportsbookGuideSitemapEntries(request);
+const sportsbookPaths = [...sportsbookEntries.matchAll(/<loc>([^<]+)<\/loc>/g)].map(([, loc]) => new URL(loc).pathname);
+for (const pathname of sportsbookPaths) addRendered(pathname, renderSportsbookGuidePage(pathname, request));
+addRendered('/odds-api', renderOddsApiPage(origin));
+const documents = {
+  '/robots.txt': ['text/plain; charset=utf-8', renderEducationRobots(request)],
+  '/sitemap.xml': ['application/xml; charset=utf-8', renderEducationSitemap(request).replace('</urlset>', `${renderMarketGuideSitemapEntries(request)}${sportsbookEntries}${renderBettingSitemapEntries(origin)}<url><loc>${origin}/odds-api</loc></url></urlset>`)]
+};
 
 const types = {
   '.css': 'text/css; charset=utf-8',
@@ -63,6 +97,7 @@ await visit(publicDir);
 
 const worker = `// Generated from public/ by scripts/build.mjs. Edit the source files instead.
 const pages = ${JSON.stringify(pages)};
+const documents = ${JSON.stringify(documents)};
 const assets = ${JSON.stringify(assets)};
 const upstream = ${JSON.stringify(upstream)};
 const sports = new Set(${JSON.stringify(sports)});
@@ -85,6 +120,7 @@ function htmlKey(url) {
   if (simulation) return 'simulation:' + simulation[1];
   if (sports.has(path.slice(1))) return url.searchParams.get('view') === 'trends' ? 'trends:' + path.slice(1) : path === '/nfl' ? 'index' : 'sport:' + path.slice(1);
   if (path === '/index.html') return 'index';
+  if (pages[path]) return path;
   return null;
 }
 function response(body, status = 200, extra = {}) {
@@ -119,6 +155,8 @@ export default {
     }
     const key = htmlKey(url);
     if (key && pages[key]) return response(request.method === 'HEAD' ? null : pages[key], 200, { 'content-type': 'text/html; charset=utf-8', 'content-security-policy': csp, 'cache-control': 'no-cache' });
+    const document = documents[path];
+    if (document) return response(request.method === 'HEAD' ? null : document[1], 200, { 'content-type': document[0], 'cache-control': 'public, max-age=3600' });
     const asset = assets[path];
     if (asset) return response(request.method === 'HEAD' ? null : decode(asset[1]), 200, { 'content-type': asset[0], 'cache-control': 'public, max-age=300' });
     return response(JSON.stringify({ error: 'Not found.' }), 404, { 'content-type': 'application/json; charset=utf-8' });

@@ -1828,3 +1828,22 @@ html[data-motion=reduce] .site-layout :is(button,a,input,select,textarea,summary
  .source-receipt-details dl { display:grid; grid-template-columns:1fr; gap:9px; }
  .site-layout .pr-drag-hint { font-size:11px; }
 }
+
+/* NFL TD overview shows the score estimate without a second model column. */
+.site-layout .td-chance-board .research-board-guide { grid-template-columns:repeat(2,minmax(0,1fr)); }
+@media(min-width:901px) {
+ .site-layout .td-chance-board :is(.research-columns,article.research-row) { grid-template-columns:minmax(180px,2.1fr) minmax(75px,1fr) minmax(70px,.85fr) minmax(90px,.85fr) minmax(70px,.65fr) 38px !important; }
+ .site-layout .td-chance-board article.research-row > * { grid-column:auto !important; grid-row:auto !important; }
+}
+@media(max-width:900px) {
+ .site-layout .td-chance-board .research-board-guide { grid-template-columns:1fr; }
+ .site-layout .td-chance-board .research-columns { display:none !important; }
+ .site-layout .td-chance-board article.research-row { display:grid !important; grid-template-columns:repeat(3,minmax(0,1fr)) !important; height:auto !important; min-height:110px !important; }
+ .site-layout .td-chance-board .research-identity { grid-column:1 / 3 !important; grid-row:1 !important; }
+ .site-layout .td-chance-board .research-odds { grid-column:3 !important; grid-row:1 !important; }
+ .site-layout .td-chance-board .research-line { grid-column:1 / 3 !important; grid-row:2 !important; }
+ .site-layout .td-chance-board .research-actions { grid-column:3 !important; grid-row:2 !important; position:static !important; justify-self:end; }
+ .site-layout .td-chance-board .research-estimate { grid-column:1 / 3 !important; grid-row:3 !important; }
+ .site-layout .td-chance-board .research-result { grid-column:3 !important; grid-row:3 !important; display:block !important; }
+ .site-layout .td-chance-board .research-history { grid-column:1 / -1 !important; grid-row:4 !important; }
+}

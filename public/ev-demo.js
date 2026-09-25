@@ -1,0 +1,59 @@
+// Every seeded record is hypothetical. The connected feed can supply the same shape later.
+export function exampleWorkspace() {
+  const now = new Date().toISOString(), day = new Date().toISOString().slice(0, 10);
+  let n = 0;
+  const quote = (event, market, type, line, side, book, odds, live = false, extra = {}) => ({
+    id: 'example-q-' + ++n, sport: 'NFL', event, market, type, line, side, book, odds, live,
+    ts: now, source: 'example', ...extra
+  });
+  const game = 'Example: Arizona vs Seattle';
+  const quotes = [
+    quote(game, 'Game total', 'total', 44.5, 'Over', 'Book A', 115),
+    quote(game, 'Game total', 'total', 44.5, 'Under', 'Book A', -135),
+    quote(game, 'Game total', 'total', 44.5, 'Over', 'Book B', -110),
+    quote(game, 'Game total', 'total', 44.5, 'Under', 'Book B', -110),
+    quote(game, 'Game total', 'total', 44.5, 'Over', 'Book C', -112),
+    quote(game, 'Game total', 'total', 44.5, 'Under', 'Book C', -108),
+    quote(game, 'Game total', 'total', 45.5, 'Over', 'Book A', -105),
+    quote(game, 'Game total', 'total', 45.5, 'Under', 'Book B', 102),
+    quote(game, 'Game total', 'total', 43.5, 'Over', 'Book C', -120),
+    quote(game, 'Game total', 'total', 43.5, 'Under', 'Book C', 100),
+    quote(game, 'Example QB passing yards', 'prop', 249.5, 'Over', 'Book A', 118),
+    quote(game, 'Example QB passing yards', 'prop', 249.5, 'Under', 'Book A', -140),
+    quote(game, 'Example QB passing yards', 'prop', 249.5, 'Over', 'Book B', -105),
+    quote(game, 'Example QB passing yards', 'prop', 249.5, 'Under', 'Book B', -115),
+    quote('Example: Season winner', 'Conference winner', 'future', '', 'Arizona', 'Book A', 650),
+    quote('Example: Season winner', 'Conference winner', 'future', '', 'Seattle', 'Book A', 500),
+    quote('Example: Season winner', 'Conference winner', 'future', '', 'Arizona', 'Book B', 625),
+    quote('Example: Season winner', 'Conference winner', 'future', '', 'Seattle', 'Book B', 475),
+    quote(game, 'Live game total', 'total', 41.5, 'Over', 'Book A', 112, true),
+    quote(game, 'Live game total', 'total', 41.5, 'Under', 'Book A', -130, true),
+    quote(game, 'Live game total', 'total', 41.5, 'Over', 'Book B', -108, true),
+    quote(game, 'Live game total', 'total', 41.5, 'Under', 'Book B', -108, true),
+    quote(game, 'Live game total', 'total', 41.5, 'Over', 'Exchange X', 105, true, { exchange: true, liquidity: 3200 }),
+    quote(game, 'Live game total', 'total', 41.5, 'Under', 'Exchange X', -116, true, { exchange: true, liquidity: 1700 })
+  ];
+  return {
+    version: 1, example: true, quotes,
+    history: quotes.map(q => ({ id: 'h-' + q.id, quoteId: q.id, event: q.event, market: q.market, side: q.side, book: q.book, line: q.line, odds: q.odds, ts: q.ts, source: 'example' })),
+    dfs: [
+      { id: 'example-d-1', player: 'Example QB', market: 'Passing yards', line: 249.5, side: 'Over', app: 'PrizePicks (example)', probability: .56, ts: now, source: 'example' },
+      { id: 'example-d-2', player: 'Example RB', market: 'Rushing yards', line: 69.5, side: 'Under', app: 'PrizePicks (example)', probability: .58, ts: now, source: 'example' },
+      { id: 'example-d-3', player: 'Example WR', market: 'Receiving yards', line: 75.5, side: 'Over', app: 'Underdog (example)', probability: .57, ts: now, source: 'example' },
+      { id: 'example-d-4', player: 'Example TE', market: 'Receptions', line: 4.5, side: 'Over', app: 'Underdog (example)', probability: .52, ts: now, source: 'example' }
+    ],
+    paytables: {
+      'PrizePicks (example)': { '2': [0, 0, 3], '3': [0, 0, 0, 5], '4': [0, 0, 0, 0, 10], '5': [0, 0, 0, 0, 0, 20] },
+      'Underdog (example)': { '2': [0, 0, 3], '3': [0, 0, 0, 6], '4': [0, 0, 0, 0, 10], '5': [0, 0, 0, 0, 20] }
+    },
+    contracts: [
+      { id: 'example-c-1', platform: 'Kalshi (example)', event: 'Example: Team reaches playoffs', bid: 42, ask: 46, last: 44, volume: 2200, ts: now, source: 'example' },
+      { id: 'example-c-2', platform: 'Polymarket (example)', event: 'Example: Team reaches playoffs', bid: 43, ask: 47, last: 45, volume: 2800, ts: now, source: 'example' }
+    ],
+    traders: [{ id: 'example-t-1', name: 'Sample trader', platform: 'Kalshi (example)', contractId: 'example-c-1', side: 'Yes', quantity: 50, entry: 40, ts: now, source: 'example' }],
+    trades: [{ id: 'example-tr-1', trader: 'Sample trader', contractId: 'example-c-1', side: 'Buy Yes', quantity: 50, price: 40, ts: now, source: 'example' }],
+    bets: [{ id: 'example-b-1', date: day, selection: 'Example: Game total Over 44.5', book: 'Book A', stake: 25, odds: 115, closeOdds: 105, result: 'open', source: 'example' }],
+    results: Array.from({ length: 8 }, (_, i) => ({ id: 'example-r-' + i, game: 'Example week ' + (i + 1), player: i % 2 ? 'Example RB' : 'Example QB', market: i % 2 ? 'Rushing yards' : 'Passing yards', line: i % 2 ? 69.5 : 249.5, result: i % 2 ? 60 + i * 3 : 240 + i * 6, date: day, source: 'example' })),
+    alerts: [], notifications: [], slips: []
+  };
+}
