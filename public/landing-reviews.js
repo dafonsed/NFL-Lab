@@ -1,22 +1,28 @@
 const viewport = document.querySelector('#home-review-viewport');
-const previous = document.querySelector('[data-review-scroll="previous"]');
-const next = document.querySelector('[data-review-scroll="next"]');
 
-if (viewport && previous && next) {
-  const update = () => {
-    previous.disabled = viewport.scrollLeft <= 2;
-    next.disabled = viewport.scrollLeft + viewport.clientWidth >= viewport.scrollWidth - 2;
-  };
-  const move = direction => {
-    const card = viewport.querySelector('.home-review-card');
-    const track = viewport.querySelector('.home-review-track');
-    if (!card || !track) return;
-    const distance = card.getBoundingClientRect().width + parseFloat(getComputedStyle(track).gap);
-    viewport.scrollBy({ left: direction * distance, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
-  };
-  previous.addEventListener('click', () => move(-1));
-  next.addEventListener('click', () => move(1));
-  viewport.addEventListener('scroll', update, { passive: true });
-  addEventListener('resize', update);
-  update();
+if (viewport) {
+  let pointerStart = 0;
+  let scrollStart = 0;
+  let dragging = false;
+
+  if (innerWidth >= 800) viewport.scrollLeft = 24;
+
+  viewport.addEventListener('pointerdown', event => {
+    if (event.pointerType === 'touch' || event.button !== 0) return;
+    dragging = true;
+    pointerStart = event.clientX;
+    scrollStart = viewport.scrollLeft;
+    viewport.setPointerCapture(event.pointerId);
+  });
+
+  viewport.addEventListener('pointermove', event => {
+    if (!dragging) return;
+    viewport.scrollLeft = scrollStart - (event.clientX - pointerStart);
+    if (Math.abs(event.clientX - pointerStart) > 4) event.preventDefault();
+  });
+
+  const finishDrag = () => { dragging = false; };
+  viewport.addEventListener('pointerup', finishDrag);
+  viewport.addEventListener('pointercancel', finishDrag);
+  viewport.addEventListener('lostpointercapture', finishDrag);
 }
