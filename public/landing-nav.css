@@ -9,8 +9,8 @@ body.landing-page .home-header {
   transition: background-color .22s ease, box-shadow .22s ease;
 }
 body.landing-page .home-header.is-scrolled {
-  background: rgba(0, 0, 0, .9);
-  box-shadow: 0 1px 0 rgba(113, 225, 213, .16), 0 12px 34px rgba(8, 31, 39, .32);
+  background: rgba(0, 0, 0, .82);
+  box-shadow: 0 1px 0 rgba(113, 225, 213, .11), 0 12px 34px rgba(8, 31, 39, .22);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
@@ -20,14 +20,14 @@ body.landing-page .home-header::after {
   bottom: -18px;
   left: 8%;
   height: 18px;
-  background: linear-gradient(90deg, transparent, rgba(76, 214, 205, .16) 30%, rgba(115, 82, 186, .13) 70%, transparent);
+  background: linear-gradient(90deg, transparent, rgba(76, 214, 205, .1) 30%, rgba(115, 82, 186, .08) 70%, transparent);
   filter: blur(12px);
   opacity: 0;
   pointer-events: none;
   content: '';
   transition: opacity .22s ease;
 }
-body.landing-page .home-header.is-scrolled::after { opacity: 1; }
+body.landing-page .home-header.is-scrolled::after { opacity: .75; }
 html { scroll-padding-top: 96px; }
 .home-header-inner {
   display: grid;
