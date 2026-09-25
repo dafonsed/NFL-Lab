@@ -707,30 +707,30 @@ body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen
 @media(max-width:800px){body.ev-page:is([data-ev-screen="fantasy"],[data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"]) .ev-bookbar{min-height:72px;padding:8px;margin-top:9px}body.ev-page:is([data-ev-screen="fantasy"],[data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"]) .ev-find-button{width:105px;min-width:105px;height:49px;min-height:49px;font-size:12px;gap:5px}body.ev-page:is([data-ev-screen="fantasy"],[data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"]) .ev-book-divider{display:none}body.ev-page:is([data-ev-screen="fantasy"],[data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"]) :is(.ev-stake-panel,.ev-filter-panel){height:auto;min-height:0;padding:16px}body.ev-page:is([data-ev-screen="fantasy"],[data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"]) .ev-stake-panel{gap:12px}body.ev-page:is([data-ev-screen="fantasy"],[data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"]) .ev-stake-panel label{font-size:13px}body.ev-page:is([data-ev-screen="fantasy"],[data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"]) .ev-input-wrap input{height:45px;font-size:16px}body.ev-page:is([data-ev-screen="fantasy"],[data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"]) .ev-design-filters,body.ev-page[data-ev-screen="odds"] .ev-design-filters{display:flex;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin}body.ev-page .ev-design-filter{flex:none;min-width:160px;height:45px}body.ev-page:is([data-ev-screen="fantasy"],[data-ev-screen="odds"]) .ev-recommend{width:120px}body.ev-page:is([data-ev-screen="fantasy"],[data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"]) .ev-search-label{top:76px;right:15px;width:min(340px,calc(100vw - 30px))}}
 
 /* Arbitrage results: each opportunity keeps the two opposing prices together. */
-.ev-arb-list{overflow:hidden;border:1px solid #2a2d31;border-radius:16px;background:#17181b}
-.ev-arb-opportunity{display:grid;grid-template-columns:minmax(230px,27%) minmax(0,1fr);align-items:center;column-gap:18px;min-width:0;padding:16px 18px;border-bottom:1px solid #303136}
+.ev-arb-list{overflow:hidden;border:1px solid #222328;border-radius:15px;background:#151519}
+.ev-arb-opportunity{display:grid;grid-template-columns:minmax(235px,27%) minmax(0,1fr);align-items:center;column-gap:14px;min-width:0;min-height:135px;padding:15px 13px;border-bottom:1px solid #28282e}
 .ev-arb-opportunity:last-child{border-bottom:0}
-.ev-arb-overview{display:grid;grid-template-columns:64px minmax(0,1fr) 25px;align-items:center;gap:12px;min-width:0}
-.ev-arb-edge{justify-self:start;padding:4px 8px;border:1px solid #507b42;border-radius:20px;background:#23351f;color:#9ced88;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
-.ev-arb-market{min-width:0}.ev-arb-market strong{display:block;overflow:hidden;color:#f3f2f4;font-size:15px;font-weight:660;text-overflow:ellipsis;white-space:nowrap}
-.ev-arb-market strong span{margin-left:3px;color:#a5a7b0;font-size:11px;font-weight:500}
-.ev-arb-market small{display:block;overflow:hidden;margin-top:6px;color:#a6a7b0;font-size:11px;line-height:1.4;text-overflow:ellipsis;white-space:nowrap}
-body.ev-page .ev-arb-expand{display:grid;place-items:center;width:25px;height:29px;padding:0;border:0;border-radius:6px;background:transparent;color:#9aa4a4;cursor:pointer;font-size:19px;line-height:1}
-body.ev-page .ev-arb-expand:hover{background:#26342f;color:#a3f0bf}
-.ev-arb-pair{display:grid;grid-template-columns:29px minmax(0,1fr);min-width:0}
-.ev-arb-pair-count{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border:1px solid #669f69;border-right:0;border-radius:12px 0 0 12px;background:#203024;color:#92d38c;font-size:12px;font-weight:450;line-height:1.1}
+.ev-arb-overview{display:grid;grid-template-columns:64px minmax(0,1fr) 19px;align-items:center;gap:10px;min-width:0}
+.ev-arb-edge{justify-self:start;padding:3px 7px;border:1px solid #47643c;border-radius:20px;background:#23301f;color:#9ad78b;font-size:10px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ev-arb-market{min-width:0}.ev-arb-market strong{display:block;color:#f0f0f1;font-size:13px;font-weight:640;line-height:1.35;overflow-wrap:anywhere}
+.ev-arb-market strong span{margin-left:3px;color:#96979f;font-size:10px;font-weight:450;white-space:nowrap}
+.ev-arb-market small{display:block;margin-top:5px;color:#999aa3;font-size:10.5px;line-height:1.4;overflow-wrap:anywhere}
+body.ev-page .ev-arb-expand{display:grid;place-items:center;width:19px;height:26px;padding:0;border:0!important;border-radius:0;background:transparent!important;box-shadow:none!important;color:#8d9392;cursor:pointer;font-size:17px;line-height:1}
+body.ev-page .ev-arb-expand:hover{color:#9adbb2}
+.ev-arb-pair{display:grid;grid-template-columns:25px minmax(0,1fr);min-width:0}
+.ev-arb-pair-count{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border:1px solid #5e8c5b;border-right:0;border-radius:11px 0 0 11px;background:#1f2e22;color:#98cc93;font-size:11px;font-weight:450;line-height:1.05}
 .ev-arb-pair-count b{font-weight:500}
-.ev-arb-legs{min-width:0;overflow:hidden;border:1px solid #2c3031;border-radius:0 12px 12px 0;background:#1a1b1e}
-.ev-arb-leg{display:grid;grid-template-columns:29px minmax(0,1fr) 70px 83px 75px;align-items:center;gap:10px;min-width:0;min-height:49px;padding:7px 13px}
-.ev-arb-leg+.ev-arb-leg{border-top:1px solid #2b2d31}
-.ev-arb-book-logo{display:grid;place-items:center;width:27px;height:27px;overflow:hidden;border-radius:50%;background:#25282a}
-.ev-arb-book-logo .ev-brand-mark{width:24px;height:24px;max-width:24px;max-height:24px;object-fit:contain;filter:none}
-.ev-arb-book-logo .ev-brand-fallback{display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:#293831;color:#a7e5bb;font-size:9px;font-weight:700}
-.ev-arb-selection{min-width:0}.ev-arb-selection strong{display:block;overflow:hidden;color:#e5e7e9;font-size:13px;font-weight:510;text-overflow:ellipsis;white-space:nowrap}
-.ev-arb-leg:first-child .ev-arb-selection strong{color:#65d99c}
-.ev-arb-selection small{display:block;overflow:hidden;margin-top:3px;color:#9b9da6;font-size:10px;text-overflow:ellipsis;white-space:nowrap}
-.ev-arb-leg-figure{text-align:right;font-variant-numeric:tabular-nums}.ev-arb-leg-figure strong{display:block;color:#f1f1f3;font-size:12px;font-weight:540;white-space:nowrap}
-.ev-arb-odds strong{color:#65d99c}.ev-arb-leg-figure small{display:block;margin-top:3px;color:#92949d;font-size:9px;white-space:nowrap}
+.ev-arb-legs{min-width:0;overflow:hidden;border:1px solid #25262b;border-radius:0 11px 11px 0;background:#19191d}
+.ev-arb-leg{display:grid;grid-template-columns:27px minmax(0,1fr) 64px 76px 67px;align-items:center;gap:9px;min-width:0;min-height:49px;padding:7px 12px}
+.ev-arb-leg+.ev-arb-leg{border-top:1px solid #28282d}
+.ev-arb-book-logo{display:grid;place-items:center;width:25px;height:25px;overflow:hidden;border-radius:50%;background:#202125}
+.ev-arb-book-logo .ev-brand-mark{width:23px;height:23px;max-width:23px;max-height:23px;object-fit:contain;filter:none}
+.ev-arb-book-logo .ev-brand-fallback{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;background:#28322b;color:#a5dab0;font-size:9px;font-weight:650}
+.ev-arb-selection{min-width:0}.ev-arb-selection strong{display:block;color:#e2e3e5;font-size:11.5px;font-weight:500;line-height:1.25;overflow-wrap:anywhere}
+.ev-arb-leg:first-child .ev-arb-selection strong{color:#67cd91}
+.ev-arb-selection small{display:block;overflow:hidden;margin-top:3px;color:#9597a0;font-size:9.5px;text-overflow:ellipsis;white-space:nowrap}
+.ev-arb-leg-figure{text-align:right;font-variant-numeric:tabular-nums}.ev-arb-leg-figure strong{display:block;color:#f0f0f2;font-size:11px;font-weight:500;white-space:nowrap}
+.ev-arb-odds strong{color:#68d094}.ev-arb-leg-figure small{display:block;margin-top:3px;color:#898b94;font-size:9px;white-space:nowrap}
 .ev-arb-expanded{grid-column:1/-1;min-width:0;margin-top:15px}.ev-arb-expanded .ev-caption{margin:11px 2px 0}
-@media(max-width:950px){.ev-arb-opportunity{grid-template-columns:1fr;row-gap:13px}.ev-arb-overview{grid-template-columns:64px minmax(0,1fr) 25px}.ev-arb-pair{margin-left:76px}}
-@media(max-width:600px){.ev-arb-opportunity{padding:14px 11px}.ev-arb-overview{grid-template-columns:57px minmax(0,1fr) 25px;gap:8px}.ev-arb-edge{padding:4px 6px;font-size:11px}.ev-arb-market strong{font-size:13px}.ev-arb-market small{font-size:10px}.ev-arb-pair{grid-template-columns:24px minmax(0,1fr);margin-left:0}.ev-arb-leg{grid-template-columns:26px repeat(3,minmax(0,1fr));gap:5px 8px;padding:8px}.ev-arb-book-logo{grid-column:1;grid-row:1}.ev-arb-selection{grid-column:2/-1;grid-row:1}.ev-arb-leg-figure{grid-row:2}.ev-arb-odds{grid-column:2}.ev-arb-leg-figure:nth-last-child(2){grid-column:3}.ev-arb-leg-figure:last-child{grid-column:4}.ev-arb-leg-figure strong{font-size:11px}.ev-arb-leg-figure small{font-size:9px}}
+@media(max-width:950px){.ev-arb-opportunity{grid-template-columns:1fr;row-gap:13px}.ev-arb-overview{grid-template-columns:64px minmax(0,1fr) 19px}.ev-arb-pair{margin-left:74px}}
+@media(max-width:600px){.ev-arb-opportunity{min-height:0;padding:14px 11px}.ev-arb-overview{grid-template-columns:54px minmax(0,1fr) 19px;gap:8px}.ev-arb-edge{padding:3px 6px}.ev-arb-market strong{font-size:12px}.ev-arb-market small{font-size:10px}.ev-arb-pair{grid-template-columns:23px minmax(0,1fr);margin-left:0}.ev-arb-leg{grid-template-columns:25px repeat(3,minmax(0,1fr));gap:5px 7px;padding:8px}.ev-arb-book-logo{grid-column:1;grid-row:1}.ev-arb-selection{grid-column:2/-1;grid-row:1}.ev-arb-leg-figure{grid-row:2}.ev-arb-odds{grid-column:2}.ev-arb-leg-figure:nth-last-child(2){grid-column:3}.ev-arb-leg-figure:last-child{grid-column:4}.ev-arb-leg-figure strong{font-size:11px}.ev-arb-leg-figure small{font-size:9px}}
