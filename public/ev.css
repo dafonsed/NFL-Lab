@@ -736,31 +736,37 @@ body.ev-page .ev-arb-overview:focus-visible{outline:2px solid #90c786;outline-of
 @media(max-width:800px){.ev-arb-list{width:100%;margin-left:0}.ev-arb-opportunity{grid-template-columns:1fr;row-gap:10px;padding:15px 12px}.ev-arb-overview{min-height:50px}.ev-arb-pair{margin-left:0}.ev-arb-expanded{margin:0}}
 @media(max-width:520px){.ev-arb-opportunity{padding:12px 9px}.ev-arb-pair{grid-template-columns:21px minmax(0,1fr);height:auto}.ev-arb-leg{grid-template-columns:23px minmax(0,1fr) 42px 43px 39px;gap:4px;padding:0 7px}.ev-arb-leg-figure strong,.ev-arb-selection strong{font-size:9px}.ev-arb-leg-figure small,.ev-arb-selection small{font-size:7px}.ev-arb-market strong{font-size:11px}.ev-arb-market small{font-size:8px}}
 
-/* Arbitrage uses the same teal-charcoal canvas and control scale as the data tables. */
-body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen^="arb-"]{--ev-bg:#0d1316;--ev-panel:#131c1f;--ev-line:#2a373b;background:#0d1316!important}
+/* Arbitrage surfaces share the bookmaker bar's charcoal palette. */
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen^="arb-"]{--ev-bg:#0d1316;--ev-panel:#141a1d;--ev-line:#29353a;background:#0d1316!important}
 body.ev-page[data-ev-screen^="arb-"] .ev-control-grid{grid-template-columns:minmax(0,1fr);gap:14px;margin-bottom:20px}
-body.ev-page[data-ev-screen^="arb-"] .ev-stake-panel{grid-template-columns:repeat(2,minmax(0,300px));align-items:center;justify-content:start;gap:18px;min-height:80px;padding:12px 20px;background:#131c1f!important}
+body.ev-page[data-ev-screen^="arb-"] .ev-stake-panel{grid-template-columns:repeat(2,minmax(0,300px));align-items:center;justify-content:start;gap:18px;min-height:80px;padding:12px 20px;border-color:#29353a!important;border-radius:19px;background:linear-gradient(180deg,#141a1d,#111719)!important}
 body.ev-page[data-ev-screen^="arb-"] .ev-stake-panel>label,body.ev-page[data-ev-screen^="arb-"] .ev-multiplier-field{display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap}
 body.ev-page[data-ev-screen^="arb-"] .ev-stake-panel>label .ev-input-wrap,body.ev-page[data-ev-screen^="arb-"] .ev-multiplier-field>.ev-input-wrap{flex:1;min-width:100px;width:auto;margin:0 0 0 8px}
 body.ev-page[data-ev-screen^="arb-"] .ev-stake-panel label{font-size:14px}
 body.ev-page[data-ev-screen^="arb-"] .ev-stake-panel .ev-input-wrap input{height:48px;font-size:16px}
-body.ev-page[data-ev-screen^="arb-"] .ev-filter-panel{min-height:0;padding:16px 18px 18px;background:#131c1f!important}
+body.ev-page[data-ev-screen^="arb-"] .ev-filter-panel{min-height:0;padding:16px 18px 18px;border-color:#29353a!important;border-radius:19px;background:linear-gradient(180deg,#141a1d,#111719)!important}
 body.ev-page[data-ev-screen^="arb-"] .ev-filter-heading{height:auto;margin-bottom:12px}
-body.ev-page[data-ev-screen^="arb-"] .ev-design-filters{display:grid;grid-template-columns:1fr 1.1fr 1.08fr .95fr 1.25fr 1.05fr;gap:12px;min-width:0;overflow:visible;padding:0}
-body.ev-page[data-ev-screen^="arb-"] .ev-design-filter{display:flex;align-items:center;gap:9px;min-width:0;height:54px;padding:0 13px;border-color:#344348;background:#151e21}
-body.ev-page[data-ev-screen^="arb-"] .ev-design-filter .ev-design-icon{font-size:19px}
-body.ev-page[data-ev-screen^="arb-"] .ev-design-filter .ev-design-prefix{display:none;color:#b6c6ca;font-size:12px}
-body.ev-page[data-ev-screen^="arb-"] .ev-design-filter:has(input[data-filter="stake"]) .ev-design-prefix,body.ev-page[data-ev-screen^="arb-"] .ev-design-filter:has(select[data-filter="date"]) .ev-design-prefix{display:block}
-body.ev-page[data-ev-screen^="arb-"] .ev-design-filter :is(.ui-choice,input){flex:1;min-width:0;width:100%;height:100%}
-body.ev-page[data-ev-screen^="arb-"] .ev-design-filter input{padding:0;background:transparent!important;box-shadow:none!important;font-size:14px}
-body.ev-page[data-ev-screen^="arb-"] .ev-design-filter .td-choice-trigger{height:52px;min-height:52px;padding-right:14px!important;font-size:14px!important}
-body.ev-page[data-ev-screen^="arb-"] .ev-design-filter:has(select)::after{top:50%;right:10px;transform:translateY(-50%)}
+body.ev-page[data-ev-screen^="arb-"] .ev-filter-heading strong{font-size:16px;font-weight:660;letter-spacing:.01em}
+body.ev-page[data-ev-screen^="arb-"] .ev-design-filters{display:grid;grid-template-columns:1fr 1.1fr 1.08fr .95fr 1.25fr 1.05fr;gap:0;min-width:0;overflow:visible;padding:4px;border:1px solid #29353a;border-radius:14px;background:#0e1518}
+body.ev-page[data-ev-screen^="arb-"] .ev-design-filter{display:grid;grid-template-columns:30px minmax(0,1fr);grid-template-rows:16px 23px;align-content:center;column-gap:10px;min-width:0;height:64px;padding:7px 12px;border:0!important;border-right:1px solid #29353a!important;border-radius:0;background:transparent!important;transition:background-color .16s ease,color .16s ease}
+body.ev-page[data-ev-screen^="arb-"] .ev-design-filter:first-child{border-radius:10px 0 0 10px}
+body.ev-page[data-ev-screen^="arb-"] .ev-design-filter:last-child{border-right:0!important;border-radius:0 10px 10px 0}
+body.ev-page[data-ev-screen^="arb-"] .ev-design-filter:hover{background:#192327!important}
+body.ev-page[data-ev-screen^="arb-"] .ev-design-filter:focus-within{position:relative;z-index:1;outline:2px solid #1acb94;outline-offset:-2px;background:#172b28!important}
+body.ev-page[data-ev-screen^="arb-"] .ev-design-filter .ev-design-icon{display:grid;grid-column:1;grid-row:1/3;place-items:center;align-self:center;width:30px;height:30px;border:1px solid #2a3c3e;border-radius:9px;background:#1a282a;color:#91b9b0;font-size:0}
+body.ev-page[data-ev-screen^="arb-"] .ev-design-filter .ev-design-icon svg{width:17px;height:17px}
+body.ev-page[data-ev-screen^="arb-"] .ev-design-filter .ev-design-prefix{display:block;grid-column:2;grid-row:1;color:#8ca0a4;font-size:10px;font-weight:590;line-height:16px;letter-spacing:.02em}
+body.ev-page[data-ev-screen^="arb-"] .ev-design-filter :is(.ui-choice,input){grid-column:2;grid-row:2;min-width:0;width:100%;height:23px}
+body.ev-page[data-ev-screen^="arb-"] .ev-design-filter input{padding:0;background:transparent!important;box-shadow:none!important;color:#edf4f2!important;font-size:14px;font-weight:630;line-height:23px}
+body.ev-page[data-ev-screen^="arb-"] .ev-design-filter .td-choice-trigger{height:23px;min-height:23px;padding:0 15px 0 0!important;color:#edf4f2!important;font-size:14px!important;font-weight:630!important;line-height:23px!important}
+body.ev-page[data-ev-screen^="arb-"] .ev-design-filter:has(select)::after{content:"";top:31px;right:15px;width:7px;height:7px;border-right:1.5px solid #88a5a4;border-bottom:1.5px solid #88a5a4;transform:rotate(45deg)}
+body.ev-page[data-ev-screen^="arb-"] .ev-design-filter .td-choice-menu{margin-top:8px;padding:6px;border:1px solid #34454a!important;border-radius:13px!important;background:#141d20!important;box-shadow:0 18px 44px #0009!important}
 body.ev-page[data-ev-screen^="arb-"] .ev-arb-list{width:100%;margin-left:0}
-body.ev-page[data-ev-screen^="arb-"] .ev-arb-list{border-color:#2a373b;background:#131c1f}
-body.ev-page[data-ev-screen^="arb-"] .ev-arb-opportunity{border-bottom-color:#2a373b}
+body.ev-page[data-ev-screen^="arb-"] .ev-arb-list{border-color:#29353a;background:linear-gradient(180deg,#141a1d,#111719)}
+body.ev-page[data-ev-screen^="arb-"] .ev-arb-opportunity{border-bottom-color:#29353a}
 body.ev-page[data-ev-screen^="arb-"] .ev-arb-overview:hover{background:#1a272a!important}
-body.ev-page[data-ev-screen^="arb-"] .ev-arb-legs{border-color:#2a373b;background:#172023;box-shadow:none}
-body.ev-page[data-ev-screen^="arb-"] .ev-arb-leg+.ev-arb-leg{border-top-color:#2a373b}
+body.ev-page[data-ev-screen^="arb-"] .ev-arb-legs{border-color:#29353a;background:#171f21;box-shadow:none}
+body.ev-page[data-ev-screen^="arb-"] .ev-arb-leg+.ev-arb-leg{border-top-color:#29353a}
 body.ev-page[data-ev-screen^="arb-"] .ev-arb-book-logo{background:#1b282c}
 body.ev-page[data-ev-screen^="arb-"] .ev-arb-opportunity{min-height:143px}
 body.ev-page[data-ev-screen^="arb-"] .ev-arb-edge{padding:3px 7px;font-size:11px}
@@ -774,8 +780,8 @@ body.ev-page[data-ev-screen^="arb-"] .ev-arb-selection strong{font-size:13px}
 body.ev-page[data-ev-screen^="arb-"] .ev-arb-selection small{font-size:10px}
 body.ev-page[data-ev-screen^="arb-"] .ev-arb-leg-figure strong{font-size:12px}
 body.ev-page[data-ev-screen^="arb-"] .ev-arb-leg-figure small{font-size:9px}
-@media(max-width:1100px){body.ev-page[data-ev-screen^="arb-"] .ev-design-filter:has(input[data-filter="stake"]) .ev-design-prefix{font-size:0}body.ev-page[data-ev-screen^="arb-"] .ev-design-filter:has(input[data-filter="stake"]) .ev-design-prefix::after{content:"Max";font-size:12px}}
-@media(max-width:1000px){body.ev-page[data-ev-screen^="arb-"] .ev-design-filters{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:1000px){body.ev-page[data-ev-screen^="arb-"] .ev-design-filters{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:6px}body.ev-page[data-ev-screen^="arb-"] .ev-design-filter,body.ev-page[data-ev-screen^="arb-"] .ev-design-filter:last-child{border:1px solid #29353a!important;border-radius:10px;background:#141c1e!important}}
 @media(max-width:620px){body.ev-page[data-ev-screen^="arb-"] .ev-stake-panel{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}body.ev-page[data-ev-screen^="arb-"] .ev-stake-panel>label,body.ev-page[data-ev-screen^="arb-"] .ev-multiplier-field{display:block}body.ev-page[data-ev-screen^="arb-"] .ev-stake-panel>label .ev-input-wrap,body.ev-page[data-ev-screen^="arb-"] .ev-multiplier-field>.ev-input-wrap{width:100%;margin:8px 0 0}body.ev-page[data-ev-screen^="arb-"] .ev-design-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:390px){body.ev-page[data-ev-screen^="arb-"] .ev-stake-panel{grid-template-columns:1fr}body.ev-page[data-ev-screen^="arb-"] .ev-design-filters{grid-template-columns:1fr}}
 @media(max-width:520px){body.ev-page[data-ev-screen^="arb-"] .ev-arb-leg{grid-template-columns:26px minmax(0,1fr) 43px 48px 43px;gap:4px;padding:0 7px}body.ev-page[data-ev-screen^="arb-"] .ev-arb-selection strong{font-size:11px}body.ev-page[data-ev-screen^="arb-"] .ev-arb-selection small,body.ev-page[data-ev-screen^="arb-"] .ev-arb-leg-figure small{font-size:9px}body.ev-page[data-ev-screen^="arb-"] .ev-arb-leg-figure strong{font-size:11px}body.ev-page[data-ev-screen^="arb-"] .ev-arb-market strong{font-size:13px}body.ev-page[data-ev-screen^="arb-"] .ev-arb-market small{font-size:10px}}
+@media(prefers-reduced-motion:reduce){body.ev-page[data-ev-screen^="arb-"] .ev-design-filter{transition:none}}

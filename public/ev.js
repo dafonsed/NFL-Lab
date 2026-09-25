@@ -144,9 +144,19 @@ function action(label, type, extra = '') { return button(label, `data-add="${typ
 const filterIcons = {
   sport:'◉', platform:'▱', league:'♜', market:'▥', date:'▣', period:'◷', side:'↕', odds:'☷', liquidity:'≋', edge:'↗', stake:'$'
 };
+const arbIcon = paths => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+const arbFilterIcons = {
+  sport:arbIcon('<circle cx="12" cy="12" r="8"/><path d="M12 4c-2.5 2-4 4.8-4 8s1.5 6 4 8m0-16c2.5 2 4 4.8 4 8s-1.5 6-4 8M4 12h16"/>'),
+  market:arbIcon('<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M10 4v16M4 10h16"/>'),
+  edge:arbIcon('<path d="m4 17 6-6 4 3 6-7m-5 0h5v5"/>'),
+  stake:arbIcon('<circle cx="12" cy="12" r="8"/><path d="M12 7v10m3-8c-.8-.8-1.8-1-3-1-1.8 0-3 1-3 2.2 0 3 6 1.2 6 4.2 0 1.1-1.2 2.6-3 2.6-1.2 0-2.2-.2-3-1"/>'),
+  date:arbIcon('<rect x="4" y="6" width="16" height="14" rx="2"/><path d="M8 4v4m8-4v4M4 10h16m-11 4h2"/>'),
+  period:arbIcon('<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>')
+};
+const designFilterIcon = kind => ['arb-pre','arb-live'].includes(active) ? (arbFilterIcons[kind] || filterIcons[kind]) : filterIcons[kind];
 function designSelect(kind, title, options, value, prefix = '') {
   const choices = options.map(([option,label]) => `<option value="${esc(option)}" ${String(option) === String(value) ? 'selected' : ''}>${esc(label)}</option>`).join('');
-  return `<label class="ev-design-filter"><span class="ev-design-icon" aria-hidden="true">${filterIcons[kind]}</span>${prefix ? `<span class="ev-design-prefix">${esc(prefix)}</span>` : ''}<select data-filter="${kind}" aria-label="${esc(title)}">${choices}</select></label>`;
+  return `<label class="ev-design-filter"><span class="ev-design-icon" aria-hidden="true">${designFilterIcon(kind)}</span>${prefix ? `<span class="ev-design-prefix">${esc(prefix)}</span>` : ''}<select data-filter="${kind}" aria-label="${esc(title)}">${choices}</select></label>`;
 }
 function renderDesignFilters() {
   const fantasy = active === 'fantasy', odds = active === 'odds', arb = ['arb-pre','arb-live'].includes(active), sharp = active === 'sharp';
@@ -167,13 +177,13 @@ function renderDesignFilters() {
   const sportControl = designSelect('sport','Sports', [['',arb ? 'All sports' : 'Sports'],...sports.map(value => [value,value])],sport,arb ? 'Sport' : '');
   const leagueControl = designSelect('league','Leagues', [['','Leagues'],...leagues.map(value => [value,value])],designFilters.league,sharp ? 'Leagues' : '');
   const marketControl = designSelect('market',fantasy ? 'Stat' : 'Markets', [['',fantasy ? 'Stat' : 'Markets'],...marketNames.map(value => [value,value])],marketType,arb ? 'Market' : sharp ? 'Markets' : '');
-  const dateControl = designSelect('date','Date range', [['all','Any'],['today','Today'],['week','7 days']],designFilters.date,'Date Range');
+  const dateControl = designSelect('date','Date range', [['all','Any'],['today','Today'],['week','7 days']],designFilters.date,arb ? 'Date range' : 'Date Range');
   const bookControl = designSelect('platform',fantasy ? 'Platforms' : 'Sportsbooks', [['',fantasy ? 'Platforms' : 'Sportsbooks'],...availableBooks.map(value => [value,value])],bookmaker,sharp ? 'Sportsbooks' : '');
-  const periodControl = designSelect('period','Period', [['all','All games'],['pregame','Pregame'],['live','Live']],designFilters.period);
+  const periodControl = designSelect('period','Period', [['all','All games'],['pregame','Pregame'],['live','Live']],designFilters.period,arb ? 'Period' : '');
   const oddsControl = designSelect('odds','Maximum odds', [['all','Any'],['200','+200'],['300','+300'],['500','+500']],designFilters.maxOdds,'Max Odds');
   const liquidityControl = `<label class="ev-design-filter"><span class="ev-design-icon" aria-hidden="true">${filterIcons.liquidity}</span><span class="ev-design-prefix">Min Liquidity</span><input data-filter="liquidity" aria-label="Minimum liquidity" type="number" min="0" step="1" value="${esc(localStorage.getItem('sportslab-ev-sharp-min') || 1000)}"></label>`;
-  const edgeControl = designSelect('edge','Minimum edge', [['0','Any edge'],['0.005','0.5%'],['0.01','1%'],['0.02','2%']],designFilters.minEdge,'Minimum Edge');
-  const stakeControl = `<label class="ev-design-filter"><span class="ev-design-icon" aria-hidden="true">${filterIcons.stake}</span><span class="ev-design-prefix">Max Stake</span><input data-filter="stake" aria-label="Maximum stake" type="number" min="1" step="1" value="${esc(stake)}"></label>`;
+  const edgeControl = designSelect('edge','Minimum edge', [['0','Any edge'],['0.005','0.5%'],['0.01','1%'],['0.02','2%']],designFilters.minEdge,'Minimum edge');
+  const stakeControl = `<label class="ev-design-filter"><span class="ev-design-icon" aria-hidden="true">${designFilterIcon('stake')}</span><span class="ev-design-prefix">Max stake</span><input data-filter="stake" aria-label="Maximum stake" type="number" min="1" step="1" value="${esc(stake)}"></label>`;
   const sideControl = designSelect('side','Over or Under', [['','Over/Under'],['Over','Over'],['Under','Under']],designFilters.side);
   const controls = fantasy ? [sportControl,bookControl,leagueControl,marketControl,dateControl,sideControl]
     : odds ? [sportControl,leagueControl,marketControl,periodControl,dateControl]
