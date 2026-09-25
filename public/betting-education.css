@@ -54,3 +54,26 @@
 @media(max-width:800px){.edu-main:has(.learn-library){width:min(100% - 36px,1280px)}.learn-heading{margin:37px 0 32px}.learn-topic-tabs{gap:19px}.learn-grid{gap:29px 18px}.learn-card-copy strong{font-size:19px}}
 @media(max-width:560px){.edu-main:has(.learn-library){width:min(100% - 32px,1280px)}.learn-heading{margin:29px 0 27px}.learn-heading h1{font-size:40px}.learn-heading>p{font-size:14px}.learn-library-heading{align-items:flex-start}.learn-library-heading h2{font-size:22px}.learn-topic-tabs{gap:17px}.topic-filter{min-height:43px;font-size:12px}.learn-toolbar{flex-wrap:wrap;gap:11px}.learn-type-filter{flex:1}.learn-type-filter select{max-width:175px}.learn-search{order:3;flex-basis:100%;width:100%;margin-left:0}.learn-toolbar .catalog-count{margin-left:auto}.learn-grid{grid-template-columns:1fr;gap:27px}.learn-card-art{aspect-ratio:1.58}.learn-card-copy{padding-top:12px}.learn-card-copy strong{font-size:20px}.learn-card-description{font-size:12px}}
 @media(prefers-reduced-motion:reduce){.learn-card-art{transition:none}}
+
+/* Category and page controls follow the reference library while retaining Sportslab's cool-toned palette. */
+.learn-topic-tabs{justify-content:space-between;gap:12px;padding:8px 0 17px;border-bottom:0;scrollbar-width:none}
+.learn-topic-tabs::-webkit-scrollbar{display:none}
+.learn-topic-tabs .topic-filter{flex:1 0 auto;justify-content:center;min-height:54px;padding:0 clamp(14px,2vw,26px);border:1px solid transparent;border-radius:999px;color:var(--edu-muted);font-size:14px;font-weight:600;transition:background-color .16s ease,color .16s ease}
+.learn-topic-tabs .topic-filter:hover{background:#10181e;color:var(--edu-text)}
+.learn-topic-tabs .topic-filter.is-active{border-color:transparent;background:#171d22;color:var(--edu-text)}
+.learn-topic-tabs .topic-filter.is-active:after{display:none}
+.learn-topic-tabs .topic-filter:focus-visible{outline:2px solid var(--edu-accent-strong);outline-offset:3px}
+.learn-pagination{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:33px;padding:18px 0;border-top:1px solid var(--edu-line)}
+.learn-page-numbers{display:flex;align-items:center;gap:5px}
+.learn-pagination a,.learn-page-step{display:inline-flex;align-items:center;justify-content:center;min-width:42px;min-height:42px;padding:0 11px;border:1px solid #263a45;border-radius:7px;background:#0c151b;color:var(--edu-muted);font:600 12px var(--edu-font);text-decoration:none}
+.learn-pagination a:hover{border-color:#426271;color:var(--edu-accent-strong)}
+.learn-pagination a[aria-current=page]{border-color:#35545f;background:#15232a;color:var(--edu-accent-strong)}
+.learn-pagination a:focus-visible{outline:2px solid var(--edu-accent-strong);outline-offset:3px}
+.learn-pagination .learn-page-step{min-width:82px}
+.learn-pagination .learn-page-step.is-disabled{border-color:transparent;background:transparent;color:#5e6e78}
+.learn-page-ellipsis{width:18px;color:var(--edu-dim);text-align:center}
+.learn-page-status{margin:0 5px;color:var(--edu-dim);font-size:11px;white-space:nowrap}
+.learn-pagination[hidden]{display:none}
+@media(max-width:800px){.learn-topic-tabs{justify-content:flex-start;gap:10px}.learn-topic-tabs .topic-filter{flex:0 0 auto;min-height:46px;padding:0 18px}}
+@media(max-width:560px){.learn-topic-tabs{gap:7px;padding-bottom:12px}.learn-topic-tabs .topic-filter{min-height:43px;padding:0 14px;font-size:12px}.learn-pagination{flex-wrap:wrap;gap:7px}.learn-page-numbers{order:3;flex:1 0 100%;justify-content:center}.learn-page-status{order:4;flex:1 0 100%;text-align:center}.learn-pagination a,.learn-page-step{min-height:42px}.learn-page-status{margin:0}}
+@media(prefers-reduced-motion:reduce){.learn-topic-tabs .topic-filter{transition:none}}
