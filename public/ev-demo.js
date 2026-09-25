@@ -1,4 +1,43 @@
 // Every seeded record is hypothetical. The connected feed can supply the same shape later.
+export function smartMoneyDemoQuotes() {
+  const ts = new Date().toISOString();
+  let id = 0;
+  const quote = (event, market, type, line, side, book, odds, liquidity = 0) => ({
+    id: `smart-demo-${++id}`, sport:'NFL', event, market, type, line, side, book, odds,
+    exchange: liquidity > 0, liquidity, live:false, ts, source:'example'
+  });
+  const markets = [
+    {
+      event:'Washington Commanders vs Los Angeles Chargers', market:'Point spread', type:'spread',
+      exchange:['Los Angeles Chargers',-2.5,'ProphetX',-115,9995], opposite:['Washington Commanders',2.5,'Sporttrade',105,7200],
+      books:[['DraftKings',116,-130],['FanDuel',112,-132],['BetMGM',110,-135],['Caesars',108,-128],['bet365',105,-130],['Fanatics',102,-132]]
+    },
+    {
+      event:'San Francisco 49ers vs Los Angeles Rams', market:'Matthew Stafford passing yards', type:'prop',
+      exchange:['Under',274.5,'Sporttrade',-120,9741], opposite:['Over',274.5,'ProphetX',-108,6400],
+      books:[['FanDuel',-103,-125],['DraftKings',-105,-128],['BetMGM',-106,-130],['Caesars',-108,-125],['BetRivers',-110,-127],['bet365',-112,-126]]
+    },
+    {
+      event:'New England Patriots vs Buffalo Bills', market:'Josh Allen passing touchdowns', type:'prop',
+      exchange:['Over',1.5,'ProphetX',-145,9577], opposite:['Under',1.5,'Sporttrade',125,5300],
+      books:[['BetMGM',138,-155],['FanDuel',135,-158],['DraftKings',132,-160],['Caesars',130,-155],['Fanatics',128,-154],['BetRivers',125,-153]]
+    },
+    {
+      event:'Philadelphia Eagles vs Dallas Cowboys', market:'Jalen Hurts rushing yards', type:'prop',
+      exchange:['Over',44.5,'Sporttrade',-118,8608], opposite:['Under',44.5,'ProphetX',102,4900],
+      books:[['DraftKings',114,-125],['bet365',112,-128],['FanDuel',110,-130],['BetMGM',108,-129],['Caesars',105,-127],['Fanatics',104,-128]]
+    }
+  ];
+  return markets.flatMap(item => [
+    quote(item.event,item.market,item.type,item.exchange[1],item.exchange[0],item.exchange[2],item.exchange[3],item.exchange[4]),
+    quote(item.event,item.market,item.type,item.opposite[1],item.opposite[0],item.opposite[2],item.opposite[3],item.opposite[4]),
+    ...item.books.flatMap(([book,oppositeOdds,exchangeOdds]) => [
+      quote(item.event,item.market,item.type,item.opposite[1],item.opposite[0],book,oppositeOdds),
+      quote(item.event,item.market,item.type,item.exchange[1],item.exchange[0],book,exchangeOdds)
+    ])
+  ]);
+}
+
 export function exampleWorkspace() {
   const now = new Date().toISOString(), day = new Date().toISOString().slice(0, 10);
   let n = 0;
