@@ -11,6 +11,7 @@
   <link rel="preload" href="/assets/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/landing-home.css?v=1">
   <link rel="stylesheet" href="/landing-header.css?v=9">
+  <link rel="stylesheet" href="/landing-footer.css?v=1">
   <script type="module" src="/landing.js?v=9"></script>
 </head>
 <body class="landing-page">
@@ -59,6 +60,47 @@
     <nav class="home-sports" id="sports" aria-label="Research by sport"><div class="home-narrow"><span>Explore a sport</span><a href="/research?sport=nfl">NFL</a><a href="/research?sport=nba">NBA</a><a href="/research?sport=wnba">WNBA</a><a href="/research?sport=mlb">MLB</a><a href="/research?sport=nhl">NHL</a><a href="/research?sport=soccer">Soccer</a></div></nav>
     <section class="home-close" aria-labelledby="close-title"><div class="home-wide"><div><h2 id="close-title">Go from the number<br>to the whole game.</h2><p>Open the workspace and follow the source through every view.</p></div><a class="home-button" href="/research">Open SportsLab <span aria-hidden="true">↗</span></a></div></section>
   </main>
-  <footer class="home-footer"><div class="home-wide home-footer-main"><div><a class="home-brand" href="/" aria-label="SportsLab home"><img src="/favicon.svg" width="28" height="28" alt=""><span>sports<strong>lab</strong></span></a><p>Independent sports research with its limits in view.</p></div><nav aria-label="Footer navigation"><a href="/research">Player research</a><a href="/live">Live games</a><a href="/simulation">Simulation</a><a href="/bets">My picks</a><a href="/online-sportsbooks">Sportsbook guides</a><a href="#bet-tracker">Bet tracker</a></nav></div><div class="home-wide home-footer-bottom"><span>Public feeds may lag. SportsLab does not place bets.</span><span>© 2026 SportsLab</span></div></footer>
+  <footer class="home-footer">
+    <div class="home-wide home-footer-grid">
+      <div class="home-footer-brand">
+        <a class="home-brand" href="/" aria-label="SportsLab home"><img src="/favicon.svg" width="36" height="36" alt=""><span>sports<strong>lab</strong></span></a>
+        <p>Sports research with the source in view.</p>
+      </div>
+      <nav class="home-footer-column" aria-labelledby="footer-research-title">
+        <h2 id="footer-research-title">Sports research</h2>
+        <a href="/research?sport=nfl">NFL research</a>
+        <a href="/research?sport=nba">NBA research</a>
+        <a href="/research?sport=wnba">WNBA research</a>
+        <a href="/research?sport=mlb">MLB research</a>
+        <a href="/research?sport=nhl">NHL research</a>
+        <a href="/research?sport=soccer">Soccer research</a>
+      </nav>
+      <nav class="home-footer-column" aria-labelledby="footer-tools-title">
+        <h2 id="footer-tools-title">SportsLab tools</h2>
+        <a href="/research">Player research</a>
+        <a href="/live">Live game center</a>
+        <a href="/simulation">Game simulation</a>
+        <a href="/bets">My picks</a>
+        <a href="/#bet-tracker">Bet tracker</a>
+      </nav>
+      <nav class="home-footer-column" aria-labelledby="footer-live-title">
+        <h2 id="footer-live-title">Live games</h2>
+        <a href="/nfl/live">NFL games</a>
+        <a href="/nba/live">NBA games</a>
+        <a href="/wnba/live">WNBA games</a>
+        <a href="/mlb/live">MLB games</a>
+      </nav>
+      <nav class="home-footer-column" aria-labelledby="footer-models-title">
+        <h2 id="footer-models-title">Simulation models</h2>
+        <a href="/nfl/simulation">NFL simulation</a>
+        <a href="/nba/simulation">NBA simulation</a>
+        <a href="/wnba/simulation">WNBA simulation</a>
+        <a href="/mlb/simulation">MLB simulation</a>
+        <a href="/nhl/simulation">NHL simulation</a>
+        <a href="/soccer/simulation">Soccer simulation</a>
+      </nav>
+    </div>
+    <div class="home-wide home-footer-bottom"><span>Public feeds may lag. SportsLab does not place bets.</span><span>© 2026 SportsLab</span></div>
+  </footer>
 </body>
 </html>
