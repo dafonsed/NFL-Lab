@@ -7,16 +7,16 @@ body.ev-page[data-ev-screen^="ev-"] .ev-control-grid {
 body.ev-page[data-ev-screen^="ev-"] :is(.ev-stake-panel, .ev-filter-panel) {
   height: 164px;
   min-height: 164px;
-  border: 1px solid #29353b !important;
+  border: 1px solid #222b31 !important;
   border-radius: 17px;
-  background: linear-gradient(180deg, #0f1519, #0d1317) !important;
+  background: linear-gradient(180deg, #0e1215, #0f1316 55%, #0d1114) !important;
 }
 
 body.ev-page[data-ev-screen^="ev-"] .ev-stake-panel {
-  grid-template-columns: 1.12fr 1fr;
-  gap: 30px;
+  grid-template-columns: 255px minmax(0, 1fr);
+  gap: 32px;
   align-items: start;
-  padding: 23px 23px 22px;
+  padding: 23px 24px 22px 25px;
 }
 
 body.ev-page .ev-multiplier-field { min-width: 0; }
@@ -49,9 +49,9 @@ body.ev-page[data-ev-screen^="ev-"] .ev-input-wrap {
 body.ev-page[data-ev-screen^="ev-"] .ev-input-wrap input {
   height: 64px;
   padding: 10px 45px 10px 20px;
-  border: 1px solid #2d3a42 !important;
+  border: 1px solid #29323a !important;
   border-radius: 11px;
-  background: #11191e !important;
+  background: #11161b !important;
   color: #e9eef3 !important;
   font-size: 23px;
   font-weight: 400;
@@ -111,7 +111,7 @@ body.ev-page[data-ev-screen^="ev-"] .ev-kelly-stepper button {
 .ev-kelly-stepper button[data-step="down"]::before { transform: translateY(-2px) rotate(45deg); }
 
 body.ev-page[data-ev-screen^="ev-"] .ev-filter-panel {
-  padding: 20px 22px 24px;
+  padding: 21px 20px 23px 24px;
 }
 
 body.ev-page[data-ev-screen^="ev-"] .ev-filter-heading {
@@ -126,7 +126,8 @@ body.ev-page[data-ev-screen^="ev-"] .ev-filter-heading strong {
   font-weight: 620;
 }
 
-body.ev-page[data-ev-screen^="ev-"] .ev-recommend { width: 190px; }
+/* The table headers retain sorting; the mockup's visible preset selector is omitted. */
+body.ev-page[data-ev-screen^="ev-"] .ev-recommend { display: none !important; }
 
 body.ev-page[data-ev-screen^="ev-"] .ev-recommend .td-choice-trigger {
   display: flex;
@@ -156,9 +157,9 @@ body.ev-page[data-ev-screen^="ev-"] .ev-filter-heading #ev-reset-filters {
   min-width: 106px;
   height: 42px;
   padding: 0 15px;
-  border: 1px solid #2c3941;
+  border: 1px solid #29333b;
   border-radius: 9px;
-  background: #11181d;
+  background: #11161b;
   color: #e8edf2;
   font-size: 16px;
   font-weight: 500;
@@ -177,9 +178,9 @@ body.ev-page[data-ev-screen^="ev-"] .ev-reference-filters label {
   height: 57px;
   min-width: 0;
   padding: 0 15px;
-  border: 1px solid #2c3940;
+  border: 1px solid #29333b;
   border-radius: 11px;
-  background: #10171b;
+  background: #11161b;
   color: #eaf0f3;
 }
 
@@ -283,7 +284,7 @@ body.ev-page[data-ev-screen^="ev-"] :is(.ev-filter-heading #ev-reset-filters, .e
 }
 
 @media (max-width: 600px) {
-  body.ev-page[data-ev-screen^="ev-"] .ev-stake-panel { height: auto; min-height: 0; gap: 12px; padding: 17px; }
+  body.ev-page[data-ev-screen^="ev-"] .ev-stake-panel { grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); height: auto; min-height: 0; gap: 12px; padding: 17px; }
   body.ev-page[data-ev-screen^="ev-"] .ev-stake-panel label, body.ev-page[data-ev-screen^="ev-"] .ev-stake-panel label #ev-multiplier-label { font-size: 14px; }
   body.ev-page[data-ev-screen^="ev-"] .ev-input-wrap { margin-top: 10px; }
   body.ev-page[data-ev-screen^="ev-"] .ev-input-wrap input { height: 48px; padding-left: 11px; font-size: 17px; }
