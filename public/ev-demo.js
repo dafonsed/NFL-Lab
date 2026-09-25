@@ -18,6 +18,10 @@ export function exampleWorkspace() {
     quote(game, 'Game total', 'alternate', 45.5, 'Under', 'Book B', 102),
     quote(game, 'Game total', 'alternate', 43.5, 'Over', 'Book C', -120),
     quote(game, 'Game total', 'alternate', 43.5, 'Under', 'Book C', 100),
+    quote(game, 'Point spread', 'spread', -3.5, 'Arizona', 'Book A', -110),
+    quote(game, 'Point spread', 'spread', 3.5, 'Seattle', 'Book A', -110),
+    quote(game, 'Point spread', 'spread', -4.5, 'Arizona', 'Book B', 105),
+    quote(game, 'Point spread', 'spread', 4.5, 'Seattle', 'Book B', -115),
     quote(game, 'Example QB passing yards', 'prop', 249.5, 'Over', 'Book A', 118),
     quote(game, 'Example QB passing yards', 'prop', 249.5, 'Under', 'Book A', -140),
     quote(game, 'Example QB passing yards', 'prop', 249.5, 'Over', 'Book B', -105),
@@ -33,7 +37,9 @@ export function exampleWorkspace() {
     quote(game, 'Live game total', 'total', 41.5, 'Over', 'Book B', -108, true),
     quote(game, 'Live game total', 'total', 41.5, 'Under', 'Book B', -108, true),
     quote(game, 'Live game total', 'total', 41.5, 'Over', 'Exchange X', 105, true, { exchange: true, liquidity: 3200 }),
-    quote(game, 'Live game total', 'total', 41.5, 'Under', 'Exchange X', -116, true, { exchange: true, liquidity: 1700 })
+    quote(game, 'Live game total', 'total', 41.5, 'Under', 'Exchange X', -116, true, { exchange: true, liquidity: 1700 }),
+    quote(game, 'Live game total', 'alternate', 40.5, 'Over', 'Book C', -120, true),
+    quote(game, 'Live game total', 'alternate', 42.5, 'Under', 'Book B', 110, true)
   ];
   return {
     version: 1, example: true, quotes,

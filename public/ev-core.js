@@ -15,7 +15,7 @@ export const probabilityToAmerican = probability => {
   if (!(p > 0 && p < 1)) return NaN;
   return Math.round(p >= .5 ? -100 * p / (1 - p) : 100 * (1 - p) / p);
 };
-export const marketKey = q => [q.event, q.market, q.line, q.live ? 'live' : 'pregame'].join('|');
+export const marketKey = q => [q.event, q.market, q.type === 'spread' || q.type === 'alternate' && !['over','under'].includes(String(q.side).toLowerCase()) ? Math.abs(Number(q.line)) : q.line, q.live ? 'live' : 'pregame'].join('|');
 export const familyKey = q => [q.event, q.market, q.live ? 'live' : 'pregame'].join('|');
 export const validQuote = q => q && q.event && q.market && q.side && q.book && Number.isFinite(decimal(q.odds));
 export const fresh = (q, now = Date.now()) => !q.live || now - Date.parse(q.ts) <= 90_000;
@@ -33,19 +33,20 @@ export function groups(quotes, mode = null) {
 
 export function opposingSides(rows) {
   const sides = [...new Set(rows.map(q => q.side))];
-  if (rows.some(q => q.type === 'future') && !sides.every(side => ['yes','no'].includes(side.toLowerCase()))) return [];
+  if (rows.some(q => q.type === 'three-way')) return [];
+  if (rows.some(q => q.type === 'future') && !sides.every(side => ['yes','no'].includes(side.toLowerCase())) && !rows.every(q => Number(q.outcomes) === 2)) return [];
   return sides.length === 2 ? sides : [];
 }
 
 export function fairProbability(quote, rows) {
-  const sides = opposingSides(rows);
-  if (!sides.includes(quote.side)) return NaN;
+  const sides = [...new Set(rows.map(q => q.side))];
+  const count = Number(quote.outcomes) || (quote.type === 'three-way' ? 3 : quote.type === 'future' && !sides.every(side => ['yes','no'].includes(side.toLowerCase())) ? NaN : 2);
+  if (!Number.isInteger(count) || count < 2 || sides.length !== count || !sides.includes(quote.side)) return NaN;
   const books = [...new Set(rows.map(q => q.book))].filter(book => book !== quote.book);
   const estimates = [];
   for (const book of books) {
-    const a = rows.filter(q => q.book === book && q.side === quote.side && fresh(q)).sort((x, y) => Date.parse(y.ts) - Date.parse(x.ts))[0];
-    const b = rows.filter(q => q.book === book && q.side !== quote.side && fresh(q)).sort((x, y) => Date.parse(y.ts) - Date.parse(x.ts))[0];
-    if (a && b) estimates.push(implied(a.odds) / (implied(a.odds) + implied(b.odds)));
+    const complete = sides.map(side => rows.filter(q => q.book === book && q.side === side && fresh(q)).sort((x, y) => Date.parse(y.ts) - Date.parse(x.ts))[0]);
+    if (complete.every(Boolean)) estimates.push(implied(complete.find(q => q.side === quote.side).odds) / complete.reduce((sum,q) => sum + implied(q.odds),0));
   }
   return estimates.length ? estimates.reduce((a, b) => a + b, 0) / estimates.length : NaN;
 }
@@ -91,7 +92,7 @@ export function arbitrageRows(quotes, mode) {
 
 export function middleRows(quotes, mode) {
   const families = new Map();
-  for (const q of quotes.filter(validQuote).filter(q => ['total','alternate'].includes(q.type) && Boolean(q.live) === mode && fresh(q))) {
+  for (const q of quotes.filter(validQuote).filter(q => ['total','spread','alternate'].includes(q.type) && Boolean(q.live) === mode && fresh(q))) {
     const key = familyKey(q);
     if (!families.has(key)) families.set(key, []);
     families.get(key).push(q);
@@ -102,7 +103,14 @@ export function middleRows(quotes, mode) {
     const unders = rows.filter(q => q.side.toLowerCase() === 'under');
     for (const over of overs) for (const under of unders) {
       if (Number(over.line) >= Number(under.line) || over.book === under.book) continue;
-      found.push({ over, under, width: Number(under.line) - Number(over.line), cost: 1 - 1 / (implied(over.odds) + implied(under.odds)) });
+      found.push({ over, under, kind:'total', window:`Total ${over.line} to ${under.line}`, width: Number(under.line) - Number(over.line), cost: 1 - 1 / (implied(over.odds) + implied(under.odds)) });
+    }
+    const spreadSides = [...new Set(rows.filter(q => q.type === 'spread' || q.type === 'alternate' && !['over','under'].includes(q.side.toLowerCase())).map(q => q.side))];
+    if (spreadSides.length !== 2) continue;
+    for (const over of rows.filter(q => q.side === spreadSides[0])) for (const under of rows.filter(q => q.side === spreadSides[1])) {
+      const low = -Number(over.line), high = Number(under.line);
+      if (!Number.isFinite(low) || !Number.isFinite(high) || low >= high || over.book === under.book) continue;
+      found.push({ over, under, kind:'spread', window:`${spreadSides[0]} margin ${low} to ${high}`, width:high-low, cost:1-1/(implied(over.odds)+implied(under.odds)) });
     }
   }
   return found.sort((a, b) => b.width - a.width || a.cost - b.cost);
@@ -191,4 +199,34 @@ export function alertMatches(rule, state) {
     return Number.isFinite(change) && change >= Number(rule.threshold) && change > 0 ? [{ id: current.id, label: `${q.market} ${previous.line} → ${current.line} at ${q.book}` }] : [];
   });
   return [];
+}
+
+export function validateWorkspace(data) {
+  if (!data || data.version !== 1 || !Array.isArray(data.quotes)) throw Error('This is not a version 1 EV workspace.');
+  const collections = ['quotes','history','dfs','contracts','contractHistory','traders','trades','bets','results','alerts','notifications','slips'];
+  const text = (item,key) => typeof item?.[key] === 'string' && item[key].trim().length > 0;
+  const range = (item,key,min,max) => Number.isFinite(Number(item?.[key])) && Number(item[key]) >= min && Number(item[key]) <= max;
+  for (const key of collections) {
+    if (data[key] != null && !Array.isArray(data[key])) throw Error(`${key} must be a list.`);
+    const records = data[key] || [];
+    const ids = new Set();
+    for (const [index,item] of records.entries()) {
+      if (!text(item,'id') || ids.has(item.id)) throw Error(`${key} record ${index + 1} needs a unique ID.`);
+      ids.add(item.id);
+      const valid = key === 'quotes' ? validQuote(item) && text(item,'ts') && Number.isFinite(Date.parse(item.ts)) && (item.outcomes == null || item.outcomes === '' || (Number.isInteger(Number(item.outcomes)) && Number(item.outcomes) >= 2 && Number(item.outcomes) <= 64))
+        : key === 'history' ? text(item,'quoteId') && text(item,'ts') && Number.isFinite(decimal(item.odds))
+        : key === 'dfs' ? text(item,'player') && text(item,'market') && text(item,'app') && range(item,'probability',0,1)
+        : key === 'contracts' ? text(item,'platform') && text(item,'event') && range(item,'bid',0,100) && range(item,'ask',0,100) && Number(item.bid) <= Number(item.ask)
+        : key === 'contractHistory' ? text(item,'contractId') && text(item,'ts') && range(item,'bid',0,100) && range(item,'ask',0,100)
+        : key === 'traders' ? text(item,'name') && text(item,'contractId') && range(item,'entry',0,100) && Number(item.quantity) > 0
+        : key === 'trades' ? text(item,'trader') && text(item,'contractId') && range(item,'price',0,100) && Number(item.quantity) > 0
+        : key === 'bets' ? text(item,'selection') && Number(item.stake) > 0 && Number.isFinite(decimal(item.odds)) && (item.closeOdds == null || item.closeOdds === '' || Number.isFinite(decimal(item.closeOdds)))
+        : key === 'results' ? text(item,'player') && text(item,'market') && text(item,'game') && text(item,'date') && Number.isFinite(Number(item.line)) && Number.isFinite(Number(item.result))
+        : key === 'alerts' ? ['price','ev','movement','fantasy-new'].includes(item.kind) && (item.seen == null || Array.isArray(item.seen)) && (item.kind === 'price' ? Number.isFinite(decimal(item.threshold)) : item.kind === 'movement' ? Number(item.threshold) > 0 : range(item,'threshold',0,100))
+        : key === 'notifications' ? text(item,'message') && text(item,'ts') : true;
+      if (!valid) throw Error(`${key} record ${index + 1} has invalid fields.`);
+    }
+  }
+  if (data.paytables != null && (typeof data.paytables !== 'object' || Array.isArray(data.paytables) || Object.values(data.paytables).some(table => !table || typeof table !== 'object' || Object.values(table).some(rule => !Array.isArray(rule) || rule.some(value => !(Number(value) >= 0)))))) throw Error('Payout rules must be nonnegative multiplier lists.');
+  return true;
 }

@@ -1,4 +1,4 @@
-import { decimal, implied, expectedReturn, money, percent, signed, oddsLabel, probabilityToAmerican, fairProbability, fresh, groups, evRows, holdRows, arbitrage, arbitrageRows, middleRows, promoConversion, parlay, fantasySlip, closingLineValue, gradedBet, pearson, sharpMatches, alertMatches } from './ev-core.js';
+import { decimal, implied, expectedReturn, money, percent, signed, oddsLabel, probabilityToAmerican, fairProbability, fresh, groups, evRows, holdRows, arbitrage, arbitrageRows, middleRows, promoConversion, parlay, fantasySlip, closingLineValue, gradedBet, pearson, sharpMatches, alertMatches, validateWorkspace } from './ev-core.js';
 import { exampleWorkspace } from './ev-demo.js';
 
 const $ = selector => document.querySelector(selector);
@@ -43,7 +43,9 @@ function normalize(data) {
 }
 let state = load();
 let active = toolMeta[location.hash.slice(1)] ? location.hash.slice(1) : 'odds';
-let search = '', sport = new URLSearchParams(location.search).get('sport')?.toUpperCase() || '';
+let search = '';
+const initialSport = new URLSearchParams(location.search).get('sport')?.toUpperCase();
+let sport = ['NFL','MLB','NBA','WNBA','NHL','SOCCER'].includes(initialSport) ? initialSport === 'SOCCER' ? 'Soccer' : initialSport : 'NFL';
 let parlayIds = [], fantasyIds = [], fantasyApp = '', stake = 100, fantasyStake = 10;
 let promoInput = { stake: 100, promoOdds: 150, hedgeOdds: -130, kind: 'bonus', boost: 0 };
 let trendA = '', trendB = '', traderName = '';
@@ -103,9 +105,9 @@ function render() {
   $('#ev-title').textContent = toolMeta[active][2];
   $('#ev-description').textContent = toolMeta[active][3];
   const viewActions = {
-    odds: action('Add price', 'quote') + (state.example ? button('Remove examples', 'data-remove-examples') : button('Load examples', 'data-load-examples')), 'ev-pre': action('Add price', 'quote'), 'ev-live': action('Add live price', 'quote', 'data-live="true"'),
-    'arb-pre': action('Add price', 'quote'), 'arb-live': action('Add live price', 'quote', 'data-live="true"'), middles: action('Add price', 'quote'), holds: action('Add price', 'quote'),
-    sharp: action('Add exchange price', 'quote', 'data-exchange="true"'), fantasy: action('Add DFS prop', 'dfs'), optimizer: action('Add DFS prop', 'dfs'), slip: action('Add DFS prop', 'dfs'),
+    odds: action('Add price', 'quote') + (state.example ? button('Remove examples', 'data-remove-examples') : button('Load examples', 'data-load-examples')), 'ev-pre': action('Add price', 'quote'), 'ev-live': action('Add live price', 'quote', 'data-live="true"') + (state.example ? button('Replay live examples', 'data-replay-live') : ''),
+    'arb-pre': action('Add price', 'quote'), 'arb-live': action('Add live price', 'quote', 'data-live="true"') + (state.example ? button('Replay live examples', 'data-replay-live') : ''), middles: action('Add price', 'quote') + (state.example ? button('Replay live examples', 'data-replay-live') : ''), holds: action('Add price', 'quote'),
+    sharp: action('Add exchange price', 'quote', 'data-exchange="true"') + (state.example ? button('Replay live examples', 'data-replay-live') : ''), fantasy: action('Add DFS prop', 'dfs'), optimizer: action('Add DFS prop', 'dfs'), slip: action('Add DFS prop', 'dfs'),
     'fantasy-alerts': action('New alert', 'alert', 'data-kind="fantasy-new"'), prediction: action('Add contract', 'contract'), tracker: action('Add bet', 'bet'), trends: action('Add result', 'result'), 'line-alerts': action('New alert', 'alert')
   };
   $('#ev-view-actions').innerHTML = viewActions[active] || '';
@@ -147,7 +149,7 @@ function renderArb(live) {
 
 function renderMiddles() {
   const rows = [false, true].flatMap(mode => middleRows(quotes(), mode));
-  return `<div class="ev-stack"><div class="ev-calculator"><label>Total outlay<input id="ev-bankroll" type="number" min="1" step="0.01" value="${esc(stake)}"></label><div class="ev-result">Stake split equalizes the one-win outcomes. The middle payoff assumes both total bets win; exact settlement depends on integer and push rules.</div></div>${rows.length ? table(['Market / window', 'Over', 'Under', 'Outcomes'], rows.map(x => { const plan = arbitrage([x.over,x.under], Number(stake)); return `<tr><td><strong>${esc(x.over.event)}</strong><small>${esc(x.over.market)} · ${x.over.live ? 'Live' : 'Pregame'} · ${fmtLine(x.over.line)} to ${fmtLine(x.under.line)}</small></td><td>${oddsCell(x.over)}<small>Stake ${money(plan.stakes[0])}</small></td><td>${oddsCell(x.under)}<small>Stake ${money(plan.stakes[1])}</small></td><td>One wins: <strong class="${plan.profit >= 0 ? 'ev-positive' : 'ev-negative'}">${money(plan.profit)}</strong><small>Both win: ${money(plan.stakes[0] * (decimal(x.over.odds) - 1) + plan.stakes[1] * (decimal(x.under.odds) - 1))}</small></td></tr>`; })) : empty('No total middles', 'Add an Over at a lower line and an Under at a higher line from different books.')}</div>`;
+  return `<div class="ev-stack"><div class="ev-calculator"><label>Total outlay<input id="ev-bankroll" type="number" min="1" step="0.01" value="${esc(stake)}"></label><div class="ev-result">Stake split equalizes the one-win outcomes. The middle payoff assumes both bets win; exact settlement depends on integer and push rules.</div></div>${rows.length ? table(['Market / window', 'Side A', 'Side B', 'Outcomes'], rows.map(x => { const plan = arbitrage([x.over,x.under], Number(stake)); return `<tr><td><strong>${esc(x.over.event)}</strong><small>${esc(x.over.market)} · ${x.over.live ? 'Live' : 'Pregame'} · ${esc(x.window)}</small></td><td>${esc(x.over.side)} ${fmtLine(x.over.line)} ${oddsCell(x.over)}<small>Stake ${money(plan.stakes[0])}</small></td><td>${esc(x.under.side)} ${fmtLine(x.under.line)} ${oddsCell(x.under)}<small>Stake ${money(plan.stakes[1])}</small></td><td>One wins: <strong class="${plan.profit >= 0 ? 'ev-positive' : 'ev-negative'}">${money(plan.profit)}</strong><small>Both win: ${money(plan.stakes[0] * (decimal(x.over.odds) - 1) + plan.stakes[1] * (decimal(x.under.odds) - 1))}</small></td></tr>`; })) : empty('No middles', 'Add a lower Over and higher Under total, or opposing spread lines with a winning margin window.')}</div>`;
 }
 
 function renderHolds() {
@@ -256,7 +258,7 @@ function renderLineAlerts() {
 const FIELDS = {
   quote: [
     ['sport','Sport','select',true,['NFL','MLB','NBA','WNBA','NHL','Soccer']], ['event','Event / game','text',true], ['market','Market name','text',true],
-    ['type','Market type','select',true,['game','spread','total','prop','alternate','future']], ['line','Line','text',false], ['side','Side / selection','text',true],
+    ['type','Market type','select',true,[['game','Two-way game line'],['three-way','Three-way game line'],['spread','Spread'],['total','Total'],['prop','Player prop'],['alternate','Alternate line'],['future','Future']]], ['outcomes','Exhaustive outcomes (multiway)','number',false], ['line','Line','text',false], ['side','Side / selection','text',true],
     ['book','Sportsbook / exchange','text',true], ['odds','American odds','number',true], ['live','In game quote','checkbox',false],
     ['exchange','Exchange offer','checkbox',false], ['liquidity','Available liquidity ($)','number',false], ['ts','Observed at','datetime-local',true]
   ],
@@ -304,6 +306,7 @@ function parseForm() {
     item[name] = type === 'checkbox' ? field.checked : type === 'number' ? (field.value === '' ? '' : Number(field.value)) : type === 'datetime-local' ? new Date(field.value).toISOString() : field.value.trim();
   }
   if (editing.type === 'quote' && !Number.isFinite(decimal(item.odds))) return failForm('Enter valid American odds: +100 or higher, or −100 or lower.'), null;
+  if (editing.type === 'quote' && item.outcomes !== '' && !(Number.isInteger(item.outcomes) && item.outcomes >= 2 && item.outcomes <= 64)) return failForm('Exhaustive outcome count must be a whole number from 2 to 64.'), null;
   if (editing.type === 'quote' && item.exchange && !(Number(item.liquidity) >= 0)) return failForm('Exchange liquidity must be zero or higher.'), null;
   if (editing.type === 'dfs' && !(item.probability >= 0 && item.probability <= 1)) return failForm('Hit probability must be between 0 and 1.'), null;
   if (editing.type === 'contract' && !(item.bid >= 0 && item.ask <= 100 && item.bid <= item.ask && item.volume >= 0)) return failForm('Bid and ask must be between 0 and 100 cents, with bid no higher than ask.'), null;
@@ -347,6 +350,7 @@ $('#ev-add-quote').addEventListener('click', () => openForm('quote'));
 $('#ev-view-actions').addEventListener('click', event => { const target = event.target.closest('[data-add]'); if (target) openForm(target.dataset.add, null, { live:target.dataset.live === 'true', exchange:target.dataset.exchange === 'true', kind:target.dataset.kind || 'price' }); });
 $('#ev-view-actions').addEventListener('click', event => { if (!event.target.closest('[data-remove-examples]')) return; for (const key of arrays) state[key] = state[key].filter(x => x.source !== 'example'); state.example = false; parlayIds = []; fantasyIds = []; commit(); });
 $('#ev-view-actions').addEventListener('click', event => { if (!event.target.closest('[data-load-examples]')) return; const demo = exampleWorkspace(); for (const key of arrays) state[key].push(...demo[key]); state.paytables = { ...demo.paytables, ...state.paytables }; state.example = true; commit(); });
+$('#ev-view-actions').addEventListener('click', event => { if (!event.target.closest('[data-replay-live]')) return; for (const quote of state.quotes.filter(q => q.live && q.source === 'example')) { quote.ts = now(); snapshotQuote(quote); } commit(); });
 $('#ev-view').addEventListener('click', event => {
   const target = event.target.closest('button'); if (!target) return;
   if (target.dataset.tool) return setTool(target.dataset.tool);
@@ -392,7 +396,7 @@ $('#ev-import-apply').addEventListener('click', async () => {
   if (file.size > 5_000_000) return $('#ev-import-error').textContent = 'The file must be under 5 MB.';
   try {
     const data = JSON.parse(await file.text());
-    if (data?.version !== 1 || !arrays.every(key => data[key] == null || Array.isArray(data[key])) || !Array.isArray(data.quotes) || !data.quotes.every(q => q && typeof q.event === 'string' && typeof q.market === 'string' && typeof q.side === 'string' && typeof q.book === 'string' && Number.isFinite(decimal(q.odds)))) throw Error('This is not a valid EV workspace export.');
+    validateWorkspace(data);
     state = normalize(data); evaluateAlerts(); persist(); $('#ev-import-dialog').close(); render();
   } catch (error) { $('#ev-import-error').textContent = error.message; }
 });
