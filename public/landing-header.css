@@ -39,6 +39,13 @@
 .hero-tracker-day.negative{border-color:#694039;background:#2a1c19}.hero-tracker-day.negative strong{color:#df8b76}
 .hero-tracker-day.open{border-color:#31546a;background:#15242b}.hero-tracker-day.open strong{color:#7ecce9}
 .hero-tracker-error{padding:70px 25px;color:#bdcbd0;text-align:center}
+.home-hero-space{min-height:1px}
+.home-tracker-section{padding-block:clamp(105px,9vw,145px);border-top:1px solid #1c2a2e;background:radial-gradient(ellipse 42% 68% at 6% 54%,#0a28303d,transparent 80%)}
+.home-tracker-layout{grid-template-columns:minmax(0,.93fr) minmax(0,1.07fr)}
+.home-tracker-section .home-copy{max-width:585px}
+.home-tracker-section .home-lede{margin-bottom:14px}
+.home-tracker-section .home-fine{margin:0 0 27px}
+.home-tracker-section .hero-tracker{width:min(100%,510px);justify-self:end}
 /* A single continuous strip: marks sit directly on the page canvas. */
 .hero-brands{width:100%;margin:auto 0 34px;overflow:hidden;mask-image:linear-gradient(to right,transparent,#000 3%,#000 97%,transparent)}
 .hero-brand-track{display:flex;width:max-content;animation:brand-drift 52s linear infinite}
@@ -49,6 +56,6 @@
 .hero-brand-set .brand-on-light img{filter:brightness(0) invert(1)}
 @keyframes brand-drift{to{transform:translateX(-50%)}}
 @media(max-width:1050px){.home-hero-grid{gap:35px}}
-@media(max-width:900px){.home-hero{min-height:0;padding-top:62px}.home-hero-grid{grid-template-columns:1fr;gap:54px;min-height:0}.home-hero .home-copy{max-width:660px}.hero-tracker{justify-self:start}.hero-brands{margin-top:75px}.home-nav{margin-left:auto}.home-header-action{display:none}}
+@media(max-width:900px){.home-hero{min-height:0;padding-top:62px}.home-hero-grid{grid-template-columns:1fr;gap:0;min-height:0}.home-hero-space{display:none}.home-hero .home-copy{max-width:660px}.home-tracker-layout{grid-template-columns:1fr}.home-tracker-section .hero-tracker{justify-self:start}.hero-brands{margin-top:75px}.home-nav{margin-left:auto}.home-header-action{display:none}}
 @media(max-width:650px){.home-header-inner{width:calc(100% - 32px);min-height:55px;padding-top:9px}.home-nav{margin:4px 0 0}.home-header-action{display:inline-flex}.home-hero{padding-top:58px}.home-hero-grid{width:calc(100% - 36px);gap:57px}.home-hero .home-copy h1{font-size:clamp(43px,10.5vw,56px);line-height:1.07}.home-hero .home-lede{font-size:16px}.home-hero .home-actions{align-items:stretch}.home-hero .home-button{min-height:42px}.hero-tracker{width:100%}.hero-tracker-head{gap:8px;min-height:60px;padding:12px 15px}.hero-tracker-avatar{width:29px;height:29px}.hero-tracker-avatar img{width:20px;height:20px}.hero-tracker-head>strong{font-size:13px}.hero-tracker-profit{margin:0 10px;padding:15px 0 12px}.hero-tracker-profit small{font-size:11px}.hero-tracker-profit strong{font-size:27px}.hero-tracker-body{padding:8px 10px 11px}.hero-tracker-weekdays{margin-bottom:5px;font-size:9px}.hero-tracker-day{padding:4px}.hero-tracker-day strong{font-size:10px}.hero-brands{margin-top:66px;margin-bottom:31px}.hero-brand-set{gap:18px;padding-right:18px}.hero-brand-set li{width:48px;height:46px}.hero-brand-set img{width:42px;height:42px}}
 @media(prefers-reduced-motion:reduce){.hero-brand-track{animation:none}.hero-brands{overflow-x:auto;mask-image:none}.hero-brand-set[aria-hidden="true"]{display:none}}

@@ -10,21 +10,21 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preload" href="/assets/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/landing-home.css?v=1">
-  <link rel="stylesheet" href="/landing-header.css?v=7">
-  <script type="module" src="/landing.js?v=8"></script>
+  <link rel="stylesheet" href="/landing-header.css?v=8">
+  <script type="module" src="/landing.js?v=9"></script>
 </head>
 <body class="landing-page">
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="home-header"><div class="home-header-inner">
     <a class="home-brand" href="/" aria-label="SportsLab home"><img src="/favicon.svg" width="31" height="31" alt=""><span>sports<strong>lab</strong></span></a>
-    <nav class="home-nav" aria-label="Main navigation"><a href="/research">Player research</a><a href="/live">Live games</a><a href="/simulation">Simulation</a><a href="/bets">My picks</a></nav>
+    <nav class="home-nav" aria-label="Main navigation"><a href="/research">Player research</a><a href="/live">Live games</a><a href="/simulation">Simulation</a><a href="/bets">My picks</a><a href="/online-sportsbooks">Sportsbook guides</a></nav>
     <a class="home-button home-header-action" href="/research">Open workspace <span aria-hidden="true">↗</span></a>
   </div></header>
   <main id="main">
     <section class="home-hero home-section" id="product" aria-labelledby="hero-title">
       <div class="home-wide home-split home-hero-grid">
         <div class="home-copy"><h1 id="hero-title">See the trend.<br><span>Track the result.</span></h1><p class="home-lede">Research the game, follow the action, and keep a clear record of every pick.</p><div class="home-actions"><a class="home-button" href="/research">Explore player research</a><a class="home-button home-button-secondary" href="/bets">Open My Picks</a></div><p class="home-fine">Your pick record stays in this browser. SportsLab does not place bets.</p></div>
-        <div class="hero-tracker" id="hero-tracker" aria-live="polite"><p class="home-loading">Loading your pick record…</p></div>
+        <div class="home-hero-space" aria-hidden="true"></div>
       </div>
       <div class="hero-brands" role="region" aria-label="Sportsbooks and sports apps">
         <div class="hero-brand-track">
@@ -50,14 +50,13 @@
         <button type="button" role="tab" data-home-tool="picks" aria-controls="home-tool-panel" aria-selected="true" tabindex="0"><span class="tool-symbol" aria-hidden="true">✓</span><span><strong>My picks</strong><small>Saved in this browser</small></span></button>
       </div><div class="home-screen home-tool-panel" id="home-tool-panel" role="tabpanel" aria-live="polite"><p class="home-loading">Loading your product view…</p></div></div>
     </div></section>
-    <section class="home-sources" id="sources" aria-labelledby="sources-title"><div class="home-narrow">
-      <div class="home-sources-head"><h2 id="sources-title">Know where the number came from.</h2><p>SportsLab keeps the sample, source, and capture time beside each result. These are the sources behind the homepage views.</p></div>
-      <div id="home-source-list" class="home-source-list" aria-live="polite"><p>Loading source links…</p></div>
-      <details class="home-source-note"><summary>How should I read these numbers?</summary><p>Completed-game counts are historical, not the chance of a future result. A sportsbook line shown here is a captured comparison and may be stale. Simulation output depends on the selected model inputs and remains experimental. My Picks uses this browser’s local storage.</p></details>
+    <section class="home-section home-tracker-section" id="bet-tracker" aria-labelledby="tracker-title"><div class="home-wide home-split home-tracker-layout">
+      <div class="home-copy"><h2 id="tracker-title">Your picks,<br>day by day.</h2><p class="home-lede">Save a bet in My Picks and see its settled result on the date you entered. Your net profit updates from the record kept in this browser.</p><p class="home-fine">The calendar shows example results when no picks are saved.</p><a class="home-button" href="/bets">Open My Picks</a></div>
+      <div class="hero-tracker" id="hero-tracker" aria-live="polite"><p class="home-loading">Loading your pick record…</p></div>
     </div></section>
     <nav class="home-sports" id="sports" aria-label="Research by sport"><div class="home-narrow"><span>Explore a sport</span><a href="/research?sport=nfl">NFL</a><a href="/research?sport=nba">NBA</a><a href="/research?sport=wnba">WNBA</a><a href="/research?sport=mlb">MLB</a><a href="/research?sport=nhl">NHL</a><a href="/research?sport=soccer">Soccer</a></div></nav>
     <section class="home-close" aria-labelledby="close-title"><div class="home-wide"><div><h2 id="close-title">Go from the number<br>to the whole game.</h2><p>Open the workspace and follow the source through every view.</p></div><a class="home-button" href="/research">Open SportsLab <span aria-hidden="true">↗</span></a></div></section>
   </main>
-  <footer class="home-footer"><div class="home-wide home-footer-main"><div><a class="home-brand" href="/" aria-label="SportsLab home"><img src="/favicon.svg" width="28" height="28" alt=""><span>sports<strong>lab</strong></span></a><p>Independent sports research with its limits in view.</p></div><nav aria-label="Footer navigation"><a href="/research">Player research</a><a href="/live">Live games</a><a href="/simulation">Simulation</a><a href="/bets">My picks</a><a href="#sources">Sources</a></nav></div><div class="home-wide home-footer-bottom"><span>Public feeds may lag. SportsLab does not place bets.</span><span>© 2026 SportsLab</span></div></footer>
+  <footer class="home-footer"><div class="home-wide home-footer-main"><div><a class="home-brand" href="/" aria-label="SportsLab home"><img src="/favicon.svg" width="28" height="28" alt=""><span>sports<strong>lab</strong></span></a><p>Independent sports research with its limits in view.</p></div><nav aria-label="Footer navigation"><a href="/research">Player research</a><a href="/live">Live games</a><a href="/simulation">Simulation</a><a href="/bets">My picks</a><a href="/online-sportsbooks">Sportsbook guides</a><a href="#bet-tracker">Bet tracker</a></nav></div><div class="home-wide home-footer-bottom"><span>Public feeds may lag. SportsLab does not place bets.</span><span>© 2026 SportsLab</span></div></footer>
 </body>
 </html>

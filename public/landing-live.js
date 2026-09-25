@@ -10,14 +10,13 @@ const money = value => new Intl.NumberFormat('en-US', { style: 'currency', curre
 const readJson = async path => { const response = await fetch(path, { headers: { Accept: 'application/json' } }); if (!response.ok) throw Error('Source returned ' + response.status); return response.json(); };
 
 export function mountLandingResearch() {
-  const research = $('#workspace'), live = $('#home-live-panel'), simulation = $('#home-simulation-panel'), tools = $('#home-tool-panel'), sources = $('#home-source-list');
+  const research = $('#workspace'), live = $('#home-live-panel'), simulation = $('#home-simulation-panel'), tools = $('#home-tool-panel');
   let payload = null, liveData = null, liveError = '', simCatalog = null, simResult = null, simError = '', tool = 'picks';
   const r = { playerId: '', window: 10, side: 'over', line: 0, gameId: '', search: '', sort: 'board' };
   const l = { sport: 'nfl', game: '', market: 'moneyline' };
   const s = { date: '', game: '', runs: 1000, pending: false };
   const player = () => payload?.players.find(item => item.id === r.playerId) || payload?.players[0];
   const rows = () => player()?.games.slice(0, r.window).reverse() || [];
-  const source = () => payload?.sources.find(item => item.season === Number(payload.period?.slice(0, 4))) || payload?.sources.at(-1);
   const researchUrl = p => '/research?sport=nfl&prop=rec_yds&researchPlayer=' + encodeURIComponent(p.id);
   const split = (games, line, side) => {
     const values = games.map(row => row.value), sorted = [...values].sort((a, b) => a - b);
@@ -29,7 +28,7 @@ export function mountLandingResearch() {
 
   function renderResearch() {
     if (!payload) return;
-    if (!research) { renderSources(); return; }
+    if (!research) return;
     const p = player(), games = rows(), result = split(games, r.line, r.side);
     const max = Math.max(r.line, ...games.map(game => game.value), 1);
     const game = p.games.find(item => item.id === r.gameId);
@@ -41,12 +40,6 @@ export function mountLandingResearch() {
       ${games.map(item => `<button type="button" data-research-game="${esc(item.id)}" class="${(r.side === 'over' ? item.value > r.line : item.value < r.line) ? 'hit' : 'miss'}${item.id === r.gameId ? ' selected' : ''}" aria-label="${esc(day(item.date))}, ${esc(item.opponent)}, ${number(item.value)} receiving yards"><b>${number(item.value)}</b><i style="height:${Math.max(7, item.value / max * 100).toFixed(1)}%"></i><small>${esc(item.opponent)}</small></button>`).join('')}</div>
       <div class="research-game" role="status">${game ? `<span>${day(game.date)} · ${game.home ? 'vs' : 'at'} ${esc(game.opponent)} · <strong>${number(game.value)} receiving yards</strong></span><a href="${safe(game.url)}" target="_blank" rel="noreferrer">Box score ↗</a>` : '<span>Select a result to inspect its game.</span><button type="button" data-research-reset>Reset captured line</button>'}</div>
       <div class="screen-footer"><span>${esc(researchStatus(p))} · ${when(p.quote.capturedAt)} · ${result.count} games</span><a href="${researchUrl(p)}">Open full research ↗</a></div>`;
-    renderSources();
-  }
-  function renderSources() {
-    if (!payload) return;
-    const p = player(), src = source();
-    sources.innerHTML = `<div><strong>Completed game history</strong><span>nflverse weekly statistics · latest result ${day(p.games[0]?.date)}</span><a href="${safe(src?.url)}" target="_blank" rel="noreferrer">Open dataset ↗</a></div><div><strong>Captured comparison line</strong><span>${esc(p.quote.book || 'Public quote')} · ${when(p.quote.capturedAt)}${p.quote.stale ? ' · refresh delayed' : ''}</span><a href="${safe(p.quote.url)}" target="_blank" rel="noreferrer">View quote source ↗</a></div><div><strong>Live game feeds</strong><span>Public scoreboard and market availability vary by sport and date.</span><a href="/live">Check feed details ↗</a></div>`;
   }
   function renderBoard() {
     if (!payload) return '<p>Player board is loading.</p>';
@@ -78,7 +71,7 @@ export function mountLandingResearch() {
   research?.addEventListener('change', event => { if(event.target.matches('[data-research-player]')){r.playerId=event.target.value;r.line=player().line;r.gameId='';renderResearch();} if(event.target.matches('[data-research-line]')){const value=Number(event.target.value);if(Number.isFinite(value)&&value>=0&&value<=350){r.line=value;r.gameId='';renderResearch();}} });
   async function loadResearch() {
     const latest = readJson('/api/landing/research');
-    try { payload = await readJson('/landing-research-snapshot.json'); } catch { try { payload = await latest; } catch { if(research)research.innerHTML='<p class="screen-error">Player history is unavailable. <a href="/research">Open the workspace ↗</a></p>'; sources.innerHTML='<p>Source links are temporarily unavailable.</p>'; return; } }
+    try { payload = await readJson('/landing-research-snapshot.json'); } catch { try { payload = await latest; } catch { if(research)research.innerHTML='<p class="screen-error">Player history is unavailable. <a href="/research">Open the workspace ↗</a></p>'; return; } }
     r.playerId=payload.players[0].id;r.line=player().line;renderResearch();if(tool==='research')renderTool();
     latest.then(next => { const newer=Date.parse(next.boardFetchedAt||'')>Date.parse(payload.boardFetchedAt||'');if(!newer)return;const oldLine=player().line;payload=next;if(!payload.players.some(item=>item.id===r.playerId))r.playerId=payload.players[0].id;if(r.line===oldLine)r.line=player().line;renderResearch();if(tool==='research')renderTool(); }).catch(()=>{});
   }
