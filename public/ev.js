@@ -1,5 +1,5 @@
 import { decimal, implied, expectedReturn, money, percent, signed, oddsLabel, probabilityToAmerican, fairProbability, fresh, groups, marketKey, evRows, fractionalKellyStake, holdRows, arbitrage, arbitrageRows, middleRows, promoConversion, parlay, fantasySlip, closingLineValue, gradedBet, pearson, sharpMatches, alertMatches, validateWorkspace } from './ev-core.js?v=2';
-import { exampleWorkspace, smartMoneyDemoQuotes } from './ev-demo.js?v=3';
+import { exampleWorkspace, smartMoneyDemoQuotes } from './ev-demo.js?v=4';
 
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -69,6 +69,7 @@ const brandMarks = {
   Fanatics:'/assets/brands/fanatics.png', 'Hard Rock Bet':'/assets/brands/hardrock.png', 'theScore Bet':'/assets/brands/thescore.png',
   'Bally Bet':'/assets/brands/bally.png', 'Desert Diamond Sports':'/assets/brands/desertdiamond.png',
   ProphetX:'/assets/brands/prophetx.png', Sporttrade:'/assets/brands/sporttrade.png',
+  Novig:'/assets/brands/novig.png', BettorEdge:'/assets/brands/bettoredge.png',
   PrizePicks:'/assets/brands/prizepicks.png', 'Underdog Fantasy':'/assets/brands/underdog.png',
   'Sleeper Picks':'/assets/brands/sleeper.png', ParlayPlay:'/assets/brands/parlayplay.png',
   Dabble:'/assets/brands/dabble.png', Chalkboard:'/assets/brands/chalkboard.png'
@@ -499,17 +500,18 @@ function renderSharp() {
   const preview = enteredQuotes.length === 0;
   const source = preview ? smartMoneyDemoQuotes() : enteredQuotes;
   const filtered = source.filter(q => !sport || q.sport === sport);
-  const matches = sharpMatches(filtered, threshold).filter(x => (!marketType || x.exchange.type === marketType) && (!bookmaker || [x.exchange.book,x.sportsbook.book].includes(bookmaker)) && (!search || [x.exchange.event,x.exchange.market,x.exchange.side,x.exchange.book,x.sportsbook.side,x.sportsbook.book,x.exchange.sport].some(value => filterText(value)))).sort((a,b) => b.liquidity - a.liquidity);
+  const matches = sharpMatches(filtered.filter(q => !q.depthOnly), threshold).filter(x => (!marketType || x.exchange.type === marketType) && (!bookmaker || [x.exchange.book,x.sportsbook.book].includes(bookmaker)) && (!search || [x.exchange.event,x.exchange.market,x.exchange.side,x.exchange.book,x.sportsbook.side,x.sportsbook.book,x.exchange.sport].some(value => filterText(value)))).sort((a,b) => b.liquidity - a.liquidity);
   if (!matches.some(x => x.exchange.id === expandedSharpKey)) expandedSharpKey = matches[0]?.exchange.id || '';
   const selected = matches.find(x => x.exchange.id === expandedSharpKey);
   const selection = q => `${esc(q.side)}${q.line !== '' && q.line != null ? ' ' + (q.type === 'spread' && Number(q.line) > 0 ? '+' : '') + fmtLine(q.line) : ''}`;
+  const category = q => `${q.sport === 'NFL' ? 'Football · ' : ''}${esc(q.sport)}`;
   const card = x => {
     const q = x.exchange;
     return `<button type="button" class="sharp-card" data-sharp-select="${esc(q.id)}" aria-pressed="${q.id === expandedSharpKey}">
-      <span class="sharp-card-value"><small>Liquidity</small><strong>${liquidityMoney(x.liquidity)}</strong><span>${esc(q.book)}</span></span>
-      <span class="sharp-card-content"><span class="sharp-card-meta"><span>${esc(q.sport)} <i aria-hidden="true">/</i> ${q.live ? 'Live' : 'Pregame'}</span><span>${preview ? 'Demo market' : age(q.ts)}</span></span><strong class="sharp-card-event">${esc(q.event)}</strong><span class="sharp-card-market">${esc(q.market)}</span>
-      <span class="sharp-card-pick"><span class="sharp-card-pick-book">${brandMark(x.sportsbook.book)}<strong>${selection(x.sportsbook)}</strong></span><b>${oddsLabel(x.sportsbook.odds)}</b></span>
-      <span class="sharp-card-counter"><span>Opposing offer · ${esc(q.book)}</span><strong>${oddsLabel(q.odds)}</strong></span></span>
+      <span class="sharp-card-value"><strong>${liquidityMoney(x.liquidity)}</strong><small>${q.limit ? `${liquidityMoney(q.limit)} limit` : 'Exchange liquidity'}</small></span>
+      <span class="sharp-card-content"><span class="sharp-card-meta"><span>${category(q)}</span><span>${preview ? 'Demo price' : age(q.ts)}</span></span><strong class="sharp-card-event">${esc(q.event)}</strong><span class="sharp-card-market">${esc(q.market)}</span>
+      <span class="sharp-card-lines"><span class="sharp-card-pick"><span class="sharp-card-pick-book">${brandMark(x.sportsbook.book)}<strong>${selection(x.sportsbook)}</strong></span><b>${oddsLabel(x.sportsbook.odds)}</b></span>
+      <span class="sharp-card-counter"><span class="sharp-card-counter-selection">${selection(q)}</span><span class="sharp-card-counter-quote"><small>${liquidityMoney(x.liquidity)}</small>${brandMark(q.book)}<b>${oddsLabel(q.odds)}</b></span></span></span></span>
     </button>`;
   };
   let detail = `<div class="sharp-detail-empty"><strong>Select a market</strong><p>Choose an opportunity to compare the entered prices and liquidity.</p></div>`;
@@ -519,23 +521,22 @@ function renderSharp() {
     const opposite = peers.filter(item => item.side !== q.side);
     const books = opposite.filter(item => !item.exchange).sort((a,b) => decimal(b.odds) - decimal(a.odds));
     const featuredBook = books.find(item => item.id === sharpSelectedBook) || selected.sportsbook;
-    const exchangeRows = peers.filter(item => item.exchange && Number(item.liquidity) > 0);
-    const liquidity = [...new Set(exchangeRows.map(item => item.side))].map(side => [side,exchangeRows.filter(item => item.side === side).reduce((sum,item) => sum + Number(item.liquidity),0)]);
-    const max = Math.max(1,...liquidity.map(([,amount]) => amount));
+    const depthRows = peers.filter(item => item.exchange && item.side === q.side && Number(item.liquidity) > 0).sort((a,b) => Number(b.liquidity) - Number(a.liquidity)).slice(0,6);
+    const maxDepth = Math.max(1,...depthRows.map(item => Number(item.liquidity)));
     const bookRows = books.slice(0,8).map(item => {
       const sameSide = peers.find(peer => !peer.exchange && peer.book === item.book && peer.side === q.side);
       return `<button type="button" class="sharp-book-row" data-sharp-book="${esc(item.id)}" aria-pressed="${sharpSelectedBook === item.id}" title="${esc(item.book)} prices">
+        <span class="sharp-book-price ${item.id === selected.sportsbook.id ? 'is-best' : ''}">${oddsLabel(item.odds)}<span aria-hidden="true">↗</span></span>
         <span class="sharp-book-identity">${brandMark(item.book)}<span class="sharp-book-name">${esc(item.book)}</span></span>
-        <strong class="sharp-book-best ${item.id === selected.sportsbook.id ? 'is-best' : ''}">${oddsLabel(item.odds)}</strong>
-        <strong class="sharp-book-other">${sameSide ? oddsLabel(sameSide.odds) : '—'}</strong>
+        <span class="sharp-book-price sharp-book-other">${sameSide ? oddsLabel(sameSide.odds) : '—'}<span aria-hidden="true">↗</span></span>
       </button>`;
     }).join('');
-    detail = `<div class="sharp-detail-top"><div><span class="sharp-detail-kicker">${esc(q.sport)} <i aria-hidden="true">/</i> ${q.live ? 'Live' : 'Pregame'} <i aria-hidden="true">/</i> ${preview ? 'Demo market' : age(q.ts)}</span><h2>${esc(q.event)}</h2><p>${esc(q.market)}</p></div><div class="sharp-detail-total"><small>Opposing liquidity</small><strong>${liquidityMoney(selected.liquidity)}</strong></div></div>
-      <div class="sharp-selected-pick"><div>${brandMark(featuredBook.book)}<span><small>${featuredBook.id === selected.sportsbook.id ? 'Best sportsbook price' : 'Selected sportsbook price'} · ${esc(featuredBook.book)}</small><strong>${selection(featuredBook)}</strong></span></div><b>${oddsLabel(featuredBook.odds)}</b></div>
-      <div class="sharp-exchange-line"><span class="sharp-exchange-name">${brandMark(q.book)}<span>Exchange offer · ${esc(q.book)}</span></span><strong>${selection(q)} <b>${oddsLabel(q.odds)}</b></strong></div>
-      <div class="sharp-detail-section"><div class="sharp-section-heading"><h3>Exchange liquidity</h3><span>${exchangeRows.length} available sides</span></div><div class="sharp-liquidity-chart">${liquidity.map(([side,amount]) => `<div class="sharp-liquidity-row"><span>${esc(side)}</span><div class="sharp-liquidity-track"><span style="width:${Math.max(3,Math.round(amount/max*100))}%"></span></div><strong>${liquidityMoney(amount)}</strong></div>`).join('')}</div></div>
-      <div class="sharp-detail-section sharp-books"><div class="sharp-section-heading"><h3>Compare sportsbook odds</h3><span>${books.length} ${books.length === 1 ? 'book' : 'books'}</span></div><div class="sharp-book-head"><span>Sportsbook</span><span>${selection(selected.sportsbook)}</span><span>${selection(q)}</span></div>${bookRows || '<p class="sharp-no-books">No opposing sportsbook prices entered.</p>'}</div>
-      <p class="sharp-detail-foot">${preview ? 'Illustrative odds and liquidity for design preview. No live feed is connected.' : `Saved price · observed ${age(q.ts)} · ${state.history.filter(item => item.quoteId === q.id).length} recorded snapshots`}</p>`;
+    detail = `<div class="sharp-detail-top"><div class="sharp-detail-total"><strong>${liquidityMoney(selected.liquidity)}</strong><small>${q.limit ? `${liquidityMoney(q.limit)} limit` : 'Exchange liquidity'}</small></div><div class="sharp-detail-intro"><span class="sharp-detail-kicker">${category(q)} <i aria-hidden="true">/</i> ${q.live ? 'Live' : 'Pregame'} <i aria-hidden="true">/</i> ${preview ? 'Demo price' : age(q.ts)}</span><h2>${esc(q.event)}</h2><p>${esc(q.market)}</p></div></div>
+      <div class="sharp-selected-pick"><div class="sharp-feature-main">${brandMark(featuredBook.book)}<span><small>${featuredBook.id === selected.sportsbook.id ? 'Best sportsbook price' : 'Selected sportsbook price'} · ${esc(featuredBook.book)}</small><strong>${selection(featuredBook)}</strong></span></div><div class="sharp-feature-odds"><b>${oddsLabel(featuredBook.odds)}</b><small>Odds</small></div><button type="button" data-sharp-jump class="sharp-compare-action" aria-label="Compare sportsbook prices">Compare <span aria-hidden="true">↗</span></button></div>
+      <div class="sharp-exchange-line"><span class="sharp-exchange-name">${brandMark(q.book)}<span><strong>${selection(q)}</strong><small>Exchange · ${esc(q.book)}</small></span></span><span class="sharp-exchange-numbers"><strong>${oddsLabel(q.odds)}</strong><small>${liquidityMoney(selected.liquidity)} liquidity</small></span></div>
+      <div class="sharp-detail-section sharp-depth"><div class="sharp-section-heading"><div><h3>Exchange depth</h3><p>${selection(q)} · available liquidity by price</p></div><span>${depthRows.length} ${depthRows.length === 1 ? 'level' : 'levels'}</span></div><div class="sharp-depth-chart">${depthRows.map((item,index) => `<div class="sharp-depth-row ${index === 0 ? 'is-leading' : ''}"><span class="sharp-depth-source" title="${esc(item.book)}">${brandMark(item.book)}</span><strong class="sharp-depth-odds">${oddsLabel(item.odds)}</strong><span class="sharp-depth-track"><span style="width:${Math.max(4,Math.round(Number(item.liquidity)/maxDepth*100))}%"></span></span><strong class="sharp-depth-liquidity">${liquidityMoney(Number(item.liquidity))}</strong></div>`).join('')}</div></div>
+      <div class="sharp-detail-section sharp-books"><div class="sharp-section-heading"><div><h3>Sportsbook prices</h3><p>Compare both sides at each book</p></div><span>${books.length} ${books.length === 1 ? 'book' : 'books'}</span></div><div class="sharp-book-head"><span>${selection(selected.sportsbook)}</span><span>Book</span><span>${selection(q)}</span></div><div class="sharp-book-list">${bookRows || '<p class="sharp-no-books">No opposing sportsbook prices entered.</p>'}</div></div>
+      <p class="sharp-detail-foot">${preview ? 'Illustrative sample prices. No live market feed is connected.' : `Saved price · observed ${age(q.ts)} · ${state.history.filter(item => item.quoteId === q.id).length} recorded snapshots`}</p>`;
   }
   return `<div class="sharp-workspace"><div class="sharp-page-bar"><div class="sharp-page-title"><h1>Smart Money</h1><p>Exchange liquidity and sportsbook prices, side by side.</p></div><span class="sharp-data-badge">${preview ? 'Demo data' : 'Saved prices'}</span></div>
     <div class="sharp-toolbar"><label class="sharp-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg><input id="sharp-search" type="search" placeholder="Search teams, players or books" aria-label="Search Smart Money markets" value="${esc(search)}" autocomplete="off"></label><button type="button" data-sharp-filters aria-expanded="${sharpFiltersOpen}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M7 12h10M10 17h4"/></svg> Filters</button><button type="button" data-sharp-refresh title="Refresh comparison" aria-label="Refresh comparison"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2 6M20 4v7h-7"/></svg></button></div>
@@ -852,6 +853,7 @@ $('#ev-view').addEventListener('click', event => {
   const target = event.target.closest('button'); if (!target) return;
   if (target.dataset.sharpSelect) { expandedSharpKey = target.dataset.sharpSelect; sharpSelectedBook = ''; return render(); }
   if (target.dataset.sharpBook) { sharpSelectedBook = target.dataset.sharpBook; return render(); }
+  if (target.hasAttribute('data-sharp-jump')) { $('#ev-view .sharp-books')?.scrollIntoView({ behavior:matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'nearest' }); return; }
   if (target.hasAttribute('data-sharp-filters')) { sharpFiltersOpen = !sharpFiltersOpen; return render(); }
   if (target.hasAttribute('data-sharp-refresh')) { render(); $('#ev-notice').textContent = state.quotes.some(q => q.source !== 'example') ? 'Comparison refreshed from saved prices.' : 'Demo comparison refreshed.'; return; }
   if (target.hasAttribute('data-sharp-clear')) { search = ''; marketType = ''; bookmaker = ''; sport = ''; history.replaceState(null, '', `${location.pathname}?sport=all${location.hash}`); localStorage.setItem('sportslab-ev-sharp-min','0'); return render(); }

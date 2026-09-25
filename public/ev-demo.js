@@ -2,35 +2,40 @@
 export function smartMoneyDemoQuotes() {
   const ts = new Date().toISOString();
   let id = 0;
-  const quote = (event, market, type, line, side, book, odds, liquidity = 0) => ({
+  const quote = (event, market, type, line, side, book, odds, liquidity = 0, extra = {}) => ({
     id: `smart-demo-${++id}`, sport:'NFL', event, market, type, line, side, book, odds,
-    exchange: liquidity > 0, liquidity, live:false, ts, source:'example'
+    exchange: liquidity > 0, liquidity, live:false, ts, source:'example', ...extra
   });
   const markets = [
     {
       event:'Washington Commanders vs Los Angeles Chargers', market:'Point spread', type:'spread',
-      exchange:['Los Angeles Chargers',-2.5,'ProphetX',-115,9995], opposite:['Washington Commanders',2.5,'Sporttrade',105,7200],
-      books:[['DraftKings',116,-130],['FanDuel',112,-132],['BetMGM',110,-135],['Caesars',108,-128],['bet365',105,-130],['Fanatics',102,-132]]
+      exchange:['Washington Commanders',2.5,'Sporttrade',116,9995], opposite:['Los Angeles Chargers',-2.5,'ProphetX',-120,7200], limit:30000,
+      depth:[['ProphetX',112,6600],['Novig',111,4100],['BettorEdge',110,2000],['Sporttrade',109,680],['ProphetX',108,420]],
+      books:[['DraftKings',-115,110],['FanDuel',-118,108],['BetMGM',-120,106],['Caesars',-120,105],['bet365',-122,104],['Fanatics',-125,102]]
     },
     {
       event:'San Francisco 49ers vs Los Angeles Rams', market:'Matthew Stafford passing yards', type:'prop',
-      exchange:['Under',274.5,'Sporttrade',-120,9741], opposite:['Over',274.5,'ProphetX',-108,6400],
-      books:[['FanDuel',-103,-125],['DraftKings',-105,-128],['BetMGM',-106,-130],['Caesars',-108,-125],['BetRivers',-110,-127],['bet365',-112,-126]]
+      exchange:['Over',274.5,'Sporttrade',143,9741], opposite:['Under',274.5,'ProphetX',-145,6400],
+      depth:[['ProphetX',141,6400],['Novig',139,3900],['BettorEdge',137,2100],['Sporttrade',135,990],['Novig',132,430]],
+      books:[['FanDuel',-140,135],['DraftKings',-142,132],['BetMGM',-145,130],['Caesars',-145,128],['BetRivers',-148,125],['bet365',-150,120]]
     },
     {
       event:'New England Patriots vs Buffalo Bills', market:'Josh Allen passing touchdowns', type:'prop',
-      exchange:['Over',1.5,'ProphetX',-145,9577], opposite:['Under',1.5,'Sporttrade',125,5300],
+      exchange:['Over',1.5,'ProphetX',-145,9577], opposite:['Under',1.5,'Sporttrade',130,5300],
+      depth:[['Sporttrade',-150,5800],['Novig',-155,3400],['BettorEdge',-160,1800],['ProphetX',-165,890],['Novig',-170,320]],
       books:[['BetMGM',138,-155],['FanDuel',135,-158],['DraftKings',132,-160],['Caesars',130,-155],['Fanatics',128,-154],['BetRivers',125,-153]]
     },
     {
-      event:'Philadelphia Eagles vs Dallas Cowboys', market:'Jalen Hurts rushing yards', type:'prop',
-      exchange:['Over',44.5,'Sporttrade',-118,8608], opposite:['Under',44.5,'ProphetX',102,4900],
-      books:[['DraftKings',114,-125],['bet365',112,-128],['FanDuel',110,-130],['BetMGM',108,-129],['Caesars',105,-127],['Fanatics',104,-128]]
+      event:'New England Patriots vs Buffalo Bills', market:'Point spread', type:'spread',
+      exchange:['Buffalo Bills',-8,'Sporttrade',109,8608], opposite:['New England Patriots',8,'ProphetX',-110,4900], limit:30000,
+      depth:[['ProphetX',107,5900],['Novig',105,3300],['BettorEdge',103,1900],['Sporttrade',101,850],['Novig',100,350]],
+      books:[['DraftKings',-105,100],['bet365',-108,-102],['FanDuel',-110,-105],['BetMGM',-112,-108],['Caesars',-115,-110],['Fanatics',-118,-112]]
     }
   ];
   return markets.flatMap(item => [
-    quote(item.event,item.market,item.type,item.exchange[1],item.exchange[0],item.exchange[2],item.exchange[3],item.exchange[4]),
+    quote(item.event,item.market,item.type,item.exchange[1],item.exchange[0],item.exchange[2],item.exchange[3],item.exchange[4],{ limit:item.limit }),
     quote(item.event,item.market,item.type,item.opposite[1],item.opposite[0],item.opposite[2],item.opposite[3],item.opposite[4]),
+    ...item.depth.map(([book,odds,liquidity]) => quote(item.event,item.market,item.type,item.exchange[1],item.exchange[0],book,odds,liquidity,{ depthOnly:true })),
     ...item.books.flatMap(([book,oppositeOdds,exchangeOdds]) => [
       quote(item.event,item.market,item.type,item.opposite[1],item.opposite[0],book,oppositeOdds),
       quote(item.event,item.market,item.type,item.exchange[1],item.exchange[0],book,exchangeOdds)
