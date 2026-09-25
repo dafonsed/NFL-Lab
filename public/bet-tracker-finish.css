@@ -259,3 +259,172 @@ body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-action
   body.bets-app.site-layout.ui-theme.reference-design :is(.bet-form-grid,.leg-fields) :is(input,select,textarea) {font-size:16px}
   body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-actions {padding:12px 18px}
 }
+
+/* Final tracker composition: one palette and a clearer hierarchy. */
+body.bets-app.site-layout.ui-theme.reference-design {
+  --tracker-panel:#171c1a;
+  --tracker-raised:#242b28;
+  --tracker-line:#36413b;
+  --tracker-text:#f4f6f4;
+  --tracker-muted:#a8b4ac;
+  background:#0d1210;
+}
+body.bets-app.site-layout.ui-theme.reference-design [data-ui-control] {
+  --button-fill:#252d29;
+  --button-border:#405047;
+  --button-ink:#eef4ee;
+  --button-radius:10px;
+}
+body.bets-app.site-layout.ui-theme.reference-design [data-ui-control=primary] {
+  --button-fill:#4bd9aa;
+  --button-border:#4bd9aa;
+  --button-ink:#0b2419;
+}
+body.bets-app.site-layout.ui-theme.reference-design :is(.tracker-button,.tracker-icon-button,.button):not(.primary) {
+  background:#252d29;
+  border-color:#405047;
+  color:#eef4ee;
+}
+body.bets-app.site-layout.ui-theme.reference-design :is(.tracker-button,.tracker-icon-button,.button):not(.primary):hover:not(:disabled) {
+  background:#303b33;
+  border-color:#6b8575;
+}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-page-heading {margin-bottom:32px}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-page-heading h1 {font-size:clamp(35px,3.1vw,46px);letter-spacing:-.055em}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-period h2 {font-size:clamp(24px,2vw,29px)}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-metrics {margin-bottom:18px;border-color:#354038;background:#1b211e}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-metrics article {min-height:125px;padding:19px 28px;border-color:#354038}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-metrics span {color:#b7c2b9;font-size:13px}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-metrics strong {margin:12px 0 7px;font-size:clamp(34px,2.8vw,42px)}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-metrics small {color:#91a196;font-size:12px}
+body.bets-app.site-layout.ui-theme.reference-design :is(.profit-calendar,.tracker-day-detail,.tracker-month-detail,.tracker-breakdown) {background:#171d1a;border-color:#354038}
+body.bets-app.site-layout.ui-theme.reference-design .profit-day.empty {background:#202723;border-color:#2c3730;color:#a9b6a9}
+body.bets-app.site-layout.ui-theme.reference-design .profit-day.positive {background:#193b28;border-color:#3e865c}
+body.bets-app.site-layout.ui-theme.reference-design .profit-day.negative {background:#402522;border-color:#865249}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-day-list {max-height:none}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-day-detail:has(.tracker-day-empty) .tracker-day-list {min-height:350px}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-day-empty {background:#1c2620;border-color:#3a5342}
+body.bets-app.site-layout.ui-theme.reference-design .profit-chart-empty>div {border:0;background:transparent;padding:0}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-chart-ranges {border-color:#39463e;background:#202823}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-chart-ranges button[aria-pressed=true] {background:#385545;color:#c7f7d5}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-breakdown-empty {max-width:28ch}
+
+/* Activity: controls live together, and empty accounts have a clear next step. */
+body.bets-app.site-layout.ui-theme.reference-design .tracker-ledger-section {margin-top:34px;padding-top:30px;border-top:1px solid #344038}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-ledger-heading {align-items:center;margin-bottom:18px}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-ledger-heading h2 {font-size:29px;line-height:1.1;letter-spacing:-.045em}
+body.bets-app.site-layout.ui-theme.reference-design #bet-count {display:block;margin-top:7px;color:#9eafa2;font-size:13px}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-ledger-actions {display:flex;align-items:center;gap:9px}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-ledger-heading>.tracker-ledger-actions {margin-left:auto;margin-right:0}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-ledger-actions .tracker-button {min-height:40px;font-size:12px}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-ledger-actions .ui-icon {width:16px;height:16px}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-ledger-controls {padding:0 19px 18px;margin-bottom:13px;border:1px solid #354038;border-radius:14px;background:#191f1b}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-ledger-controls .picks-tabs {overflow:visible}
+body.bets-app.site-layout.ui-theme.reference-design .picks-tabs {display:flex;align-items:stretch;gap:25px;width:100%;margin:0 0 17px;padding:0;border:0;border-bottom:1px solid #354038;border-radius:0;background:transparent}
+body.bets-app.site-layout.ui-theme.reference-design .picks-tabs button {position:relative;display:inline-flex;gap:8px;min-height:49px;padding:11px 2px;border:0;border-radius:0;background:transparent;color:#aab7aa;font-size:13px;font-weight:600}
+body.bets-app.site-layout.ui-theme.reference-design .picks-tabs button[aria-pressed=true] {background:transparent;color:#ecf6ed}
+body.bets-app.site-layout.ui-theme.reference-design .picks-tabs button[aria-pressed=true]:after {content:'';position:absolute;right:0;bottom:-1px;left:0;height:2px;border-radius:2px;background:#65dfaa}
+body.bets-app.site-layout.ui-theme.reference-design .picks-tabs button span {display:grid;place-items:center;min-width:20px;padding:2px 5px;border-radius:5px;background:#2b372f;color:#c7d5c7;font-size:10px}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-filters {display:grid;grid-template-columns:minmax(210px,1.8fr) repeat(4,minmax(110px,.8fr)) auto;gap:9px;margin:0;padding:0;border:0;background:transparent}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-filters .searchbox {max-width:none;min-width:0;width:100%;min-height:43px;padding:0 13px;border:1px solid #3d4a40;border-radius:9px;background:#242c26}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-filters .searchbox>span {display:grid;place-items:center;color:#a9b8ac}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-filters .searchbox svg {width:17px;height:17px}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-filters .searchbox input {min-height:40px;margin:0;padding:0;border:0!important;background:transparent!important;color:#eef4ec;font-size:13px;box-shadow:none}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-filters select {width:100%;min-height:43px;padding:9px 32px 9px 12px;border:1px solid #3d4a40!important;border-radius:9px;background:#242c26!important;color:#e1ece1;font-size:13px;box-shadow:none}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-filters #clear-filters {min-height:43px;padding-inline:12px;border-color:transparent;background:transparent;color:#a9d8b7;font-size:12px}
+body.bets-app.site-layout.ui-theme.reference-design .tracker-filters #clear-filters:hover {background:#2b3b2e}
+body.bets-app.site-layout.ui-theme.reference-design .tracking-bar {padding:0 4px 11px}
+body.bets-app.site-layout.ui-theme.reference-design .tracking-bar p {color:#91a196;font-size:11px}
+body.bets-app.site-layout.ui-theme.reference-design .bet-ticket {border-color:#354038;background:#1b221e}
+body.bets-app.site-layout.ui-theme.reference-design .bet-row {padding:19px 21px}
+body.bets-app.site-layout.ui-theme.reference-design .bet-selection {font-size:15px}
+body.bets-app.site-layout.ui-theme.reference-design .bet-number strong {font-size:14px}
+body.bets-app.site-layout.ui-theme.reference-design .bet-empty {display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:19px;min-height:150px;padding:28px 31px;border:1px solid #354438;border-radius:14px;background:#1b241e;text-align:left}
+body.bets-app.site-layout.ui-theme.reference-design .bet-empty-icon {display:grid;place-items:center;width:48px;height:48px;margin:0;border-radius:12px;background:#294536;color:#8de4a9}
+body.bets-app.site-layout.ui-theme.reference-design .bet-empty-icon svg {width:23px;height:23px}
+body.bets-app.site-layout.ui-theme.reference-design .bet-empty-copy h3 {margin:0 0 6px;color:#f0f5ed;font-size:19px;letter-spacing:-.02em}
+body.bets-app.site-layout.ui-theme.reference-design .bet-empty-copy {display:block}
+body.bets-app.site-layout.ui-theme.reference-design .bet-empty-copy p {max-width:52ch;margin:0;color:#a9b8a9;font-size:13px;line-height:1.55}
+body.bets-app.site-layout.ui-theme.reference-design .bet-empty-actions {display:flex;align-items:center;justify-content:flex-end;gap:8px;margin:0}
+body.bets-app.site-layout.ui-theme.reference-design .bet-empty-actions button {min-height:42px}
+body.bets-app.site-layout.ui-theme.reference-design.tracker-empty :is(.tracker-ledger-controls,.tracker-ledger-actions,.tracking-bar) {display:none!important}
+body.bets-app.site-layout.ui-theme.reference-design.tracker-empty .tracker-ledger-heading {margin-bottom:17px}
+
+/* The add-bet sheet prioritizes ticket entry; connected selections are optional. */
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog {width:min(800px,calc(100vw - 28px));max-height:min(880px,calc(var(--bet-viewport,100dvh) - 28px));border:1px solid #455147;border-radius:18px;background:#141a16;box-shadow:0 30px 100px #000b}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-dialog-header {padding:22px 28px;border-bottom:1px solid #344038;background:#1b231d}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-dialog-header h2 {margin:0;color:#f6f8f4;font-size:27px;line-height:1.1;letter-spacing:-.045em}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-dialog-header p {margin:6px 0 0;color:#a9b9aa;font-size:13px;line-height:1.4}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .sheet-close {width:39px;min-width:39px;height:39px;min-height:39px;border:1px solid #455147;border-radius:9px;background:#28312a;color:#d9e4d8;font-size:24px}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-body {padding:23px 28px 27px;background:#141a16}
+body.bets-app.site-layout.ui-theme.reference-design .bet-form-section-heading {display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 17px}
+body.bets-app.site-layout.ui-theme.reference-design .bet-form-section-heading .form-section-title {margin:0;color:#eef3eb;font-size:16px;font-weight:680}
+body.bets-app.site-layout.ui-theme.reference-design .bet-form-section-heading>span {color:#839987;font-size:11px}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px 18px}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-grid>label,
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .odds-combo label {display:block;min-width:0;color:#cbd8ca;font-size:13px;font-weight:620;line-height:1.25}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-grid .full-field {grid-column:1/-1}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-grid .optional {display:inline;margin-left:3px;color:#8da18e;font-size:11px;font-weight:450}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-grid :is(input,select,textarea) {display:block;width:100%;min-width:0;min-height:46px;margin:8px 0 0;padding:11px 13px;border:1px solid #435046!important;border-radius:9px;background:#202822!important;color:#f0f5ee;font-size:14px;line-height:1.25;box-shadow:none}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-grid :is(input,select,textarea)::placeholder {color:#819287}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-grid :is(input,select,textarea):focus {border-color:#68d9a2!important;outline:2px solid #68d9a244;outline-offset:1px}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-grid input[type=date] {min-height:46px;max-width:none;appearance:auto;color-scheme:dark}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-grid .ui-calendar {display:block;width:100%}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-grid label:has(input[type=date]) .calendar-trigger {display:flex;width:100%;min-height:46px;margin-top:8px;justify-content:flex-start;border:1px solid #435046;border-radius:9px;background:#202822;color:#f0f5ee}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-grid .calendar-trigger .ui-icon:last-child {margin-left:auto}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-grid label:has(input[type=date]) .calendar-trigger :is(span,strong) {font-size:13px}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-grid small {display:block;margin-top:5px;color:#91a395;font-size:11px;line-height:1.4;font-weight:450}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .odds-combo {display:grid;grid-template-columns:minmax(0,1fr) 118px;align-items:start;gap:10px;min-width:0}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .odds-combo>#odds-help {grid-column:1/-1;margin-top:-6px}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .notes-field textarea {min-height:68px;resize:vertical}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .ticket-selections {display:block;margin:21px 0 0;padding:0;border:1px solid #3c4d3f;border-radius:11px;background:#1b241d}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .ticket-selections>summary {display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:70px;padding:14px 18px;list-style:none;cursor:pointer}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .ticket-selections>summary::-webkit-details-marker {display:none}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .ticket-selections>summary strong {display:block;color:#e9f2e8;font-size:13px;font-weight:680}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .ticket-selections>summary small {display:block;margin-top:5px;color:#9aac9b;font-size:11px}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .ticket-selections-chevron {display:grid;place-items:center;width:28px;height:28px;border-radius:7px;background:#2d3c30;color:#b7d7bc;font-size:20px;transition:transform .15s ease}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .ticket-selections[open] .ticket-selections-chevron {transform:rotate(180deg)}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .ticket-selections-body {padding:17px 18px 20px;border-top:1px solid #39483b}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .ticket-selections .results-heading {display:flex;align-items:center;justify-content:space-between;gap:12px}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .ticket-selections .results-heading p {margin:0;color:#a7b9a8;font-size:12px;line-height:1.5}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .ticket-selections .results-heading button {flex-shrink:0}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .return-preview {margin:16px 0 0;padding:13px 15px;border:1px solid #3f6049;border-radius:9px;background:#1d3022;color:#b9d7be;font-size:13px;line-height:1.45}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .return-preview strong {color:#80e5a4}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-actions {padding:15px 28px;border-top:1px solid #344038;background:#1b231d}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-actions .button {min-width:103px;min-height:43px}
+body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-actions .primary {background:#4bd9aa;border-color:#4bd9aa;color:#0b2419}
+
+@media(max-width:1150px) {
+  body.bets-app.site-layout.ui-theme.reference-design .tracker-filters {grid-template-columns:repeat(4,minmax(0,1fr))}
+  body.bets-app.site-layout.ui-theme.reference-design .tracker-filters .searchbox {grid-column:1/3}
+  body.bets-app.site-layout.ui-theme.reference-design .tracker-filters #clear-filters {grid-column:4}
+}
+@media(max-width:700px) {
+  body.bets-app.site-layout.ui-theme.reference-design .tracker-metrics article {min-height:105px;padding:16px}
+  body.bets-app.site-layout.ui-theme.reference-design .tracker-metrics strong {font-size:31px}
+  body.bets-app.site-layout.ui-theme.reference-design .tracker-day-detail:has(.tracker-day-empty) .tracker-day-list {min-height:210px}
+  body.bets-app.site-layout.ui-theme.reference-design .tracker-ledger-heading {align-items:flex-start}
+  body.bets-app.site-layout.ui-theme.reference-design .tracker-ledger-actions {gap:6px}
+  body.bets-app.site-layout.ui-theme.reference-design .tracker-ledger-actions .tracker-button {min-width:38px;min-height:38px;padding:8px}
+  body.bets-app.site-layout.ui-theme.reference-design .tracker-ledger-controls {padding:0 12px 14px}
+  body.bets-app.site-layout.ui-theme.reference-design .picks-tabs {gap:17px;margin-bottom:14px}
+  body.bets-app.site-layout.ui-theme.reference-design .picks-tabs button {font-size:12px;min-height:45px}
+  body.bets-app.site-layout.ui-theme.reference-design .tracker-filters {grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  body.bets-app.site-layout.ui-theme.reference-design .tracker-filters .searchbox {grid-column:1/-1}
+  body.bets-app.site-layout.ui-theme.reference-design .tracker-filters #clear-filters {grid-column:1/-1;justify-self:start}
+  body.bets-app.site-layout.ui-theme.reference-design .bet-empty {grid-template-columns:42px 1fr;gap:13px;padding:22px 18px}
+  body.bets-app.site-layout.ui-theme.reference-design .bet-empty-icon {width:42px;height:42px}
+  body.bets-app.site-layout.ui-theme.reference-design .bet-empty-actions {grid-column:1/-1;justify-content:flex-start;flex-wrap:wrap;margin-top:7px}
+  body.bets-app.site-layout.ui-theme.reference-design #bet-dialog {width:calc(100vw - 14px);max-height:calc(var(--bet-viewport,100dvh) - 14px);border-radius:13px}
+  body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-dialog-header {padding:17px 18px}
+  body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-dialog-header h2 {font-size:23px}
+  body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-body {padding:19px 18px 21px}
+  body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-grid {grid-template-columns:1fr;gap:16px}
+  body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .odds-combo {grid-template-columns:minmax(0,1fr) 118px}
+  body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-grid :is(input,select,textarea) {font-size:16px}
+  body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-actions {padding:12px 18px}
+  body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .bet-form-actions .button {min-width:0}
+}
+@media(prefers-reduced-motion:reduce) {
+  body.bets-app.site-layout.ui-theme.reference-design #bet-dialog .ticket-selections-chevron {transition:none}
+}

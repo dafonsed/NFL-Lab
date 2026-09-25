@@ -70,6 +70,9 @@ function render() {
     return;
   }
   const total = summarizeBets(bets);
+  const hasConnectedLegs = bets.some(bet => bet.legs?.some(leg => leg.mode === 'auto'));
+  $('#refresh-lines').hidden = !hasConnectedLegs;
+  $('.tracking-bar').hidden = !hasConnectedLegs;
   $('#alltime-bet-summary').innerHTML=`<span>Net profit <strong class="${tone(total.profit)}">${signedMoney(total.profit)}</strong></span><span>ROI <strong>${total.roi===null?'—':total.roi.toFixed(1)+'%'}</strong></span><span>Record <strong>${total.won} wins · ${total.lost} losses</strong></span><span>Open stake <strong>${money(total.openStake)}</strong></span>`;
   const calendarFocus=document.activeElement?.getAttribute('data-calendar-day');
   dashboard.render(bets);
@@ -87,15 +90,16 @@ function render() {
   const expanded=new Set([...document.querySelectorAll('.bet-ticket details[open]')].map(el=>el.closest('[data-ticket-id]').dataset.ticketId+':'+el.className));
   const focusedEdit=document.activeElement?.dataset.edit;
   const visible = filteredBets();
-  const hasFilter = !!($('#bet-search').value || $('#sport-filter').value || $('#status-filter').value || $('#book-filter').value || dashboard.selectedDay || $('#ticket-range').value!=='all');
+  const hasFilter = !!($('#bet-search').value || $('#sport-filter').value || $('#status-filter').value || $('#book-filter').value || dashboard.selectedDay);
   $('#clear-filters').hidden = !hasFilter;
-  $('#bet-count').textContent = `${visible.length} of ${bets.length} ${bets.length === 1 ? 'bet' : 'bets'} · Newest first`;
+  $('#bet-count').textContent = bets.length ? `${visible.length} ${visible.length === 1 ? 'ticket' : 'tickets'} shown · Newest first` : 'Your tickets will appear here';
   $('#export-bets').disabled = !visible.length;
-  $('#export-bets').innerHTML = icon('download')+(hasFilter ? ' Export filtered CSV' : ' Export CSV');
+  $('#export-bets').innerHTML = icon('download')+' Export CSV';
+  $('#export-bets').setAttribute('aria-label', 'Export visible tickets as CSV');
   if (!visible.length) {
     $('#bet-list').innerHTML = bets.length
-      ? '<div class="bet-empty"><h2>No tickets in this view</h2><p>Choose another month, change your filters, or view your full record.</p><button class="tracker-button" data-clear>Show all tickets</button></div>'
-      : `<div class="bet-empty"><span class="bet-empty-icon" aria-hidden="true">${icon('picks')}</span><h2>No saved tickets yet</h2><p>Add a ticket or import a sportsbook screenshot.</p><div><button class="tracker-button primary" data-add>${icon('plus')} Add a bet</button><button class="tracker-button" data-import>${icon('paper')} Import screenshot</button></div></div>`;
+      ? `<div class="bet-empty"><span class="bet-empty-icon" aria-hidden="true">${icon('search')}</span><div class="bet-empty-copy"><h3>No tickets in this view</h3><p>Try another month or clear your filters to see more tickets.</p></div><div class="bet-empty-actions"><button class="tracker-button" data-clear>Show all tickets</button></div></div>`
+      : `<div class="bet-empty"><span class="bet-empty-icon" aria-hidden="true">${icon('picks')}</span><div class="bet-empty-copy"><h3>Start with your first ticket</h3><p>Log a bet to see its result in your calendar, profit chart, and activity.</p></div><div class="bet-empty-actions"><button class="tracker-button primary" data-add>${icon('plus')} Add a bet</button><button class="tracker-button" data-import>${icon('paper')} Import screenshot</button></div></div>`;
     return;
   }
   $('#bet-list').innerHTML = `<div class="bet-ledger">${visible.map(bet => {
@@ -109,11 +113,13 @@ function render() {
   if(focusedEdit)[...document.querySelectorAll('[data-edit]')].find(el=>el.dataset.edit===focusedEdit)?.focus({preventScroll:true});
 }
 
-function clearFilters() {
+function clearFilters(allTime = false) {
   $('#bet-search').value = '';
   $('#sport-filter').value = '';
   $('#status-filter').value = '';
-  $('#book-filter').value='';$('#ticket-range').value='all';dashboard.selectedDay='';
+  $('#book-filter').value='';
+  if (allTime) $('#ticket-range').value='all';
+  dashboard.selectedDay='';
   render();
 }
 
@@ -155,9 +161,9 @@ function openForm(id, draft) {
   form.reset();
   field('date').value = today();
   if (editing) for (const [key, value] of Object.entries(editing)) { if (field(key)) field(key).value = value ?? ''; }
-  field('settlement').value=editing?.settlement|| (editing?'manual':'auto');
+  field('settlement').value=editing?.settlement||'manual';
   editor.reset(editing?.legs||[],field('sport').value,field('date').value);
-  if(!editing&&!draft)editor.add(field('sport').value,field('date').value);
+  $('#ticket-selections').open=!!(editing?.legs?.length||draft?.legs?.length);
   $('#slip-form-review').hidden=!draft;
   if(draft){
     for(const [key,value] of Object.entries(draft.fields))if(field(key))field(key).value=value??'';
@@ -166,6 +172,7 @@ function openForm(id, draft) {
     returnFocus=$('#import-slip');
   }
   $('#bet-dialog-title').textContent = editing ? 'Edit your bet' : 'Add a bet';
+  $('#bet-dialog-subtitle').textContent = editing ? 'Update this ticket and its result.' : 'Enter the details from your sportsbook ticket.';
   $('#delete-bet').hidden = !editing;
   $('#form-error').hidden = true;
   updateForm();
@@ -283,6 +290,14 @@ form.addEventListener('change', updateForm);
 $('#add-bet').addEventListener('click', () => openForm());
 $('#import-slip').addEventListener('click',()=>slipImport.open());
 $('#add-leg').addEventListener('click',()=>{ dirty = true; editor.add(field('sport').value,field('date').value); $('#leg-editor .leg-editor:last-child input, #leg-editor .leg-editor:last-child select')?.focus(); });
+$('#ticket-settlement').addEventListener('change', () => {
+  if (field('settlement').value === 'auto') {
+    $('#ticket-selections').open = true;
+    if (!editor.rows.length) editor.add(field('sport').value, field('date').value);
+  } else if (editor.rows.length === 1 && !editor.rows[0].label && !editor.rows[0].gameId && !editor.rows[0].subjectId) {
+    editor.reset([], field('sport').value, field('date').value);
+  }
+});
 $('#close-bet').addEventListener('click', requestClose);
 $('#cancel-bet').addEventListener('click', requestClose);
 $('#delete-bet').addEventListener('click', () => {
@@ -306,7 +321,7 @@ $('#confirm-delete').addEventListener('click', () => {
 $('#bet-list').addEventListener('click', event => {
   const button = event.target.closest('button');
   if (button?.hasAttribute('data-add')) openForm();
-  if (button?.hasAttribute('data-clear')) clearFilters();
+  if (button?.hasAttribute('data-clear')) clearFilters(true);
   if (button?.hasAttribute('data-import')) slipImport.open();
   if (button?.dataset.edit) openForm(button.dataset.edit);
 });
@@ -320,7 +335,7 @@ document.querySelectorAll('[data-ticket-view]').forEach(button => button.addEven
   $('#status-filter').value = button.dataset.ticketView;
   $('#status-filter').dispatchEvent(new Event('change', { bubbles: true }));
 }));
-$('#clear-filters').addEventListener('click', clearFilters);
+$('#clear-filters').addEventListener('click', () => clearFilters());
 $('#export-bets').addEventListener('click', () => {
   const visible = filteredBets();
   const url = URL.createObjectURL(new Blob(['\uFEFF', betsCsv(visible)], { type: 'text/csv;charset=utf-8' }));
