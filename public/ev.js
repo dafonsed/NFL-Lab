@@ -54,8 +54,7 @@ function normalize(data) {
 let state = load();
 let active = toolMeta[location.hash.slice(1)] ? location.hash.slice(1) : 'ev-pre';
 let search = '';
-let bookmaker = '', marketType = '', showAllBooks = false, selectedSportsbooks = null, bookMenuOpen = false, arbSettingsOpen = false, bankroll = 5000, kelly = .25, flatMultiplier = 1, evSort = 'ev', detailQuoteId = '';
-let arbMinBetSize = 0;
+let bookmaker = '', marketType = '', showAllBooks = false, selectedSportsbooks = null, bookMenuOpen = false, bankroll = 5000, kelly = .25, flatMultiplier = 1, evSort = 'ev', detailQuoteId = '';
 let evLeague = '', evDateRange = 'week', evMaxOdds = '200';
 let designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' };
 let designSort = 'recommended';
@@ -140,7 +139,7 @@ function renderNav() {
   $('#ev-tool-select').value = active;
   document.querySelectorAll('.ev-quick-tools [data-tool]').forEach(button => button.setAttribute('aria-current', button.dataset.tool === active ? 'page' : 'false'));
 }
-function setTool(key) { if (!toolMeta[key]) return; active = key; bookmaker = ''; marketType = ''; showAllBooks = false; bookMenuOpen = false; arbMinBetSize = 0; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; $('.ev-tool-details').open = false; history.replaceState(null, '', location.pathname + location.search + '#' + key); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function setTool(key) { if (!toolMeta[key]) return; active = key; bookmaker = ''; marketType = ''; showAllBooks = false; bookMenuOpen = false; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; $('.ev-tool-details').open = false; history.replaceState(null, '', location.pathname + location.search + '#' + key); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 function action(label, type, extra = '') { return button(label, `data-add="${type}" ${extra}`); }
 const filterIcons = {
   sport:'◉', platform:'▱', league:'♜', market:'▥', date:'▣', period:'◷', side:'↕', odds:'☷', liquidity:'≋', edge:'↗', stake:'$'
@@ -175,26 +174,22 @@ function renderDesignFilters() {
   const sports = [...new Set(records.map(item => item.sport).filter(Boolean))].sort();
   const marketNames = [...new Set(records.map(item => fantasy ? item.market : item.type).filter(Boolean))].sort();
   const availableBooks = [...new Set(records.map(item => fantasy ? canonicalPlatform(item.app) : item.book).filter(Boolean))].sort();
-  const sportControl = designSelect('sport','Sports', [['',arb ? 'Sports' : 'Sports'],...sports.map(value => [value,value])],sport);
+  const sportControl = designSelect('sport','Sports', [['',arb ? 'All sports' : 'Sports'],...sports.map(value => [value,value])],sport,arb ? 'Sport' : '');
   const leagueControl = designSelect('league','Leagues', [['','Leagues'],...leagues.map(value => [value,value])],designFilters.league,sharp ? 'Leagues' : '');
   const marketControl = designSelect('market',fantasy ? 'Stat' : 'Markets', [['',fantasy ? 'Stat' : 'Markets'],...marketNames.map(value => [value,value])],marketType,arb ? 'Market' : sharp ? 'Markets' : '');
-  const dateControl = designSelect('date','Date range', [['all',arb ? 'Date Range' : 'Any'],['today','Today'],['week','7 days']],designFilters.date,arb ? '' : 'Date Range');
+  const dateControl = designSelect('date','Date range', [['all','Any'],['today','Today'],['week','7 days']],designFilters.date,arb ? 'Date range' : 'Date Range');
   const bookControl = designSelect('platform',fantasy ? 'Platforms' : 'Sportsbooks', [['',fantasy ? 'Platforms' : 'Sportsbooks'],...availableBooks.map(value => [value,value])],bookmaker,sharp ? 'Sportsbooks' : '');
-  const periodControl = designSelect('period',arb ? 'Game status' : 'Period', [['all',arb ? 'Game Status' : 'All games'],['pregame','Pre-Game'],['live','Live']],designFilters.period);
+  const periodControl = designSelect('period','Period', [['all','All games'],['pregame','Pregame'],['live','Live']],designFilters.period,arb ? 'Period' : '');
   const oddsControl = designSelect('odds','Maximum odds', [['all','Any'],['200','+200'],['300','+300'],['500','+500']],designFilters.maxOdds,'Max Odds');
   const liquidityControl = `<label class="ev-design-filter"><span class="ev-design-icon" aria-hidden="true">${filterIcons.liquidity}</span><span class="ev-design-prefix">Min Liquidity</span><input data-filter="liquidity" aria-label="Minimum liquidity" type="number" min="0" step="1" value="${esc(localStorage.getItem('sportslab-ev-sharp-min') || 1000)}"></label>`;
-  const edgeControl = designSelect('edge','Minimum arbitrage edge', [['0','Arb %'],['0.005','0.5%+'],['0.01','1%+'],['0.02','2%+']],designFilters.minEdge,arb ? '' : 'Minimum edge');
-  const minBetControl = designSelect('minbet','Minimum recommended bet', [['0','Min Bet Size'],['25','$25+'],['50','$50+'],['100','$100+']],arbMinBetSize);
+  const edgeControl = designSelect('edge','Minimum edge', [['0','Any edge'],['0.005','0.5%'],['0.01','1%'],['0.02','2%']],designFilters.minEdge,'Minimum edge');
   const stakeControl = `<label class="ev-design-filter"><span class="ev-design-icon" aria-hidden="true">${designFilterIcon('stake')}</span><span class="ev-design-prefix">Max stake</span><input data-filter="stake" aria-label="Maximum stake" type="number" min="1" step="1" value="${esc(stake)}"></label>`;
   const sideControl = designSelect('side','Over or Under', [['','Over/Under'],['Over','Over'],['Under','Under']],designFilters.side);
   const controls = fantasy ? [sportControl,bookControl,leagueControl,marketControl,dateControl,sideControl]
     : odds ? [sportControl,leagueControl,marketControl,periodControl,dateControl]
-    : arb ? [sportControl,leagueControl,marketControl,edgeControl,minBetControl,dateControl,periodControl]
+    : arb ? [sportControl,marketControl,edgeControl,stakeControl,dateControl,periodControl]
     : [sportControl,leagueControl,marketControl,oddsControl,liquidityControl,dateControl];
-  const selectedBookCount = sportsbookOptions().filter(sportsbookSelected).length;
-  container.innerHTML = (arb ? `<button type="button" class="ev-arb-filter-action" data-arb-books>Sportsbooks <span>${selectedBookCount}</span></button>` : '')
-    + controls.join('')
-    + (arb ? '<button type="button" class="ev-arb-filter-action" data-arb-middles>Middles <span aria-hidden="true">↗</span></button>' : '');
+  container.innerHTML = controls.join('');
 }
 function render() {
   renderNav();
@@ -204,12 +199,6 @@ function render() {
   $('#ev-top-title').textContent = pageTitle;
   document.title = pageTitle + ' · SportsLab';
   document.body.dataset.evScreen = active;
-  const arbScreen = active === 'arb-pre' || active === 'arb-live';
-  document.body.classList.toggle('ev-arb-settings-open',arbScreen && arbSettingsOpen);
-  $('#ev-arb-settings').setAttribute('aria-expanded',String(arbScreen && arbSettingsOpen));
-  $('#ev-arb-bet-size').value = stake;
-  $('#ev-arb-search').value = search;
-  document.querySelectorAll('[data-arb-mode]').forEach(button => button.setAttribute('aria-pressed',String(button.dataset.arbMode === active)));
   document.querySelectorAll('[data-ev-nav]').forEach(link => {
     const target = new URL(link.href).hash.slice(1);
     const selected = target === active || target === 'ev-pre' && active === 'ev-live' || target === 'arb-pre' && active === 'arb-live';
@@ -294,8 +283,7 @@ function renderBooks() {
   if (relevant && !fantasyMode) {
     const options = [...new Set([...books, ...sportsbookOptions()])];
     const selected = options.filter(sportsbookSelected);
-    $('.ev-arb-book-label').textContent = `Sportsbooks · ${selected.length} selected`;
-    const visibleCount = active.startsWith('arb-') ? (window.innerWidth < 520 ? 1 : window.innerWidth < 850 ? 3 : 5) : window.innerWidth < 360 ? 1 : window.innerWidth < 600 ? 2 : window.innerWidth < 950 ? 6 : window.innerWidth < 1250 ? 8 : window.innerWidth < 1500 ? 10 : 12;
+    const visibleCount = window.innerWidth < 360 ? 1 : window.innerWidth < 600 ? 2 : window.innerWidth < 950 ? 6 : window.innerWidth < 1250 ? 8 : window.innerWidth < 1500 ? 10 : 12;
     const shown = selected.slice(0, visibleCount);
     $('#ev-books').innerHTML = shown.length ? shown.map(book => `<button type="button" class="ev-selected-book" data-book-remove="${esc(book)}" aria-label="Remove ${esc(book)} from selected sportsbooks" title="Remove ${esc(book)}"><span class="ev-book-symbol">${brandMarks[book] ? `<img src="${brandMarks[book]}" alt="" class="ev-book-logo">` : esc(book.slice(0,2))}</span><span class="ev-book-remove" aria-hidden="true">×</span></button>`).join('') : '<span class="ev-no-books">No books selected</span>';
     if (selected.length > shown.length) $('#ev-books').insertAdjacentHTML('beforeend', `<button type="button" class="ev-book-overflow" data-open-book-menu aria-label="Show ${selected.length - shown.length} more selected sportsbooks">+${selected.length - shown.length}</button>`);
@@ -457,14 +445,7 @@ function renderArb(live) {
   const opportunities = arbitrageRows(quotes().filter(q => sportsbookSelected(q.book) && !q.exchange), live)
     .flatMap(({ rows, best }) => rows.filter(q => q.side === best[0].side && fresh(q)).flatMap(a =>
       rows.filter(b => b.side === best[1].side && b.book !== a.book && fresh(b)).map(b => [a,b])))
-    .filter(([a,b]) => {
-      if (marketType && a.type !== marketType) return false;
-      if (arbitrage([a,b],100)?.margin < Number(designFilters.minEdge)) return false;
-      const hedgePerDollar = decimal(a.odds) / decimal(b.odds);
-      const anchorStake = Math.min(Number(stake) * flatMultiplier, bankroll / (1 + hedgePerDollar));
-      const split = arbitrage([a,b], anchorStake * (1 + hedgePerDollar));
-      return split && Math.min(...split.stakes) + 0.01 >= arbMinBetSize;
-    })
+    .filter(([a,b]) => (!marketType || a.type === marketType) && arbitrage([a,b], 100)?.margin >= Number(designFilters.minEdge))
     .sort((left,right) => arbitrage(right, 100).margin - arbitrage(left, 100).margin);
   const wholeDollars = value => '$' + Math.round(value).toLocaleString('en-US');
   const cards = opportunities.map(([a,b]) => {
@@ -814,13 +795,6 @@ document.addEventListener('pointerdown', event => { if (bookMenuOpen && !$('.ev-
 document.addEventListener('keydown', event => { if (event.key === 'Escape' && bookMenuOpen) { bookMenuOpen = false; renderBooks(); $('#ev-books-more').focus(); } });
 window.addEventListener('resize', () => { if ($('.ev-bookbar').classList.contains('ev-bookbar-select')) renderBooks(); });
 $('#ev-find').addEventListener('click', () => $('#ev-view').scrollIntoView({ behavior:'smooth', block:'start' }));
-$('.ev-stake-panel').id = 'ev-arb-settings-panel';
-$('#ev-arb-settings').addEventListener('click', () => { arbSettingsOpen = !arbSettingsOpen; render(); });
-$('#ev-arb-bet-size').addEventListener('change', event => { stake = Math.max(1,Number(event.target.value) || 100); render(); });
-$('#ev-arb-search').addEventListener('input', event => { search = event.target.value.toLowerCase().trim(); render(); });
-$('#ev-arb-search').addEventListener('keydown', event => { if (event.key === 'Escape') { event.target.value = ''; search = ''; render(); } });
-$('.ev-arb-mode').addEventListener('click', event => { const target = event.target.closest('[data-arb-mode]'); if (!target || target.dataset.arbMode === active) return; active = target.dataset.arbMode; designFilters.period = 'all'; bookMenuOpen = false; history.replaceState(null, '', location.pathname + location.search + '#' + active); render(); });
-document.addEventListener('keydown', event => { if (event.key === '/' && active.startsWith('arb-') && !['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)) { event.preventDefault(); $('#ev-arb-search').focus(); } });
 $('#ev-timing-toggle').addEventListener('click', () => {
   if (active !== 'ev-pre' && active !== 'ev-live') return;
   active = active === 'ev-live' ? 'ev-pre' : 'ev-live';
@@ -832,11 +806,7 @@ $('#ev-timing-toggle').addEventListener('click', () => {
 document.querySelector('[data-ev-focus-search]')?.addEventListener('click', () => { document.body.classList.toggle('ev-search-open'); $('#ev-search').focus(); });
 $('#ev-search').addEventListener('keydown', event => { if (event.key === 'Escape') { document.body.classList.remove('ev-search-open'); document.querySelector('[data-ev-focus-search]')?.focus(); } });
 $('#ev-odds-tabs').addEventListener('click', event => { const tab = event.target.closest('[data-odds-tab]'); if (tab) { marketType = tab.dataset.oddsTab; render(); } });
-$('#ev-reset-filters').addEventListener('click', () => { bookmaker = ''; selectedSportsbooks = null; bookMenuOpen = false; marketType = ''; search = ''; arbMinBetSize = 0; evLeague = ''; evDateRange = 'week'; evMaxOdds = '200'; evSort = 'ev'; designSort = 'recommended'; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; if (sport !== '') { sport = ''; history.replaceState(null, '', location.pathname + '?sport=all' + location.hash); } render(); });
-$('.ev-filter-panel').addEventListener('click', event => {
-  if (event.target.closest('[data-arb-books]')) { bookMenuOpen = true; renderBooks(); $('#ev-books-more').focus(); }
-  if (event.target.closest('[data-arb-middles]')) setTool('middles');
-});
+$('#ev-reset-filters').addEventListener('click', () => { bookmaker = ''; selectedSportsbooks = null; bookMenuOpen = false; marketType = ''; search = ''; evLeague = ''; evDateRange = 'week'; evMaxOdds = '200'; evSort = 'ev'; designSort = 'recommended'; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; if (sport !== '') { sport = ''; history.replaceState(null, '', location.pathname + '?sport=all' + location.hash); } render(); });
 $('#ev-market-type').addEventListener('change', event => { marketType = event.target.value; render(); });
 $('#ev-reference-market').addEventListener('change', event => { marketType = event.target.value; render(); });
 $('#ev-reference-league').addEventListener('change', event => { evLeague = event.target.value; render(); });
@@ -853,17 +823,10 @@ $('.ev-filter-panel').addEventListener('change', event => {
     case 'league': designFilters.league = value; break;
     case 'market': marketType = value; break;
     case 'date': designFilters.date = value; break;
-    case 'period':
-      designFilters.period = value;
-      if (active.startsWith('arb-') && value !== 'all') {
-        active = value === 'live' ? 'arb-live' : 'arb-pre';
-        history.replaceState(null, '', location.pathname + location.search + '#' + active);
-      }
-      break;
+    case 'period': designFilters.period = value; break;
     case 'side': designFilters.side = value; break;
     case 'odds': designFilters.maxOdds = value; break;
     case 'edge': designFilters.minEdge = value; break;
-    case 'minbet': arbMinBetSize = Math.max(0,Number(value) || 0); break;
     case 'liquidity': localStorage.setItem('sportslab-ev-sharp-min', String(Math.max(0, Number(value) || 0))); break;
     case 'stake': stake = Math.max(1, Number(value) || 1); break;
   }
@@ -977,7 +940,7 @@ $('#ev-import-apply').addEventListener('click', async () => {
     state = normalize(data); evaluateAlerts(); persist(); $('#ev-import-dialog').close(); render();
   } catch (error) { $('#ev-import-error').textContent = error.message; }
 });
-window.addEventListener('hashchange', () => { const key = location.hash.slice(1); if (toolMeta[key]) { active = key; bookmaker = ''; marketType = ''; showAllBooks = false; bookMenuOpen = false; arbMinBetSize = 0; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; render(); } });
+window.addEventListener('hashchange', () => { const key = location.hash.slice(1); if (toolMeta[key]) { active = key; bookmaker = ''; marketType = ''; showAllBooks = false; bookMenuOpen = false; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; render(); } });
 setInterval(() => { if (['ev-live','arb-live','odds','sharp','line-alerts'].includes(active) && !bookMenuOpen && !document.querySelector('dialog[open]')) render(); }, 15_000);
 $('.ev-header-actions').append($('.ev-sidebar'));
 $('#main').append($('#ev-notice'));
