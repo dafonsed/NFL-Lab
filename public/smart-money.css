@@ -769,3 +769,171 @@ body.ev-page .sharp-workspace :is(button,input,select):focus-visible {
 @media (prefers-reduced-motion: reduce) {
   body.ev-page .sharp-card { transition: none; }
 }
+
+/* Smart Money uses one control scale. The shared dashboard also enhances
+   selects into .ui-choice buttons, so style the rendered controls together. */
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-workspace {
+  --sharp-control-size: 48px;
+}
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-controls {
+  gap: 10px;
+  margin-bottom: 24px;
+}
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] :is(.sharp-toolbar,.sharp-filter-tray) {
+  width: min(960px,100%);
+  margin-inline: auto;
+  justify-content: stretch;
+  gap: 10px;
+}
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-search {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  height: var(--sharp-control-size);
+  padding-inline: 15px;
+  border-radius: 12px;
+  background: #192226;
+  box-sizing: border-box;
+}
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-search input {
+  min-height: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 14px;
+}
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-toolbar > button,
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-filter-tray > button {
+  flex: none;
+  height: var(--sharp-control-size) !important;
+  min-height: var(--sharp-control-size) !important;
+  border: 1px solid #3a484b !important;
+  border-radius: 12px !important;
+  background: #1a2427 !important;
+  color: #dce9e5 !important;
+  font-size: 13px !important;
+  font-weight: 650;
+  box-sizing: border-box;
+}
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-toolbar > button {
+  padding-inline: 17px;
+}
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-toolbar [data-sharp-refresh] {
+  width: var(--sharp-control-size);
+  min-width: var(--sharp-control-size);
+  padding: 0 !important;
+}
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-toolbar [data-sharp-filters][aria-expanded="true"] {
+  border-color: #dcebe6 !important;
+  background: #dcebe6 !important;
+  color: #172722 !important;
+}
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-filter-tray {
+  flex-wrap: nowrap;
+  min-height: var(--sharp-control-size);
+}
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-filter-tray > label {
+  flex: 1 1 0;
+  min-width: 0;
+  height: var(--sharp-control-size);
+  padding: 0 14px;
+  border: 1px solid #39484b;
+  border-radius: 12px;
+  background: #192226;
+  color: #aabcb9;
+  font-size: 13px;
+  font-weight: 550;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-filter-tray > label:focus-within,
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-search:focus-within {
+  border-color: #69d5a3;
+  box-shadow: 0 0 0 2px #58dfad26;
+}
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-filter-tray .ui-choice {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  height: 100%;
+}
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-filter-tray .td-choice-trigger {
+  width: 100%;
+  height: 100% !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #eef5f1 !important;
+  font-size: 14px !important;
+  font-weight: 650;
+}
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-filter-tray .td-choice-trigger > .ui-icon:last-child {
+  color: #91aaa4;
+}
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-filter-tray #sharp-min {
+  flex: 1 1 auto;
+  width: 0;
+  height: 100%;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #eef5f1 !important;
+  font-size: 14px;
+  font-weight: 650;
+  text-align: right;
+  appearance: textfield;
+}
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-filter-tray #sharp-min::-webkit-inner-spin-button,
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-filter-tray #sharp-min::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-filter-tray [data-sharp-clear] {
+  min-width: 112px;
+  padding: 0 16px;
+  color: #aabdb7 !important;
+}
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-filter-tray [data-sharp-clear]:hover {
+  border-color: #6ac79c !important;
+  color: #baf0d1 !important;
+}
+
+/* Keep supporting data legible at the same scale as the controls. */
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-card {
+  border-radius: 12px !important;
+}
+.sharp-card-value small,.sharp-card-offering small,.sharp-card-odds small,.sharp-card-comparison small,
+.sharp-card-market small,.sharp-detail-total small,.sharp-detail-feature-price small,
+.sharp-section-heading p,.sharp-market-strip span,.sharp-book-head,
+.sharp-detail-foot,.sharp-method-note {
+  font-size: 12px;
+}
+.sharp-depth-row { min-height: 38px; }
+.sharp-depth-source > span,.sharp-depth-odds,.sharp-depth-liquidity { font-size: 12px; }
+.sharp-depth-source .ev-brand-mark,.sharp-depth-source .ev-brand-fallback { width: 23px; height: 23px; }
+.sharp-depth-track { height: 27px; }
+.sharp-book-name { font-size: 13px; }
+.sharp-book-best > span { font-size: 12px; }
+
+@media (max-width: 740px) {
+  body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-workspace { --sharp-control-size: 46px; }
+  body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-filter-tray { flex-wrap: wrap; }
+  body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-filter-tray > label { flex: 1 1 calc(50% - 10px); }
+  body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-filter-tray [data-sharp-clear] { flex: 1 1 calc(50% - 10px); }
+}
+@media (max-width: 430px) {
+  body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-toolbar > button { padding-inline: 12px; }
+  body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-filter-tray > label { padding-inline: 11px; min-width: 0; }
+  body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-filter-tray > label:last-of-type { min-width: 0; }
+  body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen="sharp"] .sharp-filter-tray .td-choice-trigger { font-size: 13px !important; }
+}
