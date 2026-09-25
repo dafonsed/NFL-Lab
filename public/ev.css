@@ -633,3 +633,6 @@ body.ev-page[data-ev-screen="fantasy"] .ev-find-button{background:#20d6a4!import
   body.ev-page.ev-detail-mode .ev-price-matrix tbody th{font-size:17px!important}
   body.ev-page.ev-detail-mode .ev-opportunity-note{font-size:13px}
 }
+
+body.ev-page[data-ev-screen="fantasy"] .ev-book-list button,
+body.ev-page[data-ev-screen="fantasy"] .ev-book-more{border-radius:30px!important;font-size:14px}
