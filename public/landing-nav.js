@@ -1,5 +1,12 @@
 const menuButton = document.querySelector('.home-menu-toggle');
 const menu = document.querySelector('#home-nav');
+const header = document.querySelector('.home-header');
+
+if (header) {
+  const updateScrollState = () => header.classList.toggle('is-scrolled', window.scrollY > 12);
+  updateScrollState();
+  window.addEventListener('scroll', updateScrollState, { passive: true });
+}
 
 if (menuButton && menu) {
   const setOpen = open => {
