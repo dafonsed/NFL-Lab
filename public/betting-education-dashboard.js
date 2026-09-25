@@ -5,7 +5,9 @@ const count = document.querySelector('[data-education-count]');
 const countLabel = document.querySelector('[data-education-count-label]');
 const emptyState = document.querySelector('[data-education-empty]');
 const clearButton = document.querySelector('[data-education-clear]');
+const indexability = document.querySelector('[data-education-indexability]');
 let activeCategory = 'all';
+let activeIndexability = 'all';
 
 if (search && cards.length) {
   const update = () => {
@@ -13,8 +15,9 @@ if (search && cards.length) {
     let visible = 0;
     for (const card of cards) {
       const categoryMatches = activeCategory === 'all' || card.dataset.category === activeCategory;
+      const indexabilityMatches = activeIndexability === 'all' || card.dataset.indexable === activeIndexability;
       const searchMatches = !query || card.dataset.search.includes(query);
-      card.hidden = !(categoryMatches && searchMatches);
+      card.hidden = !(categoryMatches && indexabilityMatches && searchMatches);
       if (!card.hidden) visible += 1;
     }
     if (count) count.textContent = String(visible);
@@ -23,9 +26,15 @@ if (search && cards.length) {
   };
 
   search.addEventListener('input', update);
+  indexability?.addEventListener('change', () => {
+    activeIndexability = indexability.value || 'all';
+    update();
+  });
   clearButton?.addEventListener('click', () => {
     search.value = '';
     activeCategory = 'all';
+    activeIndexability = 'all';
+    if (indexability) indexability.value = 'all';
     for (const filter of filters) {
       const selected = filter.dataset.educationCategory === 'all';
       filter.classList.toggle('is-active', selected);
