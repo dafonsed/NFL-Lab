@@ -46,6 +46,7 @@ let state = load();
 let active = toolMeta[location.hash.slice(1)] ? location.hash.slice(1) : 'ev-pre';
 let search = '';
 let bookmaker = '', marketType = '', showAllBooks = false, bankroll = 5000, kelly = .25, flatMultiplier = 1, evSort = 'ev', detailQuoteId = '';
+let evLeague = '', evDateRange = 'today', evMaxOdds = '200';
 let expandedOddsKey = '', expandedArbKey = '', expandedSharpKey = '';
 const sportsbookNames = ['bet365','DraftKings','FanDuel','BetMGM','Caesars','BetRivers','Fanatics','Hard Rock Bet','theScore Bet','Bally Bet','Desert Diamond Sports'];
 const fantasyNames = ['PrizePicks','Underdog Fantasy','Sleeper Picks','ParlayPlay','Dabble','Chalkboard','DraftKings Fantasy','FanDuel Fantasy','Betr Picks','OwnersBox','Boom Fantasy','Vivid Picks'];
@@ -114,6 +115,7 @@ function render() {
   const titles = { odds:'Odds Screen', 'ev-pre':'Positive EV', 'ev-live':'Live EV', fantasy:'DFS Props', 'arb-pre':'Arbitrage', 'arb-live':'Live Arbitrage', sharp:'Smart Money', tracker:'Bet Tracker' };
   const pageTitle = titles[active] || toolMeta[active][2];
   $('#ev-page-title').textContent = pageTitle;
+  $('#ev-top-title').textContent = pageTitle;
   document.title = pageTitle + ' · SportsLab';
   document.body.dataset.evScreen = active;
   document.querySelectorAll('[data-ev-nav]').forEach(link => {
@@ -129,13 +131,24 @@ function render() {
   $('#ev-market-type').innerHTML = options.map(([value,label]) => `<option value="${esc(value)}">${esc(label)}</option>`).join('');
   if (!options.some(([value]) => value === marketType)) marketType = '';
   $('#ev-market-type').value = marketType;
+  $('#ev-reference-sport').value = sport;
+  $('#ev-reference-market').innerHTML = options.map(([value,label]) => `<option value="${esc(value)}">${esc(label)}</option>`).join('');
+  $('#ev-reference-market').value = marketType;
+  const leagues = [...new Set(state.quotes.map(q => q.league || q.sport).filter(Boolean))].sort();
+  $('#ev-reference-league').innerHTML = '<option value="">All leagues</option>' + leagues.map(value => `<option value="${esc(value)}">${esc(value)}</option>`).join('');
+  if (!leagues.includes(evLeague)) evLeague = '';
+  $('#ev-reference-league').value = evLeague;
+  $('#ev-reference-date').value = evDateRange;
+  $('#ev-reference-max-odds').value = evMaxOdds;
+  $('#ev-sort-mode').value = evSort;
   $('#ev-sharp-filter').hidden = active !== 'sharp';
   $('#ev-sharp-min').value = localStorage.getItem('sportslab-ev-sharp-min') || 1000;
   $('#ev-ev-bankroll').value = bankroll;
   const usesKelly = ['ev-pre','ev-live'].includes(active);
   const usesFlat = ['arb-pre','arb-live'].includes(active);
   $('#ev-kelly').value = usesKelly ? kelly : flatMultiplier.toFixed(2);
-  $('#ev-data-kind').textContent = state.example ? 'Examples included' : 'Manual inputs';
+  $('#ev-data-kind').textContent = state.example ? 'Example prices' : 'Manual prices';
+  $('#ev-top-badge').textContent = state.example ? 'Example prices' : 'Manual prices';
   $('#ev-multiplier-label').textContent = usesKelly ? 'Kelly multiplier' : 'Flat multiplier';
   $('#ev-kelly').disabled = !usesKelly && !usesFlat;
   $('#ev-kelly').min = usesKelly ? '0' : '0.05';
@@ -155,6 +168,8 @@ function render() {
   };
   $('#ev-view-actions').innerHTML = viewActions[active] || '';
   const primaryScreen = ['odds','ev-pre','ev-live','arb-pre','arb-live','sharp','fantasy'].includes(active);
+  const positiveScreen = ['ev-pre','ev-live'].includes(active);
+  (positiveScreen ? $('#ev-menu-actions') : $('.ev-header')).append($('.ev-header-actions'));
   (primaryScreen ? $('.ev-header-actions') : $('.ev-view-side')).append($('#ev-view-actions'));
   if (primaryScreen) $('.ev-header-actions').append($('.ev-sidebar'));
   const views = { odds: renderOdds, 'ev-pre': () => renderEv(false), 'ev-live': () => renderEv(true), 'arb-pre': () => renderArb(false), 'arb-live': () => renderArb(true), middles: renderMiddles, holds: renderHolds, promo: renderPromo, parlay: renderParlay, sharp: renderSharp, fantasy: renderFantasy, optimizer: renderOptimizer, slip: renderSlip, 'fantasy-alerts': renderFantasyAlerts, prediction: renderPrediction, tracker: renderTracker, trends: renderTrends, 'line-alerts': renderLineAlerts };
@@ -165,11 +180,13 @@ function renderBooks() {
   const fantasyMode = ['fantasy','optimizer','slip','fantasy-alerts'].includes(active);
   const entered = fantasyMode ? state.dfs.map(item => item.app) : state.quotes.filter(q => !sport || q.sport === sport).map(q => q.book);
   const supported = fantasyMode ? fantasyNames : sportsbookNames;
-  const books = [...new Set([...entered, ...supported])];
-  const shown = showAllBooks ? books : books.slice(0, fantasyMode ? 6 : 11);
-  $('#ev-books').innerHTML = `<button type="button" class="ev-book-all" data-book="" aria-pressed="${!bookmaker}">All</button>` + shown.map(book => `<button type="button" data-book="${esc(book)}" aria-pressed="${bookmaker === book}" title="Filter ${esc(book)}">${book === 'DraftKings' ? '<img src="/assets/sportsbooks/draftkings.svg" alt="" class="ev-book-logo">' : book === 'FanDuel' ? '<img src="/assets/sportsbooks/fanduel.png" alt="" class="ev-book-logo">' : ''}<span>${esc(book)}</span></button>`).join('');
-  $('#ev-books-more').hidden = books.length <= (fantasyMode ? 6 : 11);
-  $('#ev-books-more').textContent = showAllBooks ? 'Less' : `+${books.length - shown.length} more`;
+  const books = [...new Set([...supported, ...entered])];
+  const visibleCount = fantasyMode ? 6 : ['ev-pre','ev-live'].includes(active) ? 11 : 11;
+  const shown = showAllBooks ? books : books.slice(0, visibleCount);
+  $('#ev-books').innerHTML = `<button type="button" class="ev-book-all" data-book="" aria-pressed="${!bookmaker}">All</button>` + shown.map(book => `<button type="button" data-book="${esc(book)}" aria-pressed="${bookmaker === book}" title="Filter ${esc(book)}"><span class="ev-book-symbol">${book === 'DraftKings' ? '<img src="/assets/sportsbooks/draftkings.svg" alt="" class="ev-book-logo">' : book === 'FanDuel' ? '<img src="/assets/sportsbooks/fanduel.png" alt="" class="ev-book-logo">' : esc(book === 'bet365' ? 'bet365' : book === 'BetMGM' ? 'MGM' : book === 'Caesars' ? 'C' : book === 'BetRivers' ? 'BR' : book === 'Fanatics' ? 'F' : book === 'Hard Rock Bet' ? 'HR' : book === 'theScore Bet' ? 'theScore' : book === 'Bally Bet' ? 'B' : book === 'Desert Diamond Sports' ? 'DD' : book.slice(0,3))}</span><span class="ev-book-name">${esc(book)}</span></button>`).join('');
+  $('#ev-books-more').hidden = books.length <= visibleCount;
+  $('#ev-books-more').textContent = showAllBooks ? '−' : ['ev-pre','ev-live'].includes(active) ? `+${books.length - shown.length}` : `+${books.length - shown.length} more`;
+  $('#ev-books-more').setAttribute('aria-label', showAllBooks ? 'Show fewer bookmakers' : `Show ${books.length - shown.length} more bookmakers`);
   $('#ev-books-more').setAttribute('aria-expanded', String(showAllBooks));
   const relevant = ['ev-pre','ev-live','odds','arb-pre','arb-live','sharp','fantasy'].includes(active);
   $('.ev-bookbar').hidden = !relevant;
@@ -202,17 +219,19 @@ function renderOdds() {
 }
 
 function renderEv(live) {
-  const pool = state.quotes.filter(q => !sport || q.sport === sport);
+  const today = new Date().toDateString(), weekAgo = Date.now() - 7 * 86_400_000;
+  const pool = state.quotes.filter(q => (!sport || q.sport === sport) && (!evLeague || (q.league || q.sport) === evLeague) && (evDateRange === 'all' || evDateRange === 'today' && new Date(q.ts).toDateString() === today || evDateRange === 'week' && Date.parse(q.ts) >= weekAgo));
   const all = evRows(pool, live);
-  const rows = all.filter(({quote:q,ev}) => ev > 0 && (!bookmaker || q.book === bookmaker) && (!marketType || q.type === marketType) && (!search || [q.event,q.market,q.book,q.side,q.sport].some(value => filterText(value))));
+  const rows = all.filter(({quote:q,ev}) => ev > 0 && (evMaxOdds === 'all' || Number(q.odds) <= Number(evMaxOdds)) && (!bookmaker || q.book === bookmaker) && (!marketType || q.type === marketType) && (!search || [q.event,q.market,q.book,q.side,q.sport].some(value => filterText(value))));
   if (evSort === 'event') rows.sort((a,b) => a.quote.event.localeCompare(b.quote.event) || b.ev - a.ev);
   else if (evSort === 'odds') rows.sort((a,b) => decimal(b.quote.odds) - decimal(a.quote.odds));
   else rows.sort((a,b) => b.ev - a.ev);
   const heading = (label,key) => `<button type="button" class="ev-sort" data-sort="${key}" aria-label="Sort by ${label}" ${evSort === key ? 'aria-current="true"' : ''}>${label}${evSort === key ? ' ↓' : ''}</button>`;
-  const body = rows.map(({quote:q,fair,ev}) => `<tr><td class="ev-value">${signed(ev)}</td><td class="ev-event"><strong>${esc(q.event)}</strong><small>${esc(q.sport)} · ${q.live ? 'Live entry' : 'Pregame'} · ${age(q.ts)}</small></td><td><span>${esc(q.market)}</span><small>${esc(q.type)}${q.line !== '' && q.line != null ? ' · ' + fmtLine(q.line) : ''}</small></td><td><span class="ev-book-cell"><span class="ev-book-mark" aria-hidden="true">${esc(q.book.replace(/[^\p{L}\p{N}]/gu,'').slice(0,2).toUpperCase())}</span>${esc(q.book)}</span></td><td><strong>${esc(q.side)}${q.line !== '' && q.line != null ? ' ' + fmtLine(q.line) : ''}</strong></td><td>${oddsLabel(q.odds)}</td><td>${percent(fair)}<small>No-vig consensus</small></td><td>${money(fractionalKellyStake(bankroll,kelly,fair,q.odds))}</td><td class="ev-actions">${button('Details', `data-detail="${esc(q.id)}"`)}${button('Edit', `data-edit="quote" data-id="${esc(q.id)}"`)}${live ? '' : button('Parlay', `data-parlay="${esc(q.id)}"`)}</td></tr>`);
+  const body = rows.map(({quote:q,fair,ev}) => `<tr><td class="ev-value">${(ev * 100).toFixed(2)}%<span class="ev-value-help" title="Estimated positive expected value">?</span></td><td class="ev-event"><strong>${esc(q.event)}</strong><small>${esc(q.sport)} · ${q.live ? 'Live entry' : 'Pregame'}</small><small>Observed ${age(q.ts)}</small></td><td><span>${esc(q.market)}</span><small>${esc(q.type)}${q.line !== '' && q.line != null ? ' · ' + fmtLine(q.line) : ''}</small></td><td><span class="ev-book-cell"><span class="ev-book-mark" aria-hidden="true">${q.book === 'DraftKings' ? '<img src="/assets/sportsbooks/draftkings.svg" alt="">' : q.book === 'FanDuel' ? '<img src="/assets/sportsbooks/fanduel.png" alt="">' : esc(q.book.startsWith('Book ') ? 'B' + q.book.slice(5,6) : q.book.replace(/[^\p{L}\p{N}]/gu,'').slice(0,3))}</span>${esc(q.book)}</span></td><td><strong>${esc(q.side)}${q.line !== '' && q.line != null ? ' ' + fmtLine(q.line) : ''}</strong></td><td>${oddsLabel(q.odds)}</td><td>${percent(fair)}</td><td>${money(fractionalKellyStake(bankroll,kelly,fair,q.odds))}</td><td class="ev-actions"><button type="button" class="ev-action-primary" data-detail="${esc(q.id)}">View</button><span class="ev-action-separator" aria-hidden="true"></span><button type="button" class="ev-icon-action" data-edit="quote" data-id="${esc(q.id)}" aria-label="Edit ${esc(q.event)} price" title="Edit price"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 15 1-4 5-5 3 3-5 5-4 1Z"/></svg></button><button type="button" class="ev-icon-action" data-detail="${esc(q.id)}" aria-label="View ${esc(q.event)} comparison chart" title="View comparison chart"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19v-4m5 4V9m5 10V5m5 14v-8"/></svg></button><details class="ev-row-more"><summary aria-label="More actions for ${esc(q.event)}">⋯</summary><div><button type="button" data-detail="${esc(q.id)}">View details</button><button type="button" data-edit="quote" data-id="${esc(q.id)}">Edit price</button>${live ? '' : `<button type="button" data-parlay="${esc(q.id)}">Add to parlay</button>`}</div></details></td></tr>`);
   const emptyTitle = !pool.length ? 'No prices for this sport yet' : 'No positive EV selections match these filters';
   const emptyBody = !pool.length ? 'Add or import prices to compare. You can also load clearly labeled examples.' : 'Add complete opposing prices from at least two books, or clear a filter. No price feed is connected.';
-  return `<div class="ev-stack"><div class="ev-results-context"><div><strong>${rows.length} positive ${rows.length === 1 ? 'selection' : 'selections'}</strong><span> from ${all.length} comparable prices</span></div><span>${live ? 'Live entries expire after 90 seconds' : state.example ? 'Pregame · manual and example prices' : 'Pregame · manual prices'}</span></div>${rows.length ? '<p class="ev-swipe-hint">Scroll sideways to view odds, probability and actions →</p>' + table([heading('EV','ev'),heading('Event','event'),'Market','Bookmaker','Selection',heading('Odds','odds'),'Fair probability','Rec. bet','Actions'],body) : empty(emptyTitle,emptyBody)}<p class="ev-caption ev-method-note">Fair probability averages no-vig pairs from other complete books at the same line. EV = fair probability × decimal payout − 1. Recommended bet uses the selected fractional Kelly multiplier and is an estimate, not an instruction to wager. Confirm price, limits and freshness independently.</p></div>`;
+  const displayRows = body.length ? body : [`<tr class="ev-empty-row"><td colspan="9">${empty(emptyTitle,emptyBody)}</td></tr>`];
+  return `<div class="ev-stack ev-positive-screen"><p class="ev-swipe-hint">Scroll sideways to view odds, probability and actions →</p>${table([heading('EV','ev'),heading('Event','event'),'Market','Bookmaker','Selection',heading('Odds','odds'),'Probability <span title="No-vig consensus estimate">ⓘ</span>','Rec. Bet <span title="Fractional Kelly estimate">ⓘ</span>','Actions'],displayRows)}<div class="ev-results-context"><div><strong>${rows.length} positive ${rows.length === 1 ? 'selection' : 'selections'}</strong><span> from ${all.length} comparable prices</span></div><span>${live ? 'Live entries expire after 90 seconds' : state.example ? 'Pregame · manual and example prices' : 'Pregame · manual prices'}</span></div><p class="ev-caption ev-method-note">Fair probability averages no-vig pairs from other complete books at the same line. EV = fair probability × decimal payout − 1. Recommended bet uses the selected fractional Kelly multiplier and is an estimate, not an instruction to wager. Confirm price, limits and freshness independently.</p></div>`;
 }
 
 function openDetail(id) {
@@ -480,16 +499,26 @@ $('.ev-quick-tools').addEventListener('click', event => { const key = event.targ
 $('#ev-books').addEventListener('click', event => { const target = event.target.closest('[data-book]'); if (target) { bookmaker = target.dataset.book; render(); } });
 $('#ev-books-more').addEventListener('click', () => { showAllBooks = !showAllBooks; renderBooks(); });
 $('#ev-find').addEventListener('click', () => $('#ev-view').scrollIntoView({ behavior:'smooth', block:'start' }));
-document.querySelector('[data-ev-focus-search]')?.addEventListener('click', () => $('#ev-search').focus());
+document.querySelector('[data-ev-focus-search]')?.addEventListener('click', () => { document.body.classList.toggle('ev-search-open'); $('#ev-search').focus(); });
+$('#ev-search').addEventListener('keydown', event => { if (event.key === 'Escape') { document.body.classList.remove('ev-search-open'); document.querySelector('[data-ev-focus-search]')?.focus(); } });
 $('#ev-odds-tabs').addEventListener('click', event => { const tab = event.target.closest('[data-odds-tab]'); if (tab) { marketType = tab.dataset.oddsTab; render(); } });
-$('#ev-reset-filters').addEventListener('click', () => { bookmaker = ''; marketType = ''; search = ''; if (sport !== '') { sport = ''; history.replaceState(null, '', location.pathname + '?sport=all' + location.hash); } render(); });
+$('#ev-reset-filters').addEventListener('click', () => { bookmaker = ''; marketType = ''; search = ''; evLeague = ''; evDateRange = 'today'; evMaxOdds = '200'; evSort = 'ev'; if (sport !== '') { sport = ''; history.replaceState(null, '', location.pathname + '?sport=all' + location.hash); } render(); });
 $('#ev-market-type').addEventListener('change', event => { marketType = event.target.value; render(); });
+$('#ev-reference-market').addEventListener('change', event => { marketType = event.target.value; render(); });
+$('#ev-reference-league').addEventListener('change', event => { evLeague = event.target.value; render(); });
+$('#ev-reference-date').addEventListener('change', event => { evDateRange = event.target.value; render(); });
+$('#ev-reference-max-odds').addEventListener('change', event => { evMaxOdds = event.target.value; render(); });
+$('#ev-sort-mode').addEventListener('change', event => { evSort = event.target.value; render(); });
 $('#ev-sharp-min').addEventListener('change', event => { localStorage.setItem('sportslab-ev-sharp-min', String(Math.max(0,Number(event.target.value)||0))); render(); });
 const saveEvDisplay = () => { try { localStorage.setItem('sportslab-ev-display-v1', JSON.stringify({bankroll,kelly,flatMultiplier})); } catch { /* Display settings stay usable this session. */ } };
 $('#ev-ev-bankroll').addEventListener('change', event => { bankroll = Math.max(1, Number(event.target.value) || 5000); saveEvDisplay(); render(); });
 $('#ev-kelly').addEventListener('change', event => { if (['arb-pre','arb-live'].includes(active)) flatMultiplier = Math.max(.05, Math.min(10, Number(event.target.value) || 1)); else kelly = Math.max(0, Math.min(1, Number(event.target.value) || 0)); saveEvDisplay(); render(); });
 $('#ev-detail-close').addEventListener('click', () => $('#ev-detail').close());
 $('#ev-sport').addEventListener('change', event => {
+  sport = event.target.value;
+  location.assign(`${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}${location.hash}`);
+});
+$('#ev-reference-sport').addEventListener('change', event => {
   sport = event.target.value;
   location.assign(`${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}${location.hash}`);
 });
