@@ -1,0 +1,130 @@
+/* EV workspace palette and layout for the remaining SportsLab dashboard routes.
+   This sheet loads last so existing controls and data flows stay intact. */
+body.site-layout.ui-theme.reference-design:not(.ev-page){
+  --bg:#0d1316;--desk-canvas:#0d1316;--surface-sunken:#0c1214;
+  --panel:#131b1e;--panel2:#182125;--control:#172024;
+  --desk-panel:#131b1e;--desk-row:#172024;--desk-row-alt:#141c1f;
+  --desk-heading:#151d20;--desk-hover:#1d2b2c;--desk-rule:#2b393d;
+  --ui-fill:#172024;--ui-hover:#223033;--ui-selected:#17362d;
+  --ui-selected-text:#64e7c0;--selected:#17362d;--ui-selection-wash:#17342d;
+  --line:#2b393d;--border-strong:#405055;--text:#f4f7fb;
+  --secondary:#d3dcdf;--muted:#a9b5bc;--accent:#34e0b1;
+  --accent-strong:#19c992;--bright:#64e7c0;--positive:#34e0b1;
+  --blue:#34e0b1;--cyan:#34e0b1;--violet:#64e7c0;
+  --accent-wash:#34e0b116;--violet-wash:#34e0b116;
+  --action-fill:#27d6a2;--trend:#64e7c0;--trend-dim:#34e0b116;
+  --tracker-accent:#34e0b1;--tracker-positive:#64e7c0;
+  --ui-accent-rgb:52 224 177;--ui-accent-light-rgb:100 231 192;
+  --accent-rgb:52 224 177;--accent-strong-rgb:25 201 146;
+  --bright-rgb:100 231 192;--control-rgb:23 32 36;
+  --panel-rgb:19 27 30;--panel2-rgb:24 33 37;
+  --line-rgb:43 57 61;--border-strong-rgb:64 80 85;
+  --muted-rgb:169 181 188;--secondary-rgb:211 220 223;
+  --text-rgb:244 247 251;--ui-focus:#64e7c0;
+  --hero-fill:transparent;--glow:none;--edge-light:none;
+  color:var(--text);
+  background:radial-gradient(ellipse 85% 75% at 85% 44%,#102023 0%,transparent 75%),#0d1316;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+body.site-layout.ui-theme.reference-design:not(.ev-page) :is(a,button,input,select,textarea,summary):focus-visible{outline:2px solid #64e7c0;outline-offset:3px}
+body.site-layout.ui-theme.reference-design:not(.ev-page) :is(input,textarea,select){background-color:#172024!important;border-color:#35454a!important;color:#f1f6f6}
+body.site-layout.ui-theme.reference-design:not(.ev-page) input::placeholder{color:#a8b7bc}
+body.site-layout.ui-theme.reference-design:not(.ev-page) [data-ui-control=primary]{--button-fill:#27d6a2;--button-border:#27d6a2;--button-ink:#071a16}
+body.site-layout.ui-theme.reference-design:not(.ev-page) [data-ui-control=primary]:hover:not(:disabled){--button-fill:#64e7c0;--button-border:#64e7c0}
+body.site-layout.ui-theme.reference-design:not(.ev-page) :is(.button.primary,.filter-open,.tracker-button.primary,#add-bet){background:#27d6a2!important;border-color:#27d6a2!important;color:#071a16!important;box-shadow:none!important}
+body.site-layout.ui-theme.reference-design:not(.ev-page) :is(.button.primary,.filter-open,.tracker-button.primary,#add-bet):hover{background:#64e7c0!important;border-color:#64e7c0!important}
+body.site-layout.ui-theme.reference-design:not(.ev-page) :is(.section-tabs .active,.sports-views button[aria-selected=true],.pr-segmented button[aria-pressed=true],.side-toggle button[aria-pressed=true],.td-side button[aria-pressed=true],.desk-market-menu button[aria-pressed=true],.filter-category-nav button[aria-selected=true]){background:#18342d!important;border-color:#238765!important;color:#75edc7!important;box-shadow:none!important}
+
+/* Match the EV workspace rail while retaining each tool's own destinations. */
+@media(min-width:701px){
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page)>.site-header{position:relative;z-index:15;display:flex;align-items:center;gap:20px;width:100%;height:112px;min-height:112px;padding:0 34px;border:0;border-bottom:1px solid #263236;background:linear-gradient(180deg,#111719,#101618);overflow:visible}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-header-main{display:contents;width:auto;min-height:0;height:auto;padding:0}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-header-main>.site-sports{display:none}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-brand{position:static;display:inline-flex;align-items:center;order:0;flex:0 0 230px;gap:15px;min-height:46px;margin:0;padding:0 28px 0 0;border-right:1px solid #445057;color:#f4f7fb;font-size:21px;font-weight:760;letter-spacing:.045em;text-decoration:none}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-brand>span{display:block;font-size:inherit;letter-spacing:inherit}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-brand img{width:36px;height:36px;border:0;border-radius:0;box-shadow:none}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-header-bar{position:static;display:flex;align-items:center;order:1;flex:1 1 auto;width:auto;min-width:0;max-width:none;height:100%;min-height:0;margin:0;padding:0;border:0;background:transparent;overflow:hidden}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-rail-content{display:flex;flex:1;flex-direction:row;align-items:center;gap:5px;width:100%;height:auto;min-height:0;overflow-x:auto;overflow-y:hidden;white-space:nowrap;scrollbar-width:none}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-rail-content::-webkit-scrollbar{display:none}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-sport-context{display:none}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-navigation{display:flex;flex-direction:row;align-items:center;gap:5px;width:auto;padding:0}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) :is(.site-nav-link,.site-overview-link,.site-tracker){position:relative;display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;gap:0;width:auto;height:52px;min-height:52px;margin:0;padding:0 15px;border:1px solid transparent;border-radius:14px;background:transparent;color:#b6c0c7;font-size:15px;font-weight:500;box-shadow:none;text-decoration:none}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) :is(.site-nav-link,.site-overview-link,.site-tracker)>span{display:block;font-size:inherit;font-weight:inherit}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) :is(.site-nav-link,.site-overview-link,.site-tracker)>.ui-icon{display:none}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) :is(.site-nav-link,.site-overview-link,.site-tracker):hover{background:#182224;color:#f4f7f8;border-color:transparent}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) :is(.site-nav-link,.site-overview-link,.site-tracker)[aria-current=page]{border:1px solid #138a65;border-radius:14px;background:linear-gradient(180deg,#172622,#13201e);color:#37e1b2;font-weight:640}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) :is(.site-nav-link,.site-overview-link,.site-tracker)[aria-current=page]::after{display:none}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-personal{display:block;margin:0;padding:0;border:0}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-header-actions{display:flex;align-items:center;order:2;flex:0 0 auto;margin:0 0 0 auto}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-settings-toggle{display:grid;place-items:center;width:50px;height:50px;min-height:50px;padding:0;border:1px solid #2c393e;border-radius:50%;background:linear-gradient(180deg,#1a2225,#141b1e);color:#f4f7fb;box-shadow:none}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-settings-toggle:hover{border-color:#3e7769;background:#1d2b2b;color:#64e7c0}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-header-actions>.site-dev-toggle{display:none}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) main{width:100%;max-width:none;margin:0;padding:20px 34px 46px}
+}
+@media(min-width:701px) and (max-width:1300px){
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page)>.site-header{gap:14px;padding-inline:20px}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-brand{flex-basis:195px;gap:10px;padding-right:16px;font-size:18px}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) :is(.site-nav-link,.site-overview-link,.site-tracker){padding-inline:11px;font-size:13px}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-settings-toggle{width:43px;height:43px;min-height:43px}
+}
+
+/* Flat canvas, EV-like panels and emerald states across every dashboard tool. */
+body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .workspace-masthead{min-height:87px;margin:0 0 12px;padding:8px 2px 14px;border:0;border-radius:0;background:transparent;box-shadow:none;grid-template-rows:auto auto}
+body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .workspace-masthead h1{font-size:clamp(31px,3vw,46px);font-weight:700;letter-spacing:-.038em;line-height:1.13}
+body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .workspace-masthead>.site-sports{gap:8px}
+body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .workspace-masthead>.site-sports a{min-height:35px;padding:6px 12px;border:1px solid #2b393d;border-radius:11px;background:#151d20;color:#b6c4c7}
+body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .workspace-masthead>.site-sports a:hover{border-color:#3e7669;color:#effaf5}
+body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .workspace-masthead>.site-sports a[aria-current=page]{border-color:#138a65;background:#17342d;color:#64e7c0}
+body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) :is(.desk-toolbar,.workspace-controlbar,.home-toolbar,.home-secondary-toolbar,.page-tools,.results-heading,.home-board-heading){border-color:#2b393d;background:#131b1e}
+body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) :is(.desk-toolbar,.workspace-controlbar,.home-toolbar){padding:15px 18px;border:1px solid #2b393d;border-radius:15px;margin-bottom:15px}
+body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) :is(.page-tools,.results-heading,.home-board-heading){padding:10px 16px;border-radius:10px}
+body.site-layout.ui-theme.reference-design:not(.ev-page) :is(.summary-card,.performance-stat,.sports-card,.mlb-card,.live-card,.method-card,.matchup,.live-directory-card,.workspace-fold,.research-guide,.simulator-workspace,.tracker-metrics article,.profit-calendar,.tracker-month-detail,.bet-empty){border-color:#2b393d;border-radius:14px;background:#151d20;box-shadow:none}
+body.site-layout.ui-theme.reference-design:not(.ev-page) :is(.research-board,.trend-table-scroll,.tracker-ledger,.tracker-panel,.td-workbench){border-color:#2b393d;border-radius:15px;background:#131b1e;box-shadow:none}
+body.site-layout.ui-theme.reference-design:not(.ev-page) :is(.research-columns,.trend-table thead th){background:#172024;color:#b9c6c9;border-color:#2b393d}
+body.site-layout.ui-theme.reference-design:not(.ev-page) :is(.research-row,.trend-table tbody tr){background:#151d20;border-color:#2b393d}
+body.site-layout.ui-theme.reference-design:not(.ev-page) .research-row:nth-child(odd){background:#182125}
+body.site-layout.ui-theme.reference-design:not(.ev-page) :is(.research-row,.trend-table tbody tr):hover{background:#1e2b2d}
+body.site-layout.ui-theme.reference-design:not(.ev-page) :is(.research-probability>strong,.trend-rate.high,.td-positive,.td-row-rate,.tracker-metrics strong,.tracker-profit.positive){color:#64e7c0}
+body.site-layout.ui-theme.reference-design:not(.ev-page) .research-probability>strong{border-color:#276a55;background:#14332a}
+body.site-layout.ui-theme.reference-design:not(.ev-page) :is(.pr-redesign .pr-save,.pr-redesign .pr-aside-tabs button[aria-pressed=true]){background:#1b4c3c!important;color:#79eec5!important}
+body.site-layout.ui-theme.reference-design:not(.ev-page) .player-research-dialog.pr-redesign{border-color:#334348;background:#11191c!important}
+body.site-layout.ui-theme.reference-design:not(.ev-page) .pr-redesign .pr-hero{border-bottom-color:#2d3d3e;background:linear-gradient(140deg,#1b302b,#172124 65%,#141b1e)}
+body.site-layout.ui-theme.reference-design:not(.ev-page) .pr-redesign :is(.pr-primary,.pr-sidebar,.pr-panel,.pr-markets,.pr-mode-tabs){border-color:#2b393d;background:#141d20}
+body.site-layout.ui-theme.reference-design:not(.ev-page) :is(.filter-dialog-header,.model-filter-dialog .sheet-header,.filter-dialog-footer,.model-filter-dialog .sheet-footer,.filter-dialog-body,.model-filter-dialog .sheet-body,.filter-category-nav,.filter-editors,.model-filter-editors){background:#151d20}
+body.site-layout.ui-theme.reference-design:not(.ev-page) :is(.ui-choice .td-choice-menu,.calendar-popover){border-color:#34464a!important;background:#182125!important}
+body.site-layout.ui-theme.reference-design:not(.ev-page) .developer-gate{border-color:#2b393d;background:#151d20}
+body.site-layout.ui-theme.reference-design:not(.ev-page) .developer-gate-icon{background:#164133;color:#64e7c0}
+body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-header-bar :is(.site-nav-link,.site-overview-link,.site-tracker)[aria-current=page]{color:#37e1b2!important}
+body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-header-bar .site-tracker:not([aria-current=page]){background:transparent!important}
+body.site-layout.ui-theme.reference-design:not(.ev-page) .picks-tabs{border-color:#2b393d;background:#131b1e}
+body.site-layout.ui-theme.reference-design:not(.ev-page) .picks-tabs button[aria-pressed=true]{background:#18342d!important;border:1px solid #238765!important;color:#75edc7!important}
+body.site-layout.ui-theme.reference-design:not(.ev-page) .picks-tabs button:not([aria-pressed=true]){border:1px solid transparent;color:#b6c0c7}
+body.site-layout.ui-theme.reference-design:not(.ev-page) .picks-tabs button:hover{background:#1f302e}
+body.site-layout.ui-theme.reference-design:not(.ev-page) .simulator-workspace{background:#151d20;border:1px solid #2b393d;border-radius:15px;padding:16px;gap:16px}
+body.site-layout.ui-theme.reference-design:not(.ev-page) :is(.simulator-main,.simulator-setup,.simulation-output .sim-empty,.simulation-output .sim-ready,.simulator-main .sim-stats,.simulator-main .sim-charts,.simulator-main .sim-details,.simulator-main .sim-prop-card){background:#182125;border-color:#2b393d;border-radius:12px;color:#f4f7fb}
+body.site-layout.ui-theme.reference-design:not(.ev-page) .simulator-main .sim-outcome{background:radial-gradient(ellipse at 20% -80%,#176c5140,transparent 85%),#182125;border-color:#2b393d}
+body.site-layout.ui-theme.reference-design:not(.ev-page) .sim-matchup-preview{background:radial-gradient(ellipse at 30% -100%,#176c5150,transparent),#182125;border-color:#2b393d}
+body.site-layout.ui-theme.reference-design:not(.ev-page) .simulator-setup .sim-setup-heading .ui-icon{color:#64e7c0}
+body.site-layout.ui-theme.reference-design:not(.ev-page) .simulator-main .sim-prob-bar>span:first-child,
+body.site-layout.ui-theme.reference-design:not(.ev-page) .simulator-main .sim-bin i{background:#34e0b1}
+body.site-layout.ui-theme.reference-design:not(.ev-page) .bets-app :is(.tracker-filters,.tracker-ledger,.bet-empty){border-color:#2b393d;background:#151d20}
+
+@media(max-width:700px){
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page){--site-gutter:14px;background:#0d1316}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page)>.site-header{position:relative;height:58px;min-height:58px;border-bottom:1px solid #2b393d;background:#111719}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-header-main{display:flex;align-items:center;justify-content:space-between;height:57px;min-height:57px;padding:0 16px}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-header-main>.site-sports{display:none}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-brand{position:static;display:flex;align-items:center;gap:8px;width:auto;margin:0;color:#f4f7fb;font-size:17px;font-weight:750;letter-spacing:.04em}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-brand>span{display:block;font-size:inherit;letter-spacing:inherit}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-brand img{width:30px;height:30px;border:0;border-radius:0;box-shadow:none}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-header-actions{display:flex;align-items:center;margin:0}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .site-settings-toggle{display:grid;place-items:center;width:36px;height:36px;min-height:36px;padding:0;border:1px solid #2c393e;border-radius:50%;background:#182125;color:#e7f0ef}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .mobile-navigation{border-top:1px solid #304044;background:#121a1deF;backdrop-filter:blur(14px)}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .mobile-navigation [aria-current=page]{background:#18342d;color:#64e7c0!important}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) main{width:100%;min-width:0;padding:14px 12px 88px}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .workspace-masthead{min-height:0;padding:5px 2px 12px;margin-bottom:8px;gap:10px}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .workspace-masthead h1{font-size:clamp(26px,7vw,34px)}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) .workspace-masthead>.site-sports a{min-height:32px;padding:5px 8px;border-radius:9px}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) :is(.desk-toolbar,.workspace-controlbar,.home-toolbar){padding:10px;border-radius:12px}
+ body.site-layout.ui-theme.research-console.reference-design:not(.ev-page) :is(.research-board,.trend-table-scroll){margin-inline:0;border-radius:12px}
+}
