@@ -1,15 +1,16 @@
-/* A black canvas with diffuse color, rather than separate section fills. */
+/* A continuous midnight canvas with soft light that follows the viewport. */
 body.landing-page {
-  background-color: #000;
+  background-color: #080b13;
   background-image:
-    radial-gradient(ellipse 760px 600px at 10% 9%, #171326 0%, transparent 76%),
-    radial-gradient(ellipse 830px 650px at 93% 35%, #0a1b25 0%, transparent 76%),
-    radial-gradient(ellipse 820px 630px at 8% 65%, #171123 0%, transparent 77%),
-    radial-gradient(ellipse 760px 620px at 91% 91%, #0b1c1e 0%, transparent 76%);
+    radial-gradient(ellipse 66vw 78vh at -10% 14%, rgba(76, 48, 119, .38) 0%, rgba(47, 35, 82, .16) 49%, transparent 78%),
+    radial-gradient(ellipse 62vw 82vh at 108% 54%, rgba(18, 100, 110, .32) 0%, rgba(13, 62, 82, .13) 50%, transparent 80%),
+    radial-gradient(ellipse 67vw 70vh at 17% 110%, rgba(51, 64, 116, .24) 0%, transparent 76%),
+    linear-gradient(155deg, #0b0e18 0%, #080b12 52%, #0a1018 100%);
   background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 
-body.landing-page :is(.home-header, main, .home-hero, .hero-brands, .home-live, .home-simulation, .home-tools, .home-tracker-section, .home-sports, .home-footer) {
+body.landing-page :is(.home-header, main, .home-hero, .hero-brands, .home-live, .home-simulation, .home-tools, .home-tracker-section, .home-sports, .home-close, .home-footer) {
   background: transparent;
 }
 
