@@ -57,8 +57,8 @@ export function mountHeroTracker() {
       ? (total.profit > 0 ? '+' : '') + new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(total.profit)
       : `${wholeProfit}${centsProfit && centsProfit !== '00' ? `<span class="hero-tracker-cents">.${centsProfit}</span>` : ''}`;
     const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(month);
-    root.innerHTML = `<div class="hero-tracker-profit ${totalTone}" aria-label="${demo ? 'Demo net profit' : 'Net profit'}: ${totalLabel}"><small>${demo ? 'Demo net profit' : 'Net profit'}</small><strong>${profitDisplay}</strong></div>
-      <div class="hero-tracker-head"><span class="hero-tracker-avatar"><img src="/favicon.svg" alt=""></span><strong>SportsLab</strong></div>
+    root.innerHTML = `<div class="hero-tracker-head"><span class="hero-tracker-avatar"><img src="/favicon.svg" alt=""></span><strong>SportsLab</strong></div>
+      <div class="hero-tracker-profit ${totalTone}" aria-label="${demo ? 'Demo net profit' : 'Net profit'}: ${totalLabel}"><small>${demo ? 'Demo net profit' : 'Net profit'}</small><strong>${profitDisplay}</strong></div>
       <div class="hero-tracker-body"><div class="hero-tracker-weekdays" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div><div class="hero-tracker-grid" role="group" aria-label="${monthLabel} ${demo ? 'demo' : 'saved picks'} calendar">${cells.join('')}</div></div>`;
   }
 
