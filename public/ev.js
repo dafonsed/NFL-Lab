@@ -50,6 +50,7 @@ let evLeague = '', evDateRange = 'week', evMaxOdds = '200';
 let designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' };
 let designSort = 'recommended';
 let expandedOddsKey = '', expandedArbKey = '', expandedSharpKey = '';
+let sharpFiltersOpen = false, sharpSelectedBook = '';
 const sportsbookNames = ['bet365','DraftKings','FanDuel','BetMGM','Caesars','BetRivers','Fanatics','Hard Rock Bet','theScore Bet','Bally Bet','Desert Diamond Sports'];
 const fantasyNames = ['PrizePicks','Underdog Fantasy','Sleeper Picks','ParlayPlay','Dabble','Chalkboard','DraftKings Fantasy','FanDuel Fantasy','Betr Picks','OwnersBox','Boom Fantasy','Vivid Picks'];
 const canonicalPlatform = name => String(name || '').replace(/\s*\(example\)$/, '').replace(/^Underdog$/, 'Underdog Fantasy').replace(/^Sleeper$/, 'Sleeper Picks');
@@ -467,26 +468,38 @@ function renderParlay() {
 
 function renderSharp() {
   const threshold = Number(localStorage.getItem('sportslab-ev-sharp-min') || 1000);
-  const matches = sharpMatches(quotes().filter(q => sportsbookSelected(q.book)), threshold).filter(x => !marketType || x.exchange.type === marketType);
-  if (!expandedSharpKey && matches.length) expandedSharpKey = matches[0].exchange.id;
-  const rows = matches.flatMap(x => {
-    const q = x.exchange, key = q.id, peers = groups(state.quotes).find(g => g.some(item => item.id === q.id)) || [];
-    const comparisons = peers.filter(item => !item.exchange && item.side === x.sportsbook.side);
-    const average = comparisons.length ? probabilityToAmerican(comparisons.reduce((sum,item)=>sum+implied(item.odds),0)/comparisons.length) : NaN;
-    const open = expandedSharpKey === key;
-    const main = `<tr><td class="ev-value">${money(x.liquidity)}</td><td><strong>${esc(q.market)}</strong><small>${fmtLine(q.line)}</small></td><td><strong>${esc(q.event)}</strong><small>${esc(q.sport)} · ${age(q.ts)}</small></td><td><strong>${esc(q.side)} ${fmtLine(q.line)}</strong><small>${esc(q.book)} · exchange entry</small></td><td>${oddsLabel(q.odds)}</td><td>${comparisons.length ? comparisons.map(item=>oddsLabel(item.odds)).join(' · ') : '—'}</td><td>${Number.isFinite(average) ? oddsLabel(average) : '—'}</td><td class="ev-positive"><strong>${oddsLabel(x.sportsbook.odds)}</strong><small>${esc(x.sportsbook.book)}</small></td><td><button type="button" class="ev-expand-button" data-sharp-expand="${esc(key)}" aria-expanded="${open}" aria-label="${open ? 'Collapse' : 'Expand'} ${esc(q.event)} market details">${open ? '⌃' : '⌄'}</button></td></tr>`;
-    if (!open) return [main];
-    const snapshotCount = state.history.filter(h => h.quoteId === q.id).length;
-    const exchangeLiquidity = peers.filter(item => item.exchange && Number(item.liquidity) > 0).reduce((totals,item) => {
-      totals[item.side] = (totals[item.side] || 0) + Number(item.liquidity);
-      return totals;
-    }, {});
-    const liquidityMax = Math.max(1,...Object.values(exchangeLiquidity));
-    const liquidityComparison = Object.entries(exchangeLiquidity).map(([side,amount]) => `<div class="ev-liquidity-comparison-row"><span>${esc(side)} ${fmtLine(q.line)}</span><div class="ev-liquidity-bar"><span style="width:${Math.round(amount / liquidityMax * 100)}%"></span></div><strong>${money(amount)}</strong></div>`).join('');
-    const detail = `<tr class="ev-expanded-row"><td colspan="9"><div class="ev-expanded-grid ev-sharp-detail"><section><h3>Market details</h3><div class="ev-detail-facts"><div><strong>${esc(q.side)} ${fmtLine(q.line)}</strong><span>Exchange offer · ${oddsLabel(q.odds)}</span></div><div><strong>${esc(x.sportsbook.side)} ${fmtLine(x.sportsbook.line)}</strong><span>Best entered book · ${oddsLabel(x.sportsbook.odds)}</span></div></div></section><section><h3>Bookmaker prices</h3><div class="ev-mini-ledger">${peers.slice(0,12).map(item=>`<div><span>${esc(item.book)}</span><span>${esc(item.side)}</span><strong>${oddsLabel(item.odds)}</strong></div>`).join('')}</div></section><section><h3>Liquidity comparison</h3><div class="ev-liquidity-comparison">${liquidityComparison}</div><p>Entered exchange liquidity <strong>${money(x.liquidity)}</strong></p><p>${snapshotCount} recorded ${snapshotCount === 1 ? 'snapshot' : 'snapshots'} · ${age(q.ts)}</p><p>${Number.isFinite(x.improvement) ? 'Opposite book payout is ' + percent(x.improvement) + ' above the exchange comparison.' : 'No exchange benchmark available.'}</p></section></div></td></tr>`;
-    return [main,detail];
-  });
-  return `<div class="ev-stack ev-sharp-screen">${rows.length ? '<p class="ev-swipe-hint">Scroll sideways to compare exchange and sportsbook prices →</p>' + table(['Opp. liquidity','Market','Event','Exchange offering','Exchange odds','Comparison odds','Avg. price','Best price',''],rows) : empty('No matching exchange and book prices', 'Enter an exchange offer with liquidity and a better opposite sportsbook price at the same line.')}<p class="ev-caption ev-method-note">This view compares entered liquidity and prices. It does not identify verified sharp action or stream live market activity.</p></div>`;
+  const liquidityMoney = value => new Intl.NumberFormat('en-US', { style:'currency', currency:'USD', minimumFractionDigits:0, maximumFractionDigits:0 }).format(value);
+  const preview = state.quotes.length === 0;
+  const source = preview ? [...exampleWorkspace().quotes, ...[
+    ['example-sharp-1','Example: Buffalo vs Miami','Point spread','spread',-2.5,'Buffalo','Exchange X',-120,true,6800],
+    ['example-sharp-2','Example: Buffalo vs Miami','Point spread','spread',2.5,'Miami','Book A',-105,false,0],
+    ['example-sharp-3','Example: Buffalo vs Miami','Point spread','spread',2.5,'Miami','Exchange X',-110,true,3200],
+    ['example-sharp-4','Example: Kansas City vs Las Vegas','Example RB rushing yards','prop',68.5,'Under','Exchange X',116,true,3600],
+    ['example-sharp-5','Example: Kansas City vs Las Vegas','Example RB rushing yards','prop',68.5,'Over','Exchange X',-110,true,2400],
+    ['example-sharp-6','Example: Kansas City vs Las Vegas','Example RB rushing yards','prop',68.5,'Over','Book B',-105,false,0]
+  ].map(([id,event,market,type,line,side,book,odds,exchange,liquidity]) => ({ id,event,market,type,line,side,book,odds,exchange,liquidity,sport:'NFL',live:false,ts:now(),source:'example' }))] : state.quotes;
+  const filtered = source.filter(q => !sport || q.sport === sport);
+  const matches = sharpMatches(filtered, threshold).filter(x => (!marketType || x.exchange.type === marketType) && (!bookmaker || [x.exchange.book,x.sportsbook.book].includes(bookmaker)) && (!search || [x.exchange.event,x.exchange.market,x.exchange.side,x.exchange.book,x.sportsbook.side,x.sportsbook.book,x.exchange.sport].some(value => filterText(value)))).sort((a,b) => b.liquidity - a.liquidity);
+  if (!matches.some(x => x.exchange.id === expandedSharpKey)) expandedSharpKey = matches[0]?.exchange.id || '';
+  const selected = matches.find(x => x.exchange.id === expandedSharpKey);
+  const selection = q => `${esc(q.side)}${q.line !== '' && q.line != null ? ' ' + fmtLine(q.line) : ''}`;
+  const card = x => {
+    const q = x.exchange;
+    return `<button type="button" class="sharp-card" data-sharp-select="${esc(q.id)}" aria-pressed="${q.id === expandedSharpKey}"><span class="sharp-card-value"><strong>${liquidityMoney(x.liquidity)}</strong><small>Opposing liquidity</small></span><span class="sharp-card-content"><span class="sharp-card-meta">${esc(q.sport)} · ${q.live ? 'In game' : 'Pregame'} <span>${age(q.ts)}</span></span><strong class="sharp-card-event">${esc(q.event)}</strong><span class="sharp-card-market">${esc(q.market)}</span><span class="sharp-card-pick"><strong>${selection(x.sportsbook)}</strong><b>${oddsLabel(x.sportsbook.odds)}</b></span><span class="sharp-card-counter"><span>${selection(q)}</span><span>${oddsLabel(q.odds)} exchange</span></span></span></button>`;
+  };
+  let detail = `<div class="sharp-detail-empty"><strong>Select a market</strong><p>Choose an opportunity to compare the entered prices and liquidity.</p></div>`;
+  if (selected) {
+    const q = selected.exchange;
+    const peers = groups(source).find(group => group.some(item => item.id === q.id)) || [];
+    const opposite = peers.filter(item => item.side !== q.side);
+    const books = opposite.filter(item => !item.exchange).sort((a,b) => decimal(b.odds) - decimal(a.odds));
+    const exchangeRows = peers.filter(item => item.exchange && Number(item.liquidity) > 0);
+    const liquidity = [...new Set(exchangeRows.map(item => item.side))].map(side => [side,exchangeRows.filter(item => item.side === side).reduce((sum,item) => sum + Number(item.liquidity),0)]);
+    const max = Math.max(1,...liquidity.map(([,amount]) => amount));
+    const bookRows = books.slice(0,8).map((item,index) => `<button type="button" class="sharp-book-row" data-sharp-book="${esc(item.id)}" aria-pressed="${sharpSelectedBook === item.id}" ${preview ? 'title="Example price"' : 'title="Select entered price"'}><span class="sharp-book-rank">${String(index+1).padStart(2,'0')}</span>${brandMark(item.book)}<span class="sharp-book-name">${esc(item.book)}</span><strong>${oddsLabel(item.odds)}</strong><span aria-hidden="true">↗</span></button>`).join('');
+    detail = `<div class="sharp-detail-top"><div><span class="sharp-detail-kicker">${esc(q.sport)} · ${q.live ? 'In game' : 'Pregame'}</span><h2>${esc(q.event)}</h2><p>${esc(q.market)}</p></div><div class="sharp-detail-total"><strong>${liquidityMoney(selected.liquidity)}</strong><span>Opposing liquidity</span></div></div><div class="sharp-selected-pick"><div><span class="sharp-pick-mark" aria-hidden="true">↗</span><strong>${selection(selected.sportsbook)}</strong></div><span><b>${oddsLabel(selected.sportsbook.odds)}</b><small>Best entered price</small></span></div><div class="sharp-exchange-line"><span>Exchange offer · ${esc(q.book)}</span><strong>${selection(q)} &nbsp; ${oddsLabel(q.odds)}</strong></div><div class="sharp-detail-section"><div class="sharp-section-heading"><h3>Liquidity by side</h3><span>${exchangeRows.length} exchange ${exchangeRows.length === 1 ? 'price' : 'prices'}</span></div><div class="sharp-liquidity-chart">${liquidity.map(([side,amount]) => `<div class="sharp-liquidity-row"><span>${esc(side)}</span><div class="sharp-liquidity-track"><span style="width:${Math.max(3,Math.round(amount/max*100))}%"></span></div><strong>${liquidityMoney(amount)}</strong></div>`).join('')}</div></div><div class="sharp-detail-section sharp-books"><div class="sharp-section-heading"><h3>Sportsbook prices</h3><span>${books.length} ${books.length === 1 ? 'book' : 'books'}</span></div><div class="sharp-book-head"><span>Book</span><span>Odds</span></div>${bookRows || '<p class="sharp-no-books">No opposing sportsbook prices entered.</p>'}</div><p class="sharp-detail-foot">${preview ? 'Example preview' : `Observed ${age(q.ts)} · ${state.history.filter(item => item.quoteId === q.id).length} recorded snapshots`}</p>`;
+  }
+  return `<div class="sharp-workspace"><div class="sharp-toolbar"><label class="sharp-search"><span aria-hidden="true">⌕</span><input id="sharp-search" type="search" placeholder="Search markets" aria-label="Search Smart Money markets" value="${esc(search)}" autocomplete="off"></label><button type="button" data-sharp-filters aria-expanded="${sharpFiltersOpen}">⚙ <span>Filters</span></button><button type="button" data-sharp-refresh title="Refresh comparison" aria-label="Refresh comparison">↻</button></div><div class="sharp-filter-tray" ${sharpFiltersOpen ? '' : 'hidden'}><label>Sport<select id="sharp-sport"><option value="">All sports</option>${['NFL','MLB','NBA','WNBA','NHL','Soccer'].map(value => `<option value="${value}" ${sport === value ? 'selected' : ''}>${value}</option>`).join('')}</select></label><label>Market<select id="sharp-market"><option value="">All markets</option>${[['spread','Spreads'],['total','Totals'],['prop','Player props'],['alternate','Alternates'],['future','Futures']].map(([value,label]) => `<option value="${value}" ${marketType === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><label>Min liquidity<input id="sharp-min" type="number" min="0" step="100" value="${threshold}"></label><button type="button" data-sharp-clear>Clear filters</button></div><div class="sharp-panels"><section class="sharp-list-panel" aria-label="Smart Money opportunities"><div class="sharp-panel-heading"><div><h2>Smart Money</h2><span>${matches.length} ${matches.length === 1 ? 'opportunity' : 'opportunities'}${preview ? ' · Example preview' : ''}</span></div><span class="sharp-live-dot" aria-hidden="true"></span></div><div class="sharp-card-list">${matches.length ? matches.map(card).join('') : `<div class="sharp-list-empty"><strong>No matching opportunities</strong><p>Try another filter or enter exchange and sportsbook prices for the same market.</p></div>`}</div></section><section class="sharp-detail-panel" aria-label="Selected market comparison">${detail}</section></div><p class="sharp-method-note">${preview ? 'Example prices are shown until you enter or import your own. ' : ''}Comparisons use entered prices and liquidity; they do not verify sharp action or provide a live betting feed.</p></div>`;
 }
 
 function renderFantasy() {
@@ -788,6 +801,11 @@ $('#ev-view-actions').addEventListener('click', event => { if (!event.target.clo
 $('#ev-view-actions').addEventListener('click', event => { if (!event.target.closest('[data-replay-live]')) return; for (const quote of state.quotes.filter(q => q.live && q.source === 'example')) { quote.ts = now(); snapshotQuote(quote); } commit(); });
 $('#ev-view').addEventListener('click', event => {
   const target = event.target.closest('button'); if (!target) return;
+  if (target.dataset.sharpSelect) { expandedSharpKey = target.dataset.sharpSelect; sharpSelectedBook = ''; return render(); }
+  if (target.dataset.sharpBook) { sharpSelectedBook = target.dataset.sharpBook; return render(); }
+  if (target.hasAttribute('data-sharp-filters')) { sharpFiltersOpen = !sharpFiltersOpen; return render(); }
+  if (target.hasAttribute('data-sharp-refresh')) { render(); $('#ev-notice').textContent = 'Comparison refreshed from saved prices.'; return; }
+  if (target.hasAttribute('data-sharp-clear')) { search = ''; marketType = ''; bookmaker = ''; localStorage.setItem('sportslab-ev-sharp-min','0'); return render(); }
   if (target.dataset.sort) { evSort = target.dataset.sort; return render(); }
   if (target.dataset.detail) return openDetail(target.dataset.detail);
   if (target.dataset.oddsExpand) { expandedOddsKey = expandedOddsKey === target.dataset.oddsExpand ? '__closed__' : target.dataset.oddsExpand; return render(); }
@@ -806,13 +824,25 @@ $('#ev-view').addEventListener('click', event => {
 });
 $('#ev-view').addEventListener('change', event => {
   const t = event.target;
-  if (t.id === 'ev-bankroll') { stake = Math.max(.01,Number(t.value)||100); render(); }
+  if (t.id === 'sharp-sport') { sport = t.value; history.replaceState(null, '', `${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}${location.hash}`); render(); }
+  else if (t.id === 'sharp-market') { marketType = t.value; render(); }
+  else if (t.id === 'sharp-min') { localStorage.setItem('sportslab-ev-sharp-min', String(Math.max(0,Number(t.value)||0))); render(); }
+  else if (t.id === 'ev-bankroll') { stake = Math.max(.01,Number(t.value)||100); render(); }
   else if (t.dataset.promo) { promoInput[t.dataset.promo] = t.dataset.promo === 'kind' ? t.value : Number(t.value); render(); }
   else if (t.id === 'ev-fantasy-app') { fantasyApp = t.value; fantasyIds = []; render(); }
   else if (t.id === 'ev-fantasy-stake') { fantasyStake = Math.max(.01,Number(t.value)||10); render(); }
   else if (t.id === 'ev-trader-filter') { traderName = t.value; render(); }
   else if (t.id === 'ev-trend-a') { trendA = t.value; render(); }
   else if (t.id === 'ev-trend-b') { trendB = t.value; render(); }
+});
+$('#ev-view').addEventListener('input', event => {
+  if (event.target.id !== 'sharp-search') return;
+  const position = event.target.selectionStart;
+  search = event.target.value.toLowerCase().trim();
+  render();
+  const input = $('#sharp-search');
+  input?.focus();
+  input?.setSelectionRange(position,position);
 });
 $('#ev-form').addEventListener('submit', saveForm);
 $('#ev-close').addEventListener('click', () => $('#ev-dialog').close());
