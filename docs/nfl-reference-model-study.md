@@ -8,6 +8,12 @@ The anytime touchdown **Venom Score** is a weighted 0–100 profile score. A sep
 
 This explains why the reference can show many scores near 100 without giving those players near certain TD chances. It also explains why one cannot derive a non-TD card score from its visible component percentages by simply adding them: the weighted composite is ranked afterward.
 
+## Cross-check of both public Metrics pages
+
+The two pages describe **different sports**. The [NFL Metrics Explained page](https://l3df4hpvu0mqkkkns3g8.apps.whop.com/nfl?view=metrics) specifies the five-meaningful-game sample, the 60% baseline / 40% opportunity TD score, each group's weights, the two numeric drought bonuses, and a *separate* historically calibrated TD probability. It describes TD debt, box and coverage splits, signature packs, and reason tags as supporting reads. The NFL reason-tag names are Elite Red Zone Role, Goal Line Back, Target Monster, High Volume, Shootout Script, Soft TD Defense, and Due For TD; the page does not publish thresholds for most of those labels or say they each add score points. We therefore use the measurable inputs in the score and keep the other signals separate.
+
+The site-wide [Metrics Explained page](https://l3df4hpvu0mqkkkns3g8.apps.whop.com/metrics) is about **MLB home runs**. It describes a 14-day Statcast baseline (barrel rate, hard-hit rate, expected slugging, fly-ball rate, HR/fly-ball rate, contact trend), pitcher/park/wind/temperature/lineup opportunity, and DUE, OVERPERFORMING, Viper, and rank-movement flags. It supplies no additional NFL coefficients, TD conversion rates, or NFL player-selection rule. Its useful cross-sport clue is architectural: recent player skill, game opportunity, and explanatory flags are distinct pieces. The NFL page explicitly makes its +8/+5 drought bonus part of the TD score; the MLB page describes DUE as a flag without a numeric bonus. We did not transfer baseball inputs, its 14-day window, or an assumed MLB bonus into the NFL model.
+
 ## Anytime TD: numerically recovered formula
 
 Let `clip100(x) = min(100, max(0, x))`. The public metrics tab publishes these weights, and the board values confirm the normalization bounds:
