@@ -86,15 +86,15 @@ html { scroll-padding-top: 96px; }
   padding: 10px 23px;
   border: 0;
   border-radius: 7px;
-  background: linear-gradient(105deg, #59d3ca, #a4dbbb 48%, #ef957f);
-  color: #102027;
+  background: linear-gradient(105deg, #65cbc7, #8faad3 52%, #b394d2);
+  color: #081418;
   font-size: 16px;
   font-weight: 740;
   line-height: 1.2;
   text-align: center;
   text-decoration: none;
 }
-.home-header-action:hover { border: 0; background: linear-gradient(105deg, #75e1d8, #b7e8cb 48%, #ffad94); color: #071518; }
+.home-header-action:hover { border: 0; background: linear-gradient(105deg, #82ded8, #a5bde4 52%, #c6a7e1); color: #071518; }
 .home-menu-toggle { display: none; }
 
 @media (max-width: 1180px) {
