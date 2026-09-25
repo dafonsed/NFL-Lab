@@ -136,8 +136,8 @@ export function mountLandingResearch() {
     catch(error){simError=error.message||'The simulation is unavailable.';}
     finally{s.pending=false;renderSimulation();}
   }
-  simulation.addEventListener('click',event=>{if(event.target.closest('[data-sim-run]'))runSimulation();});
-  simulation.addEventListener('change',event=>{if(event.target.matches('[data-sim-date]')){s.date=event.target.value;loadCatalog();}if(event.target.matches('[data-sim-game]')){s.game=event.target.value;simResult=null;renderSimulation();}if(event.target.matches('[data-sim-runs]')){s.runs=Number(event.target.value);simResult=null;renderSimulation();}});
+  simulation?.addEventListener('click',event=>{if(event.target.closest('[data-sim-run]'))runSimulation();});
+  simulation?.addEventListener('change',event=>{if(event.target.matches('[data-sim-date]')){s.date=event.target.value;loadCatalog();}if(event.target.matches('[data-sim-game]')){s.game=event.target.value;simResult=null;renderSimulation();}if(event.target.matches('[data-sim-runs]')){s.runs=Number(event.target.value);simResult=null;renderSimulation();}});
 
   function renderPicks() {
     let bets;
@@ -156,6 +156,6 @@ export function mountLandingResearch() {
   }
   window.addEventListener('storage',event=>{if(event.key==='nfl-lab.personal-bets.v1'&&tool==='picks')renderPicks();});
 
-  // Live feeds, simulations, and the browser-local pick record initialize independently.
-  loadResearch(); renderPicks(); loadLive(); loadCatalog();
+  // The full simulation remains available on its own route; this page only loads it when a preview is present.
+  loadResearch(); renderPicks(); loadLive(); if(simulation) loadCatalog();
 }

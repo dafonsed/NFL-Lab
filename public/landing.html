@@ -13,8 +13,10 @@
   <link rel="stylesheet" href="/landing-header.css?v=10">
   <link rel="stylesheet" href="/landing-footer.css?v=1">
   <link rel="stylesheet" href="/landing-atmosphere.css?v=4">
+  <link rel="stylesheet" href="/landing-pricing.css?v=1">
   <script type="module" src="/landing.js?v=9"></script>
   <script type="module" src="/landing-reviews.js?v=2"></script>
+  <script type="module" src="/landing-pricing.js?v=1"></script>
 </head>
 <body class="landing-page">
   <a class="skip-link" href="#main">Skip to content</a>
@@ -40,10 +42,6 @@
       <div class="home-copy"><h2 id="live-title">Follow the game<br>as it changes.</h2><p class="home-lede">Move from a matchup to its score, game state, and available markets. Feed timing stays beside the data.</p><ul class="home-points"><li>Choose a sport and scheduled game.</li><li>Read the score or upcoming state in context.</li><li>Check when the public feed last updated.</li></ul><a class="home-text-link" href="/live">Open live game center <span aria-hidden="true">↗</span></a></div>
       <div class="home-screen live-screen" id="home-live-panel" aria-live="polite"><p class="home-loading">Connecting to the game feed…</p></div>
     </div></section>
-    <section class="home-section home-simulation" id="how-it-works" aria-labelledby="simulation-title"><div class="home-wide home-split home-simulation-grid">
-      <div class="home-screen simulation-screen" id="home-simulation-panel" aria-live="polite"><p class="home-loading">Loading available matchups…</p></div>
-      <div class="home-copy"><h2 id="simulation-title">Change an input.<br>See the range.</h2><p class="home-lede">Select a matchup and run SportsLab’s existing game model. Compare the score range and inspect the assumptions behind it.</p><p class="home-fine">Scenarios are experimental estimates. More runs reduce simulation noise; they do not prove accuracy.</p><a class="home-text-link" href="/simulation">Open full simulation <span aria-hidden="true">↗</span></a></div>
-    </div></section>
     <section class="home-section home-tools" id="explore" aria-labelledby="tools-title"><div class="home-narrow">
       <div class="home-tools-heading"><h2 id="tools-title">Your way into the game.</h2><p>Research a player, follow the feed, test a scenario, or return to your own record.</p></div>
       <div class="home-tool-layout"><div class="home-tool-tabs" role="tablist" aria-label="SportsLab product views">
@@ -53,6 +51,22 @@
         <button type="button" role="tab" data-home-tool="picks" aria-controls="home-tool-panel" aria-selected="true" tabindex="0"><span class="tool-symbol" aria-hidden="true">✓</span><span><strong>My picks</strong><small>Saved in this browser</small></span></button>
       </div><div class="home-screen home-tool-panel" id="home-tool-panel" role="tabpanel" aria-live="polite"><p class="home-loading">Loading your product view…</p></div></div>
     </div></section>
+    <section class="home-pricing" id="plans" aria-labelledby="plans-title"><div class="home-pricing-inner">
+      <div class="home-pricing-heading">
+        <img src="/favicon.svg" width="58" height="58" alt="" aria-hidden="true">
+        <span class="home-pricing-kicker">SportsLab plan preview</span>
+        <h2 id="plans-title">Which plan is right for you?</h2>
+        <p>Compare the research tools in each example tier.</p>
+      </div>
+      <div class="home-pricing-cycle" role="group" aria-label="Billing preview">
+        <span class="is-active" data-cycle-label="monthly">Monthly plans</span>
+        <button class="home-pricing-switch" type="button" role="switch" aria-checked="false" aria-label="Show annual preview prices"><span></span></button>
+        <span data-cycle-label="annual">Annual plans</span><em>Save 17%</em>
+      </div>
+      <div class="home-pricing-grid" id="home-pricing-grid"></div>
+      <p class="home-pricing-disclaimer">Illustrative plan preview. SportsLab subscriptions, trials, and checkout are not active yet.</p>
+    </div></section>
+    <dialog class="home-pricing-dialog" id="home-pricing-dialog" aria-labelledby="plan-dialog-title"><button class="home-pricing-dialog-close" type="button" data-plan-close aria-label="Close">×</button><h2 id="plan-dialog-title">Plan preview</h2><p>These example plans are here for layout review. Subscriptions and free trials are not available yet.</p><a class="home-button" href="/research">Explore SportsLab</a></dialog>
     <section class="home-section home-tracker-section" id="bet-tracker" aria-labelledby="tracker-title"><div class="home-wide home-split home-tracker-layout">
       <div class="home-copy"><h2 id="tracker-title">Your picks,<br>day by day.</h2><p class="home-lede">Save a bet in My Picks and see its settled result on the date you entered. Your net profit updates from the record kept in this browser.</p><p class="home-fine">The calendar shows example results when no picks are saved.</p><a class="home-button" href="/bets">Open My Picks</a></div>
       <div class="hero-tracker" id="hero-tracker" aria-live="polite"><p class="home-loading">Loading your pick record…</p></div>
