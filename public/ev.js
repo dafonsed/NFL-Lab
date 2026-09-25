@@ -46,7 +46,7 @@ let state = load();
 let active = toolMeta[location.hash.slice(1)] ? location.hash.slice(1) : 'ev-pre';
 let search = '';
 let bookmaker = '', marketType = '', showAllBooks = false, bankroll = 5000, kelly = .25, flatMultiplier = 1, evSort = 'ev', detailQuoteId = '';
-let evLeague = '', evDateRange = 'today', evMaxOdds = '200';
+let evLeague = '', evDateRange = 'week', evMaxOdds = '200';
 let expandedOddsKey = '', expandedArbKey = '', expandedSharpKey = '';
 const sportsbookNames = ['bet365','DraftKings','FanDuel','BetMGM','Caesars','BetRivers','Fanatics','Hard Rock Bet','theScore Bet','Bally Bet','Desert Diamond Sports'];
 const fantasyNames = ['PrizePicks','Underdog Fantasy','Sleeper Picks','ParlayPlay','Dabble','Chalkboard','DraftKings Fantasy','FanDuel Fantasy','Betr Picks','OwnersBox','Boom Fantasy','Vivid Picks'];
@@ -513,7 +513,7 @@ $('#ev-find').addEventListener('click', () => $('#ev-view').scrollIntoView({ beh
 document.querySelector('[data-ev-focus-search]')?.addEventListener('click', () => { document.body.classList.toggle('ev-search-open'); $('#ev-search').focus(); });
 $('#ev-search').addEventListener('keydown', event => { if (event.key === 'Escape') { document.body.classList.remove('ev-search-open'); document.querySelector('[data-ev-focus-search]')?.focus(); } });
 $('#ev-odds-tabs').addEventListener('click', event => { const tab = event.target.closest('[data-odds-tab]'); if (tab) { marketType = tab.dataset.oddsTab; render(); } });
-$('#ev-reset-filters').addEventListener('click', () => { bookmaker = ''; marketType = ''; search = ''; evLeague = ''; evDateRange = 'today'; evMaxOdds = '200'; evSort = 'ev'; if (sport !== '') { sport = ''; history.replaceState(null, '', location.pathname + '?sport=all' + location.hash); } render(); });
+$('#ev-reset-filters').addEventListener('click', () => { bookmaker = ''; marketType = ''; search = ''; evLeague = ''; evDateRange = 'week'; evMaxOdds = '200'; evSort = 'ev'; if (sport !== '') { sport = ''; history.replaceState(null, '', location.pathname + '?sport=all' + location.hash); } render(); });
 $('#ev-market-type').addEventListener('change', event => { marketType = event.target.value; render(); });
 $('#ev-reference-market').addEventListener('change', event => { marketType = event.target.value; render(); });
 $('#ev-reference-league').addEventListener('change', event => { evLeague = event.target.value; render(); });
