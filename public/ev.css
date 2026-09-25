@@ -467,3 +467,151 @@ body.ev-page[data-ev-screen^="ev-"] .ev-header .ev-heading h1{font-size:clamp(35
   body.ev-page[data-ev-screen^="ev-"] .ev-header{min-height:59px;margin-top:2px}
   body.ev-page[data-ev-screen^="ev-"] .ev-header .ev-heading h1{font-size:32px}
 }
+
+/* Inline EV market comparison: a selected bet becomes the wide, two-sided
+   bookmaker workspace shown in the supplied reference. */
+body.ev-page[data-ev-screen^="ev-"] .ev-positive-screen .ev-table .ev-opportunity-detail-row{height:auto}
+body.ev-page[data-ev-screen^="ev-"] .ev-positive-screen .ev-table .ev-opportunity-detail-row>td,
+body.ev-page[data-ev-screen^="ev-"] .ev-positive-screen .ev-table .ev-opportunity-detail-row:hover>td{padding:18px!important;background:#101516!important;border-bottom:1px solid #30383a}
+.ev-opportunity-card{min-width:0;padding:30px 31px 24px;background:#1c2021;border:1px solid #393e40;border-radius:29px;color:#eee;box-shadow:0 16px 40px #0002}
+.ev-opportunity-summary{display:grid;grid-template-columns:55px minmax(210px,1.55fr) minmax(170px,1.15fr) minmax(135px,.8fr) minmax(110px,.65fr) minmax(95px,.55fr) minmax(90px,.55fr);align-items:center;gap:22px;min-height:92px}
+.ev-opportunity-summary>div{display:grid;align-content:center;gap:10px;min-width:0}
+.ev-opportunity-summary strong{display:block;color:#f2f4f3;font-size:19px!important;font-weight:650;line-height:1.24}
+.ev-opportunity-summary span{display:block;color:#9ea9ab;font-size:15px;line-height:1.35}
+.ev-opportunity-summary .ev-opportunity-market strong{font-size:21px!important}
+.ev-opportunity-summary .ev-opportunity-ev strong{color:#8ee6b9;font-size:20px!important}
+.ev-opportunity-summary .ev-opportunity-book{display:flex;align-items:center;gap:8px;white-space:nowrap}
+body.ev-page .ev-opportunity-collapse{width:34px;height:34px;padding:0;border:1px solid #577743;border-radius:50%;background:#202a1b;color:#a8da77;font-size:22px;cursor:pointer}
+.ev-brand-mark{display:inline-block;width:31px;height:31px;object-fit:contain;vertical-align:middle;filter:saturate(.8)}
+.ev-brand-fallback{display:inline-grid;place-items:center;width:31px;height:31px;border-radius:50%;background:#121719;border:1px solid #394448;color:#d7e0e0;font-size:10px;font-weight:800;vertical-align:middle}
+.ev-opportunity-actions{display:flex;align-items:center;justify-content:space-between;gap:15px;min-height:77px;margin-top:22px;padding:15px 0;border-top:1px solid #373d3f;color:#a4adaf;font-size:13px}
+.ev-opportunity-actions>div{display:flex;gap:9px}
+body.ev-page .ev-opportunity-actions button{min-height:38px;padding:0 14px;border:1px solid #454d4f;border-radius:20px;background:#2b3031;color:#e4e9e8;cursor:pointer;font-size:13px}
+body.ev-page .ev-opportunity-actions button:hover{border-color:#55b68e;color:#81ecc0}
+.ev-price-matrix-scroller{max-width:100%;overflow-x:auto;scrollbar-color:#454b4b transparent}
+body.ev-page[data-ev-screen^="ev-"] .ev-positive-screen .ev-price-matrix{width:max(100%,1100px);min-width:1100px;table-layout:auto;border-collapse:separate;border-spacing:0;color:#e2e5e5}
+body.ev-page[data-ev-screen^="ev-"] .ev-positive-screen .ev-price-matrix :is(th,td){width:auto;height:auto;padding:17px 13px!important;border:0!important;background:transparent!important;font-size:14px!important;font-weight:450;text-align:center;vertical-align:middle;white-space:nowrap}
+body.ev-page[data-ev-screen^="ev-"] .ev-positive-screen .ev-price-matrix thead th{height:70px;color:#aab3b4;font-size:12px!important;font-weight:500}
+body.ev-page[data-ev-screen^="ev-"] .ev-positive-screen .ev-price-matrix thead th span{display:block;max-width:88px;overflow:hidden;text-overflow:ellipsis;margin:4px auto 0}
+body.ev-page[data-ev-screen^="ev-"] .ev-positive-screen .ev-price-matrix thead th:first-child,
+body.ev-page[data-ev-screen^="ev-"] .ev-positive-screen .ev-price-matrix tbody th{text-align:left}
+body.ev-page[data-ev-screen^="ev-"] .ev-positive-screen .ev-price-matrix tbody th{min-width:185px;color:#dce1e0;font-size:15px!important;white-space:normal}
+body.ev-page[data-ev-screen^="ev-"] .ev-positive-screen .ev-price-matrix tbody td{min-width:84px;color:#bec6c7;font-variant-numeric:tabular-nums}
+body.ev-page[data-ev-screen^="ev-"] .ev-positive-screen .ev-price-matrix tbody tr{height:66px}
+body.ev-page[data-ev-screen^="ev-"] .ev-positive-screen .ev-price-matrix tbody tr:hover :is(th,td){background:transparent!important}
+body.ev-page[data-ev-screen^="ev-"] .ev-positive-screen .ev-price-matrix tbody td.is-selected{color:#91e5a7}
+body.ev-page[data-ev-screen^="ev-"] .ev-positive-screen .ev-price-matrix tbody td.is-selected strong{color:#91e5a7}
+body.ev-page[data-ev-screen^="ev-"] .ev-positive-screen .ev-price-matrix .ev-matrix-best{min-width:110px;color:#99e9aa}
+body.ev-page[data-ev-screen^="ev-"] .ev-positive-screen .ev-price-matrix .ev-matrix-best strong{color:#99e9aa}
+body.ev-page[data-ev-screen^="ev-"] .ev-positive-screen .ev-price-matrix td small{font-size:11px;white-space:nowrap}
+.ev-opportunity-note{margin:19px 0 0;color:#8b9697;font-size:11px;line-height:1.5}
+body.ev-page.ev-detail-mode{background:#101313!important}
+.ev-card-view{gap:17px!important}
+.ev-card-view-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:5px 10px 8px;color:#aab5b3;font-size:14px}
+body.ev-page .ev-card-view-toolbar button{min-height:38px;padding:0 15px;border:1px solid #3c4948;border-radius:20px;background:#202929;color:#dce8e5;cursor:pointer;font-size:13px}
+.ev-card-view-list{display:grid;gap:20px}
+.ev-card-view-list .ev-opportunity-card{background:#1d2020}
+.ev-card-view-list .ev-opportunity-card:not(:has(.ev-price-matrix-scroller)){padding-bottom:27px}
+.ev-card-view-list .ev-opportunity-card:not(:has(.ev-price-matrix-scroller)) .ev-opportunity-summary{min-height:88px}
+body.ev-page.ev-detail-mode .ev-control-grid{margin-bottom:18px}
+@media(max-width:1300px){.ev-opportunity-summary{grid-template-columns:42px minmax(170px,1.3fr) repeat(5,minmax(95px,1fr));gap:12px}.ev-opportunity-summary strong{font-size:15px!important}.ev-opportunity-summary span{font-size:12px}}
+@media(max-width:800px){.ev-opportunity-card{padding:18px;border-radius:17px}.ev-opportunity-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:17px 12px}.ev-opportunity-summary .ev-opportunity-collapse{grid-column:1;grid-row:1}.ev-opportunity-summary .ev-opportunity-market{grid-column:2;grid-row:1}.ev-opportunity-summary strong,.ev-opportunity-summary .ev-opportunity-market strong{font-size:16px!important}.ev-opportunity-summary span{font-size:11px}.ev-opportunity-actions{align-items:flex-start;flex-direction:column}}
+
+/* The other market tools use the same EDGEBOARD density, rails and quiet panels. */
+body.ev-page[data-ev-screen="odds"],body.ev-page[data-ev-screen^="arb-"],body.ev-page[data-ev-screen="sharp"],body.ev-page[data-ev-screen="fantasy"]{--ev-bg:#0d1517;--ev-panel:#141c1f;--ev-line:#2a393d;background:radial-gradient(ellipse 90% 55% at 70% 36%,#132124 0%,#0d1517 75%)!important}
+body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"],[data-ev-screen="fantasy"]) .ev-bookbar{min-height:87px;margin:9px 0 15px;padding:12px 14px;border-radius:15px;background:#121a1d;border-color:#2c393d}
+body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"]) .ev-book-list button{width:57px;min-width:57px;height:57px;min-height:57px;padding:0;border-radius:50%;font-size:11px}
+body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"]) .ev-book-list button{border-radius:50%!important;background:radial-gradient(circle at 45% 35%,#20292d,#151d20 78%)!important}
+body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"]) .ev-book-list button.ev-book-all{width:72px;min-width:72px}
+body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"]) .ev-book-name{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"]) .ev-book-logo{width:30px;height:30px;filter:grayscale(1) brightness(1.7)}
+body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"]) .ev-book-more{width:57px;height:57px;min-width:57px;min-height:57px;padding:0;border-radius:50%}
+body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"],[data-ev-screen="fantasy"]) .ev-control-grid{grid-template-columns:minmax(390px,1fr) minmax(0,2.05fr);gap:18px;margin-bottom:18px}
+body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"],[data-ev-screen="fantasy"]) :is(.ev-stake-panel,.ev-filter-panel){min-height:122px;padding:19px 20px;background:#151d20!important;border:1px solid #2c3b40!important;border-radius:14px}
+body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"],[data-ev-screen="fantasy"]) .ev-stake-panel{align-items:center}
+body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"],[data-ev-screen="fantasy"]) .ev-filter-heading{margin-bottom:13px}
+body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"],[data-ev-screen="fantasy"]) .ev-table-wrap{border-color:#2c3c40;border-radius:14px;background:#11191c}
+body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"],[data-ev-screen="fantasy"]) .ev-table th{height:60px;background:#172023;color:#c0cbd0;font-size:14px;font-weight:480}
+body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"],[data-ev-screen="fantasy"]) .ev-table td{background:#131c1f;border-color:#2a383c;font-size:15px}
+body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"],[data-ev-screen="fantasy"]) .ev-table tbody>tr:not(.ev-expanded-row){height:104px}
+body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"],[data-ev-screen="fantasy"]) .ev-table .ev-value{color:#3fe4b1!important;font-size:23px!important}
+body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"],[data-ev-screen="fantasy"]) .ev-expanded-row>td{padding:0 12px 12px!important;background:#131c1f}
+body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"],[data-ev-screen="fantasy"]) .ev-expanded-grid{padding:22px;background:#142024;border-color:#2b3b40;border-radius:13px}
+body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"],[data-ev-screen="fantasy"]) .ev-expanded-grid h3{font-size:15px}
+.ev-odds-screen .ev-odds-grid{min-width:1510px;table-layout:fixed}
+.ev-odds-grid thead tr:first-child th{height:47px!important;border-bottom:1px solid #344247;text-align:center}
+.ev-odds-grid thead tr:nth-child(2) th{height:42px!important;padding:8px 5px!important;border-left:1px solid #2b393e;text-align:center;font-size:11px!important;max-width:100px;overflow:hidden;text-overflow:ellipsis}
+.ev-odds-grid thead th:first-child{width:110px;text-align:left!important}.ev-odds-grid thead th:nth-child(2){width:235px;text-align:left!important}
+.ev-odds-grid thead th:last-child{width:72px}
+.ev-odds-grid td.ev-game-time{width:110px;font-size:14px!important}.ev-odds-grid td.ev-game-time small{color:#b8c5ca;font-size:13px}
+.ev-odds-grid td.ev-odds-matchup{width:235px}.ev-odds-grid td.ev-odds-matchup strong{display:block;max-width:215px;font-size:15px;line-height:1.35}
+.ev-odds-grid td.ev-odds-grid-cell{padding:4px!important;border-left:1px solid #2b393e;text-align:center}
+body.ev-page .ev-odds-grid-cell button{display:block;width:100%;min-height:30px;padding:3px 2px;border:1px solid transparent;border-radius:6px;background:#1c272a;color:#e2eaec;cursor:pointer;font-size:12px;white-space:nowrap}
+body.ev-page .ev-odds-grid-cell button+button{margin-top:3px}
+body.ev-page .ev-odds-grid-cell button.is-best{border-color:#19ce91;background:#123b2e;color:#d8ffec}
+.ev-odds-grid-cell button span,.ev-odds-grid-cell button small{display:inline;margin:0 0 0 3px!important;color:inherit!important;font-size:11px!important}
+.ev-odds-grid-blank{display:block;color:#6b8186}
+.ev-odds-detail{display:grid;grid-template-columns:1.2fr 1fr .8fr;gap:25px;min-height:175px;padding:19px 22px;border:1px solid #2e4145;border-radius:12px;background:#152126}
+.ev-odds-detail>section+section{padding-left:25px;border-left:1px solid #33454a}
+.ev-odds-detail h3{margin:0 0 16px;color:#eef3f4;font-size:15px}
+.ev-line-graphic{display:flex;align-items:center;min-height:105px;padding:15px;border:1px solid #34484c;border-radius:8px;background:repeating-linear-gradient(to right,transparent 0 20%,#2b3b3e 20% calc(20% + 1px)),repeating-linear-gradient(to bottom,transparent 0 24%,#2b3b3e 24% calc(24% + 1px)),#112025;color:#95a9ae;font-size:12px}
+.ev-odds-detail .ev-mini-ledger>div{font-size:12px}.ev-odds-detail dl{margin:0}.ev-odds-detail dl>div{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #304247;font-size:12px}.ev-odds-detail dt{color:#a7b7bc}.ev-odds-detail dd{margin:0;color:#e2e9ea;text-align:right}
+@media(max-width:1100px){body.ev-page:is([data-ev-screen="odds"],[data-ev-screen^="arb-"],[data-ev-screen="sharp"],[data-ev-screen="fantasy"]) .ev-control-grid{grid-template-columns:1fr}.ev-odds-detail{grid-template-columns:1fr}.ev-odds-detail>section+section{padding:16px 0 0;border-left:0;border-top:1px solid #33454a}}
+
+.ev-dfs-screen .ev-table{min-width:1320px;table-layout:fixed}
+.ev-dfs-screen .ev-table th:nth-child(1){width:8%}.ev-dfs-screen .ev-table th:nth-child(2){width:16%}.ev-dfs-screen .ev-table th:nth-child(3){width:13%}.ev-dfs-screen .ev-table th:nth-child(4){width:11%}.ev-dfs-screen .ev-table th:nth-child(5){width:9%}.ev-dfs-screen .ev-table th:nth-last-child(2){width:10%}.ev-dfs-screen .ev-table th:last-child{width:14%}
+.ev-dfs-screen .ev-table td{padding:18px 16px!important}
+.ev-dfs-screen .ev-table td strong{font-size:15px}
+.ev-dfs-screen .ev-table td.ev-value small{color:#a3b6b7;font-size:11px;font-weight:450}
+.ev-dfs-player{display:flex;align-items:center;gap:12px;min-width:0}
+.ev-dfs-player>span:last-child{min-width:0}
+.ev-dfs-avatar{display:grid;place-items:center;flex:none;width:49px;height:54px;border:1px solid #30464d;border-radius:12px;background:linear-gradient(145deg,#173039,#0b1b23);color:#7cd9d1;font-size:15px;font-weight:760;letter-spacing:.03em}
+body.ev-page .ev-dfs-screen .ev-dfs-line{min-height:64px;min-width:80px;padding:8px 6px;border-radius:9px;background:#172125;color:#e7eff0}
+body.ev-page .ev-dfs-screen .ev-dfs-line.is-best{background:#10372d!important;color:#5cecb8!important}
+body.ev-page .ev-dfs-screen .ev-dfs-line strong{font-size:13px}
+body.ev-page .ev-dfs-screen .ev-dfs-line small{color:#aebdc0!important;font-size:12px}
+body.ev-page[data-ev-screen="fantasy"] .ev-book-list button{min-width:122px;min-height:53px;padding:0 14px;border-radius:30px}
+body.ev-page[data-ev-screen="fantasy"] .ev-book-list button.ev-book-all{min-width:72px}
+body.ev-page[data-ev-screen="fantasy"] .ev-book-more{min-height:53px;border-radius:30px}
+body.ev-page[data-ev-screen="fantasy"].site-layout.ui-theme.reference-design main#main{padding-top:0!important}
+body.ev-page[data-ev-screen="fantasy"] .ev-find-button{background:#20d6a4!important;border-color:#26dbaa!important;color:#071d16!important;opacity:1!important}
+
+.ev-arb-screen .ev-table{min-width:1320px;table-layout:fixed}
+.ev-arb-screen .ev-table th:nth-child(1){width:9%}.ev-arb-screen .ev-table th:nth-child(2){width:17%}.ev-arb-screen .ev-table th:nth-child(3){width:12%}.ev-arb-screen .ev-table th:nth-child(4),.ev-arb-screen .ev-table th:nth-child(5){width:16%}.ev-arb-screen .ev-table th:nth-child(6){width:12%}.ev-arb-screen .ev-table th:nth-child(7){width:12%}
+.ev-arb-screen .ev-table td{padding:19px 18px}
+.ev-arb-screen .ev-table td strong{font-size:15px}
+.ev-arb-screen .ev-price-box{padding:12px 14px;border:1px solid #31474b;border-radius:10px;background:#172327}
+.ev-arb-screen .ev-price-box strong{font-size:15px}.ev-arb-screen .ev-price-box span{font-size:12px}
+.ev-arb-screen .ev-arb-detail{grid-template-columns:1fr 1fr .95fr;padding:20px}
+.ev-arb-screen .ev-arb-detail>section{padding:0 22px}
+.ev-arb-screen .ev-arb-detail>section:first-child{padding-left:0}
+.ev-arb-screen .ev-arb-detail>section:last-child{padding-right:0}
+.ev-arb-screen .ev-arb-side .ev-price-box{display:flex;align-items:center;justify-content:space-between;gap:10px;max-width:310px;margin:0 0 15px}
+.ev-arb-screen .ev-arb-side .ev-price-box span{display:flex;align-items:center;gap:7px;color:#e3eded;font-size:13px}
+.ev-arb-screen .ev-arb-detail label{max-width:240px;margin:0 0 13px;color:#acbabf;font-size:12px}
+.ev-arb-screen .ev-arb-detail input{height:42px;border-radius:7px;font-size:15px}
+.ev-arb-side-amount{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:310px;padding:9px 0;border-bottom:1px solid #304248;color:#aebdc0;font-size:12px}
+.ev-arb-side-amount strong{color:#eef6f4;font-size:16px!important;font-variant-numeric:tabular-nums}
+.ev-arb-screen .ev-arb-profit{margin:0;padding:19px!important;border:1px solid #176950!important;border-radius:11px;background:#0f2a25}
+.ev-arb-screen .ev-arb-profit h3{color:#68e6b6}.ev-arb-screen .ev-arb-profit>strong{font-size:29px!important}.ev-arb-screen .ev-arb-profit .ev-arb-side-amount{max-width:none}
+.ev-arb-screen .ev-arb-history{padding:16px 20px;background:#142024;border-color:#314348}
+@media(max-width:900px){.ev-arb-screen .ev-arb-detail{grid-template-columns:1fr}.ev-arb-screen .ev-arb-detail>section,.ev-arb-screen .ev-arb-detail>section:first-child,.ev-arb-screen .ev-arb-detail>section:last-child{padding:0}.ev-arb-screen .ev-arb-detail>section+section{padding-top:18px;border-top:1px solid #344548}}
+
+.ev-sharp-screen .ev-table{min-width:1320px;table-layout:fixed}
+.ev-sharp-screen .ev-table th:nth-child(1){width:11%}.ev-sharp-screen .ev-table th:nth-child(2){width:12%}.ev-sharp-screen .ev-table th:nth-child(3){width:16%}.ev-sharp-screen .ev-table th:nth-child(4){width:16%}.ev-sharp-screen .ev-table th:nth-child(5){width:9%}.ev-sharp-screen .ev-table th:nth-child(6){width:13%}.ev-sharp-screen .ev-table th:nth-child(7){width:9%}.ev-sharp-screen .ev-table th:nth-child(8){width:10%}
+.ev-sharp-screen .ev-table td{padding:18px 17px}
+.ev-sharp-screen .ev-sharp-detail{grid-template-columns:1.08fr 1fr .96fr;min-height:240px;padding:21px}
+.ev-sharp-detail .ev-detail-facts{display:grid;gap:11px}
+.ev-sharp-detail .ev-detail-facts>div{display:flex;justify-content:space-between;gap:10px;align-items:center;min-height:62px;padding:14px 16px;border:1px solid #30484c;border-radius:9px;background:#172428}
+.ev-sharp-detail .ev-detail-facts strong{font-size:15px}.ev-sharp-detail .ev-detail-facts span{font-size:12px;text-align:right}
+.ev-sharp-detail .ev-mini-ledger>div{grid-template-columns:1fr 1fr 70px;padding:9px 7px;border-color:#314448;font-size:12px}
+.ev-sharp-detail .ev-mini-ledger>div strong{color:#61dcb0}
+.ev-sharp-detail .ev-liquidity-bar{height:13px;margin:28px 0 15px;background:#25383d;border-radius:20px}
+.ev-sharp-detail .ev-liquidity-bar span{background:#24d4a7}
+.ev-liquidity-comparison{display:grid;gap:16px;margin:23px 0 18px}
+.ev-liquidity-comparison-row{display:grid;grid-template-columns:minmax(90px,1fr) minmax(90px,2fr) auto;align-items:center;gap:13px;color:#dce8e8;font-size:12px}
+.ev-liquidity-comparison-row .ev-liquidity-bar{height:11px;margin:0}
+.ev-liquidity-comparison-row strong{min-width:65px;text-align:right;font-size:13px}
+.ev-liquidity-comparison-row:nth-child(even) .ev-liquidity-bar span{background:#9db4c4}
+.ev-sharp-detail p{font-size:12px;line-height:1.45}
+@media(max-width:900px){.ev-sharp-screen .ev-sharp-detail{grid-template-columns:1fr}}

@@ -50,6 +50,18 @@ let evLeague = '', evDateRange = 'week', evMaxOdds = '200';
 let expandedOddsKey = '', expandedArbKey = '', expandedSharpKey = '';
 const sportsbookNames = ['bet365','DraftKings','FanDuel','BetMGM','Caesars','BetRivers','Fanatics','Hard Rock Bet','theScore Bet','Bally Bet','Desert Diamond Sports'];
 const fantasyNames = ['PrizePicks','Underdog Fantasy','Sleeper Picks','ParlayPlay','Dabble','Chalkboard','DraftKings Fantasy','FanDuel Fantasy','Betr Picks','OwnersBox','Boom Fantasy','Vivid Picks'];
+const brandMarks = {
+  bet365:'/assets/brands/bet365.png', DraftKings:'/assets/sportsbooks/draftkings.svg', FanDuel:'/assets/sportsbooks/fanduel.png',
+  BetMGM:'/assets/brands/betmgm.png', Caesars:'/assets/brands/caesars.png', BetRivers:'/assets/brands/betrivers.png',
+  Fanatics:'/assets/brands/fanatics.png', 'Hard Rock Bet':'/assets/brands/hardrock.png', 'theScore Bet':'/assets/brands/thescore.png',
+  'Bally Bet':'/assets/brands/bally.png', 'Desert Diamond Sports':'/assets/brands/desertdiamond.png',
+  PrizePicks:'/assets/brands/prizepicks.png', 'Underdog Fantasy':'/assets/brands/underdog.png',
+  'Sleeper Picks':'/assets/brands/sleeper.png', ParlayPlay:'/assets/brands/parlayplay.png',
+  Dabble:'/assets/brands/dabble.png', Chalkboard:'/assets/brands/chalkboard.png'
+};
+const brandMark = (name, cls = '') => brandMarks[name]
+  ? `<img class="ev-brand-mark ${cls}" src="${brandMarks[name]}" alt="">`
+  : `<span class="ev-brand-fallback ${cls}" aria-hidden="true">${esc(name.replace(/\s*\(example\)$/, '').slice(0,2))}</span>`;
 try {
   const saved = JSON.parse(localStorage.getItem('sportslab-ev-display-v1'));
   if (Number(saved?.bankroll) > 0) bankroll = Number(saved.bankroll);
@@ -169,7 +181,8 @@ function render() {
   $('#ev-view-actions').innerHTML = viewActions[active] || '';
   const primaryScreen = ['odds','ev-pre','ev-live','arb-pre','arb-live','sharp','fantasy'].includes(active);
   const positiveScreen = ['ev-pre','ev-live'].includes(active);
-  (positiveScreen ? $('#ev-menu-actions') : $('.ev-header')).append($('.ev-header-actions'));
+  document.body.classList.toggle('ev-detail-mode', positiveScreen && Boolean(detailQuoteId));
+  (primaryScreen ? $('#ev-menu-actions') : $('.ev-header')).append($('.ev-header-actions'));
   (primaryScreen ? $('.ev-header-actions') : $('.ev-view-side')).append($('#ev-view-actions'));
   if (primaryScreen) $('.ev-header-actions').append($('.ev-sidebar'));
   const views = { odds: renderOdds, 'ev-pre': () => renderEv(false), 'ev-live': () => renderEv(true), 'arb-pre': () => renderArb(false), 'arb-live': () => renderArb(true), middles: renderMiddles, holds: renderHolds, promo: renderPromo, parlay: renderParlay, sharp: renderSharp, fantasy: renderFantasy, optimizer: renderOptimizer, slip: renderSlip, 'fantasy-alerts': renderFantasyAlerts, prediction: renderPrediction, tracker: renderTracker, trends: renderTrends, 'line-alerts': renderLineAlerts };
@@ -207,7 +220,7 @@ function renderBooks() {
   $('#ev-add-quote').textContent = active === 'fantasy' ? 'Add DFS prop' : active === 'sharp' ? 'Add exchange price' : 'Add price';
 }
 
-function renderOdds() {
+function renderOddsLegacy() {
   const all = quotes().filter(q => (!marketType || q.type === marketType) && (!bookmaker || q.book === bookmaker));
   const sets = groups(all), books = [...new Set(all.map(q => q.book))].sort((a,b) => a.localeCompare(b));
   const displayBooks = books.slice(0,8);
@@ -229,6 +242,84 @@ function renderOdds() {
   return `<div class="ev-stack ev-odds-screen">${rows.length ? '<p class="ev-swipe-hint">Scroll sideways to compare bookmakers →</p>' + table(['Event','Market',...displayBooks.map(esc),''], rows) : empty('No prices to compare', 'Add or import prices for the selected sport and market. This workspace has no connected live odds feed.')}<p class="ev-caption ev-method-note">${all.length} entered prices · ${sets.length} markets. Highlighted cells are the best entered price for each side. Check capture time and availability before using any price.</p></div>`;
 }
 
+function renderOdds() {
+  if (marketType && !['spread','total'].includes(marketType)) return renderOddsLegacy();
+  const all = quotes().filter(q => (!bookmaker || q.book === bookmaker) && (!marketType || q.type === marketType));
+  const visibleQuotes = all.filter(q => ['spread','moneyline','winner','total'].includes(q.type));
+  const eventGroups = new Map();
+  for (const q of visibleQuotes) {
+    const key = `${q.sport}|${q.event}|${q.live ? 'live' : 'pregame'}`;
+    if (!eventGroups.has(key)) eventGroups.set(key, []);
+    eventGroups.get(key).push(q);
+  }
+  const enteredBooks = [...new Set(visibleQuotes.map(q => q.book))];
+  const displayBooks = enteredBooks.length ? enteredBooks.slice(0,6) : sportsbookNames.slice(0,5);
+  const categories = [
+    {title:'Spread', accepts:q=>q.type === 'spread'},
+    {title:'Moneyline', accepts:q=>q.type === 'moneyline' || q.type === 'winner'},
+    {title:'Total', accepts:q=>q.type === 'total'}
+  ].filter(category => !marketType || category.accepts({type:marketType}));
+  const headerBooks = categories.map(category => `<th scope="colgroup" colspan="${displayBooks.length}">${category.title}</th>`).join('');
+  const subheads = categories.map(() => displayBooks.map(book => `<th scope="col" title="${esc(book)}">${esc(book)}</th>`).join('')).join('');
+  const rows = [...eventGroups.entries()].map(([key, group]) => {
+    const first = group[0], open = expandedOddsKey === key;
+    const perCategory = categories.map(category => {
+      const matches = group.filter(category.accepts);
+      const chosen = matches.length ? groups(matches).sort((a,b)=>b.length-a.length)[0] : [];
+      const sides = [...new Set(chosen.map(q=>q.side))].slice(0,2);
+      const best = sides.map(side => chosen.filter(q=>q.side===side && fresh(q)).sort((a,b)=>decimal(b.odds)-decimal(a.odds))[0]);
+      return {chosen,sides,best};
+    });
+    const primary = `<tr class="ev-odds-game-row"><td class="ev-game-time">${esc(first.startTime || '—')}<small>${esc(first.sport || 'Sport')}</small></td><td class="ev-odds-matchup"><strong>${esc(first.event)}</strong><small>${first.live ? 'Live entry' : 'Pregame'} · ${age(first.ts)}</small></td>${perCategory.map(({chosen,sides,best}) => displayBooks.map(book => `<td class="ev-odds-grid-cell">${sides.length ? sides.map((side,index) => {
+      const q = chosen.filter(item=>item.book===book && item.side===side).sort((a,b)=>Date.parse(b.ts)-Date.parse(a.ts))[0];
+      return q ? `<button type="button" data-edit="quote" data-id="${esc(q.id)}" class="${best[index]?.id===q.id ? 'is-best' : ''}" aria-label="Edit ${esc(book)} ${esc(side)} ${esc(first.event)} price"><span>${['total','spread'].includes(q.type) ? `${esc(side).slice(0,1)} ${fmtLine(q.line)}` : oddsLabel(q.odds)}</span>${['total','spread'].includes(q.type) ? `<small>${oddsLabel(q.odds)}</small>` : ''}</button>` : '<span class="ev-odds-grid-blank">—</span>';
+    }).join('') : '<span class="ev-odds-grid-blank">—</span>'}</td>`).join('')).join('')}<td><button type="button" class="ev-expand-button" data-odds-expand="${esc(key)}" aria-expanded="${open}" aria-label="${open ? 'Collapse' : 'Expand'} ${esc(first.event)} line movement">${open ? '⌃' : '⌄'}</button></td></tr>`;
+    if (!open) return primary;
+    const focus = perCategory.find(item=>item.chosen.length) || {chosen:group};
+    const histories = focus.chosen.filter(q=>state.history.filter(h=>h.quoteId===q.id).length>1).flatMap(q => state.history.filter(h=>h.quoteId===q.id).map(h=>({...h,book:q.book,side:q.side}))).sort((a,b)=>Date.parse(a.ts)-Date.parse(b.ts));
+    const lines = focus.chosen.map(q=>`<div><span>${esc(q.book)}</span><span>${esc(q.side)} ${fmtLine(q.line)}</span><strong>${oddsLabel(q.odds)}</strong></div>`).join('');
+    const detail = `<tr class="ev-expanded-row ev-odds-detail-row"><td colspan="${3+categories.length*displayBooks.length}"><div class="ev-odds-detail"><section><h3>Line movement · ${esc(focus.chosen[0]?.market || first.market)}</h3><div class="ev-line-graphic" aria-label="${histories.length} recorded price snapshots">${histories.length > 1 ? `<div class="ev-movement-list">${histories.slice(-8).map(h=>`<span>${esc(h.book)} <b>${oddsLabel(h.odds)}</b><small>${age(h.ts)}</small></span>`).join('')}</div>` : '<span>Line movement appears after a price is edited.</span>'}</div></section><section><h3>Open and current prices</h3><div class="ev-mini-ledger">${lines}</div></section><section><h3>Market details</h3><dl><div><dt>Status</dt><dd>${first.live ? fresh(first) ? 'Live entry' : 'Stale live entry' : 'Pregame'}</dd></div><div><dt>Books</dt><dd>${new Set(group.map(q=>q.book)).size}</dd></div><div><dt>Source</dt><dd>${state.example ? 'Manual and example entries' : 'Manual entries'}</dd></div></dl></section></div></td></tr>`;
+    return primary + detail;
+  }).join('');
+  return `<div class="ev-stack ev-odds-screen">${eventGroups.size ? `<p class="ev-swipe-hint">Scroll sideways to compare bookmakers →</p><div class="ev-table-wrap"><table class="ev-table ev-odds-grid"><thead><tr><th rowspan="2" scope="col">Time</th><th rowspan="2" scope="col">Matchup</th>${headerBooks}<th rowspan="2" scope="col">Details</th></tr><tr>${subheads}</tr></thead><tbody>${rows}</tbody></table></div>` : empty('No prices to compare','Add or import prices for the selected sport and market. This workspace has no connected live odds feed.')}<p class="ev-caption ev-method-note">${visibleQuotes.length} entered prices · ${eventGroups.size} events. Highlighted cells show the best entered price for each side. Check freshness and availability.</p></div>`;
+}
+
+function renderEvExpanded(quote, fair, ev, asCard = false) {
+  const open = detailQuoteId === quote.id;
+  const peers = groups(state.quotes).find(group => group.some(item => item.id === quote.id)) || [quote];
+  const sides = [quote.side, ...new Set(peers.map(item => item.side).filter(side => side !== quote.side))];
+  const books = [...new Set(peers.map(item => item.book))].sort((a,b) => {
+    const ai = sportsbookNames.indexOf(a), bi = sportsbookNames.indexOf(b);
+    return (ai < 0 ? 100 : ai) - (bi < 0 ? 100 : bi) || a.localeCompare(b);
+  });
+  const matrix = sides.map(side => {
+    const prices = peers.filter(item => item.side === side);
+    const average = prices.length ? probabilityToAmerican(prices.reduce((sum,item) => sum + implied(item.odds),0) / prices.length) : NaN;
+    const best = prices.slice().sort((a,b) => decimal(b.odds) - decimal(a.odds))[0];
+    const cells = books.map(book => {
+      const price = prices.filter(item => item.book === book).sort((a,b) => Date.parse(b.ts) - Date.parse(a.ts))[0];
+      return `<td class="${price?.id === quote.id ? 'is-selected' : ''} ${price?.id === best?.id ? 'is-best' : ''}">${price ? `<strong>${oddsLabel(price.odds)}</strong>${price.liquidity ? `<small>${money(price.liquidity)} available</small>` : ''}` : '<span class="ev-odds-missing">—</span>'}</td>`;
+    }).join('');
+    const line = prices[0]?.line;
+    return `<tr><th scope="row">${esc(side)}${line !== '' && line != null ? ' ' + fmtLine(line) : ''}</th><td>${Number.isFinite(average) ? oddsLabel(average) : '—'}</td><td class="ev-matrix-best">${best ? `${brandMark(best.book)} <strong>${oddsLabel(best.odds)}</strong>` : '—'}</td>${cells}</tr>`;
+  }).join('');
+  const stakeEstimate = fractionalKellyStake(bankroll,kelly,fair,quote.odds);
+  return `${asCard ? '' : '<tr class="ev-opportunity-detail-row"><td colspan="9">'}<article class="ev-opportunity-card" aria-label="${esc(quote.event)} ${esc(quote.market)} price comparison">
+    <div class="ev-opportunity-summary">
+      <button type="button" class="ev-opportunity-collapse" data-detail="${esc(quote.id)}" aria-expanded="${open}" aria-label="${open ? 'Collapse' : 'Expand'} ${esc(quote.event)} details">${open ? '⌃' : '+'}</button>
+      <div class="ev-opportunity-market"><strong>${esc(quote.market)}</strong><span>${esc(quote.event)} · ${esc(quote.sport)} · ${quote.live ? 'Live entry' : 'Pregame'}</span></div>
+      <div><strong>${esc(quote.side)}${quote.line !== '' && quote.line != null ? ' ' + fmtLine(quote.line) : ''}</strong><span>Selection</span></div>
+      <div><strong class="ev-opportunity-book">${brandMark(quote.book)} ${oddsLabel(quote.odds)}</strong><span>${esc(quote.book)}</span></div>
+      <div><strong>${percent(fair)}</strong><span>Fair probability</span></div>
+      <div><strong>${money(stakeEstimate)}</strong><span>Rec. bet</span></div>
+      <div class="ev-opportunity-ev"><strong>${(ev * 100).toFixed(2)}%</strong><span>Estimated EV</span></div>
+    </div>
+    ${open ? `<div class="ev-opportunity-actions"><span>Observed ${age(quote.ts)} · ${quote.source === 'local-api' ? 'Local API' : quote.source === 'example' ? 'Example' : 'Manual'} price</span><div><button type="button" data-edit="quote" data-id="${esc(quote.id)}">Edit price</button>${quote.live ? '' : `<button type="button" data-parlay="${esc(quote.id)}">Add to parlay</button>`}</div></div>
+    <div class="ev-price-matrix-scroller"><table class="ev-price-matrix"><thead><tr><th scope="col">Selection</th><th scope="col">Average</th><th scope="col">Best</th>${books.map(book => `<th scope="col">${brandMark(book)}<span>${esc(book)}</span></th>`).join('')}</tr></thead><tbody>${matrix}</tbody></table></div>
+    <p class="ev-opportunity-note">Prices shown are entered records for this market. Confirm availability, limits and freshness independently.</p>` : ''}
+  </article>${asCard ? '' : '</td></tr>'}`;
+}
+
 function renderEv(live) {
   const today = new Date().toDateString(), weekAgo = Date.now() - 7 * 86_400_000;
   const pool = state.quotes.filter(q => (!sport || q.sport === sport) && (!evLeague || (q.league || q.sport) === evLeague) && (evDateRange === 'all' || evDateRange === 'today' && new Date(q.ts).toDateString() === today || evDateRange === 'week' && Date.parse(q.ts) >= weekAgo));
@@ -238,7 +329,11 @@ function renderEv(live) {
   else if (evSort === 'odds') rows.sort((a,b) => decimal(b.quote.odds) - decimal(a.quote.odds));
   else rows.sort((a,b) => b.ev - a.ev);
   const heading = (label,key) => `<button type="button" class="ev-sort" data-sort="${key}" aria-label="Sort by ${label}" ${evSort === key ? 'aria-current="true"' : ''}>${label}${evSort === key ? ' ↓' : ''}</button>`;
-  const body = rows.map(({quote:q,fair,ev}) => `<tr><td class="ev-value">${(ev * 100).toFixed(2)}%<span class="ev-value-help" title="Estimated positive expected value">?</span></td><td class="ev-event"><strong>${esc(q.event)}</strong><small>${esc(q.sport)} · ${q.live ? 'Live entry' : 'Pregame'}</small><small>Observed ${age(q.ts)}</small></td><td><span>${esc(q.market)}</span><small>${esc(q.type)}${q.line !== '' && q.line != null ? ' · ' + fmtLine(q.line) : ''}</small></td><td><span class="ev-book-cell"><span class="ev-book-mark" aria-hidden="true">${q.book === 'DraftKings' ? '<img src="/assets/sportsbooks/draftkings.svg" alt="">' : q.book === 'FanDuel' ? '<img src="/assets/sportsbooks/fanduel.png" alt="">' : esc(q.book.startsWith('Book ') ? 'B' + q.book.slice(5,6) : q.book.replace(/[^\p{L}\p{N}]/gu,'').slice(0,3))}</span>${esc(q.book)}</span></td><td><strong>${esc(q.side)}${q.line !== '' && q.line != null ? ' ' + fmtLine(q.line) : ''}</strong></td><td>${oddsLabel(q.odds)}</td><td>${percent(fair)}</td><td>${money(fractionalKellyStake(bankroll,kelly,fair,q.odds))}</td><td class="ev-actions"><button type="button" class="ev-action-primary" data-detail="${esc(q.id)}">View</button><span class="ev-action-separator" aria-hidden="true"></span><button type="button" class="ev-icon-action" data-edit="quote" data-id="${esc(q.id)}" aria-label="Edit ${esc(q.event)} price" title="Edit price"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 15 1-4 5-5 3 3-5 5-4 1Z"/></svg></button><button type="button" class="ev-icon-action" data-detail="${esc(q.id)}" aria-label="View ${esc(q.event)} comparison chart" title="View comparison chart"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19v-4m5 4V9m5 10V5m5 14v-8"/></svg></button><details class="ev-row-more"><summary aria-label="More actions for ${esc(q.event)}">⋯</summary><div><button type="button" data-detail="${esc(q.id)}">View details</button><button type="button" data-edit="quote" data-id="${esc(q.id)}">Edit price</button>${live ? '' : `<button type="button" data-parlay="${esc(q.id)}">Add to parlay</button>`}</div></details></td></tr>`);
+  if (detailQuoteId && rows.some(({quote}) => quote.id === detailQuoteId)) {
+    const cards = rows.map(({quote,fair,ev}) => renderEvExpanded(quote,fair,ev,true)).join('');
+    return `<div class="ev-stack ev-positive-screen ev-card-view"><div class="ev-card-view-toolbar"><span>${rows.length} positive ${rows.length === 1 ? 'selection' : 'selections'}</span><button type="button" data-detail="${esc(detailQuoteId)}">Back to table</button></div><div class="ev-card-view-list">${cards}</div><p class="ev-caption ev-method-note">Fair probability and recommended stakes use the existing entered prices and selected bankroll settings. Confirm availability and freshness.</p></div>`;
+  }
+  const body = rows.map(({quote:q,fair,ev}) => detailQuoteId === q.id ? renderEvExpanded(q,fair,ev) : `<tr><td class="ev-value">${(ev * 100).toFixed(2)}%<span class="ev-value-help" title="Estimated positive expected value">?</span></td><td class="ev-event"><strong>${esc(q.event)}</strong><small>${esc(q.sport)} · ${q.live ? 'Live entry' : 'Pregame'}</small><small>Observed ${age(q.ts)}</small></td><td><span>${esc(q.market)}</span><small>${esc(q.type)}${q.line !== '' && q.line != null ? ' · ' + fmtLine(q.line) : ''}</small></td><td><span class="ev-book-cell"><span class="ev-book-mark" aria-hidden="true">${q.book === 'DraftKings' ? '<img src="/assets/sportsbooks/draftkings.svg" alt="">' : q.book === 'FanDuel' ? '<img src="/assets/sportsbooks/fanduel.png" alt="">' : esc(q.book.startsWith('Book ') ? 'B' + q.book.slice(5,6) : q.book.replace(/[^\p{L}\p{N}]/gu,'').slice(0,3))}</span>${esc(q.book)}</span></td><td><strong>${esc(q.side)}${q.line !== '' && q.line != null ? ' ' + fmtLine(q.line) : ''}</strong></td><td>${oddsLabel(q.odds)}</td><td>${percent(fair)}</td><td>${money(fractionalKellyStake(bankroll,kelly,fair,q.odds))}</td><td class="ev-actions"><button type="button" class="ev-action-primary" data-detail="${esc(q.id)}">View</button><span class="ev-action-separator" aria-hidden="true"></span><button type="button" class="ev-icon-action" data-edit="quote" data-id="${esc(q.id)}" aria-label="Edit ${esc(q.event)} price" title="Edit price"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 15 1-4 5-5 3 3-5 5-4 1Z"/></svg></button><button type="button" class="ev-icon-action" data-detail="${esc(q.id)}" aria-label="View ${esc(q.event)} comparison chart" title="View comparison chart"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19v-4m5 4V9m5 10V5m5 14v-8"/></svg></button><details class="ev-row-more"><summary aria-label="More actions for ${esc(q.event)}">⋯</summary><div><button type="button" data-detail="${esc(q.id)}">View details</button><button type="button" data-edit="quote" data-id="${esc(q.id)}">Edit price</button>${live ? '' : `<button type="button" data-parlay="${esc(q.id)}">Add to parlay</button>`}</div></details></td></tr>`);
   const emptyTitle = !pool.length ? 'No prices for this sport yet' : 'No positive EV selections match these filters';
   const emptyBody = !pool.length ? 'Add or import prices to compare. You can also load clearly labeled examples.' : 'Add complete opposing prices from at least two books, or clear a filter. No price feed is connected.';
   const displayRows = body.length ? body : [`<tr class="ev-empty-row"><td colspan="9">${empty(emptyTitle,emptyBody)}</td></tr>`];
@@ -246,17 +341,12 @@ function renderEv(live) {
 }
 
 function openDetail(id) {
-  const quote = state.quotes.find(q => q.id === id);
-  if (!quote) return;
-  detailQuoteId = id;
-  const peers = groups(state.quotes).find(rows => rows.some(q => q.id === id)) || [quote];
-  const fair = fairProbability(quote, peers), estimate = expectedReturn(fair, quote.odds);
-  $('#ev-detail-title').textContent = quote.market;
-  const sameSide = peers.filter(q => q.side === quote.side).sort((a,b) => decimal(b.odds) - decimal(a.odds));
-  const otherSide = peers.filter(q => q.side !== quote.side).sort((a,b) => decimal(b.odds) - decimal(a.odds));
-  const priceRows = (list) => list.length ? list.map(q => `<tr><th scope="row">${esc(q.book)}${q.id === quote.id ? ' <span class="ev-detail-selected">Selected</span>' : ''}</th><td>${oddsLabel(q.odds)}</td><td>${percent(implied(q.odds))}</td><td>${origin(q)}</td></tr>`).join('') : '<tr><td colspan="4">No opposing price entered</td></tr>';
-  $('#ev-detail-body').innerHTML = `<div class="ev-detail-summary"><div><span>Estimated EV</span><strong class="${estimate > 0 ? 'ev-positive' : 'ev-negative'}">${signed(estimate)}</strong></div><div><span>Selection</span><strong>${esc(quote.side)} ${fmtLine(quote.line)}</strong></div><div><span>Fair probability</span><strong>${percent(fair)}</strong></div></div><p class="ev-detail-event">${esc(quote.event)} · ${esc(quote.sport)} · ${quote.live ? 'Live entry' : 'Pregame'}</p><div class="ev-detail-comparison"><h3>Implied probability by book</h3><div class="ev-detail-bars">${sameSide.map(q => `<div><span>${esc(q.book)}</span><div class="ev-bar-track"><i style="width:${Math.max(0,Math.min(100,implied(q.odds)*100))}%"></i></div><strong>${oddsLabel(q.odds)}</strong></div>`).join('')}</div></div><div class="ev-detail-tables"><section><h3>${esc(quote.side)}${quote.line !== '' && quote.line != null ? ' ' + fmtLine(quote.line) : ''}</h3><table><thead><tr><th>Book</th><th>Odds</th><th>Implied</th><th>Source</th></tr></thead><tbody>${priceRows(sameSide)}</tbody></table></section><section><h3>Opposing side</h3><table><thead><tr><th>Book</th><th>Odds</th><th>Implied</th><th>Source</th></tr></thead><tbody>${priceRows(otherSide)}</tbody></table></section></div><p class="ev-detail-note">Selected price entered ${age(quote.ts)}. ${quote.live && !fresh(quote) ? 'This live entry is stale. ' : ''}This is a calculation from entered prices, not a live sportsbook quote.</p>`;
-  if (!$('#ev-detail').open) $('#ev-detail').showModal();
+  if (!state.quotes.some(q => q.id === id)) return;
+  const opening = detailQuoteId !== id;
+  detailQuoteId = opening ? id : '';
+  render();
+  const selector = opening ? '.ev-opportunity-collapse' : '.ev-action-primary';
+  document.querySelector(`${selector}[data-detail="${CSS.escape(id)}"]`)?.focus();
 }
 
 function renderArb(live) {
@@ -270,9 +360,9 @@ function renderArb(live) {
     if (!open) return [main];
     const historyLine = q => state.history.filter(h => h.quoteId === q.id).slice(-4).map(h => oddsLabel(h.odds)).join(' → ') || oddsLabel(q.odds);
     const expanded = `<tr class="ev-expanded-row"><td colspan="8"><div class="ev-expanded-grid ev-arb-detail">
-      <section><h3>Side A · ${esc(a.side)}</h3><div class="ev-price-box"><strong>${esc(a.book)}</strong><span>${oddsLabel(a.odds)}</span></div><label>Stake (USD)<input id="ev-bankroll" type="number" min="1" max="${bankroll}" step="0.01" value="${esc(stake)}"></label><p>Allocated ${money(result.stakes[0])} · Return ${money(result.stakes[0] * decimal(a.odds))}</p></section>
-      <section><h3>Side B · ${esc(b.side)}</h3><div class="ev-price-box"><strong>${esc(b.book)}</strong><span>${oddsLabel(b.odds)}</span></div><p>Allocated ${money(result.stakes[1])} · Return ${money(result.stakes[1] * decimal(b.odds))}</p></section>
-      <section class="ev-arb-profit"><h3>Calculated arbitrage</h3><span>Equalized profit</span><strong>${money(result.profit)}</strong><span>${signed(edge)} ROI · ${money(totalStake)} total stake</span><p>Assumes both prices accept the full stake and settle as a two-outcome market.</p></section>
+      <section class="ev-arb-side"><h3>Side A · ${esc(a.side)} ${fmtLine(a.line)}</h3><div class="ev-price-box"><span>${brandMark(a.book)} ${esc(a.book)}</span><strong>${oddsLabel(a.odds)}</strong></div><label>Total stake (USD)<input id="ev-bankroll" type="number" min="1" max="${bankroll}" step="0.01" value="${esc(stake)}"></label><div class="ev-arb-side-amount"><span>Allocated to side A</span><strong>${money(result.stakes[0])}</strong></div><div class="ev-arb-side-amount"><span>Return if side A wins</span><strong>${money(result.stakes[0] * decimal(a.odds))}</strong></div></section>
+      <section class="ev-arb-side"><h3>Side B · ${esc(b.side)} ${fmtLine(b.line)}</h3><div class="ev-price-box"><span>${brandMark(b.book)} ${esc(b.book)}</span><strong>${oddsLabel(b.odds)}</strong></div><div class="ev-arb-side-amount"><span>Allocated to side B</span><strong>${money(result.stakes[1])}</strong></div><div class="ev-arb-side-amount"><span>Return if side B wins</span><strong>${money(result.stakes[1] * decimal(b.odds))}</strong></div></section>
+      <section class="ev-arb-profit"><h3>Arbitrage calculated</h3><span>Equalized profit</span><strong>${money(result.profit)}</strong><span>${signed(edge)} ROI</span><div class="ev-arb-side-amount"><span>Total stake</span><strong>${money(totalStake)}</strong></div><div class="ev-arb-side-amount"><span>Total return</span><strong>${money(totalStake + result.profit)}</strong></div><p>Assumes both prices accept the full stake and settle as a two-outcome market.</p></section>
     </div><div class="ev-arb-history"><strong>Recorded price movement</strong><span>${esc(a.side)} (${esc(a.book)}) <b>${historyLine(a)}</b></span><span>${esc(b.side)} (${esc(b.book)}) <b>${historyLine(b)}</b></span><small>Edits add timestamped snapshots; these are entered prices, not a live feed.</small></div><p class="ev-caption">${live ? 'Only live entries under 90 seconds old are included. ' : ''}Confirm both quotes and limits before acting.</p></td></tr>`;
     return [main, expanded];
   });
@@ -315,7 +405,13 @@ function renderSharp() {
     const main = `<tr><td class="ev-value">${money(x.liquidity)}</td><td><strong>${esc(q.market)}</strong><small>${fmtLine(q.line)}</small></td><td><strong>${esc(q.event)}</strong><small>${esc(q.sport)} · ${age(q.ts)}</small></td><td><strong>${esc(q.side)} ${fmtLine(q.line)}</strong><small>${esc(q.book)} · exchange entry</small></td><td>${oddsLabel(q.odds)}</td><td>${comparisons.length ? comparisons.map(item=>oddsLabel(item.odds)).join(' · ') : '—'}</td><td>${Number.isFinite(average) ? oddsLabel(average) : '—'}</td><td class="ev-positive"><strong>${oddsLabel(x.sportsbook.odds)}</strong><small>${esc(x.sportsbook.book)}</small></td><td><button type="button" class="ev-expand-button" data-sharp-expand="${esc(key)}" aria-expanded="${open}" aria-label="${open ? 'Collapse' : 'Expand'} ${esc(q.event)} market details">${open ? '⌃' : '⌄'}</button></td></tr>`;
     if (!open) return [main];
     const snapshotCount = state.history.filter(h => h.quoteId === q.id).length;
-    const detail = `<tr class="ev-expanded-row"><td colspan="9"><div class="ev-expanded-grid ev-sharp-detail"><section><h3>Market details</h3><div class="ev-detail-facts"><div><strong>${esc(q.side)} ${fmtLine(q.line)}</strong><span>Exchange offer · ${oddsLabel(q.odds)}</span></div><div><strong>${esc(x.sportsbook.side)} ${fmtLine(x.sportsbook.line)}</strong><span>Best entered book · ${oddsLabel(x.sportsbook.odds)}</span></div></div></section><section><h3>Bookmaker prices</h3><div class="ev-mini-ledger">${peers.slice(0,12).map(item=>`<div><span>${esc(item.book)}</span><span>${esc(item.side)}</span><strong>${oddsLabel(item.odds)}</strong></div>`).join('')}</div></section><section><h3>Liquidity</h3><div class="ev-liquidity-bar"><span style="width:100%"></span></div><p>Entered exchange liquidity <strong>${money(x.liquidity)}</strong></p><p>${snapshotCount} recorded ${snapshotCount === 1 ? 'snapshot' : 'snapshots'} · ${age(q.ts)}</p><p>${Number.isFinite(x.improvement) ? 'Opposite book payout is ' + percent(x.improvement) + ' above the exchange comparison.' : 'No exchange benchmark available.'}</p></section></div></td></tr>`;
+    const exchangeLiquidity = peers.filter(item => item.exchange && Number(item.liquidity) > 0).reduce((totals,item) => {
+      totals[item.side] = (totals[item.side] || 0) + Number(item.liquidity);
+      return totals;
+    }, {});
+    const liquidityMax = Math.max(1,...Object.values(exchangeLiquidity));
+    const liquidityComparison = Object.entries(exchangeLiquidity).map(([side,amount]) => `<div class="ev-liquidity-comparison-row"><span>${esc(side)} ${fmtLine(q.line)}</span><div class="ev-liquidity-bar"><span style="width:${Math.round(amount / liquidityMax * 100)}%"></span></div><strong>${money(amount)}</strong></div>`).join('');
+    const detail = `<tr class="ev-expanded-row"><td colspan="9"><div class="ev-expanded-grid ev-sharp-detail"><section><h3>Market details</h3><div class="ev-detail-facts"><div><strong>${esc(q.side)} ${fmtLine(q.line)}</strong><span>Exchange offer · ${oddsLabel(q.odds)}</span></div><div><strong>${esc(x.sportsbook.side)} ${fmtLine(x.sportsbook.line)}</strong><span>Best entered book · ${oddsLabel(x.sportsbook.odds)}</span></div></div></section><section><h3>Bookmaker prices</h3><div class="ev-mini-ledger">${peers.slice(0,12).map(item=>`<div><span>${esc(item.book)}</span><span>${esc(item.side)}</span><strong>${oddsLabel(item.odds)}</strong></div>`).join('')}</div></section><section><h3>Liquidity comparison</h3><div class="ev-liquidity-comparison">${liquidityComparison}</div><p>Entered exchange liquidity <strong>${money(x.liquidity)}</strong></p><p>${snapshotCount} recorded ${snapshotCount === 1 ? 'snapshot' : 'snapshots'} · ${age(q.ts)}</p><p>${Number.isFinite(x.improvement) ? 'Opposite book payout is ' + percent(x.improvement) + ' above the exchange comparison.' : 'No exchange benchmark available.'}</p></section></div></td></tr>`;
     return [main,detail];
   });
   return `<div class="ev-stack ev-sharp-screen">${rows.length ? '<p class="ev-swipe-hint">Scroll sideways to compare exchange and sportsbook prices →</p>' + table(['Opp. liquidity','Market','Event','Exchange offering','Exchange odds','Comparison odds','Avg. price','Best price',''],rows) : empty('No matching exchange and book prices', 'Enter an exchange offer with liquidity and a better opposite sportsbook price at the same line.')}<p class="ev-caption ev-method-note">This view compares entered liquidity and prices. It does not identify verified sharp action or stream live market activity.</p></div>`;
@@ -323,8 +419,9 @@ function renderSharp() {
 
 function renderFantasy() {
   const entries = dfs().filter(item => (!bookmaker || item.app === bookmaker) && (!marketType || item.market === marketType));
-  const platformNames = [...new Set(entries.map(item => item.app))];
-  const platforms = [...new Set([...platformNames, 'PrizePicks','Underdog Fantasy','Sleeper Picks'])].slice(0,4);
+  const platformLabel = name => name.replace(/\s*\(example\)$/,'').replace(/^Underdog$/,'Underdog Fantasy');
+  const platformNames = [...new Set(entries.map(item => platformLabel(item.app)))];
+  const platforms = [...new Set([...platformNames, 'PrizePicks','Underdog Fantasy','Sleeper Picks'])].slice(0,3);
   const grouped = new Map();
   for (const item of entries) {
     const key = [item.player,item.market,item.event,item.side].join('|');
@@ -335,12 +432,14 @@ function renderFantasy() {
     const first = group[0], pick = group.reduce((best,item)=>Number(item.probability)>Number(best.probability)?item:best,first);
     const bestLine = first.side === 'Under' ? Math.max(...group.map(item=>Number(item.line))) : Math.min(...group.map(item=>Number(item.line)));
     const appCells = platforms.map(app => {
-      const item = group.filter(entry => entry.app === app).sort((a,b)=>Date.parse(b.ts)-Date.parse(a.ts))[0];
-      return `<td>${item ? `<button type="button" class="ev-dfs-line ${Number(item.line) === bestLine ? 'is-best' : ''}" data-edit="dfs" data-id="${esc(item.id)}" aria-label="Edit ${esc(item.app)} ${esc(item.player)} prop"><strong>${esc(item.side)} ${fmtLine(item.line)}</strong><small>${percent(Number(item.probability))} estimated</small></button>` : '<span class="ev-odds-missing">—</span>'}</td>`;
+      const item = group.filter(entry => platformLabel(entry.app) === app).sort((a,b)=>Date.parse(b.ts)-Date.parse(a.ts))[0];
+      return `<td>${item ? `<button type="button" class="ev-dfs-line ${Number(item.line) === bestLine ? 'is-best' : ''}" data-edit="dfs" data-id="${esc(item.id)}" aria-label="Edit ${esc(item.app)} ${esc(item.player)} prop"><strong>${item.side === 'Over' ? 'O' : item.side === 'Under' ? 'U' : esc(item.side)} ${fmtLine(item.line)}</strong><small>${percent(Number(item.probability))}</small></button>` : '<span class="ev-odds-missing">—</span>'}</td>`;
     }).join('');
-    return `<tr><td class="ev-value">${percent(Number(pick.probability))}</td><td><strong>${esc(first.player)}</strong><small>${esc(first.sport || 'Sport not entered')} · ${age(first.ts)}</small></td><td><strong>${esc(first.event || 'Matchup not entered')}</strong></td><td><strong>${esc(first.market)}</strong></td><td>${esc(first.side)} ${fmtLine(first.line)}</td>${appCells}<td class="ev-actions"><button type="button" data-fantasy="${esc(pick.id)}">Add to slip</button><button type="button" data-edit="dfs" data-id="${esc(pick.id)}">Edit</button></td></tr>`;
+    const best = group.find(item => Number(item.line) === bestLine) || first;
+    const initials = first.player.split(/\s+/).slice(0,2).map(part=>part[0] || '').join('').toUpperCase();
+    return `<tr><td class="ev-value">${percent(Number(pick.probability))}<small>estimated</small></td><td><span class="ev-dfs-player"><span class="ev-dfs-avatar" aria-hidden="true">${esc(initials)}</span><span><strong>${esc(first.player)}</strong><small>${esc(first.sport || 'Sport not entered')} · ${age(first.ts)}</small></span></span></td><td><strong>${esc(first.event || 'Matchup not entered')}</strong></td><td><strong>${esc(first.market)}</strong></td><td><strong>${esc(first.side)} ${fmtLine(first.line)}</strong></td>${appCells}<td><strong class="ev-positive">${esc(first.side)} ${fmtLine(best.line)}</strong><small>${esc(best.app)}</small></td><td class="ev-actions"><button type="button" data-fantasy="${esc(pick.id)}">Add to slip</button><button type="button" data-edit="dfs" data-id="${esc(pick.id)}">Edit</button></td></tr>`;
   });
-  return `<div class="ev-stack ev-dfs-screen">${rows.length ? '<p class="ev-swipe-hint">Scroll sideways to compare DFS platforms →</p>' + table(['Est. hit','Player','Matchup','Prop','Pick',...platforms.map(esc),'Actions'],rows) : empty('No DFS props entered', 'Add a player prop, pick, platform and estimated hit probability to compare lines.')}<p class="ev-caption ev-method-note">Hit rates are entered estimates, not verified projections or expected value. A highlighted line is the most favorable entered line for the selected Over or Under; payout rules live in the slip builder.</p></div>`;
+  return `<div class="ev-stack ev-dfs-screen">${rows.length ? '<p class="ev-swipe-hint">Scroll sideways to compare DFS platforms →</p>' + table(['Est. hit','Player','Matchup','Prop','Line',...platforms.map(app=>esc(app === 'Underdog Fantasy' ? 'Underdog' : app === 'Sleeper Picks' ? 'Sleeper' : app)),'Best line','Actions'],rows) : empty('No DFS props entered', 'Add a player prop, pick, platform and estimated hit probability to compare lines.')}<p class="ev-caption ev-method-note">Hit rates are entered estimates, not verified projections or expected value. A highlighted line is the most favorable entered line for the selected Over or Under; payout rules live in the slip builder.</p></div>`;
 }
 
 function renderOptimizer() {
