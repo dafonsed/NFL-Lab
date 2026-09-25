@@ -2,7 +2,7 @@ import { BET_STORAGE_KEY, STATUSES, validateBet, betReturns, summarizeBets, read
 import { BetLegEditor } from './bet-editor.js';
 import { LEG_RESULTS, legState, ticketSettlement, gameKey, refreshTicket, formatLegTarget, validateLeg } from './bet-legs.js';
 import { icon } from './ui-icons.js';
-import { BetDashboard } from './bet-dashboard.js';
+import { BetDashboard } from './bet-dashboard-v2.js';
 import { BetSlipImport } from './bet-slip-import.js';
 import {sportsbookMark} from './product-ui.js';
 

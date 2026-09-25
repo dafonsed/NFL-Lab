@@ -1,5 +1,5 @@
 import { decimal, implied, expectedReturn, money, percent, signed, oddsLabel, probabilityToAmerican, fairProbability, fresh, groups, marketKey, evRows, fractionalKellyStake, holdRows, arbitrage, arbitrageRows, middleRows, promoConversion, parlay, fantasySlip, closingLineValue, gradedBet, pearson, sharpMatches, alertMatches, validateWorkspace } from './ev-core.js?v=2';
-import { exampleWorkspace } from './ev-demo.js';
+import { exampleWorkspace, smartMoneyDemoQuotes } from './ev-demo.js?v=3';
 
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -29,7 +29,16 @@ const arrays = ['quotes', 'history', 'dfs', 'contracts', 'contractHistory', 'tra
 function load() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORE));
-    if (parsed?.version === 1) return normalize(parsed);
+    if (parsed?.version === 1) {
+      const saved = normalize(parsed);
+      if (saved.example && saved.quotes.some(q => q.source === 'example' && (/^Book [ABC]$/.test(q.book) || q.book === 'Exchange X'))) {
+        const demo = exampleWorkspace();
+        for (const key of arrays) saved[key] = [...saved[key].filter(item => item.source !== 'example'), ...demo[key]];
+        saved.paytables = { ...demo.paytables, ...saved.paytables };
+        localStorage.setItem(STORE, JSON.stringify(saved));
+      }
+      return saved;
+    }
   } catch { /* Browser storage can be disabled. */ }
   return normalize({ version: 1, example: false });
 }
@@ -50,6 +59,7 @@ let evLeague = '', evDateRange = 'week', evMaxOdds = '200';
 let designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' };
 let designSort = 'recommended';
 let expandedOddsKey = '', expandedArbKey = '', expandedSharpKey = '';
+let sharpFiltersOpen = false, sharpSelectedBook = '';
 const sportsbookNames = ['bet365','DraftKings','FanDuel','BetMGM','Caesars','BetRivers','Fanatics','Hard Rock Bet','theScore Bet','Bally Bet','Desert Diamond Sports'];
 const fantasyNames = ['PrizePicks','Underdog Fantasy','Sleeper Picks','ParlayPlay','Dabble','Chalkboard','DraftKings Fantasy','FanDuel Fantasy','Betr Picks','OwnersBox','Boom Fantasy','Vivid Picks'];
 const canonicalPlatform = name => String(name || '').replace(/\s*\(example\)$/, '').replace(/^Underdog$/, 'Underdog Fantasy').replace(/^Sleeper$/, 'Sleeper Picks');
@@ -58,6 +68,7 @@ const brandMarks = {
   BetMGM:'/assets/brands/betmgm.png', Caesars:'/assets/brands/caesars.png', BetRivers:'/assets/brands/betrivers.png',
   Fanatics:'/assets/brands/fanatics.png', 'Hard Rock Bet':'/assets/brands/hardrock.png', 'theScore Bet':'/assets/brands/thescore.png',
   'Bally Bet':'/assets/brands/bally.png', 'Desert Diamond Sports':'/assets/brands/desertdiamond.png',
+  ProphetX:'/assets/brands/prophetx.png', Sporttrade:'/assets/brands/sporttrade.png',
   PrizePicks:'/assets/brands/prizepicks.png', 'Underdog Fantasy':'/assets/brands/underdog.png',
   'Sleeper Picks':'/assets/brands/sleeper.png', ParlayPlay:'/assets/brands/parlayplay.png',
   Dabble:'/assets/brands/dabble.png', Chalkboard:'/assets/brands/chalkboard.png'
@@ -171,7 +182,7 @@ function renderDesignFilters() {
 }
 function render() {
   renderNav();
-  const titles = { odds:'Odds Screen', 'ev-pre':'Positive EV', 'ev-live':'Live EV', fantasy:'DFS Props', 'arb-pre':'Arbitrage', 'arb-live':'Live Arbitrage', sharp:'Smart Money', tracker:'Bet Tracker' };
+  const titles = { odds:'Odds Screen', 'ev-pre':'Positive EV', 'ev-live':'Positive EV', fantasy:'DFS Props', 'arb-pre':'Arbitrage', 'arb-live':'Live Arbitrage', sharp:'Smart Money', tracker:'Bet Tracker' };
   const pageTitle = titles[active] || toolMeta[active][2];
   $('#ev-page-title').textContent = pageTitle;
   $('#ev-top-title').textContent = pageTitle;
@@ -244,6 +255,12 @@ function render() {
 
 function renderBooks() {
   const fantasyMode = ['fantasy','optimizer','slip','fantasy-alerts'].includes(active);
+  const positiveMode = active === 'ev-pre' || active === 'ev-live';
+  const timingToggle = $('#ev-timing-toggle');
+  timingToggle.hidden = !positiveMode;
+  timingToggle.dataset.mode = active;
+  timingToggle.setAttribute('aria-checked', String(active === 'ev-live'));
+  timingToggle.title = active === 'ev-live' ? 'Switch to pregame bets' : 'Switch to live bets';
   const entered = fantasyMode ? state.dfs.map(item => canonicalPlatform(item.app)) : state.quotes.filter(q => !sport || q.sport === sport).map(q => q.book);
   const supported = fantasyMode ? fantasyNames : active === 'sharp' ? ['Pinnacle','DraftKings','FanDuel','bet365',...sportsbookNames.filter(name => !['DraftKings','FanDuel','bet365'].includes(name))] : sportsbookNames;
   const books = [...new Set([...supported, ...entered])];
@@ -255,12 +272,12 @@ function renderBooks() {
   if (relevant && !fantasyMode) {
     const options = [...new Set([...books, ...sportsbookOptions()])];
     const selected = options.filter(sportsbookSelected);
-    const visibleCount = window.innerWidth < 360 ? 2 : window.innerWidth < 600 ? 3 : window.innerWidth < 950 ? 6 : 12;
+    const visibleCount = window.innerWidth < 360 ? 1 : window.innerWidth < 600 ? 2 : window.innerWidth < 950 ? 6 : window.innerWidth < 1250 ? 8 : window.innerWidth < 1500 ? 10 : 12;
     const shown = selected.slice(0, visibleCount);
     $('#ev-books').innerHTML = shown.length ? shown.map(book => `<button type="button" class="ev-selected-book" data-book-remove="${esc(book)}" aria-label="Remove ${esc(book)} from selected sportsbooks" title="Remove ${esc(book)}"><span class="ev-book-symbol">${brandMarks[book] ? `<img src="${brandMarks[book]}" alt="" class="ev-book-logo">` : esc(book.slice(0,2))}</span><span class="ev-book-remove" aria-hidden="true">×</span></button>`).join('') : '<span class="ev-no-books">No books selected</span>';
     if (selected.length > shown.length) $('#ev-books').insertAdjacentHTML('beforeend', `<button type="button" class="ev-book-overflow" data-open-book-menu aria-label="Show ${selected.length - shown.length} more selected sportsbooks">+${selected.length - shown.length}</button>`);
     $('#ev-books-more').hidden = false;
-    $('#ev-books-more').innerHTML = '<span aria-hidden="true">⌄</span>';
+    $('#ev-books-more').innerHTML = '<span aria-hidden="true">+</span>';
     $('#ev-books-more').setAttribute('aria-label','Choose sportsbooks');
     $('#ev-books-more').setAttribute('aria-expanded',String(bookMenuOpen));
     menu.hidden = !bookMenuOpen;
@@ -414,26 +431,34 @@ function openDetail(id) {
 }
 
 function renderArb(live) {
-  const opportunities = arbitrageRows(quotes().filter(q => sportsbookSelected(q.book)), live).filter(x => (!marketType || x.best[0].type === marketType) && arbitrage(x.best, 100).margin >= Number(designFilters.minEdge));
-  const totalStake = Math.min(Number(stake) * flatMultiplier, bankroll);
-  const cards = opportunities.map(x => {
-    const [a,b] = x.best, key = marketKey(a), result = arbitrage(x.best, totalStake), open = expandedArbKey === key;
+  const opportunities = arbitrageRows(quotes().filter(q => sportsbookSelected(q.book) && !q.exchange), live)
+    .flatMap(({ rows, best }) => rows.filter(q => q.side === best[0].side && fresh(q)).flatMap(a =>
+      rows.filter(b => b.side === best[1].side && b.book !== a.book && fresh(b)).map(b => [a,b])))
+    .filter(([a,b]) => (!marketType || a.type === marketType) && arbitrage([a,b], 100)?.margin >= Number(designFilters.minEdge))
+    .sort((left,right) => arbitrage(right, 100).margin - arbitrage(left, 100).margin);
+  const wholeDollars = value => '$' + Math.round(value).toLocaleString('en-US');
+  const cards = opportunities.map(([a,b]) => {
+    const key = `${marketKey(a)}|${a.id}|${b.id}`;
+    const hedgePerDollar = decimal(a.odds) / decimal(b.odds);
+    const anchorStake = Math.min(Number(stake) * flatMultiplier, bankroll / (1 + hedgePerDollar));
+    const totalStake = anchorStake * (1 + hedgePerDollar);
+    const result = arbitrage([a,b], totalStake), open = expandedArbKey === key;
     const edge = result.margin;
     const leg = (q, index) => `<div class="ev-arb-leg">
       <span class="ev-arb-book-logo" aria-hidden="true">${brandMark(q.book)}</span>
-      <div class="ev-arb-selection"><strong>${q.type === 'prop' ? esc(q.player || q.market) + ' ' : ''}${esc(q.side)}${q.line !== '' && q.line != null ? ' ' + fmtLine(q.line) : ''}</strong><small>${esc(q.book)}</small></div>
+      <div class="ev-arb-selection"><strong>${esc(q.type === 'prop' ? q.player || q.market : q.market)} ${esc(q.side)}${q.line !== '' && q.line != null ? ' ' + fmtLine(q.line) : ''} <span class="ev-arb-selection-arrow" aria-hidden="true">↗</span></strong><small>${esc(q.book)}</small></div>
       <div class="ev-arb-leg-figure ev-arb-odds"><strong>${oddsLabel(q.odds)}</strong><small>Odds</small></div>
-      <div class="ev-arb-leg-figure"><strong>${money(result.stakes[index])}</strong><small>Rec. bet</small></div>
-      <div class="ev-arb-leg-figure"><strong>${money(result.profit)}</strong><small>Profit</small></div>
+      <div class="ev-arb-leg-figure"><strong>${wholeDollars(result.stakes[index])}</strong><small>Rec. bet</small></div>
+      <div class="ev-arb-leg-figure"><strong>${wholeDollars(result.profit)}</strong><small>Profit</small></div>
     </div>`;
     const historyLine = q => state.history.filter(h => h.quoteId === q.id).slice(-4).map(h => oddsLabel(h.odds)).join(' → ') || oddsLabel(q.odds);
     const expanded = !open ? '' : `<div class="ev-arb-expanded"><div class="ev-expanded-grid ev-arb-detail">
-      <section class="ev-arb-side"><h3>Side A · ${esc(a.side)} ${fmtLine(a.line)}</h3><div class="ev-price-box"><span>${brandMark(a.book)} ${esc(a.book)}</span><strong>${oddsLabel(a.odds)}</strong></div><label>Total stake (USD)<input id="ev-bankroll" type="number" min="1" max="${bankroll}" step="0.01" value="${esc(stake)}"></label><div class="ev-arb-side-amount"><span>Allocated to side A</span><strong>${money(result.stakes[0])}</strong></div><div class="ev-arb-side-amount"><span>Return if side A wins</span><strong>${money(result.stakes[0] * decimal(a.odds))}</strong></div></section>
+      <section class="ev-arb-side"><h3>Side A · ${esc(a.side)} ${fmtLine(a.line)}</h3><div class="ev-price-box"><span>${brandMark(a.book)} ${esc(a.book)}</span><strong>${oddsLabel(a.odds)}</strong></div><label>Side A stake (USD)<input id="ev-bankroll" type="number" min="1" max="${bankroll}" step="0.01" value="${esc(stake)}"></label><div class="ev-arb-side-amount"><span>Allocated to side A</span><strong>${money(result.stakes[0])}</strong></div><div class="ev-arb-side-amount"><span>Return if side A wins</span><strong>${money(result.stakes[0] * decimal(a.odds))}</strong></div></section>
       <section class="ev-arb-side"><h3>Side B · ${esc(b.side)} ${fmtLine(b.line)}</h3><div class="ev-price-box"><span>${brandMark(b.book)} ${esc(b.book)}</span><strong>${oddsLabel(b.odds)}</strong></div><div class="ev-arb-side-amount"><span>Allocated to side B</span><strong>${money(result.stakes[1])}</strong></div><div class="ev-arb-side-amount"><span>Return if side B wins</span><strong>${money(result.stakes[1] * decimal(b.odds))}</strong></div></section>
       <section class="ev-arb-profit"><h3>Arbitrage calculated</h3><span>Equalized profit</span><strong>${money(result.profit)}</strong><span>${signed(edge)} ROI</span><div class="ev-arb-side-amount"><span>Total stake</span><strong>${money(totalStake)}</strong></div><div class="ev-arb-side-amount"><span>Total return</span><strong>${money(totalStake + result.profit)}</strong></div><p>Assumes both prices accept the full stake and settle as a two-outcome market.</p></section>
     </div><div class="ev-arb-history"><strong>Recorded price movement</strong><span>${esc(a.side)} (${esc(a.book)}) <b>${historyLine(a)}</b></span><span>${esc(b.side)} (${esc(b.book)}) <b>${historyLine(b)}</b></span><small>Edits add timestamped snapshots; these are entered prices, not a live feed.</small></div><p class="ev-caption">${live ? 'Only live entries under 90 seconds old are included. ' : ''}Confirm both quotes and limits before acting.</p></div>`;
     return `<article class="ev-arb-opportunity">
-      <div class="ev-arb-overview"><span class="ev-arb-edge">${signed(edge)}</span><div class="ev-arb-market"><strong>${esc(a.market)} <span>${esc(a.sport)}</span></strong><small>${esc(a.event)} · ${a.live ? 'Live' : 'Pregame'} · ${age(a.ts)}</small></div><button type="button" class="ev-arb-expand" data-arb-expand="${esc(key)}" aria-expanded="${open}" aria-label="${open ? 'Hide' : 'Show'} stake plan for ${esc(a.event)}">${open ? '⌃' : '⌄'}</button></div>
+      <button type="button" class="ev-arb-overview" data-arb-expand="${esc(key)}" aria-expanded="${open}" aria-label="${open ? 'Hide' : 'Show'} stake plan for ${esc(a.event)}"><span class="ev-arb-edge">${(edge * 100).toFixed(2)}%</span><span class="ev-arb-market"><strong>${esc(a.displayMarket || a.market)} <span class="ev-arb-league">${a.sport === 'MLB' ? '⚾' : a.sport === 'NFL' ? '🏈' : '●'} ${esc(a.sport)}</span></strong><small><span class="ev-arb-matchup">${esc(a.displayEvent || a.event)}</span><span class="ev-arb-event-time">${a.source === 'example' ? 'Demo' : a.live ? 'Live' : 'Pregame'} · ${esc(a.displayTime || age(a.ts))}</span></small></span></button>
       <div class="ev-arb-pair"><span class="ev-arb-pair-count" aria-label="Two opposing bets"><b>2</b><b>×</b><b>↗</b></span><div class="ev-arb-legs">${leg(a,0)}${leg(b,1)}</div></div>
       ${expanded}
     </article>`;
@@ -467,26 +492,55 @@ function renderParlay() {
 
 function renderSharp() {
   const threshold = Number(localStorage.getItem('sportslab-ev-sharp-min') || 1000);
-  const matches = sharpMatches(quotes().filter(q => sportsbookSelected(q.book)), threshold).filter(x => !marketType || x.exchange.type === marketType);
-  if (!expandedSharpKey && matches.length) expandedSharpKey = matches[0].exchange.id;
-  const rows = matches.flatMap(x => {
-    const q = x.exchange, key = q.id, peers = groups(state.quotes).find(g => g.some(item => item.id === q.id)) || [];
-    const comparisons = peers.filter(item => !item.exchange && item.side === x.sportsbook.side);
-    const average = comparisons.length ? probabilityToAmerican(comparisons.reduce((sum,item)=>sum+implied(item.odds),0)/comparisons.length) : NaN;
-    const open = expandedSharpKey === key;
-    const main = `<tr><td class="ev-value">${money(x.liquidity)}</td><td><strong>${esc(q.market)}</strong><small>${fmtLine(q.line)}</small></td><td><strong>${esc(q.event)}</strong><small>${esc(q.sport)} · ${age(q.ts)}</small></td><td><strong>${esc(q.side)} ${fmtLine(q.line)}</strong><small>${esc(q.book)} · exchange entry</small></td><td>${oddsLabel(q.odds)}</td><td>${comparisons.length ? comparisons.map(item=>oddsLabel(item.odds)).join(' · ') : '—'}</td><td>${Number.isFinite(average) ? oddsLabel(average) : '—'}</td><td class="ev-positive"><strong>${oddsLabel(x.sportsbook.odds)}</strong><small>${esc(x.sportsbook.book)}</small></td><td><button type="button" class="ev-expand-button" data-sharp-expand="${esc(key)}" aria-expanded="${open}" aria-label="${open ? 'Collapse' : 'Expand'} ${esc(q.event)} market details">${open ? '⌃' : '⌄'}</button></td></tr>`;
-    if (!open) return [main];
-    const snapshotCount = state.history.filter(h => h.quoteId === q.id).length;
-    const exchangeLiquidity = peers.filter(item => item.exchange && Number(item.liquidity) > 0).reduce((totals,item) => {
-      totals[item.side] = (totals[item.side] || 0) + Number(item.liquidity);
-      return totals;
-    }, {});
-    const liquidityMax = Math.max(1,...Object.values(exchangeLiquidity));
-    const liquidityComparison = Object.entries(exchangeLiquidity).map(([side,amount]) => `<div class="ev-liquidity-comparison-row"><span>${esc(side)} ${fmtLine(q.line)}</span><div class="ev-liquidity-bar"><span style="width:${Math.round(amount / liquidityMax * 100)}%"></span></div><strong>${money(amount)}</strong></div>`).join('');
-    const detail = `<tr class="ev-expanded-row"><td colspan="9"><div class="ev-expanded-grid ev-sharp-detail"><section><h3>Market details</h3><div class="ev-detail-facts"><div><strong>${esc(q.side)} ${fmtLine(q.line)}</strong><span>Exchange offer · ${oddsLabel(q.odds)}</span></div><div><strong>${esc(x.sportsbook.side)} ${fmtLine(x.sportsbook.line)}</strong><span>Best entered book · ${oddsLabel(x.sportsbook.odds)}</span></div></div></section><section><h3>Bookmaker prices</h3><div class="ev-mini-ledger">${peers.slice(0,12).map(item=>`<div><span>${esc(item.book)}</span><span>${esc(item.side)}</span><strong>${oddsLabel(item.odds)}</strong></div>`).join('')}</div></section><section><h3>Liquidity comparison</h3><div class="ev-liquidity-comparison">${liquidityComparison}</div><p>Entered exchange liquidity <strong>${money(x.liquidity)}</strong></p><p>${snapshotCount} recorded ${snapshotCount === 1 ? 'snapshot' : 'snapshots'} · ${age(q.ts)}</p><p>${Number.isFinite(x.improvement) ? 'Opposite book payout is ' + percent(x.improvement) + ' above the exchange comparison.' : 'No exchange benchmark available.'}</p></section></div></td></tr>`;
-    return [main,detail];
-  });
-  return `<div class="ev-stack ev-sharp-screen">${rows.length ? '<p class="ev-swipe-hint">Scroll sideways to compare exchange and sportsbook prices →</p>' + table(['Opp. liquidity','Market','Event','Exchange offering','Exchange odds','Comparison odds','Avg. price','Best price',''],rows) : empty('No matching exchange and book prices', 'Enter an exchange offer with liquidity and a better opposite sportsbook price at the same line.')}<p class="ev-caption ev-method-note">This view compares entered liquidity and prices. It does not identify verified sharp action or stream live market activity.</p></div>`;
+  const liquidityMoney = value => new Intl.NumberFormat('en-US', { style:'currency', currency:'USD', minimumFractionDigits:0, maximumFractionDigits:0 }).format(value);
+  // Old generic examples can be persisted in the browser. Keep Smart Money's
+  // curated demo visible until the user has entered or imported actual prices.
+  const enteredQuotes = state.quotes.filter(q => q.source !== 'example');
+  const preview = enteredQuotes.length === 0;
+  const source = preview ? smartMoneyDemoQuotes() : enteredQuotes;
+  const filtered = source.filter(q => !sport || q.sport === sport);
+  const matches = sharpMatches(filtered, threshold).filter(x => (!marketType || x.exchange.type === marketType) && (!bookmaker || [x.exchange.book,x.sportsbook.book].includes(bookmaker)) && (!search || [x.exchange.event,x.exchange.market,x.exchange.side,x.exchange.book,x.sportsbook.side,x.sportsbook.book,x.exchange.sport].some(value => filterText(value)))).sort((a,b) => b.liquidity - a.liquidity);
+  if (!matches.some(x => x.exchange.id === expandedSharpKey)) expandedSharpKey = matches[0]?.exchange.id || '';
+  const selected = matches.find(x => x.exchange.id === expandedSharpKey);
+  const selection = q => `${esc(q.side)}${q.line !== '' && q.line != null ? ' ' + (q.type === 'spread' && Number(q.line) > 0 ? '+' : '') + fmtLine(q.line) : ''}`;
+  const card = x => {
+    const q = x.exchange;
+    return `<button type="button" class="sharp-card" data-sharp-select="${esc(q.id)}" aria-pressed="${q.id === expandedSharpKey}">
+      <span class="sharp-card-value"><small>Liquidity</small><strong>${liquidityMoney(x.liquidity)}</strong><span>${esc(q.book)}</span></span>
+      <span class="sharp-card-content"><span class="sharp-card-meta"><span>${esc(q.sport)} <i aria-hidden="true">/</i> ${q.live ? 'Live' : 'Pregame'}</span><span>${preview ? 'Demo market' : age(q.ts)}</span></span><strong class="sharp-card-event">${esc(q.event)}</strong><span class="sharp-card-market">${esc(q.market)}</span>
+      <span class="sharp-card-pick"><span class="sharp-card-pick-book">${brandMark(x.sportsbook.book)}<strong>${selection(x.sportsbook)}</strong></span><b>${oddsLabel(x.sportsbook.odds)}</b></span>
+      <span class="sharp-card-counter"><span>Opposing offer · ${esc(q.book)}</span><strong>${oddsLabel(q.odds)}</strong></span></span>
+    </button>`;
+  };
+  let detail = `<div class="sharp-detail-empty"><strong>Select a market</strong><p>Choose an opportunity to compare the entered prices and liquidity.</p></div>`;
+  if (selected) {
+    const q = selected.exchange;
+    const peers = groups(source).find(group => group.some(item => item.id === q.id)) || [];
+    const opposite = peers.filter(item => item.side !== q.side);
+    const books = opposite.filter(item => !item.exchange).sort((a,b) => decimal(b.odds) - decimal(a.odds));
+    const featuredBook = books.find(item => item.id === sharpSelectedBook) || selected.sportsbook;
+    const exchangeRows = peers.filter(item => item.exchange && Number(item.liquidity) > 0);
+    const liquidity = [...new Set(exchangeRows.map(item => item.side))].map(side => [side,exchangeRows.filter(item => item.side === side).reduce((sum,item) => sum + Number(item.liquidity),0)]);
+    const max = Math.max(1,...liquidity.map(([,amount]) => amount));
+    const bookRows = books.slice(0,8).map(item => {
+      const sameSide = peers.find(peer => !peer.exchange && peer.book === item.book && peer.side === q.side);
+      return `<button type="button" class="sharp-book-row" data-sharp-book="${esc(item.id)}" aria-pressed="${sharpSelectedBook === item.id}" title="${esc(item.book)} prices">
+        <span class="sharp-book-identity">${brandMark(item.book)}<span class="sharp-book-name">${esc(item.book)}</span></span>
+        <strong class="sharp-book-best ${item.id === selected.sportsbook.id ? 'is-best' : ''}">${oddsLabel(item.odds)}</strong>
+        <strong class="sharp-book-other">${sameSide ? oddsLabel(sameSide.odds) : '—'}</strong>
+      </button>`;
+    }).join('');
+    detail = `<div class="sharp-detail-top"><div><span class="sharp-detail-kicker">${esc(q.sport)} <i aria-hidden="true">/</i> ${q.live ? 'Live' : 'Pregame'} <i aria-hidden="true">/</i> ${preview ? 'Demo market' : age(q.ts)}</span><h2>${esc(q.event)}</h2><p>${esc(q.market)}</p></div><div class="sharp-detail-total"><small>Opposing liquidity</small><strong>${liquidityMoney(selected.liquidity)}</strong></div></div>
+      <div class="sharp-selected-pick"><div>${brandMark(featuredBook.book)}<span><small>${featuredBook.id === selected.sportsbook.id ? 'Best sportsbook price' : 'Selected sportsbook price'} · ${esc(featuredBook.book)}</small><strong>${selection(featuredBook)}</strong></span></div><b>${oddsLabel(featuredBook.odds)}</b></div>
+      <div class="sharp-exchange-line"><span class="sharp-exchange-name">${brandMark(q.book)}<span>Exchange offer · ${esc(q.book)}</span></span><strong>${selection(q)} <b>${oddsLabel(q.odds)}</b></strong></div>
+      <div class="sharp-detail-section"><div class="sharp-section-heading"><h3>Exchange liquidity</h3><span>${exchangeRows.length} available sides</span></div><div class="sharp-liquidity-chart">${liquidity.map(([side,amount]) => `<div class="sharp-liquidity-row"><span>${esc(side)}</span><div class="sharp-liquidity-track"><span style="width:${Math.max(3,Math.round(amount/max*100))}%"></span></div><strong>${liquidityMoney(amount)}</strong></div>`).join('')}</div></div>
+      <div class="sharp-detail-section sharp-books"><div class="sharp-section-heading"><h3>Compare sportsbook odds</h3><span>${books.length} ${books.length === 1 ? 'book' : 'books'}</span></div><div class="sharp-book-head"><span>Sportsbook</span><span>${selection(selected.sportsbook)}</span><span>${selection(q)}</span></div>${bookRows || '<p class="sharp-no-books">No opposing sportsbook prices entered.</p>'}</div>
+      <p class="sharp-detail-foot">${preview ? 'Illustrative odds and liquidity for design preview. No live feed is connected.' : `Saved price · observed ${age(q.ts)} · ${state.history.filter(item => item.quoteId === q.id).length} recorded snapshots`}</p>`;
+  }
+  return `<div class="sharp-workspace"><div class="sharp-page-bar"><div class="sharp-page-title"><h1>Smart Money</h1><p>Exchange liquidity and sportsbook prices, side by side.</p></div><span class="sharp-data-badge">${preview ? 'Demo data' : 'Saved prices'}</span></div>
+    <div class="sharp-toolbar"><label class="sharp-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg><input id="sharp-search" type="search" placeholder="Search teams, players or books" aria-label="Search Smart Money markets" value="${esc(search)}" autocomplete="off"></label><button type="button" data-sharp-filters aria-expanded="${sharpFiltersOpen}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M7 12h10M10 17h4"/></svg> Filters</button><button type="button" data-sharp-refresh title="Refresh comparison" aria-label="Refresh comparison"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2 6M20 4v7h-7"/></svg></button></div>
+    <div class="sharp-filter-tray" ${sharpFiltersOpen ? '' : 'hidden'}><label>Sport<select id="sharp-sport"><option value="">All sports</option>${['NFL','MLB','NBA','WNBA','NHL','Soccer'].map(value => `<option value="${value}" ${sport === value ? 'selected' : ''}>${value}</option>`).join('')}</select></label><label>Market<select id="sharp-market"><option value="">All markets</option>${[['spread','Spreads'],['total','Totals'],['prop','Player props'],['alternate','Alternates'],['future','Futures']].map(([value,label]) => `<option value="${value}" ${marketType === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><label>Min liquidity<input id="sharp-min" type="number" min="0" step="100" value="${threshold}"></label><button type="button" data-sharp-clear>Clear filters</button></div>
+    <div class="sharp-panels"><section class="sharp-list-panel" aria-label="Smart Money opportunities"><div class="sharp-panel-heading"><div><h2>Opportunities</h2><span>Browse markets with opposing exchange liquidity</span></div><span class="sharp-count">${matches.length}</span></div><div class="sharp-card-list">${matches.length ? matches.map(card).join('') : `<div class="sharp-list-empty"><strong>No matching opportunities</strong><p>Try another filter or enter exchange and sportsbook prices for the same market.</p></div>`}</div></section><section class="sharp-detail-panel" aria-label="Selected market comparison">${detail}</section></div><p class="sharp-method-note">${preview ? 'All demo prices and liquidity are illustrative. ' : ''}Comparisons reflect saved prices; they do not verify market action or provide a live betting feed.</p></div>`;
 }
 
 function renderFantasy() {
@@ -720,6 +774,14 @@ document.addEventListener('pointerdown', event => { if (bookMenuOpen && !$('.ev-
 document.addEventListener('keydown', event => { if (event.key === 'Escape' && bookMenuOpen) { bookMenuOpen = false; renderBooks(); $('#ev-books-more').focus(); } });
 window.addEventListener('resize', () => { if ($('.ev-bookbar').classList.contains('ev-bookbar-select')) renderBooks(); });
 $('#ev-find').addEventListener('click', () => $('#ev-view').scrollIntoView({ behavior:'smooth', block:'start' }));
+$('#ev-timing-toggle').addEventListener('click', () => {
+  if (active !== 'ev-pre' && active !== 'ev-live') return;
+  active = active === 'ev-live' ? 'ev-pre' : 'ev-live';
+  detailQuoteId = '';
+  bookMenuOpen = false;
+  history.replaceState(null, '', location.pathname + location.search + '#' + active);
+  render();
+});
 document.querySelector('[data-ev-focus-search]')?.addEventListener('click', () => { document.body.classList.toggle('ev-search-open'); $('#ev-search').focus(); });
 $('#ev-search').addEventListener('keydown', event => { if (event.key === 'Escape') { document.body.classList.remove('ev-search-open'); document.querySelector('[data-ev-focus-search]')?.focus(); } });
 $('#ev-odds-tabs').addEventListener('click', event => { const tab = event.target.closest('[data-odds-tab]'); if (tab) { marketType = tab.dataset.oddsTab; render(); } });
@@ -788,6 +850,11 @@ $('#ev-view-actions').addEventListener('click', event => { if (!event.target.clo
 $('#ev-view-actions').addEventListener('click', event => { if (!event.target.closest('[data-replay-live]')) return; for (const quote of state.quotes.filter(q => q.live && q.source === 'example')) { quote.ts = now(); snapshotQuote(quote); } commit(); });
 $('#ev-view').addEventListener('click', event => {
   const target = event.target.closest('button'); if (!target) return;
+  if (target.dataset.sharpSelect) { expandedSharpKey = target.dataset.sharpSelect; sharpSelectedBook = ''; return render(); }
+  if (target.dataset.sharpBook) { sharpSelectedBook = target.dataset.sharpBook; return render(); }
+  if (target.hasAttribute('data-sharp-filters')) { sharpFiltersOpen = !sharpFiltersOpen; return render(); }
+  if (target.hasAttribute('data-sharp-refresh')) { render(); $('#ev-notice').textContent = state.quotes.some(q => q.source !== 'example') ? 'Comparison refreshed from saved prices.' : 'Demo comparison refreshed.'; return; }
+  if (target.hasAttribute('data-sharp-clear')) { search = ''; marketType = ''; bookmaker = ''; sport = ''; history.replaceState(null, '', `${location.pathname}?sport=all${location.hash}`); localStorage.setItem('sportslab-ev-sharp-min','0'); return render(); }
   if (target.dataset.sort) { evSort = target.dataset.sort; return render(); }
   if (target.dataset.detail) return openDetail(target.dataset.detail);
   if (target.dataset.oddsExpand) { expandedOddsKey = expandedOddsKey === target.dataset.oddsExpand ? '__closed__' : target.dataset.oddsExpand; return render(); }
@@ -806,13 +873,25 @@ $('#ev-view').addEventListener('click', event => {
 });
 $('#ev-view').addEventListener('change', event => {
   const t = event.target;
-  if (t.id === 'ev-bankroll') { stake = Math.max(.01,Number(t.value)||100); render(); }
+  if (t.id === 'sharp-sport') { sport = t.value; history.replaceState(null, '', `${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}${location.hash}`); render(); }
+  else if (t.id === 'sharp-market') { marketType = t.value; render(); }
+  else if (t.id === 'sharp-min') { localStorage.setItem('sportslab-ev-sharp-min', String(Math.max(0,Number(t.value)||0))); render(); }
+  else if (t.id === 'ev-bankroll') { stake = Math.max(.01,Number(t.value)||100); render(); }
   else if (t.dataset.promo) { promoInput[t.dataset.promo] = t.dataset.promo === 'kind' ? t.value : Number(t.value); render(); }
   else if (t.id === 'ev-fantasy-app') { fantasyApp = t.value; fantasyIds = []; render(); }
   else if (t.id === 'ev-fantasy-stake') { fantasyStake = Math.max(.01,Number(t.value)||10); render(); }
   else if (t.id === 'ev-trader-filter') { traderName = t.value; render(); }
   else if (t.id === 'ev-trend-a') { trendA = t.value; render(); }
   else if (t.id === 'ev-trend-b') { trendB = t.value; render(); }
+});
+$('#ev-view').addEventListener('input', event => {
+  if (event.target.id !== 'sharp-search') return;
+  const position = event.target.selectionStart;
+  search = event.target.value.toLowerCase().trim();
+  render();
+  const input = $('#sharp-search');
+  input?.focus();
+  input?.setSelectionRange(position,position);
 });
 $('#ev-form').addEventListener('submit', saveForm);
 $('#ev-close').addEventListener('click', () => $('#ev-dialog').close());

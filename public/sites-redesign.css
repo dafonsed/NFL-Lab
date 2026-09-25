@@ -1,4 +1,13 @@
 /* Sportslab's compact, data-led visual system. The product content remains its own. */
+body.site-layout.reference-design {
+  --font: "Segoe UI Variable", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+body.site-layout.ui-theme.reference-design {
+  font-family: var(--font) !important;
+}
+body.landing-page {
+  font-family: "Segoe UI Variable", "Segoe UI", "Helvetica Neue", Arial, sans-serif !important;
+}
 body.landing-page {
   --accent:#35b6f2;
   --bright:#7ad1fa;
