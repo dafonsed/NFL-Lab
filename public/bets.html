@@ -4,31 +4,37 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#08080a"><meta name="description" content="Your personal bet tracker. Log tickets, update results, and track profit and loss.">
   <title>Bet tracker · Sports Lab</title><link rel="icon" href="/favicon.svg">
-  <link rel="stylesheet" href="/style.css"><script type="module" src="/bets.js?v=4"></script>
+  <link rel="stylesheet" href="/style.css"><script type="module" src="/bets.js?v=6"></script>
 </head>
 <body class="bets-app">
   <a class="skip" href="#main">Skip to bet tracker</a>
   <!--site-header-->
   <main id="main" tabindex="-1">
-    <div class="tracker-page-heading"><div><h1>Bet tracker</h1><p>Follow your tickets, profit, and results in one place.</p></div><div class="tracker-heading-actions"><button class="tracker-button" id="import-slip"><span data-bet-icon="paper"></span> Import screenshot</button><button class="tracker-button primary" id="add-bet"><span data-bet-icon="plus"></span> Add bet</button></div></div>
+    <div class="tracker-page-heading"><div><h1>Bet tracker</h1><p>Your performance, tickets, and results.</p></div><div class="tracker-heading-actions"><button class="tracker-button" id="import-slip"><span data-bet-icon="paper"></span> Import screenshot</button><button class="tracker-button primary" id="add-bet"><span data-bet-icon="plus"></span> Add bet</button></div></div>
     <div id="storage-error" class="notice" role="alert" hidden></div>
-    <section id="bet-overview" aria-label="Monthly betting performance"></section>
-    <details class="tracker-alltime"><summary>All-time record</summary><div id="alltime-bet-summary"></div></details>
-    <section class="tracker-ledger-section" aria-labelledby="tickets-title">
-    <div class="tracker-ledger-heading"><div><h2 id="tickets-title">Activity</h2><span id="bet-count" role="status"></span></div><div class="tracker-ledger-actions"><button class="tracker-button" id="refresh-lines"><span data-bet-icon="refresh"></span> Refresh results</button><button class="tracker-button" id="export-bets" disabled><span data-bet-icon="download"></span> Export CSV</button></div></div>
-    <div class="tracker-ledger-controls"><nav class="picks-tabs" aria-label="Ticket view"><button data-ticket-view="" aria-pressed="true">All tickets <span data-ticket-count="all">0</span></button><button data-ticket-view="open" aria-pressed="false">Open <span data-ticket-count="open">0</span></button><button data-ticket-view="settled" aria-pressed="false">Settled <span data-ticket-count="settled">0</span></button></nav>
-    <section class="tracker-filters" aria-label="Filter bets">
-      <div class="searchbox"><span data-bet-icon="search" aria-hidden="true"></span><input id="bet-search" type="search" placeholder="Search tickets" aria-label="Search bets"></div>
-      <label class="sr-only" for="sport-filter">Filter by sport</label><select id="sport-filter"><option value="">All sports</option><option>NFL</option><option>MLB</option><option>NBA</option><option>WNBA</option><option>NHL</option><option>Soccer</option><option>Other</option></select>
-      <label class="sr-only" for="status-filter">Filter by result</label><select id="status-filter"><option value="">All results</option><option value="open">Open</option><option value="settled">All settled</option><option value="won">Won</option><option value="lost">Lost</option><option value="push">Push</option><option value="void">Void</option><option value="cashed">Cashed out</option></select>
-      <label class="sr-only" for="book-filter">Filter by sportsbook</label><select id="book-filter"><option value="">All books</option></select>
-      <label class="sr-only" for="ticket-range">Ticket date range</label><select id="ticket-range"><option value="month">Selected month</option><option value="all">All time</option></select>
-      <button class="tracker-button" id="clear-filters" hidden>Clear filters</button>
-    </section>
-    <div id="selected-bet-day" hidden></div></div>
-    <div class="tracking-bar"><p id="tracking-status" role="status">Connected game results refresh every minute while this page is visible.</p></div>
-    <section id="bet-list" aria-label="Saved bets"></section>
-    </section>
+    <div class="tracker-primary-layout">
+      <div class="tracker-main-column">
+        <section id="bet-overview" aria-label="Betting performance"></section>
+        <section class="tracker-ledger-section" aria-labelledby="tickets-title">
+          <div class="tracker-ledger-heading"><div><h2 id="tickets-title">Activity</h2><span id="bet-count" role="status"></span></div><div class="tracker-ledger-actions"><button class="tracker-button" id="refresh-lines"><span data-bet-icon="refresh"></span> Refresh results</button><button class="tracker-button" id="export-bets" disabled><span data-bet-icon="download"></span> Export CSV</button></div></div>
+          <div class="tracker-ledger-controls"><nav class="picks-tabs" aria-label="Ticket view"><button data-ticket-view="" aria-pressed="true">All tickets <span data-ticket-count="all">0</span></button><button data-ticket-view="open" aria-pressed="false">Open <span data-ticket-count="open">0</span></button><button data-ticket-view="settled" aria-pressed="false">Settled <span data-ticket-count="settled">0</span></button></nav><div class="searchbox"><span data-bet-icon="search" aria-hidden="true"></span><input id="bet-search" type="search" placeholder="Search tickets" aria-label="Search bets"></div></div>
+          <div id="selected-bet-day" hidden></div>
+          <div class="tracking-bar"><p id="tracking-status" role="status">Connected game results refresh every minute while this page is visible.</p></div>
+          <section id="bet-list" aria-label="Saved bets"></section>
+        </section>
+        <section class="tracker-history" aria-labelledby="tracker-history-title"><div class="tracker-history-heading"><h2 id="tracker-history-title">Calendar &amp; breakdown</h2><p>Review how each day contributed to your results.</p></div><div id="bet-calendar"></div><details class="tracker-alltime"><summary>All-time record</summary><div id="alltime-bet-summary"></div></details></section>
+      </div>
+      <aside class="tracker-filter-rail" aria-label="Ticket filters">
+        <div class="tracker-filter-heading"><h2>Filters</h2><button class="tracker-filter-clear" id="clear-filters" hidden>Clear all</button></div>
+        <div class="tracker-filter-stack">
+          <label class="tracker-filter-group" for="book-filter"><span>Sportsbook</span><select id="book-filter"><option value="">All sportsbooks</option></select></label>
+          <label class="tracker-filter-group" for="sport-filter"><span>Sport</span><select id="sport-filter"><option value="">All sports</option><option>NFL</option><option>MLB</option><option>NBA</option><option>WNBA</option><option>NHL</option><option>Soccer</option><option>Other</option></select></label>
+          <label class="tracker-filter-group" for="status-filter"><span>Result</span><select id="status-filter"><option value="">All results</option><option value="open">Open</option><option value="settled">All settled</option><option value="won">Won</option><option value="lost">Lost</option><option value="push">Push</option><option value="void">Void</option><option value="cashed">Cashed out</option></select></label>
+          <label class="tracker-filter-group" for="ticket-range"><span>Date range</span><select id="ticket-range"><option value="all">All time</option><option value="month">Selected month</option></select></label>
+        </div>
+        <p class="tracker-filter-note">Filters change Activity only. Choose a time range under the profit chart to change the graph.</p>
+      </aside>
+    </div>
     <div class="tracker-storage"><span><span data-bet-icon="picks"></span> Saved in this browser</span><p>Records stay on this device. Export a copy before clearing site data.</p></div>
     <footer><span>SPORTS LAB <span class="muted">/ Personal workspace</span></span><span>MLB Stats API + ESPN box scores · Your booked lines stay fixed</span></footer>
   </main>
