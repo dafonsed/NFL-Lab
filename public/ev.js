@@ -182,7 +182,7 @@ function renderDesignFilters() {
 }
 function render() {
   renderNav();
-  const titles = { odds:'Odds Screen', 'ev-pre':'Positive EV', 'ev-live':'Live EV', fantasy:'DFS Props', 'arb-pre':'Arbitrage', 'arb-live':'Live Arbitrage', sharp:'Smart Money', tracker:'Bet Tracker' };
+  const titles = { odds:'Odds Screen', 'ev-pre':'Positive EV', 'ev-live':'Positive EV', fantasy:'DFS Props', 'arb-pre':'Arbitrage', 'arb-live':'Live Arbitrage', sharp:'Smart Money', tracker:'Bet Tracker' };
   const pageTitle = titles[active] || toolMeta[active][2];
   $('#ev-page-title').textContent = pageTitle;
   $('#ev-top-title').textContent = pageTitle;
@@ -255,6 +255,12 @@ function render() {
 
 function renderBooks() {
   const fantasyMode = ['fantasy','optimizer','slip','fantasy-alerts'].includes(active);
+  const positiveMode = active === 'ev-pre' || active === 'ev-live';
+  const timingToggle = $('#ev-timing-toggle');
+  timingToggle.hidden = !positiveMode;
+  timingToggle.dataset.mode = active;
+  timingToggle.setAttribute('aria-checked', String(active === 'ev-live'));
+  timingToggle.title = active === 'ev-live' ? 'Switch to pregame bets' : 'Switch to live bets';
   const entered = fantasyMode ? state.dfs.map(item => canonicalPlatform(item.app)) : state.quotes.filter(q => !sport || q.sport === sport).map(q => q.book);
   const supported = fantasyMode ? fantasyNames : active === 'sharp' ? ['Pinnacle','DraftKings','FanDuel','bet365',...sportsbookNames.filter(name => !['DraftKings','FanDuel','bet365'].includes(name))] : sportsbookNames;
   const books = [...new Set([...supported, ...entered])];
@@ -266,12 +272,12 @@ function renderBooks() {
   if (relevant && !fantasyMode) {
     const options = [...new Set([...books, ...sportsbookOptions()])];
     const selected = options.filter(sportsbookSelected);
-    const visibleCount = window.innerWidth < 360 ? 2 : window.innerWidth < 600 ? 3 : window.innerWidth < 950 ? 6 : 12;
+    const visibleCount = window.innerWidth < 360 ? 1 : window.innerWidth < 600 ? 2 : window.innerWidth < 950 ? 6 : window.innerWidth < 1250 ? 8 : window.innerWidth < 1500 ? 10 : 12;
     const shown = selected.slice(0, visibleCount);
     $('#ev-books').innerHTML = shown.length ? shown.map(book => `<button type="button" class="ev-selected-book" data-book-remove="${esc(book)}" aria-label="Remove ${esc(book)} from selected sportsbooks" title="Remove ${esc(book)}"><span class="ev-book-symbol">${brandMarks[book] ? `<img src="${brandMarks[book]}" alt="" class="ev-book-logo">` : esc(book.slice(0,2))}</span><span class="ev-book-remove" aria-hidden="true">×</span></button>`).join('') : '<span class="ev-no-books">No books selected</span>';
     if (selected.length > shown.length) $('#ev-books').insertAdjacentHTML('beforeend', `<button type="button" class="ev-book-overflow" data-open-book-menu aria-label="Show ${selected.length - shown.length} more selected sportsbooks">+${selected.length - shown.length}</button>`);
     $('#ev-books-more').hidden = false;
-    $('#ev-books-more').innerHTML = '<span aria-hidden="true">⌄</span>';
+    $('#ev-books-more').innerHTML = '<span aria-hidden="true">+</span>';
     $('#ev-books-more').setAttribute('aria-label','Choose sportsbooks');
     $('#ev-books-more').setAttribute('aria-expanded',String(bookMenuOpen));
     menu.hidden = !bookMenuOpen;
@@ -768,6 +774,14 @@ document.addEventListener('pointerdown', event => { if (bookMenuOpen && !$('.ev-
 document.addEventListener('keydown', event => { if (event.key === 'Escape' && bookMenuOpen) { bookMenuOpen = false; renderBooks(); $('#ev-books-more').focus(); } });
 window.addEventListener('resize', () => { if ($('.ev-bookbar').classList.contains('ev-bookbar-select')) renderBooks(); });
 $('#ev-find').addEventListener('click', () => $('#ev-view').scrollIntoView({ behavior:'smooth', block:'start' }));
+$('#ev-timing-toggle').addEventListener('click', () => {
+  if (active !== 'ev-pre' && active !== 'ev-live') return;
+  active = active === 'ev-live' ? 'ev-pre' : 'ev-live';
+  detailQuoteId = '';
+  bookMenuOpen = false;
+  history.replaceState(null, '', location.pathname + location.search + '#' + active);
+  render();
+});
 document.querySelector('[data-ev-focus-search]')?.addEventListener('click', () => { document.body.classList.toggle('ev-search-open'); $('#ev-search').focus(); });
 $('#ev-search').addEventListener('keydown', event => { if (event.key === 'Escape') { document.body.classList.remove('ev-search-open'); document.querySelector('[data-ev-focus-search]')?.focus(); } });
 $('#ev-odds-tabs').addEventListener('click', event => { const tab = event.target.closest('[data-odds-tab]'); if (tab) { marketType = tab.dataset.oddsTab; render(); } });
