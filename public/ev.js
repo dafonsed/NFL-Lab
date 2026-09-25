@@ -45,7 +45,7 @@ function normalize(data) {
 let state = load();
 let active = toolMeta[location.hash.slice(1)] ? location.hash.slice(1) : 'ev-pre';
 let search = '';
-let bookmaker = '', marketType = '', showAllBooks = false, bankroll = 5000, kelly = .25, flatMultiplier = 1, evSort = 'ev', detailQuoteId = '';
+let bookmaker = '', marketType = '', showAllBooks = false, selectedSportsbooks = null, bookMenuOpen = false, bankroll = 5000, kelly = .25, flatMultiplier = 1, evSort = 'ev', detailQuoteId = '';
 let evLeague = '', evDateRange = 'week', evMaxOdds = '200';
 let designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' };
 let designSort = 'recommended';
@@ -65,6 +65,8 @@ const brandMarks = {
 const brandMark = (name, cls = '') => brandMarks[name]
   ? `<img class="ev-brand-mark ${cls}" src="${brandMarks[name]}" alt="">`
   : `<span class="ev-brand-fallback ${cls}" aria-hidden="true">${esc(name.replace(/\s*\(example\)$/, '').slice(0,2))}</span>`;
+const sportsbookSelected = name => selectedSportsbooks === null || selectedSportsbooks.has(name);
+const sportsbookOptions = () => [...new Set([...(active === 'sharp' ? ['Pinnacle'] : []), ...sportsbookNames, ...state.quotes.map(quote => quote.book).filter(Boolean)])];
 try {
   const saved = JSON.parse(localStorage.getItem('sportslab-ev-display-v1'));
   if (Number(saved?.bankroll) > 0) bankroll = Number(saved.bankroll);
@@ -125,7 +127,7 @@ function renderNav() {
   $('#ev-tool-select').value = active;
   document.querySelectorAll('.ev-quick-tools [data-tool]').forEach(button => button.setAttribute('aria-current', button.dataset.tool === active ? 'page' : 'false'));
 }
-function setTool(key) { if (!toolMeta[key]) return; active = key; bookmaker = ''; marketType = ''; showAllBooks = false; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; $('.ev-tool-details').open = false; history.replaceState(null, '', location.pathname + location.search + '#' + key); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function setTool(key) { if (!toolMeta[key]) return; active = key; bookmaker = ''; marketType = ''; showAllBooks = false; bookMenuOpen = false; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; $('.ev-tool-details').open = false; history.replaceState(null, '', location.pathname + location.search + '#' + key); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 function action(label, type, extra = '') { return button(label, `data-add="${type}" ${extra}`); }
 const filterIcons = {
   sport:'◉', platform:'▱', league:'♜', market:'▥', date:'▣', period:'◷', side:'↕', odds:'☷', liquidity:'≋', edge:'↗', stake:'$'
@@ -164,7 +166,7 @@ function renderDesignFilters() {
   const controls = fantasy ? [sportControl,bookControl,leagueControl,marketControl,dateControl,sideControl]
     : odds ? [sportControl,leagueControl,marketControl,periodControl,dateControl]
     : arb ? [sportControl,marketControl,edgeControl,stakeControl,dateControl,periodControl]
-    : [bookControl,leagueControl,marketControl,oddsControl,liquidityControl,dateControl];
+    : [sportControl,leagueControl,marketControl,oddsControl,liquidityControl,dateControl];
   container.innerHTML = controls.join('');
 }
 function render() {
@@ -243,23 +245,42 @@ function renderBooks() {
   const entered = fantasyMode ? state.dfs.map(item => canonicalPlatform(item.app)) : state.quotes.filter(q => !sport || q.sport === sport).map(q => q.book);
   const supported = fantasyMode ? fantasyNames : active === 'sharp' ? ['Pinnacle','DraftKings','FanDuel','bet365',...sportsbookNames.filter(name => !['DraftKings','FanDuel','bet365'].includes(name))] : sportsbookNames;
   const books = [...new Set([...supported, ...entered])];
-  const visibleCount = fantasyMode ? 6 : active === 'sharp' ? 4 : ['ev-pre','ev-live'].includes(active) ? 11 : 9;
-  const shown = showAllBooks ? books : books.slice(0, visibleCount);
-  $('#ev-books').innerHTML = `<button type="button" class="ev-book-all" data-book="" aria-pressed="${!bookmaker}">All</button>` + shown.map(book => `<button type="button" data-book="${esc(book)}" aria-pressed="${bookmaker === book}" title="Filter ${esc(book)}"><span class="ev-book-symbol">${brandMarks[book] ? `<img src="${brandMarks[book]}" alt="" class="ev-book-logo">` : esc(book)}</span><span class="ev-book-name">${esc(book)}</span></button>`).join('');
-  $('#ev-books-more').hidden = books.length <= visibleCount;
-  $('#ev-books-more').textContent = showAllBooks ? '−' : ['ev-pre','ev-live'].includes(active) ? `+${books.length - shown.length}` : `+${books.length - shown.length} more`;
-  $('#ev-books-more').setAttribute('aria-label', showAllBooks ? `Show fewer ${fantasyMode ? 'platforms' : 'bookmakers'}` : `Show ${books.length - shown.length} more ${fantasyMode ? 'platforms' : 'bookmakers'}`);
-  $('#ev-books-more').setAttribute('aria-expanded', String(showAllBooks));
   const relevant = ['ev-pre','ev-live','odds','arb-pre','arb-live','sharp','fantasy'].includes(active);
   $('.ev-bookbar').hidden = !relevant;
   $('.ev-control-grid').hidden = !relevant;
+  $('.ev-bookbar').classList.toggle('ev-bookbar-select', relevant && !fantasyMode);
+  const menu = $('#ev-book-menu');
+  if (relevant && !fantasyMode) {
+    const options = [...new Set([...books, ...sportsbookOptions()])];
+    const selected = options.filter(sportsbookSelected);
+    const visibleCount = window.innerWidth < 360 ? 2 : window.innerWidth < 600 ? 3 : window.innerWidth < 950 ? 6 : 12;
+    const shown = selected.slice(0, visibleCount);
+    $('#ev-books').innerHTML = shown.length ? shown.map(book => `<button type="button" class="ev-selected-book" data-book-remove="${esc(book)}" aria-label="Remove ${esc(book)} from selected sportsbooks" title="Remove ${esc(book)}"><span class="ev-book-symbol">${brandMarks[book] ? `<img src="${brandMarks[book]}" alt="" class="ev-book-logo">` : esc(book.slice(0,2))}</span><span class="ev-book-remove" aria-hidden="true">×</span></button>`).join('') : '<span class="ev-no-books">No books selected</span>';
+    if (selected.length > shown.length) $('#ev-books').insertAdjacentHTML('beforeend', `<button type="button" class="ev-book-overflow" data-open-book-menu aria-label="Show ${selected.length - shown.length} more selected sportsbooks">+${selected.length - shown.length}</button>`);
+    $('#ev-books-more').hidden = false;
+    $('#ev-books-more').innerHTML = '<span aria-hidden="true">⌄</span>';
+    $('#ev-books-more').setAttribute('aria-label','Choose sportsbooks');
+    $('#ev-books-more').setAttribute('aria-expanded',String(bookMenuOpen));
+    menu.hidden = !bookMenuOpen;
+    menu.innerHTML = `<div class="ev-book-menu-heading"><strong>Sportsbooks</strong><span>${selected.length} selected</span></div><div class="ev-book-menu-actions"><button type="button" data-book-select-all>Select all</button><button type="button" data-book-clear>Clear all</button></div><div class="ev-book-menu-options" role="group" aria-label="Choose sportsbooks">${options.map(book => `<label class="ev-book-option"><input type="checkbox" data-book-option="${esc(book)}" ${sportsbookSelected(book) ? 'checked' : ''}><span class="ev-book-option-mark" aria-hidden="true">${brandMarks[book] ? `<img src="${brandMarks[book]}" alt="">` : esc(book.slice(0,2))}</span><span>${esc(book)}</span></label>`).join('')}</div>`;
+  } else {
+    menu.hidden = true;
+    bookMenuOpen = false;
+    const visibleCount = fantasyMode ? 6 : active === 'sharp' ? 4 : ['ev-pre','ev-live'].includes(active) ? 11 : 9;
+    const shown = showAllBooks ? books : books.slice(0, visibleCount);
+    $('#ev-books').innerHTML = `<button type="button" class="ev-book-all" data-book="" aria-pressed="${!bookmaker}">All</button>` + shown.map(book => `<button type="button" data-book="${esc(book)}" aria-pressed="${bookmaker === book}" title="Filter ${esc(book)}"><span class="ev-book-symbol">${brandMarks[book] ? `<img src="${brandMarks[book]}" alt="" class="ev-book-logo">` : esc(book)}</span><span class="ev-book-name">${esc(book)}</span></button>`).join('');
+    $('#ev-books-more').hidden = books.length <= visibleCount;
+    $('#ev-books-more').textContent = showAllBooks ? '−' : ['ev-pre','ev-live'].includes(active) ? `+${books.length - shown.length}` : `+${books.length - shown.length} more`;
+    $('#ev-books-more').setAttribute('aria-label', showAllBooks ? `Show fewer ${fantasyMode ? 'platforms' : 'bookmakers'}` : `Show ${books.length - shown.length} more ${fantasyMode ? 'platforms' : 'bookmakers'}`);
+    $('#ev-books-more').setAttribute('aria-expanded', String(showAllBooks));
+  }
   const labels = { odds:'Compare lines', 'ev-pre':'Find bets', 'ev-live':'Find bets', fantasy:'Find props', 'arb-pre':'Find arbs', 'arb-live':'Find arbs', sharp:'Find opportunities' };
   $('#ev-find').firstChild.textContent = (labels[active] || 'View results') + ' ';
   $('#ev-add-quote').textContent = active === 'fantasy' ? 'Add DFS prop' : active === 'sharp' ? 'Add exchange price' : 'Add price';
 }
 
 function renderOddsLegacy() {
-  const all = quotes().filter(q => (!marketType || q.type === marketType) && (!bookmaker || q.book === bookmaker));
+  const all = quotes().filter(q => (!marketType || q.type === marketType) && sportsbookSelected(q.book));
   const sets = groups(all), books = [...new Set(all.map(q => q.book))].sort((a,b) => a.localeCompare(b));
   const displayBooks = books.slice(0,8);
   const rows = sets.flatMap(group => {
@@ -282,7 +303,7 @@ function renderOddsLegacy() {
 
 function renderOdds() {
   if (marketType && !['spread','total'].includes(marketType)) return renderOddsLegacy();
-  const all = quotes().filter(q => (!bookmaker || q.book === bookmaker) && (!marketType || q.type === marketType));
+  const all = quotes().filter(q => sportsbookSelected(q.book) && (!marketType || q.type === marketType));
   const visibleQuotes = all.filter(q => ['spread','moneyline','winner','total'].includes(q.type));
   const eventGroups = new Map();
   for (const q of visibleQuotes) {
@@ -365,7 +386,7 @@ function renderEv(live) {
   const today = new Date().toDateString(), weekAgo = Date.now() - 7 * 86_400_000;
   const pool = state.quotes.filter(q => (!sport || q.sport === sport) && (!evLeague || (q.league || q.sport) === evLeague) && (evDateRange === 'all' || evDateRange === 'today' && new Date(q.ts).toDateString() === today || evDateRange === 'week' && Date.parse(q.ts) >= weekAgo));
   const all = evRows(pool, live);
-  const rows = all.filter(({quote:q,ev}) => ev > 0 && (evMaxOdds === 'all' || Number(q.odds) <= Number(evMaxOdds)) && (!bookmaker || q.book === bookmaker) && (!marketType || q.type === marketType) && (!search || [q.event,q.market,q.book,q.side,q.sport].some(value => filterText(value))));
+  const rows = all.filter(({quote:q,ev}) => ev > 0 && (evMaxOdds === 'all' || Number(q.odds) <= Number(evMaxOdds)) && sportsbookSelected(q.book) && (!marketType || q.type === marketType) && (!search || [q.event,q.market,q.book,q.side,q.sport].some(value => filterText(value))));
   if (evSort === 'event') rows.sort((a,b) => a.quote.event.localeCompare(b.quote.event) || b.ev - a.ev);
   else if (evSort === 'odds') rows.sort((a,b) => decimal(b.quote.odds) - decimal(a.quote.odds));
   else rows.sort((a,b) => b.ev - a.ev);
@@ -391,7 +412,7 @@ function openDetail(id) {
 }
 
 function renderArb(live) {
-  const opportunities = arbitrageRows(quotes(), live).filter(x => (!marketType || x.best[0].type === marketType) && (!bookmaker || x.best.some(q => q.book === bookmaker)) && arbitrage(x.best, 100).margin >= Number(designFilters.minEdge));
+  const opportunities = arbitrageRows(quotes().filter(q => sportsbookSelected(q.book)), live).filter(x => (!marketType || x.best[0].type === marketType) && arbitrage(x.best, 100).margin >= Number(designFilters.minEdge));
   if (!expandedArbKey && opportunities.length) expandedArbKey = marketKey(opportunities[0].best[0]);
   const totalStake = Math.min(Number(stake) * flatMultiplier, bankroll);
   const rows = opportunities.flatMap(x => {
@@ -436,7 +457,7 @@ function renderParlay() {
 
 function renderSharp() {
   const threshold = Number(localStorage.getItem('sportslab-ev-sharp-min') || 1000);
-  const matches = sharpMatches(quotes(), threshold).filter(x => (!marketType || x.exchange.type === marketType) && (!bookmaker || [x.exchange.book,x.sportsbook.book].includes(bookmaker)));
+  const matches = sharpMatches(quotes().filter(q => sportsbookSelected(q.book)), threshold).filter(x => !marketType || x.exchange.type === marketType);
   if (!expandedSharpKey && matches.length) expandedSharpKey = matches[0].exchange.id;
   const rows = matches.flatMap(x => {
     const q = x.exchange, key = q.id, peers = groups(state.quotes).find(g => g.some(item => item.id === q.id)) || [];
@@ -651,13 +672,48 @@ function deleteRecord() {
 $('#ev-tool-nav').addEventListener('click', event => { const key = event.target.closest('[data-tool]')?.dataset.tool; if (key) setTool(key); });
 $('#ev-tool-select').addEventListener('change', event => setTool(event.target.value));
 $('.ev-quick-tools').addEventListener('click', event => { const key = event.target.closest('[data-tool]')?.dataset.tool; if (key) setTool(key); });
-$('#ev-books').addEventListener('click', event => { const target = event.target.closest('[data-book]'); if (target) { bookmaker = target.dataset.book; render(); } });
-$('#ev-books-more').addEventListener('click', () => { showAllBooks = !showAllBooks; renderBooks(); });
+$('#ev-books').addEventListener('click', event => {
+  const remove = event.target.closest('[data-book-remove]');
+  if (remove) {
+    selectedSportsbooks = new Set(selectedSportsbooks ?? sportsbookOptions());
+    selectedSportsbooks.delete(remove.dataset.bookRemove);
+    render();
+    return;
+  }
+  if (event.target.closest('[data-open-book-menu]')) { bookMenuOpen = true; renderBooks(); $('#ev-books-more').focus(); return; }
+  const target = event.target.closest('[data-book]');
+  if (target) { bookmaker = target.dataset.book; render(); }
+});
+$('#ev-books-more').addEventListener('click', () => {
+  if (!$('.ev-bookbar').classList.contains('ev-bookbar-select')) { showAllBooks = !showAllBooks; renderBooks(); return; }
+  bookMenuOpen = !bookMenuOpen;
+  renderBooks();
+  if (bookMenuOpen) $('#ev-book-menu input')?.focus();
+});
+$('#ev-book-menu').addEventListener('change', event => {
+  const option = event.target.closest('[data-book-option]');
+  if (!option) return;
+  selectedSportsbooks = new Set(selectedSportsbooks ?? sportsbookOptions());
+  if (option.checked) selectedSportsbooks.add(option.dataset.bookOption);
+  else selectedSportsbooks.delete(option.dataset.bookOption);
+  render();
+  [...document.querySelectorAll('#ev-book-menu [data-book-option]')].find(input => input.dataset.bookOption === option.dataset.bookOption)?.focus();
+});
+$('#ev-book-menu').addEventListener('click', event => {
+  if (event.target.closest('[data-book-select-all]')) selectedSportsbooks = null;
+  else if (event.target.closest('[data-book-clear]')) selectedSportsbooks = new Set();
+  else return;
+  render();
+  $('#ev-books-more').focus();
+});
+document.addEventListener('pointerdown', event => { if (bookMenuOpen && !$('.ev-bookbar').contains(event.target)) { bookMenuOpen = false; renderBooks(); } });
+document.addEventListener('keydown', event => { if (event.key === 'Escape' && bookMenuOpen) { bookMenuOpen = false; renderBooks(); $('#ev-books-more').focus(); } });
+window.addEventListener('resize', () => { if ($('.ev-bookbar').classList.contains('ev-bookbar-select')) renderBooks(); });
 $('#ev-find').addEventListener('click', () => $('#ev-view').scrollIntoView({ behavior:'smooth', block:'start' }));
 document.querySelector('[data-ev-focus-search]')?.addEventListener('click', () => { document.body.classList.toggle('ev-search-open'); $('#ev-search').focus(); });
 $('#ev-search').addEventListener('keydown', event => { if (event.key === 'Escape') { document.body.classList.remove('ev-search-open'); document.querySelector('[data-ev-focus-search]')?.focus(); } });
 $('#ev-odds-tabs').addEventListener('click', event => { const tab = event.target.closest('[data-odds-tab]'); if (tab) { marketType = tab.dataset.oddsTab; render(); } });
-$('#ev-reset-filters').addEventListener('click', () => { bookmaker = ''; marketType = ''; search = ''; evLeague = ''; evDateRange = 'week'; evMaxOdds = '200'; evSort = 'ev'; designSort = 'recommended'; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; if (sport !== '') { sport = ''; history.replaceState(null, '', location.pathname + '?sport=all' + location.hash); } render(); });
+$('#ev-reset-filters').addEventListener('click', () => { bookmaker = ''; selectedSportsbooks = null; bookMenuOpen = false; marketType = ''; search = ''; evLeague = ''; evDateRange = 'week'; evMaxOdds = '200'; evSort = 'ev'; designSort = 'recommended'; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; if (sport !== '') { sport = ''; history.replaceState(null, '', location.pathname + '?sport=all' + location.hash); } render(); });
 $('#ev-market-type').addEventListener('change', event => { marketType = event.target.value; render(); });
 $('#ev-reference-market').addEventListener('change', event => { marketType = event.target.value; render(); });
 $('#ev-reference-league').addEventListener('change', event => { evLeague = event.target.value; render(); });
@@ -755,8 +811,8 @@ $('#ev-import-apply').addEventListener('click', async () => {
     state = normalize(data); evaluateAlerts(); persist(); $('#ev-import-dialog').close(); render();
   } catch (error) { $('#ev-import-error').textContent = error.message; }
 });
-window.addEventListener('hashchange', () => { const key = location.hash.slice(1); if (toolMeta[key]) { active = key; bookmaker = ''; marketType = ''; showAllBooks = false; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; render(); } });
-setInterval(() => { if (['ev-live','arb-live','odds','sharp','line-alerts'].includes(active) && !document.querySelector('dialog[open]')) render(); }, 15_000);
+window.addEventListener('hashchange', () => { const key = location.hash.slice(1); if (toolMeta[key]) { active = key; bookmaker = ''; marketType = ''; showAllBooks = false; bookMenuOpen = false; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; render(); } });
+setInterval(() => { if (['ev-live','arb-live','odds','sharp','line-alerts'].includes(active) && !bookMenuOpen && !document.querySelector('dialog[open]')) render(); }, 15_000);
 $('.ev-header-actions').append($('.ev-sidebar'));
 $('#main').append($('#ev-notice'));
 persist(); render();

@@ -1,0 +1,31 @@
+/* Compact selected sportsbook rail and multi-select menu. */
+body.ev-page .ev-bookbar-select{position:relative;gap:10px;height:74px;min-height:74px;padding:10px 12px;background:#101516;border-color:#2b3436;border-radius:16px}
+body.ev-page .ev-bookbar-select .ev-book-list{justify-content:flex-start;gap:8px;overflow:hidden;padding:0;scrollbar-width:none}
+body.ev-page .ev-bookbar-select .ev-book-list button.ev-selected-book{position:relative;flex:none;width:44px;min-width:44px;height:44px;min-height:44px;padding:4px;border-radius:50%!important;border:1px solid #343e40!important;background:#191f21!important;color:#e9efee!important;box-shadow:none!important}
+body.ev-page .ev-bookbar-select .ev-selected-book .ev-book-symbol{width:100%;height:100%;padding:3px;font-size:10px}
+body.ev-page[data-ev-screen="sharp"] .ev-bookbar-select .ev-selected-book .ev-book-symbol{display:grid!important}
+body.ev-page .ev-bookbar-select .ev-selected-book .ev-book-logo{width:31px;height:31px;border-radius:50%;object-fit:contain;filter:none}
+body.ev-page .ev-bookbar-select .ev-selected-book .ev-book-remove{position:absolute;top:-4px;right:-3px;display:grid;place-items:center;width:15px;height:15px;border-radius:50%;background:#30383a;color:#f4f7f6;font-size:12px;line-height:1}
+body.ev-page .ev-bookbar-select .ev-selected-book:hover,body.ev-page .ev-bookbar-select .ev-selected-book:focus-visible{border-color:#20d39a!important;background:#1b2b27!important}
+body.ev-page .ev-bookbar-select .ev-book-list button.ev-book-overflow{width:39px;min-width:39px;height:39px;min-height:39px;padding:0;border:1px solid #343e40!important;border-radius:50%!important;background:#292f31!important;color:#f1f3f2!important;font-size:12px}
+body.ev-page .ev-bookbar-select .ev-no-books{color:#aebcbd;font-size:13px;white-space:nowrap}
+body.ev-page .ev-bookbar-select #ev-books-more{display:grid;place-items:center;flex:none;width:40px;min-width:40px;height:44px;min-height:44px;padding:0;border:0!important;border-radius:10px!important;background:transparent!important;color:#dfe8e7!important;font-size:28px;line-height:1}
+body.ev-page .ev-bookbar-select #ev-books-more[aria-expanded="true"]{color:#2de1a9!important}
+body.ev-page .ev-bookbar-select .ev-book-divider{height:35px;margin:0 6px;background:#344042}
+body.ev-page .ev-bookbar-select .ev-find-button{width:184px;min-width:184px;height:49px;min-height:49px;font-size:16px;border-radius:27px!important;background:#21c879!important;border-color:#21c879!important}
+body.ev-page .ev-bookbar-select .ev-book-menu{position:absolute;z-index:45;top:calc(100% + 8px);right:210px;width:min(370px,calc(100vw - 34px));padding:16px;border:1px solid #384745;border-radius:16px;background:#171e20;box-shadow:0 24px 60px #000b;color:#edf3f1}
+body.ev-page .ev-bookbar-select .ev-book-menu[hidden]{display:none!important}
+.ev-book-menu-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
+.ev-book-menu-heading strong{font-size:16px;font-weight:650}
+.ev-book-menu-heading span{color:#9fb0ad;font-size:12px}
+.ev-book-menu-actions{display:flex;gap:8px;margin-bottom:12px}
+body.ev-page .ev-book-menu-actions button{padding:7px 10px;border:1px solid #3a4b48;border-radius:8px;background:#202b2a;color:#cbe8dd;font-size:12px;cursor:pointer}
+.ev-book-menu-options{display:grid;gap:2px;max-height:325px;overflow-y:auto;scrollbar-color:#46534f transparent}
+.ev-book-option{display:flex;align-items:center;gap:11px;min-height:43px;padding:5px 7px;border-radius:8px;color:#e2eae8;font-size:13px;cursor:pointer}
+.ev-book-option:hover,.ev-book-option:focus-within{background:#273431}
+.ev-book-option input{width:16px;height:16px;accent-color:#1dcc91;cursor:pointer}
+.ev-book-option-mark{display:grid;place-items:center;flex:none;width:27px;height:27px;border:1px solid #394442;border-radius:50%;background:#13191a;color:#dce8e3;font-size:8px;font-weight:750}
+.ev-book-option-mark img{width:23px;height:23px;object-fit:contain;border-radius:50%}
+@media(max-width:800px){body.ev-page .ev-bookbar-select{height:65px;min-height:65px;margin-top:9px;padding:7px 8px;gap:5px}body.ev-page .ev-bookbar-select .ev-book-list{gap:5px}body.ev-page .ev-bookbar-select .ev-book-list button.ev-selected-book{width:37px;min-width:37px;height:37px;min-height:37px}body.ev-page .ev-bookbar-select .ev-selected-book .ev-book-logo{width:25px;height:25px}body.ev-page .ev-bookbar-select .ev-book-divider{display:none}body.ev-page .ev-bookbar-select #ev-books-more{width:31px;min-width:31px}body.ev-page .ev-bookbar-select .ev-find-button{width:113px;min-width:113px;height:43px;min-height:43px;gap:4px;font-size:12px}body.ev-page .ev-bookbar-select .ev-book-menu{right:0}}
+@media(max-width:800px){body.ev-page .ev-bookbar-select .ev-find-button{width:120px;min-width:120px;white-space:nowrap;font-size:11px;gap:6px}}
+@media(max-width:360px){body.ev-page .ev-bookbar-select .ev-find-button{width:105px;min-width:105px;font-size:10px}}
