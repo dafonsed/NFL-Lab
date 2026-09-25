@@ -1,29 +1,63 @@
-.longform-layout{display:grid;grid-template-columns:minmax(170px,210px) minmax(0,770px);align-items:start;gap:clamp(28px,5vw,72px);width:min(100%,1080px);margin:0 auto}
-.longform-toc{position:sticky;top:86px;max-height:calc(100vh - 108px);overflow:auto;padding:15px 14px;border:1px solid #223540;border-left:2px solid #6bd5df;border-radius:0 9px 9px 0;background:linear-gradient(145deg,#0e1920,#0a1218);scrollbar-width:thin}
-.longform-toc h2{margin:0 0 12px;color:#e6eef2;font-size:11px;font-weight:680;letter-spacing:.08em;text-transform:uppercase}
-.longform-toc ol{display:grid;gap:3px;margin:0;padding:0;list-style:none;counter-reset:article-section}
-.longform-toc li{counter-increment:article-section}
-.longform-toc a{display:block;padding:5px 6px;border-radius:4px;color:#9eb0bb;font-size:11px;line-height:1.45;text-decoration:none;transition:color .16s ease,background .16s ease}
-.longform-toc a::before{content:counter(article-section,decimal-leading-zero) "  ";color:#5c8793;font-size:9px;font-variant-numeric:tabular-nums}
-.longform-toc a:hover,.longform-toc a:focus-visible{background:#13232b;color:#d5f0f0;outline:none}
-.longform-toc-meta{display:flex;flex-wrap:wrap;gap:5px;margin:13px 6px 0;padding-top:11px;border-top:1px solid #223540;color:#7f939e;font-size:10px}
+.longform-layout{width:min(100%,770px);margin:0 auto}
+.longform-toc{margin:0 0 29px;border:1px solid #223540;border-radius:7px;background:#0d151c;color:#eaf0f4}
+.longform-toc summary{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:48px;padding:11px 15px;cursor:pointer;list-style:none;font-size:13px;font-weight:650}
+.longform-toc summary::-webkit-details-marker{display:none}
+.longform-toc summary::after{content:"+";margin-left:auto;color:#78c7d4;font-size:18px;font-weight:450;line-height:1}
+.longform-toc[open] summary::after{content:"−"}
+.longform-toc summary:focus-visible{outline:2px solid #92e1e9;outline-offset:3px;border-radius:5px}
+.longform-toc-count{margin-left:auto;color:#81949f;font-size:11px;font-weight:500}
+.longform-toc nav{padding:2px 14px 14px;border-top:1px solid #20313e}
+.longform-toc ol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 9px;margin:11px 0 0;padding:0;list-style:none}
+.longform-toc a{display:block;height:100%;padding:8px 9px;border-radius:4px;color:#a8b6c0;font-size:12px;line-height:1.45;text-decoration:none;transition:color .16s ease,background-color .16s ease}
+.longform-toc a:hover,.longform-toc a:focus-visible{background:#14232c;color:#d9f3f3;outline:none}
 .longform-copy{min-width:0;max-width:770px;color:inherit}
 .longform-copy>section,.longform-copy>.faq,.longform-copy>.market-sources{scroll-margin-top:28px}
 .longform-copy h2[id]{scroll-margin-top:28px}
 .article-reading-time{color:#a7cbd0;font-weight:600}
-.edu-article.has-longform{width:100%;max-width:min(100%,1120px)}
+.edu-article.has-longform{width:100%;max-width:min(100%,770px)}
 .edu-article.has-longform>.article-content{max-width:none;margin:0;padding:0}
-.market-guide-site .market-article.has-longform{max-width:min(100%,1120px)}
+.edu-article.has-longform>.related,.edu-article.has-longform>.article-pagination{width:100%;max-width:770px;margin-right:auto;margin-left:auto}
+.edu-article.has-longform>.related{margin-top:38px;padding-top:23px;border-top:1px solid #20313e}
+.edu-article.has-longform>.related h2{margin-bottom:13px;font-size:18px}
+.edu-article.has-longform>.related ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px;margin:0;padding:0;list-style:none}
+.edu-article.has-longform>.related li{min-width:0;margin:0;padding:0}
+.edu-article.has-longform>.related li a{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:10px 12px;border:1px solid #1c2b35;border-radius:5px;background:#0c141a;color:#b9c9d1;font-size:12px;line-height:1.45;text-decoration:none;transition:border-color .16s ease,color .16s ease,background-color .16s ease}
+.edu-article.has-longform>.related li a::after{content:"↗";flex:0 0 auto;color:#78c7d4}
+.edu-article.has-longform>.related li a:hover,.edu-article.has-longform>.related li a:focus-visible{border-color:#466674;background:#101d25;color:#eaf0f4;outline:none}
+.edu-article.has-longform>.article-pagination{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:22px;padding-top:15px;border-top:1px solid #20313e}
+.edu-article.has-longform>.article-pagination a{color:#92e1e9;font-size:12px;text-decoration:none}
+.edu-article.has-longform>.article-pagination a:hover,.edu-article.has-longform>.article-pagination a:focus-visible{text-decoration:underline;text-underline-offset:3px}
+.market-guide-site .market-article.has-longform{max-width:min(100%,770px)}
 .market-guide-site .market-article.has-longform>.article-content{max-width:none}
-.sportsbook-guide-article.has-longform{max-width:min(100%,1120px)}
+.market-guide-site .market-article.has-longform .longform-toc{border-color:#263945;background:#0d171e;color:#e4edf2}
+.market-guide-site .market-article.has-longform .longform-toc nav{border-color:#20313e}
+.market-guide-site .market-article.has-longform .longform-toc a{color:#a8b6c0}
+.market-guide-site .market-article.has-longform .longform-toc a:hover,.market-guide-site .market-article.has-longform .longform-toc a:focus-visible{background:#13232b;color:#d6efef}
+.market-guide-site .market-article.has-longform .longform-toc-count{color:#81929f}
+.market-guide-site .market-article.has-longform>.article-pagination{max-width:770px;margin-right:auto;margin-left:auto}
+.sportsbook-guide-article.has-longform{max-width:min(100%,770px)}
 .sportsbook-guide-article.has-longform>.article-content{max-width:none}
-.bet-article-meta{display:flex;align-items:center;gap:9px;margin:30px auto 12px;padding-top:15px;border-top:1px solid var(--bet-line);max-width:1080px;color:var(--bet-muted);font-size:11px}
-.bet-article.has-longform{max-width:1080px;margin:0 auto}
+.sportsbook-guide-article.has-longform>.article-pagination{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;width:100%;max-width:770px;margin-right:auto;margin-left:auto}
+.sportsbook-guide-article.has-longform>.article-pagination>span{max-width:68%;line-height:1.65}
+.bet-article-meta{display:flex;align-items:center;gap:9px;margin:30px auto 12px;padding-top:15px;border-top:1px solid var(--bet-line);max-width:770px;color:var(--bet-muted);font-size:11px}
+.bet-article.has-longform{max-width:770px;margin:0 auto}
 .bet-article-content{min-width:0}
 .bet-article-content .longform-copy{max-width:770px}
 .bet-article.has-longform section{scroll-margin-top:28px}
 .bet-article.has-longform h2[id]{scroll-margin-top:28px}
-@media(max-width:900px){.longform-layout{grid-template-columns:180px minmax(0,1fr);gap:28px}}
-@media(max-width:720px){.longform-layout{grid-template-columns:minmax(0,1fr);gap:20px}.longform-toc{position:static;max-height:230px;padding:12px;border-radius:7px;order:0}.longform-toc h2{margin-bottom:7px}.longform-toc ol{grid-template-columns:repeat(2,minmax(0,1fr));gap:1px 6px}.longform-toc a{padding:5px 4px;font-size:10px}.longform-toc-meta{margin:8px 4px 0;padding-top:8px}.edu-article.has-longform{max-width:100%}.bet-article-meta{margin-top:24px}}
-@media(max-width:430px){.longform-toc ol{grid-template-columns:1fr}.longform-toc{max-height:220px}.longform-toc a{font-size:10px}}
-@media(prefers-reduced-motion:reduce){.longform-toc a{transition:none}}
+.market-guide-site .market-article.has-longform section[id]{scroll-margin-top:28px}
+@media(max-width:720px){
+  .edu-article.has-longform{max-width:100%}
+  .bet-article-meta{margin-top:24px}
+  .edu-article.has-longform>.related ul{grid-template-columns:1fr}
+  .edu-article.has-longform>.article-pagination,.sportsbook-guide-article.has-longform>.article-pagination{align-items:flex-start;flex-direction:column;gap:11px}
+  .sportsbook-guide-article.has-longform>.article-pagination>span{max-width:none}
+}
+@media(max-width:520px){
+  .longform-toc ol{grid-template-columns:1fr}
+  .longform-toc{margin-bottom:25px}
+}
+@media(prefers-reduced-motion:reduce){
+  .longform-toc a,.edu-article.has-longform>.related li a{transition:none}
+  html{scroll-behavior:auto}
+}
