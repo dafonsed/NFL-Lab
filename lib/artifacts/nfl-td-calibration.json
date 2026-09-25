@@ -3,15 +3,15 @@
   "method": "ridge-logistic",
   "withPosition": false,
   "coefficients": [
-    -0.668236391763413,
-    1.1555340836400692
+    -0.7107693095532304,
+    0.7802610324681931
   ],
-  "trainingCount": 8926,
+  "trainingCount": 5266,
   "trainingSeasons": [
     2024,
     2025
   ],
   "opponentWindow": 8,
-  "droughtBonus": false,
-  "id": "ef0caaa67f904c99c3a052be0366ca76e3470cf2b8ea3781566562830859ab2a"
+  "droughtBonus": true,
+  "id": "79fddd548071b36c983ef85ffc14c07c1063aa1b4db7d19dcf041495f77a3778"
 }

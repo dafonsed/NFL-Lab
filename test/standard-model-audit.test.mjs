@@ -23,12 +23,16 @@ test('standard rating preserves published weights and explains the exact final s
   assert.ok(Math.abs(r.factors.reduce((s,f)=>s+f.points,0)-r.score)<1e-10);
   assert.ok(Math.abs(r.factors.reduce((s,f)=>s+f.weight,0)-1)<1e-10);
   assert.equal(RATING_WEIGHTS.any_td.role.rz_role,.35);
-  for(const market of ['pass_yds','pass_tds','rush_yds','rec','rush_attempts','rec_yds','pass_attempts','pass_completions','pass_interceptions','rush_rec_yds'])assert.equal(ratingFromComponents(market,{volume:80,baseline:60,matchup:30}).score,64);
+  assert.ok(Math.abs(ratingFromComponents('rush_yds',{volume:80,front:60,script:40,baseline:20}).score-(80*.4+60*.3+40*.15+20*.15))<1e-10);
+  assert.ok(Math.abs(ratingFromComponents('rec',{design:80,baseline:60,matchup:30,script:40}).score-(80*.4+60*.3+30*.2+40*.1))<1e-10);
+  assert.ok(Math.abs(ratingFromComponents('pass_yds',{baseline:80,matchup:60,script:30,environment:40}).score-(80*.45+60*.25+30*.15+40*.15))<1e-10);
+  assert.ok(Math.abs(ratingFromComponents('pass_tds',{rz_lean:80,baseline:60,matchup:30,environment:40}).score-(80*.35+60*.3+30*.2+40*.15))<1e-10);
+  for(const market of ['rush_attempts','rec_yds','pass_attempts','pass_completions','pass_interceptions','rush_rec_yds'])assert.equal(ratingFromComponents(market,{volume:80,baseline:60,matchup:30}).score,64);
 });
 test('missing rating inputs are renormalized and cannot masquerade as recorded zero',()=>{
-  const r=ratingFromComponents('rec',{volume:null,baseline:40,matchup:null});
-  assert.equal(r.score,40);assert.deepEqual(r.missing,['volume','matchup']);
-  assert.equal(ratingFromComponents('rec',{volume:0,baseline:40,matchup:null}).score,15);
+  const r=ratingFromComponents('rec',{design:null,baseline:40,matchup:null,script:null});
+  assert.equal(r.score,40);assert.deepEqual(r.missing,['design','matchup','script']);
+  assert.equal(ratingFromComponents('rec',{design:0,baseline:40,matchup:null,script:null}).score,120/7);
   assert.equal(ratingFromComponents('rec',{matchup:100}).score,null);
 });
 const attempt=(extra={})=>({play_type:'pass',pass_attempt:1,passer_player_id:'q',receiver_player_id:'r',air_yards:5,yardline_100:15,complete_pass:1,pass_touchdown:1,passing_yards:15,...extra});

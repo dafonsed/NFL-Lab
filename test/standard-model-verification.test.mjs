@@ -21,25 +21,25 @@ test('rate populations exclude negated plays, conversions, sacks and spikes but 
 });
 
 test('full-data rating weights reconcile on a grid and missing factors do not imply equal comparability',()=>{
- for(const volume of [0,20,80,100])for(const baseline of [0,35,100])for(const matchup of [0,50,100]){
-  const r=ratingFromComponents('rec',{volume,baseline,matchup});
-  assert.ok(Math.abs(r.score-(.5*volume+.3*baseline+.2*matchup))<1e-10);
+ for(const design of [0,20,80,100])for(const baseline of [0,35,100])for(const matchup of [0,50,100]){
+  const r=ratingFromComponents('rec',{design,baseline,matchup,script:40});
+  assert.ok(Math.abs(r.score-(.4*design+.3*baseline+.2*matchup+.1*40))<1e-10);
  }
- const complete=ratingFromComponents('rec',{volume:80,baseline:0,matchup:0});
- const incomplete=ratingFromComponents('rec',{volume:80,baseline:null,matchup:null});
- assert.equal(complete.score,40);assert.equal(incomplete.score,80);
- assert.deepEqual(incomplete.missing,['baseline','matchup']);
- assert.equal(ratingFromComponents('rec',{volume:null,baseline:40,matchup:null}).score,40);
- assert.equal(ratingFromComponents('rec',{volume:0,baseline:40,matchup:null}).score,15);
+ const complete=ratingFromComponents('rec',{design:80,baseline:0,matchup:0,script:0});
+ const incomplete=ratingFromComponents('rec',{design:80,baseline:null,matchup:null,script:null});
+ assert.equal(complete.score,32);assert.equal(incomplete.score,80);
+ assert.deepEqual(incomplete.missing,['baseline','matchup','script']);
+ assert.equal(ratingFromComponents('rec',{design:null,baseline:40,matchup:null,script:null}).score,40);
+ assert.ok(Math.abs(ratingFromComponents('rec',{design:0,baseline:40,matchup:null,script:null}).score-120/7)<1e-10);
 });
 
 test('shared opportunity scoring retains exact weights with unrounded context inputs',()=>{
  const p={modelScore:42,baselineScore:42.5,opportunityScore:40,dueBonus:0,tdProb:null,projected:2,reason:'History',details:{components:{volume:50,baseline:30,matchup:40.0004}},forecast:{sample:[{targets:4,receptions:2}],teammateImpact:{applied:true,adjustments:{targets:1,carries:0},channels:[{field:'targets',delta:1,teamWorkload:30}],donors:[{player:'Donor'}]}}};
- applyOpportunityRating(p,'rec');const c=p.details.components;
+ applyOpportunityRating(p,'rec_yds');const c=p.details.components;
  const exact=.5*c.volume+.3*c.baseline+.2*c.matchup;
  const former=.5*c.volume+.3*c.baseline+.2*40;
  assert.equal(p.modelScore,Math.round(exact*1e4)/1e4);
- assert.equal(p.modelScore,47.8334);assert.equal(Math.round(former*1e4)/1e4,47.8333);
+ assert.equal(p.modelScore,46.1667);assert.ok(Math.abs(exact-former-.00008)<1e-10);
 });
 
 test('valid weather, consistent baseball units and quote boundaries preserve their formulas',()=>{

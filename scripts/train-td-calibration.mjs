@@ -21,7 +21,7 @@ for (const [season, first, last] of [[2024, 6, 18], [2025, 1, 18], [2026, 1, 2]]
       if (!game?.complete || player.details.sample.length < 5 || player.result.status !== 'final' || !result) continue;
       const rushing = number(result.rushing_tds), receiving = number(result.receiving_tds);
       if (rushing === null || receiving === null || !Number.isFinite(player.modelScore)) continue;
-      rows.push({ season, week, gameId: player.gameId, playerId: player.playerId, position: player.position, score: player.modelScore, outcome: Number(rushing + receiving > 0), poisson: player.tdProb });
+      rows.push({ season, week, gameId: player.gameId, playerId: player.playerId, position: player.position, score: player.modelScore, outcome: Number(rushing + receiving > 0), poisson: player.poissonTdProb, referenceChance: player.tdProbMethod === 'reference-score-curve' ? player.tdProb : null });
     }
   }
   console.log(`${season}: ${rows.filter(r => r.season === season).length} eligible outcomes`);
@@ -36,15 +36,16 @@ const validationPoisson = tdProbabilityMetrics(validation, r => r.poisson);
 const withPosition = validationPosition.brier + .001 < validationScore.brier && validationPosition.logLoss <= validationScore.logLoss;
 const artifact = fitTdCalibration(rows.filter(r => r.season <= 2025), { withPosition });
 artifact.opponentWindow = 8;
-artifact.droughtBonus = false;
+artifact.droughtBonus = true;
 artifact.id = createHash('sha256').update(JSON.stringify(artifact)).digest('hex');
 const holdoutCalibrated = tdProbabilityMetrics(holdout, r => calibratedTdProbability(r.score, r.position, artifact, 2026));
 const holdoutPoisson = tdProbabilityMetrics(holdout, r => r.poisson);
+const holdoutReference = tdProbabilityMetrics(holdout, r => r.referenceChance);
 const report = {
   version: artifact.version, artifactId: artifact.id, generatedAt: new Date().toISOString(),
   split: { training: 2024, validation: 2025, finalTraining: [2024, 2025], earlyHoldout: '2026 weeks 1–2' },
   selection: { rule: 'Position terms require ≥0.001 lower 2025 Brier and no higher log loss.', withPosition, validationScore, validationPosition, validationPoisson },
-  earlyHoldout: { calibrated: holdoutCalibrated, poisson: holdoutPoisson },
+  earlyHoldout: { calibrated: holdoutCalibrated, poisson: holdoutPoisson, referenceCurve: holdoutReference },
   sources: datasets.map(d => ({ type: d.type, season: d.year, url: d.meta.url, sha256: d.meta.sha256, fetchedAt: d.meta.fetchedAt })),
   limitations: [
     'Historical boards are reconstructed from revised public datasets, not frozen pregame snapshots.',
@@ -57,4 +58,4 @@ const report = {
 };
 await fs.writeFile(new URL('../lib/artifacts/nfl-td-calibration.json', import.meta.url), JSON.stringify(artifact, null, 2) + '\n');
 await fs.writeFile(new URL('../lib/artifacts/nfl-td-calibration-evaluation.json', import.meta.url), JSON.stringify(report, null, 2) + '\n');
-console.log(JSON.stringify({ artifactId: artifact.id, trainingCount: artifact.trainingCount, withPosition, validation: { score: validationScore.brier, position: validationPosition.brier, poisson: validationPoisson.brier }, earlyHoldout: { calibrated: holdoutCalibrated.brier, poisson: holdoutPoisson.brier, n: holdoutCalibrated.n } }, null, 2));
+console.log(JSON.stringify({ artifactId: artifact.id, trainingCount: artifact.trainingCount, withPosition, validation: { score: validationScore.brier, position: validationPosition.brier, poisson: validationPoisson.brier }, earlyHoldout: { calibrated: holdoutCalibrated.brier, poisson: holdoutPoisson.brier, referenceCurve: holdoutReference.brier, n: holdoutCalibrated.n } }, null, 2));

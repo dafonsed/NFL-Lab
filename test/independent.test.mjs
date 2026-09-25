@@ -6,6 +6,7 @@ import path from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { buildRates, buildPlayers, chooseCurrent, impliedPoints, prepareData, rushPlay, targetPlay, number, zoneFor } from '../lib/model.mjs';
 import { TD_CALIBRATION_VERSION, calibratedTdProbability } from '../lib/td-calibration.mjs';
+import {inferredTdProbability,TD_CURVE_VERSION} from '../lib/reference-profile.mjs';
 import { Provider, DATASETS, datasetUrl } from '../lib/providers.mjs';
 import { validateQuery, SourceStore } from '../lib/source.mjs';
 const play=(changes={})=>({game_id:'2025_18_A_B',season:'2025',week:'18',play_id:'1',play_type:'run',posteam:'A',defteam:'B',rush_attempt:'1',rusher_player_id:'p1',rush_touchdown:'0',rushing_yards:'4',yardline_100:'3',...changes});
@@ -27,17 +28,17 @@ test('schedule spread sign gives correct home and away implied totals',()=>{cons
 test('automatic week remains through Monday and advances Tuesday',()=>{const {schedule}=fixture();assert.deepEqual(chooseCurrent(schedule,new Date('2026-09-20T22:00:00Z')),{season:2026,week:2});assert.equal(chooseCurrent(schedule,new Date('2026-09-21T12:00:00Z')).week,2);assert.equal(chooseCurrent(schedule,new Date('2026-09-22T12:00:00Z')).week,3);});
 test('January belongs to the prior NFL season and playoffs are selectable',()=>{const games=[{season:'2026',week:'19',game_type:'WC',gameday:'2027-01-09'}];assert.deepEqual(chooseCurrent(games,new Date('2027-01-08')),{season:2026,week:19});});
 test('UTC Tuesday during Monday Night Football stays in the current week',()=>{assert.equal(chooseCurrent(fixture().schedule,new Date('2026-09-22T01:00:00Z')).week,2);assert.equal(chooseCurrent(fixture().schedule,new Date('2026-09-22T09:59:00Z')).week,2);assert.equal(chooseCurrent(fixture().schedule,new Date('2026-09-22T10:00:00Z')).week,3);});
-test('current-week results cannot enter the sample',()=>{const p=boardFixture()[0];assert.equal(p.details.sample.length,2);assert.equal(p.details.stats.touches_pg,18);assert.equal(p.details.cheat_code.td_debt.actual,1);assert.ok(p.details.sample.every(g=>g.gameId!=='2026_02_B_A'));});
-test('future touchdown chance uses the frozen score fit without reading target-game touchdowns',()=>{
+test('current-week results cannot enter the sample',()=>{const p=boardFixture()[0];assert.equal(p.details.sample.length,2);assert.equal(p.details.stats.touches_pg,19);assert.equal(p.details.cheat_code.td_debt.actual,1);assert.ok(p.details.sample.every(g=>g.gameId!=='2026_02_B_A'));});
+test('future touchdown chance uses the inferred score curve without reading target-game touchdowns',()=>{
  const calibration={version:TD_CALIBRATION_VERSION,withPosition:false,coefficients:[-1,1],trainingSeasons:[2024,2025],id:'fixture-fit'};
  const original=boardFixture({tdCalibration:calibration})[0],f=fixture();f.weekly.at(-1).rushing_tds='99';
  const changed=boardFixture({tdCalibration:calibration,weekly:f.weekly})[0];
- assert.equal(original.tdProbMethod,'historical-score-calibration');
- assert.equal(original.tdProb,calibratedTdProbability(original.modelScore,original.position,calibration,2026));
+ assert.equal(original.tdProbMethod,'reference-score-curve');
+ assert.equal(original.tdProb,inferredTdProbability(original.modelScore));
  assert.equal(original.tdProb,changed.tdProb);
  assert.equal(original.poissonTdProb,changed.poissonTdProb);
  assert.equal(original.tdProbSourceScore,original.modelScore);
- assert.equal(original.tdCalibrationId,'fixture-fit');
+ assert.equal(original.tdCalibrationId,TD_CURVE_VERSION);
  assert.equal(calibratedTdProbability(original.modelScore,original.position,calibration,2025),null);
 });
 test('new rushing and receiving markets separate historical inputs from selected-week results',()=>{
@@ -55,7 +56,7 @@ test('new passing markets use prior attempts, completions and interceptions with
 test('uncompleted games cannot enter a future-week sample',()=>{const f=fixture();const ps=boardFixture({week:3,pbp:f.pbp.filter(p=>!(p.game_id==='2026_02_B_A'&&p.desc==='END GAME'))});assert.equal(ps[0].details.sample.length,2);});
 test('future rosters cannot retroactively change the selected team',()=>{const f=fixture();const ps=boardFixture({rosters:[f.roster,{...f.roster,week:'3',team:'C'}]});assert.equal(ps[0].team,'A');});
 test('inactive players and teams on bye do not get invented matchups',()=>{const f=fixture();assert.equal(boardFixture({rosters:[{...f.roster,status:'RES'}]}).length,0);assert.equal(boardFixture({rosters:[{...f.roster,team:'C'}]}).length,0);});
-test('zero-touch offensive appearances count when snap data exists',()=>{const f=fixture(),weekly=f.weekly.filter(p=>p.game_id!=='2026_01_A_B'),pbp=f.pbp.filter(p=>p.game_id!=='2026_01_A_B'||p.desc==='END GAME');const p=boardFixture({weekly,pbp,snaps:[{game_id:'2026_01_A_B',pfr_player_id:'pfr1',team:'A',offense_snaps:'5',offense_pct:'.1'}]})[0];assert.equal(p.details.sample.length,2);assert.equal(p.details.stats.touches_pg,6);});
+test('low-snap zero-touch appearances do not dilute meaningful-game usage',()=>{const f=fixture(),weekly=f.weekly.filter(p=>p.game_id!=='2026_01_A_B'),pbp=f.pbp.filter(p=>p.game_id!=='2026_01_A_B'||p.desc==='END GAME');const p=boardFixture({weekly,pbp,snaps:[{game_id:'2026_01_A_B',pfr_player_id:'pfr1',team:'A',offense_snaps:'5',offense_pct:'.1'}]})[0];assert.equal(p.details.sample.length,1);assert.equal(p.details.stats.touches_pg,13);});
 test('a missing weekly row with actual plays is not fabricated as zero',()=>{const f=fixture(),p=boardFixture({weekly:f.weekly.filter(p=>p.game_id!=='2026_01_A_B'),snaps:[{game_id:'2026_01_A_B',pfr_player_id:'pfr1',team:'A',offense_snaps:'5',offense_pct:'.1'}]})[0];assert.equal(p.details.sample.length,1);});
 test('missing charting creates no box or coverage data',()=>{const p=boardFixture()[0];assert.deepEqual(p.details.cheat_code.box,[]);assert.equal(p.details.coverage.chartedGames.length,0);});
 test('zero placeholder defenders do not count as a light box',()=>{const p=boardFixture({chart:[{nflverse_game_id:'2025_18_A_B',play_id:'1',defenders_in_box:'0'}]})[0];assert.deepEqual(p.details.cheat_code.box,[]);});
