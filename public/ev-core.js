@@ -127,7 +127,7 @@ export function promoConversion({ stake, promoOdds, hedgeOdds, kind = 'bonus', b
 }
 
 export function parlay(legs) {
-  if (!legs.length || new Set(legs.map(x => x.event)).size !== legs.length) return null;
+  if (legs.length < 2 || new Set(legs.map(x => x.event)).size !== legs.length) return null;
   const probability = legs.reduce((a, x) => a * Number(x.probability), 1);
   const payout = legs.reduce((a, x) => a * decimal(x.odds), 1);
   return { probability, payout, ev: probability * payout - 1 };
@@ -183,8 +183,8 @@ export function sharpMatches(quotes, minimum = 1000) {
 }
 
 export function alertMatches(rule, state) {
-  if (rule.kind === 'fantasy-new') return state.dfs.filter(x => (!rule.market || x.market.toLowerCase().includes(rule.market.toLowerCase())) && (!Number.isFinite(Number(rule.threshold)) || Number(x.probability) * 100 >= Number(rule.threshold))).map(x => ({ id: x.id, label: `${x.player} ${x.market} ${Math.round(Number(x.probability) * 100)}% at ${x.app}` }));
-  const rows = state.quotes.filter(q => (!rule.event || q.event.toLowerCase().includes(rule.event.toLowerCase())) && (!rule.market || q.market.toLowerCase().includes(rule.market.toLowerCase())) && (!rule.liveOnly || q.live));
+  if (rule.kind === 'fantasy-new') return state.dfs.filter(x => (!rule.sport || x.sport === rule.sport) && (!rule.market || x.market.toLowerCase().includes(rule.market.toLowerCase())) && (!Number.isFinite(Number(rule.threshold)) || Number(x.probability) * 100 >= Number(rule.threshold))).map(x => ({ id: x.id, label: `${x.player} ${x.market} ${Math.round(Number(x.probability) * 100)}% at ${x.app}` }));
+  const rows = state.quotes.filter(q => (!rule.sport || q.sport === rule.sport) && (!rule.event || q.event.toLowerCase().includes(rule.event.toLowerCase())) && (!rule.market || q.market.toLowerCase().includes(rule.market.toLowerCase())) && (!rule.liveOnly || q.live));
   const observation = q => state.history.filter(h => h.quoteId === q.id).at(-1)?.id || q.id;
   if (rule.kind === 'price') return rows.filter(q => decimal(q.odds) >= decimal(rule.threshold)).map(q => ({ id: observation(q), label: `${q.side} ${oddsLabel(q.odds)} at ${q.book}` }));
   if (rule.kind === 'ev') {
