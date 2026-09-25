@@ -35,50 +35,23 @@ body.landing-page :is(.home-header, main, .home-hero, .hero-brands, .home-live, 
   letter-spacing: -.047em;
   line-height: 1.12;
 }
-.home-reviews-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  width: min(520px, 100%);
-  margin: 48px auto 0;
-}
-.home-reviews-summary-item { min-width: 0; text-align: center; }
-.home-reviews-summary-item + .home-reviews-summary-item { border-left: 1px solid #202126; }
-.home-reviews-summary-label {
-  display: block;
-  margin-bottom: 13px;
-  color: #909399;
-  font-size: 15px;
-  font-weight: 500;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-}
-.home-reviews-summary-item strong {
+.home-reviews-stars {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 11px;
-  color: #f8f9fa;
-  font-size: 39px;
-  font-weight: 750;
-  letter-spacing: -.035em;
-  line-height: 1;
+  gap: 5px;
+  margin: 45px auto 0;
+  color: #d3ae60;
 }
-.home-reviews-discord-mark {
-  display: grid;
-  place-items: center;
-  width: 31px;
-  height: 31px;
-  border-radius: 50%;
-  background: #5865f2;
-  color: #fff;
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: 0;
+.home-reviews-stars svg {
+  width: 32px;
+  height: 32px;
+  fill: currentColor;
 }
 .home-review-viewport {
   overflow-x: auto;
   overscroll-behavior-inline: contain;
-  margin-top: 66px;
+  margin-top: 110px;
   scrollbar-width: none;
   cursor: grab;
 }
@@ -141,11 +114,9 @@ body.landing-page :is(.home-header, main, .home-hero, .hero-brands, .home-live, 
 @media (max-width: 650px) {
   .home-reviews { padding: 50px 0 55px; }
   .home-reviews-heading h2 { font-size: clamp(39px, 10vw, 50px); }
-  .home-reviews-summary { width: min(360px, 100%); margin-top: 34px; }
-  .home-reviews-summary-label { font-size: 11px; }
-  .home-reviews-summary-item strong { gap: 5px; font-size: 27px; }
-  .home-reviews-discord-mark { width: 24px; height: 24px; font-size: 14px; }
-  .home-review-viewport { margin-top: 48px; }
+  .home-reviews-stars { margin-top: 34px; }
+  .home-reviews-stars svg { width: 28px; height: 28px; }
+  .home-review-viewport { margin-top: 78px; }
   .home-review-track { gap: 13px; }
   .home-review-card { flex-basis: min(84vw, 335px); min-height: 325px; padding: 31px 25px 28px; }
   .home-review-card blockquote { font-size: 16px; line-height: 1.55; }
