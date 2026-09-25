@@ -735,3 +735,25 @@ body.ev-page .ev-arb-overview:focus-visible{outline:2px solid #90c786;outline-of
 .ev-arb-expanded{grid-column:1/-1;min-width:0;margin:0 0 15px 11px}.ev-arb-expanded .ev-caption{margin:11px 2px 0}
 @media(max-width:800px){.ev-arb-list{width:100%;margin-left:0}.ev-arb-opportunity{grid-template-columns:1fr;row-gap:10px;padding:15px 12px}.ev-arb-overview{min-height:50px}.ev-arb-pair{margin-left:0}.ev-arb-expanded{margin:0}}
 @media(max-width:520px){.ev-arb-opportunity{padding:12px 9px}.ev-arb-pair{grid-template-columns:21px minmax(0,1fr);height:auto}.ev-arb-leg{grid-template-columns:23px minmax(0,1fr) 42px 43px 39px;gap:4px;padding:0 7px}.ev-arb-leg-figure strong,.ev-arb-selection strong{font-size:9px}.ev-arb-leg-figure small,.ev-arb-selection small{font-size:7px}.ev-arb-market strong{font-size:11px}.ev-arb-market small{font-size:8px}}
+
+/* Arbitrage uses the same teal-charcoal canvas and control scale as the data tables. */
+body.ev-page.site-layout.ui-theme.reference-design[data-ev-screen^="arb-"]{--ev-bg:#0d1316;--ev-panel:#131c1f;--ev-line:#2a373b;background:#0d1316!important}
+body.ev-page[data-ev-screen^="arb-"] .ev-control-grid{grid-template-columns:minmax(0,1fr);gap:14px;margin-bottom:20px}
+body.ev-page[data-ev-screen^="arb-"] .ev-stake-panel{grid-template-columns:repeat(2,minmax(0,280px));justify-content:start;gap:18px;min-height:0;padding:16px 20px;background:#131c1f!important}
+body.ev-page[data-ev-screen^="arb-"] .ev-stake-panel .ev-input-wrap{margin-top:9px}
+body.ev-page[data-ev-screen^="arb-"] .ev-filter-panel{min-height:0;padding:16px 18px 18px;background:#131c1f!important}
+body.ev-page[data-ev-screen^="arb-"] .ev-filter-heading{height:auto;margin-bottom:12px}
+body.ev-page[data-ev-screen^="arb-"] .ev-design-filters{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;min-width:0;overflow:visible;padding:0}
+body.ev-page[data-ev-screen^="arb-"] .ev-design-filter{min-width:0;height:62px;padding:5px 14px;border-color:#344348;background:#151e21}
+body.ev-page[data-ev-screen^="arb-"] .ev-design-filter .ev-design-prefix{font-size:12px;color:#b6c6ca}
+body.ev-page[data-ev-screen^="arb-"] .ev-design-filter :is(select,input){font-size:14px}
+body.ev-page[data-ev-screen^="arb-"] .ev-design-filter .td-choice-trigger{font-size:14px!important}
+body.ev-page[data-ev-screen^="arb-"] .ev-arb-list{border-color:#2a373b;background:#131c1f}
+body.ev-page[data-ev-screen^="arb-"] .ev-arb-opportunity{border-bottom-color:#2a373b}
+body.ev-page[data-ev-screen^="arb-"] .ev-arb-overview:hover{background:#1a272a!important}
+body.ev-page[data-ev-screen^="arb-"] .ev-arb-legs{border-color:#2a373b;background:#172023;box-shadow:none}
+body.ev-page[data-ev-screen^="arb-"] .ev-arb-leg+.ev-arb-leg{border-top-color:#2a373b}
+body.ev-page[data-ev-screen^="arb-"] .ev-arb-book-logo{background:#1b282c}
+@media(max-width:1180px){body.ev-page[data-ev-screen^="arb-"] .ev-design-filters{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:620px){body.ev-page[data-ev-screen^="arb-"] .ev-stake-panel{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}body.ev-page[data-ev-screen^="arb-"] .ev-design-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:390px){body.ev-page[data-ev-screen^="arb-"] .ev-stake-panel{grid-template-columns:1fr}body.ev-page[data-ev-screen^="arb-"] .ev-design-filters{grid-template-columns:1fr}}
