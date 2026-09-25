@@ -346,7 +346,10 @@ function deleteRecord() {
 
 $('#ev-tool-nav').addEventListener('click', event => { const key = event.target.closest('[data-tool]')?.dataset.tool; if (key) setTool(key); });
 $('#ev-tool-select').addEventListener('change', event => setTool(event.target.value));
-$('#ev-sport').addEventListener('change', event => { sport = event.target.value; render(); });
+$('#ev-sport').addEventListener('change', event => {
+  sport = event.target.value;
+  location.assign(`${location.pathname}?sport=${encodeURIComponent(sport.toLowerCase())}${location.hash}`);
+});
 $('#ev-search').addEventListener('input', event => { search = event.target.value.toLowerCase().trim(); render(); });
 $('#ev-add-quote').addEventListener('click', () => openForm('quote'));
 $('#ev-view-actions').addEventListener('click', event => { const target = event.target.closest('[data-add]'); if (target) openForm(target.dataset.add, null, { live:target.dataset.live === 'true', exchange:target.dataset.exchange === 'true', kind:target.dataset.kind || 'price' }); });
