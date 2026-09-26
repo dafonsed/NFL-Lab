@@ -1,0 +1,156 @@
+/* Carry the public Sportslab palette through every workspace route.
+   Cyan identifies navigation and actions; green identifies favorable results. */
+body.site-layout.ui-theme.reference-design {
+  --brand-canvas:#080c10;
+  --brand-rail:#0b1116;
+  --brand-panel:#11181d;
+  --brand-raised:#17232b;
+  --brand-line:#33434b;
+  --brand-ink:#f4f7f8;
+  --brand-muted:#a8b7bf;
+  --brand-blue:#45bdf1;
+  --brand-blue-light:#82d5fa;
+  --brand-green:#8ed572;
+  --bg:var(--brand-canvas);
+  --panel:var(--brand-panel);
+  --panel2:var(--brand-raised);
+  --control:#111a20;
+  --surface-sunken:#090f13;
+  --surface-hover:#20303a;
+  --line:#293941;
+  --border-strong:#40535e;
+  --text:var(--brand-ink);
+  --secondary:#c7d3d8;
+  --muted:var(--brand-muted);
+  --accent:var(--brand-blue);
+  --bright:var(--brand-blue-light);
+  --positive:var(--brand-green);
+  --trend:var(--brand-green);
+  --trend-dim:#8ed5721a;
+  --red:#df8179;
+  --warning:#e4b86a;
+  --accent-wash:#45bdf11a;
+  --violet-wash:#45bdf11a;
+  --ui-accent-rgb:69 189 241;
+  --ui-accent-light-rgb:130 213 250;
+  --accent-rgb:69 189 241;
+  --accent-strong-rgb:69 189 241;
+  --bright-rgb:130 213 250;
+  --control-rgb:17 26 32;
+  --panel-rgb:17 24 29;
+  --panel2-rgb:23 35 43;
+  --line-rgb:41 57 65;
+  --border-strong-rgb:64 83 94;
+  --muted-rgb:168 183 191;
+  --secondary-rgb:199 211 216;
+  --text-rgb:244 247 248;
+  --ui-fill:var(--brand-raised);
+  --ui-hover:#243640;
+  --ui-selected:#dceef7;
+  --ui-selected-text:#0b1820;
+  --selected:#dceef7;
+  --ui-selection-wash:#142a36;
+  --ui-focus:var(--brand-blue-light);
+  --action-fill:var(--brand-blue);
+  --tracker-accent:var(--brand-blue);
+  --tracker-positive:var(--brand-green);
+  --desk-canvas:var(--brand-canvas);
+  --desk-panel:var(--brand-panel);
+  --desk-row:#131d23;
+  --desk-row-alt:#10191e;
+  --desk-rule:var(--brand-line);
+  --desk-heading:#0d151a;
+  --desk-hover:#1e3039;
+  --hero-fill:linear-gradient(105deg,#0c2632,#11232d 48%,#0b1218);
+  background:var(--brand-canvas);
+  color:var(--brand-ink);
+}
+
+/* Shared shell, navigation, and controls. */
+body.site-layout.ui-theme.research-console.reference-design { background:var(--brand-canvas) }
+body.site-layout.ui-theme.research-console.reference-design .site-header-bar,
+body.site-layout.ui-theme.research-console.reference-design .site-header,
+body.site-layout.ui-theme.research-console.reference-design .mobile-navigation { background:var(--brand-rail);border-color:var(--brand-line) }
+body.site-layout.ui-theme.research-console.reference-design .site-header-main { background:var(--brand-rail) }
+body.site-layout.ui-theme.research-console.reference-design .site-sports { background:#0e171c;border-color:var(--brand-line) }
+body.site-layout.ui-theme.research-console.reference-design :is(.site-nav-link,.site-overview-link,.site-tracker) { color:#aebfc8 }
+body.site-layout.ui-theme.research-console.reference-design :is(.site-nav-link,.site-overview-link,.site-tracker):hover { background:#1b2c35;color:var(--brand-ink) }
+body.site-layout.ui-theme.research-console.reference-design :is(.site-nav-link,.site-overview-link,.site-tracker)[aria-current=page] { background:#142a36;color:#d9f2ff;border-color:#315c70 }
+body.site-layout.ui-theme.research-console.reference-design :is(.site-nav-link,.site-overview-link,.site-tracker)[aria-current=page] .ui-icon { color:var(--brand-blue-light) }
+body.site-layout.ui-theme.research-console.reference-design .workspace-masthead,
+body.site-layout.ui-theme.reference-design :is(.page-heading,.product-page-heading,.trends-heading,.td-player-heading,.pr-header,.player-hero) { background:var(--hero-fill);border-color:var(--brand-line) }
+body.site-layout.ui-theme.reference-design :is(button,a,input,select,textarea,summary):focus-visible { outline-color:var(--brand-blue-light) }
+body.site-layout.ui-theme.reference-design :is(input,textarea,select) { background-color:#111a20!important;border-color:#344751!important;color:var(--brand-ink) }
+body.site-layout.ui-theme.reference-design :is(input[type=checkbox],input[type=radio],input[type=range]) { accent-color:var(--brand-blue) }
+body.site-layout.ui-theme.reference-design input::placeholder { color:#98acb6 }
+body.site-layout.ui-theme.reference-design :is([data-ui-control],.calendar-trigger,.td-choice-trigger) { --button-fill:#17242c;--button-border:#344751;--button-ink:#d7e5eb }
+body.site-layout.ui-theme.reference-design [data-ui-control=primary] { --button-fill:var(--brand-blue);--button-border:var(--brand-blue);--button-ink:#07151d }
+body.site-layout.ui-theme.reference-design [data-ui-control=primary]:hover:not(:disabled) { --button-fill:var(--brand-blue-light);--button-border:var(--brand-blue-light) }
+body.site-layout.ui-theme.reference-design [data-ui-control=segment]:is(.active,[aria-pressed=true],[aria-selected=true]) { --button-fill:#dceef7;--button-ink:#0b1820 }
+body.site-layout.ui-theme.reference-design [data-ui-control=tab]:is(.active,[aria-pressed=true],[aria-selected=true]) { border-bottom-color:var(--brand-blue)!important }
+body.site-layout.ui-theme.reference-design .button.primary,
+body.site-layout.ui-theme.reference-design .pr-button.primary { background:var(--brand-blue);border-color:var(--brand-blue);color:#07151d }
+body.site-layout.ui-theme.reference-design .button.primary:hover,
+body.site-layout.ui-theme.reference-design .pr-button.primary:hover { background:var(--brand-blue-light);border-color:var(--brand-blue-light) }
+body.site-layout.ui-theme.reference-design dialog { background:var(--brand-panel);border-color:var(--brand-line);color:var(--brand-ink) }
+
+/* Research boards, cards, filters, and the player detail panel. */
+body.site-layout.ui-theme.research-console.reference-design :is(.desk-toolbar,.workspace-controlbar,.home-toolbar,.page-tools,.results-heading,.home-board-heading,.home-secondary-toolbar) { background:#0d151a;border-color:var(--brand-line) }
+body.site-layout.ui-theme.research-console.reference-design :is(.research-board,.trend-table-scroll) { background:var(--brand-panel);border-color:var(--brand-line) }
+body.site-layout.ui-theme.research-console.reference-design :is(.research-columns,.trend-table thead th) { background:#10191f;color:#b9cbd3;border-color:var(--brand-line) }
+body.site-layout.ui-theme.research-console.reference-design :is(.research-row,.trend-table tbody tr) { background:#151f25;border-color:#2a3942 }
+body.site-layout.ui-theme.research-console.reference-design :is(.research-row:nth-child(odd),.trend-table tbody tr:nth-child(even)) { background:#111b21 }
+body.site-layout.ui-theme.research-console.reference-design .research-row:hover { background:#20333d }
+body.site-layout.ui-theme.reference-design :is(.summary-card,.performance-stat,.sports-card,.mlb-card,.live-card,.method-card,.matchup,.live-directory-card,.td-chart-card,.td-support-card,.td-context-panel,.td-records-card,.pr-card,.workspace-sheet,.bet-card,.sim-card) { background:var(--brand-panel);border-color:var(--brand-line) }
+body.site-layout.ui-theme.reference-design :is(.ui-choice .td-choice-menu,.calendar-popover) { background:#17232b!important;border-color:#40535e!important }
+body.site-layout.ui-theme.reference-design :is(.filter-dialog-header,.model-filter-dialog .sheet-header,.filter-dialog-footer,.model-filter-dialog .sheet-footer,.filter-dialog-body,.model-filter-dialog .sheet-body,.filter-category-nav,.filter-editors,.model-filter-editors) { background:#111a20 }
+body.site-layout.ui-theme.reference-design .filter-category-nav button[aria-selected=true] { background:#dceef7!important;color:#0b1820!important }
+body.site-layout.ui-theme.reference-design .player-research-dialog.pr-redesign { background:#0b1419!important;border-color:#40535e }
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-hero { background:#11232d;border-color:var(--brand-line) }
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-primary { background:#0b1419 }
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-sidebar { background:#0e191f;border-color:var(--brand-line) }
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-panel { background:#17232b;border-color:var(--brand-line) }
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-save { background:var(--brand-blue)!important;color:#07151d!important }
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-priced-quote { background:#102b38;border-color:#387b9b }
+body.site-layout.ui-theme.reference-design :is(.pr-bar.hit,.board-history .hit) { fill:var(--brand-green)!important }
+body.site-layout.ui-theme.reference-design :is(.pr-bar.miss,.board-history .miss) { fill:var(--red)!important }
+body.site-layout.ui-theme.reference-design :is(.pr-bar-label,.trend-table .trend-rate.high,.research-row .research-probability>strong,.td-hit-stat>strong,.td-summary-stats .td-split>strong,.pr-redesign .pr-chart-heading h3,.pr-redesign .pr-sample-splits b,.sim-prop-card .sim-prop-probabilities b,.sim-team-probability) { color:var(--brand-green)!important;fill:var(--brand-green) }
+body.site-layout.ui-theme.research-console.reference-design .research-row .research-probability { background:#1b2c22 }
+body.site-layout.ui-theme.research-console.reference-design .trend-table .trend-rate.high { background:#1b2c22 }
+body.site-layout.ui-theme.reference-design :is(.td-player-heading>button,.simulator-setup #sim-run,.reference-chart-filter>summary) { background:var(--brand-blue)!important;border-color:var(--brand-blue)!important;color:#07151d!important;--button-fill:var(--brand-blue);--button-border:var(--brand-blue);--button-ink:#07151d }
+body.site-layout.ui-theme.reference-design :is(.market-tabs>.market-tab.active,.pr-redesign .pr-markets button[aria-pressed=true]) { border-bottom-color:var(--brand-blue)!important;background:#173547!important;color:#e7f8ff!important }
+body.site-layout.ui-theme.research-console.reference-design .simulator-setup { background:var(--brand-panel);border:1px solid var(--brand-line) }
+body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-start { background:#121d23;border:1px solid var(--brand-line) }
+body.site-layout.ui-theme.research-console.reference-design .simulator-main .sim-prop-card { background:var(--brand-panel);border-color:var(--brand-line) }
+body.site-layout.ui-theme.research-console.reference-design .simulator-setup #sim-run { background:var(--brand-blue)!important;color:#07151d!important;border-color:var(--brand-blue)!important }
+body.site-layout.ui-theme.research-console.reference-design .sim-setup-heading .ui-icon { color:var(--brand-blue) }
+body.site-layout.ui-theme.research-console.reference-design .sim-result-tabs [data-sim-view][aria-pressed=true] { border-bottom-color:var(--brand-blue)!important;color:var(--brand-ink)!important }
+
+/* EV workbench uses the same blue surfaces and green result color. */
+body.site-layout.ui-theme.reference-design.ev-page { --ev-ink:var(--brand-ink);--ev-muted:var(--brand-muted);--ev-rule:var(--brand-line);--ev-panel:var(--brand-panel);--ev-panel-2:var(--brand-raised);--ev-mint:var(--brand-green);--ev-amber:var(--warning) }
+body.site-layout.ui-theme.reference-design.ev-page .ev-header { background:linear-gradient(105deg,#0c2632,#11232d 56%,#10191e);border-color:var(--brand-line) }
+body.site-layout.ui-theme.reference-design.ev-page .ev-notice { background:#28231b;border-color:#65523a;color:#f0d2a4 }
+body.site-layout.ui-theme.reference-design.ev-page :is(.ev-sidebar,.ev-toolbar,.ev-card,.ev-metric,.ev-table-wrap,.ev-calculator,.ev-list-item) { background:var(--brand-panel);border-color:var(--brand-line) }
+body.site-layout.ui-theme.reference-design.ev-page .ev-sidebar button { --button-fill:transparent;--button-border:transparent;--button-ink:#c0cdd3;background:transparent!important;border-color:transparent!important;color:#c0cdd3!important;box-shadow:none!important }
+body.site-layout.ui-theme.reference-design.ev-page .ev-sidebar button:hover,
+body.site-layout.ui-theme.reference-design.ev-page .ev-sidebar button[aria-current=page] { --button-fill:#173547;--button-ink:var(--brand-blue-light);background:#173547!important;color:var(--brand-blue-light)!important }
+body.site-layout.ui-theme.reference-design.ev-page :is(.ev-view-header button,.ev-card button,.ev-table button,.ev-calculator button,.ev-list button) { background:#172630;border-color:#40535e;color:var(--brand-ink) }
+body.site-layout.ui-theme.reference-design.ev-page :is(.ev-view-header button,.ev-card button,.ev-table button,.ev-calculator button,.ev-list button):hover { border-color:var(--brand-blue);color:var(--brand-blue-light) }
+body.site-layout.ui-theme.reference-design.ev-page .ev-table th { background:#17242b;color:var(--brand-muted) }
+body.site-layout.ui-theme.reference-design.ev-page .ev-table :is(th,td) { border-color:#2a3942 }
+body.site-layout.ui-theme.reference-design.ev-page .ev-table tbody tr:hover { background:#1d3039 }
+body.site-layout.ui-theme.reference-design.ev-page .ev-result { background:#1c3023;border-color:#466b46;color:#dcf3cf }
+body.site-layout.ui-theme.reference-design.ev-page .ev-chip { background:#1c3023;border-color:#466b46;color:#ddedda }
+body.site-layout.ui-theme.reference-design.ev-page .ev-status { background:#1c3023;border-color:#517949;color:#c2e5ae }
+body.site-layout.ui-theme.reference-design.ev-page .ev-status.example { background:#22313a;border-color:#506575;color:#c7d8e0 }
+body.site-layout.ui-theme.reference-design.ev-page .ev-status.stale { background:#352c20;border-color:#796246;color:#f2d39d }
+body.site-layout.ui-theme.reference-design.ev-page .ev-empty { border-color:#40535e }
+body.site-layout.ui-theme.reference-design.ev-page dialog { background:#111b21;border-color:#40535e }
+body.site-layout.ui-theme.reference-design.ev-page :is(input,select,textarea) { background-color:#0d171c!important;border-color:#40535e!important }
+body.site-layout.ui-theme.reference-design.ev-page .ev-positive,
+body.site-layout.ui-theme.reference-design.ev-page .ev-metric.positive strong { color:var(--brand-green)!important }
+
+@media(max-width:700px) {
+  body.site-layout.ui-theme.research-console.reference-design .mobile-navigation { background:#0b1116f7;border-top-color:var(--brand-line) }
+  body.site-layout.ui-theme.research-console.reference-design .mobile-navigation [aria-current=page] { color:var(--brand-blue-light)!important }
+}

@@ -1,3 +1,4 @@
+import {sportTools} from './navigation.js';
 import {requestData, loadingRows, emptyBoard, propBoard, gameStrip, boardGames} from './product-ui.js';
 import {researchProfile, NFL_MARKETS, escape as esc} from './research-data.js';
 import {playerContext, playerKey} from './sports-view.js';
@@ -16,14 +17,14 @@ let requestId=0, controller;
 $('#home-date').value=state.date;$('#home-date-label').hidden=sport==='nfl';$('#home-week-label').hidden=sport!=='nfl';
 $('#home-market').innerHTML=`<option value="${esc(state.market)}">${esc(({rec_yds:'Receiving yards',hits:'Hits',points:'Points',shots:'Shots'}[state.market])||state.market)}</option>`;
 function query(){const q=new URLSearchParams({market:state.market});if(sport==='nfl'){q.set('view','board');if(state.week){const [season,week]=state.week.split('-');q.set('season',season);q.set('week',week);}}else {q.set('date',state.date);if(sport!=='mlb'){q.set('sport',sport);if(state.game)q.set('game',state.game);}}return q;}
-function links(){const q=query();q.delete('sport');if(state.game&&['nfl','mlb'].includes(sport))q.set('game',state.game);const root='/'+sport+'?'+q;$('#full-research').href=root;$('#home-all').href=root;const tq=new URLSearchParams(q);tq.set('view','trends');$('#home-trends').href='/'+sport+'?'+tq;$('#home-live').href=['nfl','mlb','nba','wnba'].includes(sport)?'/'+sport+'/live'+(sport==='nfl'?'':'?date='+state.date):'/live';$('#home-simulation').href='/'+sport+'/simulation'+(sport==='nfl'?'':'?date='+state.date);}
+function links(){const q=query();q.delete('sport');if(state.game&&['nfl','mlb'].includes(sport))q.set('game',state.game);const root='/'+sport+'?'+q;$('#full-research').href=root;$('#home-all').href=root;const tq=new URLSearchParams(q);tq.set('view','trends');$('#home-trends').href='/'+sport+'?'+tq;const available=sportTools(sport);for(const key of ['live']){const link=$('#home-'+key),tool=available.find(t=>t.key===key);link.hidden=!tool;if(tool)link.href=tool.href+(sport==='nfl'?'':'?date='+state.date);}}
 function save(p){const id=p.playerId;if(saved.has(id))saved.delete(id);else saved.add(id);try{localStorage.setItem(savedKey,JSON.stringify([...saved]));$('#home-status').textContent=saved.has(id)?p.name+' saved.':p.name+' removed from saved players.';}catch{$('#home-status').textContent='Browser storage is unavailable. Your changes last only for this session.';}render();return saved.has(id);}
 function render(){
   const filter=$('#home-search').value.trim().toLowerCase(), rows=state.profiles.filter(p=>(p.name+' '+p.team+' '+p.opponent).toLowerCase().includes(filter)&&(!state.game||sport!=='mlb'&&sport!=='nfl'||String(p.gameId)===state.game));
   $('#home-count').textContent=(rows.length>30?'30 of ':'')+rows.length+' players';$('#home-board-title').textContent=state.profiles[0]?.label||'Player props';
   $('#home-board').innerHTML=rows.length?propBoard(rows.slice(0,30),{kind:'home-prop',row:p=>({saved:saved.has(p.playerId),saveId:p.key})}):emptyBoard('No matching players','Try another prop or clear the player search.',filter?'<button class="button subtle" data-clear-search>Clear search</button>':'');
   if(rows.length)mountResearchWorkspace($('#home-board'),rows,{open:detail});
-  $('#home-all').textContent=rows.length>30?'See all '+rows.length+' players →':'Open the full board →';
+  $('#home-all').textContent=rows.length>30?'See all '+rows.length+' players →':'Open the full model board →';
 }
 async function load(force=false){
   const id=++requestId;controller?.abort();controller=new AbortController();const signal=controller.signal,key=query().toString(),retain=state.board&&state.loadedKey===key;
@@ -41,8 +42,8 @@ async function load(force=false){
     state.board=b;state.loadedKey=query().toString();const markets=sport==='nfl'?NFL_MARKETS:b.markets;
     $('#home-market').innerHTML=Object.entries(markets).map(([k,m])=>`<option value="${esc(k)}">${esc(m.label)}</option>`).join('');$('#home-market').value=state.market;
     state.profiles=b.players.map(p=>{const context=!['mlb','nfl'].includes(sport)?playerContext(b,playerKey(p)):null;return researchProfile({sport,board:context?.board||b,player:p,market:state.market});});
-    const games=state.catalog?.games?state.catalog.games.map(g=>({id:g.id,away:g.away.code,home:g.home.code,awayScore:g.away.score,homeScore:g.home.score,status:g.status})):boardGames(b,sport);
-    $('#home-games').innerHTML=gameStrip(games,{selected:state.game,all:['nfl','mlb'].includes(sport)});
+    const games=state.catalog?.games?state.catalog.games.map(g=>({id:g.id,away:g.away.code,home:g.home.code,awayId:g.away.id,homeId:g.home.id,awayScore:g.away.score,homeScore:g.home.score,status:g.status})):boardGames(b,sport);
+    $('#home-games').innerHTML=gameStrip(games,{sport,selected:state.game,all:['nfl','mlb'].includes(sport)});
     if(sport==='nfl'){$('#home-week').innerHTML='<option value="">Latest available week</option>'+(b.weeks||[]).map(w=>`<option value="${w.season}-${w.week}">${w.season} · Week ${w.week}</option>`).join('');$('#home-week').value=state.week;}
     const period=sport==='nfl'?b.current.season+' · Week '+b.current.week:state.date,historical=sport==='nfl'?!!b.current?.completed:state.date<today()||b.game?.state==='post'||(b.games?.length&&b.games.every(g=>g.state==='final'));
     $('#home-context').textContent=sport.toUpperCase()+' · '+period+(historical?' · Historical research':'');

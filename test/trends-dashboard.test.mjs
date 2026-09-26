@@ -23,7 +23,7 @@ test('research overview opens with six sports and accessible loading state', asy
 test('main navigation preserves the current sport and the brand returns to the public homepage', () => {
   for (const sport of ['nfl', 'mlb', 'nba', 'wnba', 'nhl', 'soccer']) {
     const $ = load(siteHeader(new URL(`http://localhost/${sport}?view=trends`)));
-    assert.deepEqual($('.site-navigation a').slice(0,2).map((_, a) => $(a).attr('href')).get(), ['/' + sport, '/' + sport + '?view=trends']);
+    assert.deepEqual($('.site-navigation a[data-nav-section="research"],.site-navigation a[data-nav-section="trends"]').map((_, a) => $(a).attr('href')).get(), ['/' + sport, '/' + sport + '?view=trends']);
     assert.equal($('.site-navigation [aria-current]').text(), 'Trends');
     assert.equal($('.site-brand').attr('href'), '/');
   }
@@ -47,4 +47,28 @@ test('dashboard search, watchlist, matchup, venue and side filters compose witho
   assert.equal(profiles[0].rows.length, 5);
   assert.equal(trendRows(profiles, { ...options, game: '2' }).length, 0);
   assert.equal(trendRows(profiles, { search: 'LA' }).length, 3);
+});
+
+test('advanced filters compose teams, positions, sample, hit rate, lines and selected-side odds', () => {
+  const profiles = [
+    {...player('a', {line:1.5,bookKey:'fanduel',prices:{over:{american:-150},under:{american:120}}}, [2,2,2,0,2]),team:'SEA',position:'DH',lineup:'confirmed'},
+    {...player('b', {line:1.5,bookKey:'draftkings',prices:{over:{american:140}}}, [2,0,0,0,2]),team:'NYY',position:'CF',availability:{unavailable:true}},
+    {...player('c', null),team:'SEA',position:'DH'}
+  ];
+  const filters={teams:['SEA'],positions:['DH'],sample:'5',minRate:80,minGames:5,book:'fanduel',minLine:1,maxLine:2,minOdds:-200,maxOdds:-100,startersOnly:true,hideUnavailable:true};
+  assert.deepEqual(trendRows(profiles,{filters}).map(r=>r.p.key),['a']);
+  assert.equal(trendRows(profiles,{filters,side:'under'}).length,0);
+  assert.equal(trendRows(profiles,{filters:{...filters,minGames:6}}).length,0);
+  assert.equal(trendRows(profiles,{filters:{...filters,venue:'away'}}).length,0);
+  assert.deepEqual(trendRows(profiles,{filters:{minLine:0}}).map(r=>r.p.key),['a','b']);
+  assert.equal(trendRows(profiles,{filters:{minOdds:0,maxOdds:0}}).length,0);
+  assert.deepEqual(trendRows(profiles,{filters:{hideUnavailable:true}}).map(r=>r.p.key),['a','c']);
+  assert.equal(profiles[0].rows.length,5);
+});
+
+test('advanced sample filters retain missing-data semantics and known zero lines', () => {
+  const profiles=[player('zero',{line:0,prices:{over:{american:100}}},[0,1,0]),player('missing',null,[1,2]),player('empty',{line:1},[])];
+  assert.deepEqual(trendRows(profiles,{filters:{minLine:0,maxLine:0}}).map(r=>r.p.key),['zero']);
+  assert.deepEqual(trendRows(profiles,{filters:{minRate:1}}).map(r=>r.p.key),['zero']);
+  assert.equal(trendRows(profiles,{filters:{sample:'5',venue:'home',minGames:2}}).find(r=>r.p.key==='zero').stats.n,2);
 });

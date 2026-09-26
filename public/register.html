@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080e13">
+  <meta name="robots" content="noindex,follow">
+  <meta name="description" content="SportsLab account registration preview.">
+  <title>Create account · SportsLab</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/auth.css">
+  <script type="module" src="/auth.js"></script>
+</head>
+<body class="account-page" data-account-mode="register">
+  <a class="account-skip" href="#main">Skip to registration</a>
+  <header class="account-header">
+    <a class="account-brand" href="/" aria-label="SportsLab home"><img src="/favicon.svg" width="34" height="34" alt=""><span>sports<span>lab</span></span></a>
+    <a class="account-header-link" href="/research">Explore workspace <span aria-hidden="true">↗</span></a>
+  </header>
+  <main id="main" class="account-layout">
+    <section class="account-story" aria-labelledby="account-story-title">
+      <svg class="account-story-lines" viewBox="0 0 600 470" fill="none" aria-hidden="true"><path d="M-25 407C98 372 144 448 247 375S401 196 629 189"/><path d="M-25 435C98 400 149 475 261 411S425 226 629 217"/><path d="M-25 463C98 428 156 501 275 447S448 256 629 245"/></svg>
+      <div class="account-story-content">
+        <p class="account-story-label">Sports research, in context</p>
+        <h1 id="account-story-title">Know what sits behind the line.</h1>
+        <p class="account-story-copy">Game history, market prices, and source details belong in the same view.</p>
+        <div class="account-story-list" aria-label="SportsLab tools">
+          <div><span class="account-story-mark" aria-hidden="true"></span><strong>Research the matchup</strong><span>See the sample behind a player trend.</span></div>
+          <div><span class="account-story-mark" aria-hidden="true"></span><strong>Compare the market</strong><span>View entered prices and their capture times.</span></div>
+          <div><span class="account-story-mark" aria-hidden="true"></span><strong>Keep your record</strong><span>Track picks in your browser workspace.</span></div>
+        </div>
+      </div>
+    </section>
+    <section class="account-access" aria-labelledby="account-title">
+      <div class="account-access-inner">
+        <nav class="account-tabs" aria-label="Account pages"><a href="/login">Sign in</a><a href="/register" aria-current="page">Create account</a></nav>
+        <h2 id="account-title">Create your account.</h2>
+        <p class="account-subtitle">Set up a place for your SportsLab work.</p>
+        <p class="account-preview"><span aria-hidden="true">i</span> Registration is coming soon. This form is a preview; details are not sent or saved.</p>
+        <form id="account-form" novalidate>
+          <div class="account-field"><label for="account-email">Email address</label><input id="account-email" name="email" type="email" placeholder="you@example.com" autocomplete="email" required></div>
+          <div class="account-field"><label for="account-password">Password</label><div class="account-password-field"><input id="account-password" name="password" type="password" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required><button type="button" data-toggle-password="account-password" aria-pressed="false">Show</button></div></div>
+          <div class="account-field"><label for="account-confirm">Confirm password</label><div class="account-password-field"><input id="account-confirm" name="confirm" type="password" placeholder="Enter password again" autocomplete="new-password" required><button type="button" data-toggle-password="account-confirm" aria-pressed="false">Show</button></div></div>
+          <button class="account-submit" type="submit">Create account</button>
+          <p id="account-status" class="account-status" role="status" aria-live="polite" hidden></p>
+        </form>
+        <p class="account-switch">Already have an account? <a href="/login">Sign in</a></p>
+        <p class="account-explore">No account needed to explore. <a href="/research">Open the workspace</a></p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

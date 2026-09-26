@@ -9,10 +9,11 @@ test('Simulation remains in workspace navigation and follows sport changes', asy
   for (const sport of ['nfl', 'nba', 'wnba', 'mlb', 'nhl', 'soccer']) {
     const url = new URL(`http://localhost/${sport}/simulation/`), $ = load(renderSitePage(template, url));
     assert.deepEqual(siteContext(url), { sport, section: 'simulation' });
-    assert.equal($('.site-navigation a').filter((_, a) => $(a).text().trim() === 'Simulation').length, 1);
-    assert.equal($('.site-navigation a[aria-current="page"]').attr('href'), `/${sport}/simulation`);
+    const supported = ['nfl','mlb','nba','wnba'].includes(sport);
+    assert.equal($('.site-navigation a').filter((_, a) => $(a).text().trim() === 'Simulation').length, supported ? 1 : 0);
+    assert.equal($('.site-navigation a[aria-current="page"]').attr('href'), supported ? `/${sport}/simulation` : undefined);
     assert.equal($('.site-header').attr('data-site-section'), 'simulation');
-    assert.ok($('.site-sports a').toArray().every(a => $(a).attr('href').endsWith('/simulation')));
+    assert.deepEqual($('.site-sports a').map((_,a)=>$(a).attr('href')).get(), ['/nfl/simulation','/mlb/simulation','/nba/simulation','/wnba/simulation','/nhl','/soccer']);
     assert.equal($('#sim-count').val(), '10000');
     assert.equal($('#simulation-form').length, 1);
   }

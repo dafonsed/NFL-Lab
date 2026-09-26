@@ -12,7 +12,7 @@ test('bet import serves local OCR assets with WebAssembly limited to the worker'
    const page=await fetch(origin+'/bets'),html=await page.text();
    assert.equal(page.status,200);assert.ok(html.includes('id="import-slip"'));assert.ok(html.includes('id="bet-overview"'));
    assert.ok(!page.headers.get('content-security-policy').includes('wasm-unsafe-eval'));
-   const css=html.match(/href="[^\"]+\\.css"/g);assert.equal(css.at(-1),'href="/bets.css"');
+   const css=html.match(/href="[^\"]+\\.css"/g);assert.ok(css.includes('href="/bets.css"'));assert.equal(css.at(-1),'href="/workspace-palette.css"');
    for(const name of ['bet-dashboard.js','bet-analytics.js','bet-slip-parser.js','bet-slip-import.js'])assert.equal((await fetch(origin+'/'+name)).status,200);
    const worker=await fetch(origin+'/vendor/ocr/worker.min.js');assert.equal(worker.status,200);assert.ok(worker.headers.get('content-security-policy').includes("'wasm-unsafe-eval'"));
    for(const name of ['tesseract.esm.min.js','tesseract-core-lstm.wasm.js','tesseract-core-simd-lstm.wasm.js','tesseract-core-relaxedsimd-lstm.wasm.js']) {

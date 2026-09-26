@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {load} from 'cheerio';
-import {requestData,propBoard,propRow,miniHistory} from '../public/product-ui.js';
+import {requestData,propBoard,propRow,miniHistory,trendTable} from '../public/product-ui.js';
 
 test('request boundary times out, distinguishes caller cancellation, and keeps returned values intact',async()=>{
  const original=globalThis.fetch;
@@ -16,6 +16,7 @@ test('request boundary times out, distinguishes caller cancellation, and keeps r
 test('comparison rows preserve zeroes, archive and stale provenance, and historical results separately',()=>{
  const p={key:'a',sport:'nba',name:'Player <A>',team:'ABC',opponent:'XYZ',position:'G',market:'points',playerId:'1',rows:[{date:'2026-01-01',value:0}],forecast:{point:0,sampleCount:1,probability:{over:0}},prop:{line:0,bookmaker:'Book',basis:'published_archive',stale:true},result:{status:'final',actual:0},raw:{}};
  const before=structuredClone(p),$=load(propRow(p));
+ assert.equal($('.research-history').length,0,'Model rows do not embed Trends charts');
  assert.equal($('.research-estimate > strong').text(),'0');assert.equal($('.research-probability > strong').text(),'0%');assert.equal($('.research-result > strong').text(),'0');assert.equal($('.research-result small').text(),'Final');assert.match($('.quote-kind').text(),/Retrospective.*saved/);assert.equal($('.research-player strong').text(),'Player <A>');assert.deepEqual(p,before);
  const missing=load(propRow({...p,prop:null,forecast:{point:null},result:null}));assert.equal(missing('.research-estimate > strong').text(),'—');assert.equal(missing('.research-probability > strong').text(),'—');assert.match(missing('.research-line small').text(),/No posted line/);
 });
@@ -24,12 +25,35 @@ test('recent result charts retain negative game values, pushes and comparison di
  const $=load(miniHistory(p,'under'));assert.equal($('rect.hit').length,1);assert.equal($('rect.push').length,1);assert.equal($('rect.miss').length,1);assert.match($('svg').attr('aria-label'),/-2/);assert.ok(Number($('rect.hit').attr('y'))>Number($('rect.miss').attr('y')));
 });
 
-test('future NFL TD overview shows model strength without workload',()=>{
- const p={key:'td',sport:'nfl',market:'any_td',name:'Player',team:'SEA',opponent:'HOU',rows:[],forecast:{point:.56,probability:{over:.45},sampleCount:5},prop:{line:.5,bookmaker:'Book'},raw:{modelScore:72,tdProb:.61,tdProbMethod:'historical-score-calibration'}};
+test('model rows show the selected side price and only mark an available sportsbook quote',()=>{
+ const p={key:'book',playerId:'1',sport:'mlb',name:'Player',team:'SEA',opponent:'HOU',market:'hits',rows:[],forecast:{point:1},prop:{line:.5,bookmaker:'FanDuel',stale:true,prices:{over:{american:-200},under:{american:150}}}};
+ const over=load(propRow(p,{side:'over'})),under=load(propRow(p,{side:'under'}));
+ assert.equal(over('.research-odds strong').text(),'-200');assert.equal(under('.research-odds strong').text(),'+150');
+ assert.equal(over('.research-odds img').attr('alt'),'FanDuel');assert.match(over('.research-odds').attr('title'),/Saved quote/);
+ const missing=load(propRow({...p,prop:{...p.prop,prices:{}}}));assert.equal(missing('.research-odds strong').text(),'—');assert.equal(missing('.research-odds img').length,0);
+ const other=load(propRow({...p,prop:{...p.prop,bookmaker:'Other book'}}));assert.equal(other('.research-odds img').length,0);assert.equal(other('.research-odds small').text(),'Other book');
+});
+
+test('NFL TD overview shows model strength beside sportsbook prices and keeps TD chance separate',()=>{
+ const p={key:'td',sport:'nfl',market:'any_td',label:'Touchdowns',name:'Player',team:'SEA',opponent:'HOU',rows:[],forecast:{point:.56,probability:{over:.45},sampleCount:5},prop:{line:.5,bookmaker:'FanDuel',prices:{over:{american:-220}}},raw:{}};
  const $=load(propBoard([p]));
- assert.equal($('.research-estimate strong').text(),'72%');
+ assert.match($('.research-board-guide').text(),/0–100 ranking score/);
  assert.match($('.research-estimate .row-field-label').text(),/Model strength/);
+ assert.equal($('.research-estimate strong').text(),'—');
  assert.equal($('.research-probability').length,0);
- assert.equal($('.research-columns span').length,6);
- assert.doesNotMatch($('.research-board').text(),/Workload/);
+ assert.equal($('.research-odds strong').text(),'-220');
+ const calibrated=load(propBoard([{...p,raw:{modelScore:72,tdProb:.61,tdProbMethod:'historical-score-calibration'}}]));
+ assert.match(calibrated('.research-columns').text(),/Model strength %/);
+ assert.equal(calibrated('.research-estimate strong').text(),'72%');
+ assert.doesNotMatch(calibrated('.research-estimate').text(),/61%/);
+ assert.equal(calibrated('.research-probability').length,0);
+ assert.doesNotMatch(calibrated('.research-board').text(),/Workload/);
+});
+
+test('Trends windows use real sample sizes, retain zeroes and mark saved odds',()=>{
+ const p={key:'a',playerId:'1',name:'Player <A>',label:'Points',team:'ABC',opponent:'XYZ',sport:'nba',rows:[{date:'2026-01-03',value:2,opponent:'XYZ'},{date:'2026-01-02',value:0,opponent:'OTHER'},{date:'2026-01-01',value:-2,opponent:'XYZ'}],prop:{line:0,bookmaker:'Book',stale:true,prices:{under:{american:-110}}}};
+ const before=structuredClone(p),$=load(trendTable([{p,line:0}],{side:'under',saved:new Set(['1'])}));
+ assert.equal($('.trend-rate').length,4);assert.equal($('.trend-rate').first().find('strong').text(),'33%');assert.equal($('.trend-rate').first().find('small').text(),'1/3');assert.equal($('.trend-rate').last().find('strong').text(),'50%');assert.equal($('.trend-rate').last().find('small').text(),'1/2');
+ assert.match($('.trend-rate').first().attr('title'),/1 pushes/);assert.equal($('.trend-average strong').text(),'0');assert.match($('.trend-line').text(),/0Saved quote/);assert.equal($('.trend-odds strong').text(),'-110');assert.equal($('.trend-save').attr('aria-pressed'),'true');assert.equal($('.trend-player-link strong').text(),'Player <A>');assert.deepEqual(p,before);
+ const missing=load(trendTable([{p:{...p,prop:null,rows:[]},line:null}]));assert.equal(missing('.trend-rate').first().find('strong').text(),'—');assert.equal(missing('.trend-rate').first().find('small').text(),'0 games');assert.equal(missing('.trend-odds strong').text(),'—');assert.equal(missing('.trend-average strong').text(),'—');
 });

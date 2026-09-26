@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a1d2b">
+  <meta name="robots" content="noindex,follow">
+  <meta name="description" content="Sportslab EV workspace tool and local API reference.">
+  <title>EV Tools &amp; API | Sportslab Documentation</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/docs.css">
+  <script type="module" src="/docs.js"></script>
+</head>
+<body>
+  <svg class="icon-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10h-7v-6h-4v6H3V10Z"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 5c-3-2-6-2-9-1v15c3-1 6-1 9 1m0-15c3-2 6-2 9-1v15c-3-1-6-1-9 1m0-15v15"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 7-5 5 5 5m8-10 5 5-5 5m-2-12-4 14"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="m4 11 14-6v14L4 13v-2Zm0 2 2 7h4l-2-6"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4V5Z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 15.1A8.4 8.4 0 0 1 8.9 4 8.4 8.4 0 1 0 20 15.1Z"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m8 10 4 4 4-4"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M8 5H5v14h14v-5M12 5h7v7m0-7-9 9"/></symbol>
+  </svg>
+  <a class="skip-link" href="#content">Jump to Content</a>
+  <header class="site-header">
+    <div class="header-upper">
+      <a class="header-logo" href="/" aria-label="Sportslab home"><img src="/favicon.svg" width="42" height="42" alt=""><span>sports<span>lab</span></span></a>
+      <div class="header-upper-actions"><a href="/ev">Open EV tools</a><button type="button" class="theme-button" id="theme-toggle" aria-label="Toggle color scheme"><svg><use href="#i-moon"/></svg></button></div>
+    </div>
+    <div class="header-lower">
+      <nav class="top-navigation" aria-label="Primary navigation"><span class="version">EV tools</span>
+        <a href="/"><svg><use href="#i-home"/></svg>Home</a>
+        <a href="/betting-education"><svg><use href="#i-book"/></svg>Guides</a>
+        <a class="selected" href="/docs" aria-current="page"><svg><use href="#i-code"/></svg>Documentation</a>
+        <a href="/ev"><svg><use href="#i-bell"/></svg>EV Workspace</a>
+        <a href="/research"><svg><use href="#i-chat"/></svg>Research</a>
+        <a href="/odds-api">API Overview</a>
+      </nav>
+      <button type="button" id="search-trigger" class="header-search" aria-label="Search documentation"><svg><use href="#i-search"/></svg><span>Search</span><kbd>CTRL-K</kbd></button>
+      <button type="button" id="menu-toggle" class="mobile-menu" aria-controls="docs-sidebar" aria-expanded="false">Menu</button>
+    </div>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-sidebar" aria-label="Secondary navigation">
+      <label class="sidebar-filter"><svg><use href="#i-search"/></svg><span class="sr-only">Filter pages</span><input id="docs-filter" type="search" placeholder="Filter" autocomplete="off"><kbd>CTRL-/</kbd></label>
+      <nav aria-label="Reference pages">
+        <section class="sidebar-section" id="documentation-group"><h2>Documentation</h2>
+          <a class="sidebar-page current" href="/docs" aria-current="page">Getting Started</a>
+          <a class="sidebar-page" href="#workflow">Workspace workflow</a>
+          <a class="sidebar-page" href="#data">Quote data contract</a>
+          <a class="sidebar-page" href="#local-api">Local API archive</a>
+          <a class="sidebar-page" href="#integration">Connect the local API</a>
+          <a class="sidebar-page" href="/odds-api">Sportslab API overview</a>
+        </section>
+        <section class="sidebar-section" id="endpoints-group"><h2>EV Tools</h2><div id="endpoint-nav"></div></section>
+      </nav>
+      <p class="filter-empty" id="filter-empty" hidden>No matching pages.</p>
+      <div class="sidebar-credit"><span>Sportslab</span><strong>EV documentation</strong></div>
+    </aside>
+
+    <main class="docs-main" id="content" tabindex="-1">
+      <article class="article">
+        <header class="article-header">
+          <div class="copy-controls"><button type="button" id="copy-page"><svg><use href="#i-copy"/></svg>Copy Page</button><button type="button" id="copy-more" aria-label="More copy options" aria-expanded="false"><svg><use href="#i-chevron"/></svg></button><div class="copy-menu" id="copy-menu" hidden><button type="button" id="copy-link">Copy link</button><button type="button" id="copy-markdown">Copy as Markdown</button></div></div>
+          <h1>EV Tools &amp; API</h1>
+          <p>One guide to the Sportslab EV workbench, its 18 tools, the quote data contract, and the supplied local API archive.</p>
+        </header>
+        <div class="article-body">
+          <h1 id="welcome">Welcome to the <a href="/ev">Sportslab EV workspace</a></h1>
+          <p>The workbench brings price comparison, expected value, arbitrage, fantasy, and tracking into one local workspace. Every tool below opens directly to its matching screen.</p>
+          <h2 id="workflow">Workspace workflow</h2>
+          <p>Start in <a href="/ev#odds">Odds comparison</a>. Add prices manually, import a version 1 workspace JSON file, or load clearly marked example records. Choose a sport and market, then move among tools without leaving the workspace.</p>
+          <p>Records are saved in this browser. Export a JSON copy to move them between browsers or machines. The calculation tools use the same saved records, so a price entered for comparison can also appear in Positive EV, arbitrage, low holds, and alert screens.</p>
+          <h2 id="data">Quote data contract</h2>
+          <p>Sportsbook quotes need a stable <code>id</code>, <code>sport</code>, <code>event</code>, <code>market</code>, <code>type</code>, <code>line</code>, <code>side</code>, <code>book</code>, American <code>odds</code>, <code>live</code> status, and an observation time <code>ts</code>. Exchange quotes can add <code>exchange</code> and <code>liquidity</code>. DFS props, prediction contracts, bets, results, and alerts have separate record arrays in the version 1 workspace format.</p>
+          <p>Positive EV requires a complete set of outcomes from another book at the same event, market, line, and live status. Live calculations exclude quotes older than 90 seconds. The detailed format is maintained in the project’s EV workbench data contract.</p>
+          <h2 id="markets">Markets</h2>
+          <ul>
+            <li><a href="/ev#odds">Odds comparison</a> — compare entered prices and recorded movement.</li>
+            <li><a href="/ev#ev-pre">Positive EV · pregame</a> and <a href="/ev#ev-live">Positive EV · live</a> — compare offered odds with no-vig estimates from complete opposing books.</li>
+            <li><a href="/ev#arb-pre">Arbitrage · pregame</a> and <a href="/ev#arb-live">Arbitrage · live</a> — inspect opposing prices and calculated stake splits.</li>
+            <li><a href="/ev#middles">Middles</a> — find spread and total pairs with an interval where both bets can win.</li>
+            <li><a href="/ev#holds">Low holds</a> — compare the combined margin of opposing best prices.</li>
+          </ul>
+          <h2 id="builders">Builders &amp; research</h2>
+          <ul>
+            <li><a href="/ev#promo">Promo / bonus converter</a> — balance a promotional side with a cash hedge.</li>
+            <li><a href="/ev#parlay">Parlay builder</a> — combine independent legs using saved fair probabilities.</li>
+            <li><a href="/ev#sharp">Sharp money / Pro</a> — inspect exchange liquidity, opposing prices, and movement history.</li>
+          </ul>
+          <h2 id="fantasy">Fantasy tools</h2>
+          <ul>
+            <li><a href="/ev#fantasy">Fantasy lines</a> — compare entered player lines and hit probabilities.</li>
+            <li><a href="/ev#optimizer">Fantasy optimizer</a> — rank two-pick combinations against saved payout rules.</li>
+            <li><a href="/ev#slip">Fantasy slip builder</a> — calculate hit-count distributions and projected payout.</li>
+            <li><a href="/ev#fantasy-alerts">Fantasy alerts</a> — review newly entered props against local alert rules.</li>
+          </ul>
+          <h2 id="records">Records &amp; alerts</h2>
+          <ul>
+            <li><a href="/ev#prediction">Prediction traders</a> — track contracts, order book snapshots, positions, and trades.</li>
+            <li><a href="/ev#tracker">Bet tracker &amp; CLV</a> — grade saved bets and compare booked and closing prices.</li>
+            <li><a href="/ev#trends">Player prop trends</a> — inspect entered results, hit rates, and paired-game relationships.</li>
+            <li><a href="/ev#line-alerts">Movement &amp; price alerts</a> — manage thresholds and review local notifications.</li>
+          </ul>
+          <h2 id="local-api">Local API archive</h2>
+          <p>The supplied EV tool folder is included as a local Python integration. Sportslab adds a normalized quote handoff so the quote-based EV screens can read the same local prices. The original scraper modules remain prototypes; <code>POST /scrape</code> responds with 501 until a working source adapter is supplied.</p>
+          <ul>
+            <li><code>GET /api/ev/health</code> and <code>GET /api/ev/status</code> — local service health and quote counts.</li>
+            <li><code>GET /api/ev/quotes</code> — normalized sportsbook quotes for the workbench.</li>
+            <li><code>POST /api/ev/quotes</code> — upsert a JSON array of normalized quotes.</li>
+            <li><code>GET /api/ev/matches</code> — events represented by those quotes.</li>
+            <li><code>DELETE /api/ev/matches/{id}</code> — remove an event and its quotes.</li>
+            <li><code>POST /api/ev/scrape?url=…</code> — reserved for a future scraper; currently 501.</li>
+          </ul>
+          <h2 id="integration">Connect the local API</h2>
+          <p>Run the Python service on <code>127.0.0.1:8000</code> when it is available. The Sportslab Node app forwards the routes above to that local service; it does not expose them from the hosted site. Submit quotes using the data contract, then press <strong>Sync local API</strong> in the <a href="/ev">EV workspace</a>. The workspace saves a local copy and shares those prices across its comparison, EV, arbitrage, builders, and alerts.</p>
+          <pre><code>python integrations/ev_tool/run_server.py</code></pre>
+          <p>For example, <code>POST /api/ev/quotes</code> accepts a JSON array like this:</p>
+          <pre><code>[
+  {
+    "id": "feed:event:total:over:book",
+    "sport": "NFL", "event": "Arizona vs Seattle",
+    "market": "Game total", "type": "total", "line": 44.5,
+    "side": "Over", "book": "Example Book", "odds": -110,
+    "live": false, "ts": "2026-09-25T00:00:00Z"
+  }
+]</code></pre>
+          <p>Manual and imported records remain available without the Python service. The quote sync does not populate fantasy props, prediction contracts, or personal bet records; those still use their own workspace records. The <a href="/odds-api">Sportslab API overview</a> describes the app’s separate public preview routes.</p>
+        </div>
+        <footer class="article-footer"><p class="updated">Sportslab EV documentation</p><div class="next"><h3>What's Next</h3><p>Open the EV workspace or review the existing Sportslab API overview.</p><ul><li><a href="/ev">Open all EV tools</a></li><li><a href="/odds-api">Sportslab API overview</a></li></ul></div><div class="feedback"><span>Did this page help you?</span><button type="button" data-feedback="yes">Yes</button><button type="button" data-feedback="no">No</button><p id="feedback-message" role="status" hidden>Thanks for the feedback.</p></div></footer>
+      </article>
+    </main>
+    <aside class="docs-toc" aria-label="Table of contents"><nav><a class="toc-parent" href="#welcome">EV workspace</a><a href="#workflow">Workspace workflow</a><a href="#data">Quote data contract</a><a href="#markets">Markets</a><a href="#builders">Builders &amp; research</a><a href="#fantasy">Fantasy tools</a><a href="#records">Records &amp; alerts</a><a href="#local-api">Local API archive</a><a href="#integration">Connect the local API</a></nav></aside>
+  </div>
+</body>
+</html>

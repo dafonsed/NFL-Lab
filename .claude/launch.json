@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sportslab",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server.mjs"],
+      "env": { "PORT": "3101" },
+      "port": 3101
+    }
+  ]
+}

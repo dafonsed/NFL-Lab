@@ -24,6 +24,17 @@ test('only full charts with a comparison line expose a keyboard slider',()=>{
  assert.equal(load(gameChart(rows,75.5,'over',true))('[role=slider]').length,0);
  assert.equal(load(gameChart([],75.5))('[role=slider]').length,0);
 });
+
+test('history labels use the actual opponent logos, short codes and home/away markers',()=>{
+ const rows=[{date:'2026-09-20',value:0,parts:[],opponent:'Los Angeles Angels',opponentId:108,home:true},{date:'2026-09-19',value:2,parts:[],opponent:'Athletics',opponentId:133,home:false}];
+ const $=load(gameChart(rows,.5,'under',false,600,'mlb'));
+ assert.deepEqual($('.pr-opponent-code').map((_,e)=>$(e).text()).get(),['@ ATH','vs LAA']);
+ assert.deepEqual($('.pr-opponent-logo').map((_,e)=>$(e).attr('href')).get(),['https://a.espncdn.com/i/teamlogos/mlb/500-dark/ath.png','https://a.espncdn.com/i/teamlogos/mlb/500/laa.png']);
+ assert.match($('.pr-game-opponent').first().attr('aria-label'),/Athletics/);
+ assert.equal($('[data-result="0"] .pr-bar.hit').length,1);
+ assert.equal($('[data-result="2"] .pr-bar.miss').length,1);
+ assert.ok(!$('.pr-game-opponent').text().includes('…'));
+});
 test('matchup comparison preserves its units, values, sample and calculation note',()=>{
  const p={sport:'nfl',label:'Receiving yards',opponent:'LV <team>',forecast:{},context:{available:true,rate:138.28,leagueRate:150.74,sampleCount:5,unit:'WR production per opponent game',description:'Stabilized with three league-average games',sourceUrl:'https://example.com'}};
  const $=load(matchupComparison(p));assert.deepEqual($('dd').map((_,e)=>$(e).text()).get(),['138.28','150.74']);assert.match($('.pr-context-unit').text(),/Receiving yards \/ game · vs WR/);assert.match($('.pr-context-sample').text(),/5 prior games/);assert.match($('details').text(),/three league-average games/);assert.equal($('team').length,0);

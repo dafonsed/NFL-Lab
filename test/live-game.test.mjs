@@ -1,11 +1,30 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildGamePrior, projectLiveGame, compareGameMarkets, impliedProbability, fairAmerican, betExpectedValue, nflGameHistory, mlbGameHistory } from '../lib/live-game-model.mjs';
-import { gameOddsHtml, gameOddsFreshness } from '../public/live-game.js';
+import { gameOddsHtml, gameOddsFreshness, sportsbookMatrixHtml, gameScoreboardHtml } from '../public/live-game.js';
+import {load} from 'cheerio';
 import { LiveNflStore } from '../lib/live-nfl.mjs';
 import { LiveSportsStore } from '../lib/live-sports.mjs';
 
 const now = Date.parse('2026-09-22T22:00:00Z');
+test('sportsbook comparison keeps alternate lines and missing prices in their own cells',()=>{
+  const $=load(sportsbookMatrixHtml({books:[
+    {name:'FanDuel',markets:[{key:'pointSpread',label:'Spread',selections:[{side:'away',label:'SEA',line:1.5,odds:-110},{side:'home',label:'HOU',line:-1.5,odds:100}]}]},
+    {name:'DraftKings',markets:[{key:'pointSpread',label:'Spread',selections:[{side:'away',label:'SEA',line:1.5,odds:-115},{side:'away',label:'SEA',line:2.5,odds:-160}]}]},
+  ]}));
+  const rows=$('.odds-matrix tbody tr');assert.equal(rows.length,3);
+  assert.deepEqual(rows.first().find('td strong').map((_,e)=>$(e).text()).get(),['-110','-115']);
+  assert.equal(rows.eq(1).find('td').last().text(),'—');
+  assert.equal(rows.eq(2).find('th b').text(),'+2.5');
+  assert.equal(rows.eq(2).find('td').first().text(),'—');
+  assert.equal(rows.eq(2).find('td').last().text(),'-160');
+});
+test('scoreboard shows a scheduled start without treating missing scores as zero',()=>{
+  const game={state:'pre',status:'Scheduled',date:'2026-09-24T20:35:00Z',teams:[{abbreviation:'SEA',homeAway:'away',score:null},{abbreviation:'HOU',homeAway:'home',score:null}]};
+  const upcoming=load(gameScoreboardHtml(game,'mlb','Scheduled'));assert.equal(upcoming('.live-matchup-score').length,0);assert.match(upcoming.text(),/Start time/);
+  const underway=load(gameScoreboardHtml({...game,state:'in',bases:[],teams:game.teams.map((team,i)=>({...team,score:i?null:0}))},'mlb','Top 1st'));
+  assert.deepEqual(underway('.live-matchup-score').map((_,e)=>underway(e).text()).get(),['0','—']);
+});
 const gameFor = sport => ({ id: '401234567', sport, date: '2026-09-22T21:00:00Z', state: 'in', period: 3,
   remainingSeconds: { nfl: 1800, nba: 1440, wnba: 1200 }[sport], possession: 'h',
   inning: 5, outs: 1, top: true, scheduledInnings: 9, bases: ['second'], regularSeason: true,

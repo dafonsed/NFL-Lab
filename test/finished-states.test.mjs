@@ -18,10 +18,11 @@ test('final player records preserve missing versus zero and escape source labels
 test('withheld live odds retain every book price without empty model columns',()=>{
  const data={game:{state:'post'},gameModel:{status:'withheld',reasons:['Game finished.']},odds:{books:[{name:'Example',markets:[{key:'moneyline',label:'Moneyline',selections:[{label:'Away',side:'away',line:null,odds:110},{label:'Home',side:'home',line:null,odds:-130}]},{key:'total',label:'Total',selections:[{label:'Over',side:'over',line:8.5,odds:-110},{label:'Under',side:'under',line:8.5,odds:-110}]}]}]}};
  const $=load(gameOddsHtml(data));
- assert.equal($('table').length,1);assert.equal($('tbody tr').length,4);
+ assert.equal($('.odds-market-block').length,2);assert.equal($('tbody tr').length,4);
  assert.deepEqual($('.book-price').map((_,el)=>$(el).text()).get(),['+110','-130','-110','-110']);
- assert.equal($('thead th').length,2);assert.match($('#game-model-paused').text(),/Game finished/);
- assert.match($('tbody').text(),/Over 8.5/);assert.equal($('[data-game-comparison]').length,0);
+ for(const table of $('table').toArray())assert.equal($(table).find('thead th').length,2);
+ assert.match($('#game-model-paused').text(),/Game finished/);
+ assert.equal($('.odds-market-block').last().find('tbody th').first().text(),'Over8.5');assert.equal($('[data-game-comparison]').length,0);
 });
 
 test('archive labels name the market and keep model version identifiers separate',()=>{

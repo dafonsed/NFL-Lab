@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0b0911"><title>Game Simulation · Sports Lab</title>
+  <meta name="theme-color" content="#08080a"><title>Game Simulation · Sports Lab</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/simulation.css">
   <script type="module" src="/simulation.js"></script>
@@ -12,19 +12,27 @@
   <!--site-header-->
   <main id="main" tabindex="-1">
     <div class="page-heading"><div><h1>Game simulation<span class="accent">.</span></h1><p>Compare possible scores and team win probabilities for one matchup.</p></div><span class="sim-badge">Experimental</span></div>
-    <form id="simulation-form" class="sim-controls">
-      <label>Game date<input id="sim-date" name="date" type="date" min="2005-01-01" max="2100-12-31" required></label>
-      <label class="sim-game-label">Matchup<select id="sim-game" name="game" required disabled><option value="">Loading matchups…</option></select></label>
-      <label>Simulations<select id="sim-count" name="simulations"><option value="1000">1,000 runs</option><option value="10000" selected>10,000 runs</option><option value="25000">25,000 runs</option><option value="50000">50,000 runs</option></select></label>
-      <label>Seed <span class="sim-optional">optional</span><input id="sim-seed" name="seed" maxlength="128" placeholder="Repeat a result" autocomplete="off"></label>
-      <button id="sim-run" class="button primary" type="submit" disabled>Run simulation <span aria-hidden="true">↗</span></button>
-    </form>
-    <div id="sim-status" class="sim-status" role="status" aria-live="polite">Loading the game schedule…</div>
-    <button id="sim-retry" type="button" class="button subtle" hidden>Retry schedule</button>
-    <div id="sim-results" aria-busy="false">
-      <section class="sim-empty"><h2>Loading matchups</h2><p>Checking the schedule for the selected date.</p></section>
+    <div class="sim-matchup-controls workspace-controlbar">
+      <label><span class="sr-only">Game date</span><input id="sim-date" form="simulation-form" name="date" type="date" min="2005-01-01" max="2100-12-31" required></label>
+      <label class="sim-game-label"><span class="sr-only">Matchup</span><select id="sim-game" form="simulation-form" name="game" required disabled><option value="">Loading matchups…</option></select></label>
     </div>
-    <details class="sim-note"><summary>Inputs & limitations</summary><p>Uses the existing game model’s weighted scoring history and opponent strength. Player injuries, weather and lineups are not connected to this model. More runs reduce simulation noise; they do not prove accuracy.</p></details>
+    <div class="simulator-workspace">
+      <section class="simulator-main" aria-label="Simulation results">
+        <div id="sim-matchup-preview" class="sim-matchup-preview" hidden></div>
+        <div id="sim-results" aria-busy="false"><section class="sim-empty"><h2>Loading matchups</h2><p>Checking the schedule for the selected date.</p></section></div>
+      </section>
+      <aside class="simulator-setup" aria-label="Simulation setup">
+        <form id="simulation-form" class="sim-setup-form">
+          <div class="sim-setup-heading"><span data-ui-icon="simulation" aria-hidden="true"></span><h2>Simulation setup</h2></div>
+          <label>Number of simulations<select id="sim-count" name="simulations"><option value="1000">1,000 runs</option><option value="10000" selected>10,000 runs</option><option value="25000">25,000 runs</option><option value="50000">50,000 runs</option></select></label>
+          <details class="sim-advanced"><summary>Advanced options</summary><label>Repeatable seed<input id="sim-seed" name="seed" maxlength="128" placeholder="Optional seed" autocomplete="off"></label></details>
+          <button id="sim-run" class="button primary" type="submit" disabled><span data-ui-icon="simulation" aria-hidden="true"></span>Run simulation</button>
+        </form>
+        <div id="sim-status" class="sim-status" role="status" aria-live="polite">Loading the game schedule…</div>
+        <button id="sim-retry" type="button" class="button subtle" hidden>Retry schedule</button>
+        <details class="sim-note" data-dev-only><summary>About this model</summary><p>Experimental scenarios from weighted scoring history and opponent strength. Player injuries, weather and lineups are not connected to this game model. More runs reduce simulation noise; they do not prove accuracy.</p></details>
+      </aside>
+    </div>
   </main>
 </body>
 </html>
