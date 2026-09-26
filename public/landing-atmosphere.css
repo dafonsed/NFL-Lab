@@ -1,0 +1,139 @@
+/* Black canvas with a few localized light blooms along the page edges. */
+body.landing-page {
+  background-color: #000;
+  background-image:
+    radial-gradient(ellipse 680px 580px at 0% 8%, rgba(84, 45, 132, .42), transparent 77%),
+    radial-gradient(ellipse 650px 580px at 100% 11%, rgba(18, 104, 112, .36), transparent 77%),
+    radial-gradient(ellipse 590px 590px at 0% 31%, rgba(15, 91, 105, .32), transparent 78%),
+    radial-gradient(ellipse 640px 580px at 100% 47%, rgba(80, 45, 124, .36), transparent 78%),
+    radial-gradient(ellipse 600px 600px at 0% 65%, rgba(48, 57, 133, .32), transparent 78%),
+    radial-gradient(ellipse 640px 580px at 100% 79%, rgba(16, 93, 93, .34), transparent 78%),
+    radial-gradient(ellipse 590px 550px at 0% 94%, rgba(75, 44, 115, .32), transparent 78%);
+  background-repeat: no-repeat;
+}
+
+@media (max-width: 650px) {
+  body.landing-page {
+    background-image:
+      radial-gradient(ellipse 320px 480px at -10% 7%, rgba(84, 45, 132, .43), transparent 78%),
+      radial-gradient(ellipse 320px 480px at 110% 10%, rgba(18, 104, 112, .38), transparent 78%),
+      radial-gradient(ellipse 330px 490px at -10% 32%, rgba(15, 91, 105, .34), transparent 78%),
+      radial-gradient(ellipse 340px 490px at 110% 47%, rgba(80, 45, 124, .38), transparent 78%),
+      radial-gradient(ellipse 330px 490px at -10% 65%, rgba(48, 57, 133, .34), transparent 78%),
+      radial-gradient(ellipse 340px 480px at 110% 80%, rgba(16, 93, 93, .36), transparent 78%),
+      radial-gradient(ellipse 330px 470px at -10% 94%, rgba(75, 44, 115, .34), transparent 78%);
+  }
+}
+
+body.landing-page :is(.home-header, main, .home-hero, .hero-brands, .home-live, .home-simulation, .home-tools, .home-tracker-section, .home-sports, .home-close, .home-footer) {
+  background: transparent;
+}
+
+.home-reviews {
+  overflow: hidden;
+  padding: 18px 0 36px;
+  background: transparent;
+}
+
+.home-reviews-heading { text-align: center; }
+.home-reviews-kicker {
+  color: #a4a9b9;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+.home-reviews-heading h2 {
+  margin: 18px 0 0;
+  color: #fbfbfc;
+  font-size: clamp(43px, 3.7vw, 57px);
+  font-weight: 750;
+  letter-spacing: -.047em;
+  line-height: 1.12;
+}
+.home-reviews-stars {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin: 45px auto 0;
+  color: #d3ae60;
+}
+.home-reviews-stars svg {
+  width: 32px;
+  height: 32px;
+  fill: currentColor;
+}
+.home-review-viewport {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  margin-top: 110px;
+  scrollbar-width: none;
+  cursor: grab;
+}
+.home-review-viewport::-webkit-scrollbar { display: none; }
+.home-review-viewport:active { cursor: grabbing; }
+.home-review-viewport:focus-visible { outline: 2px solid #8edbd7; outline-offset: -2px; }
+.home-review-track { display: flex; align-items: stretch; width: max-content; gap: 20px; }
+.home-review-card {
+  display: flex;
+  flex: 0 0 clamp(340px, 20vw, 420px);
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 354px;
+  margin: 0;
+  padding: 44px 32px 38px;
+  border-radius: 22px;
+  background: #171717;
+}
+.home-review-card blockquote {
+  margin: 0;
+  color: #f0f1f3;
+  font-size: 18px;
+  line-height: 1.58;
+}
+.home-review-card figcaption {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 26px;
+}
+.home-review-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #5865f2;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+}
+.home-review-card:nth-child(3n+2) .home-review-avatar { background: #336f86; }
+.home-review-card:nth-child(3n+3) .home-review-avatar { background: #704891; }
+.home-review-card figcaption strong,
+.home-review-card figcaption small { display: block; }
+.home-review-card figcaption strong {
+  color: #f2f3f5;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.home-review-card figcaption small {
+  margin-top: 5px;
+  color: #8e9097;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+@media (max-width: 650px) {
+  .home-reviews { padding: 50px 0 55px; }
+  .home-reviews-heading h2 { font-size: clamp(39px, 10vw, 50px); }
+  .home-reviews-stars { margin-top: 34px; }
+  .home-reviews-stars svg { width: 28px; height: 28px; }
+  .home-review-viewport { margin-top: 78px; }
+  .home-review-track { gap: 13px; }
+  .home-review-card { flex-basis: min(84vw, 335px); min-height: 325px; padding: 31px 25px 28px; }
+  .home-review-card blockquote { font-size: 16px; line-height: 1.55; }
+}

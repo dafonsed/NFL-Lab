@@ -159,6 +159,7 @@ export const server = http.createServer(async (req, res) => {
     if (/^\/vendor\/ocr\/(?:tesseract\.esm\.min\.js|worker\.min\.js|tesseract-core-(?:lstm|simd-lstm|relaxedsimd-lstm)\.wasm\.js|eng\.traineddata\.gz|[A-Za-z.-]+\.txt)$/.test(pagePath)) names[pagePath]=pagePath.slice(1);
     if (/^\/assets\/leagues\/(nfl|mlb|nba|wnba|nhl|premier)\.png$/.test(pagePath)) names[pagePath]=pagePath.slice(1);
     if (/^\/assets\/teams\/mlb\/(mia|nym)\.svg$/.test(pagePath)) names[pagePath]=pagePath.slice(1);
+    if (/^\/assets\/brands\/[a-z0-9-]+\.png$/.test(pagePath)) names[pagePath]=pagePath.slice(1);
     if (['/assets/sportsbooks/fanduel.png','/assets/sportsbooks/draftkings.svg'].includes(pagePath)) names[pagePath]=pagePath.slice(1);
     if (['/assets/fonts/InterVariable.woff2','/assets/fonts/Inter-LICENSE.txt'].includes(pagePath)) names[pagePath]=pagePath.slice(1);
     if (pagePath==='/sports-identity.js') names[pagePath]='sports-identity.js';
@@ -170,6 +171,7 @@ export const server = http.createServer(async (req, res) => {
     if (pagePath==='/workspace-palette.css') names[pagePath]='workspace-palette.css';
     if (pagePath==='/oddsjam-design.css') names[pagePath]='oddsjam-design.css';
     if (pagePath==='/landing-refined.css') names[pagePath]='landing-refined.css';
+    for (const file of ['landing-home.css','landing-header.css','landing-footer.css','landing-atmosphere.css','landing-pricing.css','landing-nav.css','landing-header.js','landing-demo-bets.js','landing-reviews.js','landing-pricing.js','landing-nav.js']) names['/' + file] = file;
     if (pagePath==='/landing-research-snapshot.json') names[pagePath]='landing-research-snapshot.json';
     if (pagePath==='/betting-education.css') names[pagePath]='betting-education.css';
     if (pagePath==='/betting-education-dashboard.js') names[pagePath]='betting-education-dashboard.js';
