@@ -173,6 +173,7 @@ export const server = http.createServer(async (req, res) => {
     if (pagePath==='/landing-refined.css') names[pagePath]='landing-refined.css';
     for (const file of ['landing-home.css','landing-header.css','landing-footer.css','landing-atmosphere.css','landing-pricing.css','landing-nav.css','landing-header.js','landing-demo-bets.js','landing-reviews.js','landing-pricing.js','landing-nav.js']) names['/' + file] = file;
     if (pagePath==='/landing-research-snapshot.json') names[pagePath]='landing-research-snapshot.json';
+    for (const file of ['calculator-design.css', 'article-interactives.css', 'article-interactives.js', 'longform-articles.css', 'longform-articles.js', 'sportsbook-guide-directory.js', 'assets/longform-editorial-sprite.png']) names['/' + file] = file;
     if (pagePath==='/betting-education.css') names[pagePath]='betting-education.css';
     if (pagePath==='/betting-education-dashboard.js') names[pagePath]='betting-education-dashboard.js';
     if (pagePath==='/online-sports-betting.css') names[pagePath]='online-sports-betting.css';

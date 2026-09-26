@@ -1,0 +1,107 @@
+/* One visual language for calculator pages and interactive article examples. */
+.bet-tool,#main .article-widget{
+  --calc-bg:#191919;--calc-inset:#121212;--calc-line:#353535;
+  --calc-text:#f4f4f4;--calc-copy:#c0c0c0;--calc-muted:#929292;
+  --calc-green:#8dfc69;--calc-red:#ffaaa2;
+  box-sizing:border-box;color-scheme:dark;color:var(--calc-text);
+  background:var(--calc-bg);border:1px solid #242424;border-radius:28px;
+  padding:26px;min-width:0;font-variant-numeric:tabular-nums;
+  font-family:LabInter,Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+.bet-tool *, #main .article-widget *{box-sizing:border-box}
+.bet-tool{display:block;width:min(100%,760px);margin-inline:auto}
+#main .article-widget{margin:32px 0}
+.bet-tool-heading{display:block;margin:0 0 24px;padding:0;border:0}
+.bet-tool-heading h2,#main .article-widget .article-widget-heading h2{margin:0;color:var(--calc-text);font-size:20px;line-height:1.35;letter-spacing:-.035em;font-weight:650}
+.bet-tool-heading p:not(.bet-tool-kicker),#main .article-widget .article-widget-heading p{margin:10px 0 0;color:var(--calc-copy);font-size:13px;line-height:1.65}
+.bet-tool-kicker,#main .article-widget .article-widget-kicker{display:block;margin:0 0 10px;color:var(--calc-muted);font-size:10px;font-weight:550;line-height:1.5;letter-spacing:.08em;text-transform:uppercase}
+.bet-live-indicator{display:none}
+.article-widget-heading{margin-bottom:24px}
+.bet-fields{margin:0 0 20px}
+.bet-fields legend{margin-bottom:12px;color:var(--calc-copy);font-size:12px;font-weight:550}
+.bet-field-grid,#main .article-widget .widget-input-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:18px 16px}
+.bet-field-grid:has(.parlay-leg){grid-template-columns:minmax(0,1fr);gap:0}
+.bet-input,#main .article-widget .widget-input-grid label{display:flex;flex-direction:column;gap:8px;min-width:0;color:var(--calc-text);font-size:12px;line-height:1.45;font-weight:450}
+.bet-control{width:100%}
+.bet-control i{color:var(--calc-muted)}
+.bet-input input,.bet-input select,#main .article-widget input:not([type=range]),#main .article-widget select{
+  width:100%;min-width:0;min-height:42px;height:42px;padding:0 13px;
+  border:1px solid var(--calc-line);border-radius:12px;background:var(--calc-inset);
+  color:var(--calc-text);font:500 13px/1.4 LabInter,Inter,system-ui,sans-serif;
+  font-variant-numeric:tabular-nums;transition:border-color .15s ease,background-color .15s ease;
+}
+.bet-input select,#main .article-widget select{border-radius:24px;padding-right:30px;cursor:pointer}
+.bet-input input:hover,.bet-input select:hover,#main .article-widget input:not([type=range]):hover,#main .article-widget select:hover{border-color:#626262}
+.bet-tool :focus-visible,#main .article-widget :focus-visible{outline:2px solid var(--calc-green);outline-offset:3px}
+.bet-input input:focus,.bet-input select:focus,#main .article-widget input:not([type=range]):focus,#main .article-widget select:focus{border-color:var(--calc-green);outline:2px solid #8dfc6933;outline-offset:1px}
+.bet-input small,#main .article-widget .widget-input-grid small{margin:0;color:var(--calc-muted);font-size:10px;line-height:1.5;font-weight:400}
+.parlay-leg{grid-template-columns:62px minmax(0,1fr) minmax(0,1fr);gap:12px;padding:0 0 16px;margin-bottom:16px;border-color:var(--calc-line)}
+.bet-check{white-space:nowrap;gap:6px;color:var(--calc-copy);padding-bottom:13px}
+.bet-check input{accent-color:var(--calc-green);width:16px;height:16px}
+.bet-form-actions{gap:18px;margin:22px 0 24px}
+.bet-submit{min-height:42px;padding:0 19px;background:var(--calc-green);border:1px solid var(--calc-green);border-radius:24px;color:#14210d;font-size:12px;font-weight:700}
+.bet-submit:hover{background:#a7ff8b;border-color:#a7ff8b}
+.bet-reset{color:var(--calc-copy);font-weight:450}
+.bet-reset:hover{color:var(--calc-text)}
+.bet-result{padding:18px 16px 0;background:transparent;border:1px solid var(--calc-line);border-radius:16px}
+.bet-result-top{align-items:center;color:var(--calc-muted);font-size:10px}
+#bet-result-status{padding:4px 8px;border-radius:20px;color:var(--calc-copy);background:var(--calc-inset);font-size:10px}
+.bet-result.is-positive #bet-result-status{color:var(--calc-green);background:#25321e}
+.bet-result.is-negative #bet-result-status{color:var(--calc-red);background:#35231f}
+.bet-result h3{margin:17px 0 8px;color:var(--calc-text);font-size:18px;font-weight:600;letter-spacing:-.03em}
+.bet-result.is-positive #bet-result-title{color:var(--calc-text)}
+.bet-result.is-negative #bet-result-title{color:var(--calc-red)}
+.bet-result>p{margin:0 0 18px;color:var(--calc-muted);font-size:12px;line-height:1.6}
+.bet-result dl{gap:0;border-top:1px solid var(--calc-line)}
+.bet-result dl:empty{border:0}
+.bet-result dt,.bet-result dd{padding:14px 0;border-color:var(--calc-line);font-size:12px;line-height:1.45}
+.bet-result dt{padding-right:20px;color:var(--calc-copy)}
+.bet-result dd{align-content:center;color:var(--calc-text);font-weight:650}
+.bet-result dt:nth-last-child(2),.bet-result dd:last-child{border:0}
+.bet-tool-note{margin:21px 0 0;padding:0;border:0;color:var(--calc-muted);font-size:10px;line-height:1.6}
+#main .article-widget .widget-range-label{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:24px 0 6px;color:var(--calc-copy);font-size:12px;line-height:1.5}
+#main .article-widget .widget-range-label output{color:var(--calc-text);font-weight:650;white-space:nowrap}
+#main .article-widget input.widget-range{display:block;width:100%;min-height:32px;margin:0 0 20px;accent-color:var(--calc-green);cursor:pointer}
+#main .article-widget .widget-results{display:block;margin:24px 0 20px;padding:0 16px;border:1px solid var(--calc-line);border-radius:14px}
+#main .article-widget .widget-results>div{display:flex;justify-content:space-between;align-items:center;gap:20px;min-height:56px;padding:14px 0;border-bottom:1px solid var(--calc-line);font-size:12px;line-height:1.5}
+#main .article-widget .widget-results>div:last-child{border:0}
+#main .article-widget .widget-results span{color:var(--calc-copy)}
+#main .article-widget .widget-results strong{color:var(--calc-text);text-align:right;font-size:15px;font-weight:650}
+#main .article-widget .widget-results strong[data-tone=positive]{color:var(--calc-green)}
+#main .article-widget .widget-results strong[data-tone=negative]{color:var(--calc-red)}
+#main .article-widget p.widget-result{margin:20px 0;padding:14px 16px;border-radius:12px;background:var(--calc-inset);color:var(--calc-copy);font-size:12px;line-height:1.6}
+#main .article-widget>small,#main .article-widget .comparison-controls>small{display:block;margin-top:20px;color:var(--calc-muted);font-size:10px;line-height:1.65}
+#main .article-widget .comparison-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+#main .article-widget .comparison-toolbar>strong{color:var(--calc-copy);font-size:12px;font-weight:500}
+#main .article-widget .widget-toggle{display:flex;gap:3px;padding:3px;background:var(--calc-inset);border:1px solid var(--calc-line);border-radius:24px}
+#main .article-widget .widget-toggle button{min-height:36px;padding:6px 12px;background:transparent;border:0;border-radius:20px;color:var(--calc-muted);font-family:inherit;font-size:11px;font-weight:500;line-height:1.4;cursor:pointer}
+#main .article-widget .widget-toggle button[aria-pressed=true]{background:#303030;color:var(--calc-text)}
+#main .article-widget .comparison-table{overflow:hidden;border:1px solid var(--calc-line);border-radius:14px}
+#main .article-widget .comparison-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(80px,110px) minmax(70px,90px);align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--calc-line);color:var(--calc-copy);font-size:12px}
+#main .article-widget .comparison-row:last-child{border-bottom:0}
+#main .article-widget .comparison-header{background:var(--calc-inset);color:var(--calc-muted);font-size:10px}
+#main .article-widget .comparison-break-even{text-align:right;color:var(--calc-text);font-weight:650}
+#main .article-widget .comparison-row[data-best=true] .comparison-break-even{color:var(--calc-green)}
+#main .article-widget .comparison-row[data-best=true] label::after{display:block;width:max-content;margin-top:5px;padding:2px 7px;border-radius:20px;background:#25321e;color:var(--calc-green);font-size:9px;content:'Best price'}
+#main .article-widget input[aria-invalid=true]{border-color:var(--calc-red)}
+#main .article-widget [hidden]{display:none}
+.widget-article-link a{color:#b1de9f}
+@media(min-width:640px){#main .article-widget[data-article-widget=pickem] .widget-input-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:520px){
+  .bet-tool,#main .article-widget{padding:20px 16px;border-radius:22px}
+  .bet-tool-heading h2,#main .article-widget .article-widget-heading h2{font-size:18px}
+  .bet-field-grid,#main .article-widget .widget-input-grid{grid-template-columns:minmax(0,1fr);gap:16px}
+  .parlay-leg{grid-template-columns:54px minmax(0,1fr);gap:10px}
+  .parlay-leg .bet-input:last-child{grid-column:2}
+  .bet-result{padding:16px 12px 0}
+  .bet-result dt,.bet-result dd{font-size:11px}
+  .bet-result dl{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .bet-result dd{overflow-wrap:anywhere}
+  #main .article-widget .widget-results{padding:0 12px}
+  #main .article-widget .widget-results>div{gap:12px}
+  #main .article-widget .widget-results strong{font-size:14px}
+  #main .article-widget .comparison-row{grid-template-columns:minmax(0,1fr) 76px 62px;gap:8px;padding:12px 10px;font-size:11px}
+  #main .article-widget .comparison-header{font-size:9px}
+  #main .article-widget .comparison-row input{padding:0 8px;font-size:12px}
+}
+@media(prefers-reduced-motion:reduce){.bet-tool input,.bet-tool select,#main .article-widget input,#main .article-widget select{transition:none}}
