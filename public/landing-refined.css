@@ -28,7 +28,6 @@ body.landing-page {
 .landing-brand>span>span{font-weight:800}
 .landing-nav{display:flex;align-items:center;gap:32px;margin:0 auto 0 55px;color:#c7d1d9;font-size:13px;font-weight:600}
 .landing-nav a{padding:19px 0;white-space:nowrap}
-.landing-nav .landing-mobile-auth{display:none}
 .landing-nav a:hover,.landing-header-link:hover{color:#76cdf7}
 .landing-header-actions{display:flex;align-items:center;gap:27px}
 .landing-header-link{color:#c9d3db;font-size:13px;font-weight:600;white-space:nowrap}
@@ -217,8 +216,6 @@ body.landing-page {
   .landing-brand>span{font-size:21px}
   .landing-header-actions{margin-left:auto}
   .landing-header-link{display:none}
-  .landing-header-actions{gap:12px}
-  .landing-header-actions .landing-auth-link{display:inline-flex}
   .landing-header .landing-button-small{min-height:36px;padding:8px 12px;gap:9px;font-size:11px}
   .landing-nav{order:3;width:100%;display:flex;justify-content:space-between;gap:13px;margin:7px 0 0;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
   .landing-nav::-webkit-scrollbar{display:none}
@@ -294,8 +291,6 @@ body.landing-page {
   .landing-footer-bottom span{display:block;margin-top:11px}
 }
 @media(max-width:360px){
-  .landing-header-actions .landing-auth-link{display:none}
-  .landing-nav .landing-mobile-auth{display:block}
   .landing-container{width:calc(100% - 28px)}
   .landing-header-inner,.landing-hero-grid,.landing-evidence,.landing-league-inner{width:calc(100% - 28px)}
   .landing-hero h1{font-size:38px}
@@ -676,13 +671,12 @@ body.landing-page {
 .landing-calendar-count small{margin:0;color:#a7bdad;font-size:8px;letter-spacing:.04em}
 .landing-calendar-count strong{color:#92d066;font-size:19px}
 .landing-calendar-labels,.landing-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
-.landing-calendar-labels{display:flex;justify-content:space-between;margin:23px 0 7px;color:#82949d;font-size:9px;font-weight:700;letter-spacing:.07em;text-align:left}
+.landing-calendar-labels{margin:23px 0 7px;color:#82949d;font-size:10px;text-align:center}
 .landing-calendar-grid a{display:flex;flex-direction:column;justify-content:space-between;min-width:0;aspect-ratio:1.04;padding:7px 6px;border:1px solid #36513a;border-radius:5px;background:#1a281c;color:#b8d2ac;transition:background .15s,border-color .15s}
 .landing-calendar-grid a.is-above{border-color:#62853c;background:#304d24;color:#a9d777}
 .landing-calendar-grid a.is-push{border-color:#786b45;background:#333025;color:#e5ce85}
 .landing-calendar-grid a:hover{border-color:#9aca66;background:#3b562f}
 .landing-calendar-grid small{overflow:hidden;font-size:9px;line-height:1;text-overflow:ellipsis;white-space:nowrap}
-.landing-calendar-grid a>span{color:#97ad9c;font-size:9px;line-height:1}
 .landing-calendar-grid strong{font-size:15px;font-weight:650;line-height:1;text-align:right;font-variant-numeric:tabular-nums}
 .landing-calendar-foot{display:flex;justify-content:space-between;gap:15px;margin-top:16px;padding-top:13px;border-top:1px solid #344048;color:#9dabb1;font-size:11px}
 .landing-calendar-foot a{color:#75cef3;font-weight:650;white-space:nowrap}
@@ -847,7 +841,6 @@ body.landing-page {
   .landing-calendar-grid a{padding:5px 3px}
   .landing-calendar-grid strong{font-size:11px}
   .landing-calendar-grid small{font-size:7px}
-  .landing-calendar-grid a>span{font-size:7px}
   .landing-calendar-foot{font-size:9px}
   .landing-paths-select{gap:7px}
   .landing-paths-select button{grid-template-columns:26px 1fr;min-height:70px;gap:7px}
@@ -892,9 +885,3 @@ body.landing-page {
   .landing-receipts-rail{margin-inline:-18px;padding-inline:18px}
   .landing-receipt-card{flex-basis:82vw;min-height:280px}
 }
-
-/* Give the education library its own footer lane on the public homepage. */
-.landing-footer-main{grid-template-columns:minmax(0,1fr) minmax(0,2.7fr);gap:45px}
-.landing-footer-main nav{grid-template-columns:repeat(4,minmax(0,1fr));gap:22px}
-@media(max-width:900px){.landing-footer-main{grid-template-columns:1fr;gap:35px}}
-@media(max-width:650px){.landing-footer-main nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:25px 20px}}

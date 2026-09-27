@@ -1,107 +1,117 @@
-/* One visual language for calculator pages and interactive article examples. */
-.bet-tool,#main .article-widget{
-  --calc-bg:#191919;--calc-inset:#121212;--calc-line:#353535;
-  --calc-text:#f4f4f4;--calc-copy:#c0c0c0;--calc-muted:#929292;
-  --calc-green:#8dfc69;--calc-red:#ffaaa2;
-  box-sizing:border-box;color-scheme:dark;color:var(--calc-text);
-  background:var(--calc-bg);border:1px solid #242424;border-radius:28px;
-  padding:26px;min-width:0;font-variant-numeric:tabular-nums;
-  font-family:LabInter,Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+/* Article calculators inherit the surrounding Sportslab page palette. */
+@font-face{font-family:CalcOutfit;src:url('/assets/fonts/OutfitVariable.ttf') format('truetype');font-style:normal;font-weight:100 900;font-display:swap}
+#main :is(.bet-tool,.article-widget){
+  --calc-bg:var(--bet-panel,var(--edu-surface,#101820));
+  --calc-inset:var(--bet-bg,var(--edu-bg,#080d12));
+  --calc-control:var(--bet-panel-soft,var(--edu-surface-2,#121e28));
+  --calc-line:var(--bet-line,var(--edu-line,#20313e));
+  --calc-line-strong:var(--bet-line-strong,#3b5669);
+  --calc-text:var(--bet-text,var(--edu-text,#eaf0f4));
+  --calc-copy:var(--bet-copy,var(--edu-muted,#b6c6d1));
+  --calc-muted:var(--longform-muted,#92a1ab);
+  --calc-accent:var(--bet-blue,var(--edu-accent-strong,#92e1e9));
+  --calc-accent-soft:color-mix(in srgb,var(--calc-accent) 12%,transparent);
+  --calc-green:var(--bet-green,#62c68e);--calc-red:var(--bet-red,#f18382);
+  display:block;box-sizing:border-box;width:min(100%,620px);min-width:0;margin:30px 0;
+  padding:22px;background:var(--calc-bg);border:0;border-radius:26px;
+  color:var(--calc-text);color-scheme:dark;font:400 13px/1.5 CalcOutfit,system-ui,sans-serif;
+  font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;
 }
-.bet-tool *, #main .article-widget *{box-sizing:border-box}
-.bet-tool{display:block;width:min(100%,760px);margin-inline:auto}
-#main .article-widget{margin:32px 0}
-.bet-tool-heading{display:block;margin:0 0 24px;padding:0;border:0}
-.bet-tool-heading h2,#main .article-widget .article-widget-heading h2{margin:0;color:var(--calc-text);font-size:20px;line-height:1.35;letter-spacing:-.035em;font-weight:650}
-.bet-tool-heading p:not(.bet-tool-kicker),#main .article-widget .article-widget-heading p{margin:10px 0 0;color:var(--calc-copy);font-size:13px;line-height:1.65}
-.bet-tool-kicker,#main .article-widget .article-widget-kicker{display:block;margin:0 0 10px;color:var(--calc-muted);font-size:10px;font-weight:550;line-height:1.5;letter-spacing:.08em;text-transform:uppercase}
-.bet-live-indicator{display:none}
-.article-widget-heading{margin-bottom:24px}
-.bet-fields{margin:0 0 20px}
-.bet-fields legend{margin-bottom:12px;color:var(--calc-copy);font-size:12px;font-weight:550}
-.bet-field-grid,#main .article-widget .widget-input-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:18px 16px}
-.bet-field-grid:has(.parlay-leg){grid-template-columns:minmax(0,1fr);gap:0}
-.bet-input,#main .article-widget .widget-input-grid label{display:flex;flex-direction:column;gap:8px;min-width:0;color:var(--calc-text);font-size:12px;line-height:1.45;font-weight:450}
-.bet-control{width:100%}
-.bet-control i{color:var(--calc-muted)}
-.bet-input input,.bet-input select,#main .article-widget input:not([type=range]),#main .article-widget select{
-  width:100%;min-width:0;min-height:42px;height:42px;padding:0 13px;
-  border:1px solid var(--calc-line);border-radius:12px;background:var(--calc-inset);
-  color:var(--calc-text);font:500 13px/1.4 LabInter,Inter,system-ui,sans-serif;
-  font-variant-numeric:tabular-nums;transition:border-color .15s ease,background-color .15s ease;
+#main :is(.bet-tool,.article-widget) *{box-sizing:border-box}
+#main :is(.bet-tool-heading,.article-widget-heading){margin:0 0 22px;padding:0;border:0}
+#main .bet-tool-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#main :is(.bet-tool-heading,.article-widget-heading) h2{margin:0;padding:0;color:var(--calc-text);font-family:inherit;font-size:19px;line-height:1.3;letter-spacing:-.025em;font-weight:550}
+#main :is(.article-widget-kicker,.bet-tool-kicker,.bet-live-indicator){display:none}
+#main .calc-sr-only,#main .bet-fields legend{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important;padding:0!important;margin:-1px!important;border:0!important}
+#main .bet-reset{flex-shrink:0;min-height:32px;padding:4px 7px;margin:-4px -7px 0 0;background:none;border:0;border-radius:20px;color:var(--calc-muted);font:400 11px/1.4 CalcOutfit,system-ui,sans-serif;cursor:pointer}
+#main .bet-reset:hover{color:var(--calc-accent);background:var(--calc-accent-soft)}
+#main .bet-fields{min-width:0;margin:0 0 16px;padding:0;border:0}
+#main .bet-fields:last-child{margin-bottom:0}
+#main :is(.bet-field-grid,.widget-input-grid){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+#main .bet-field-grid:has(.parlay-leg){grid-template-columns:minmax(0,1fr);gap:0}
+#main :is(.bet-input,.widget-input-grid label){display:flex;flex-direction:column;gap:5px;min-width:0;color:var(--calc-text);font-size:13px;line-height:1.4;font-weight:400}
+#main .bet-control{position:relative;display:flex;align-items:center;width:100%}
+#main .bet-control i{left:12px;color:var(--calc-muted);font-size:12px}
+#main :is(.bet-input input,.bet-input select,.article-widget input:not([type=range]),.article-widget select){
+  width:100%;min-width:0;height:36px;min-height:36px;padding:0 12px;background:var(--calc-inset);
+  border:1px solid transparent;border-radius:22px;color:var(--calc-text);
+  font:400 13px/1.4 CalcOutfit,system-ui,sans-serif;font-variant-numeric:tabular-nums;
+  transition:border-color .15s ease,background-color .15s ease;
 }
-.bet-input select,#main .article-widget select{border-radius:24px;padding-right:30px;cursor:pointer}
-.bet-input input:hover,.bet-input select:hover,#main .article-widget input:not([type=range]):hover,#main .article-widget select:hover{border-color:#626262}
-.bet-tool :focus-visible,#main .article-widget :focus-visible{outline:2px solid var(--calc-green);outline-offset:3px}
-.bet-input input:focus,.bet-input select:focus,#main .article-widget input:not([type=range]):focus,#main .article-widget select:focus{border-color:var(--calc-green);outline:2px solid #8dfc6933;outline-offset:1px}
-.bet-input small,#main .article-widget .widget-input-grid small{margin:0;color:var(--calc-muted);font-size:10px;line-height:1.5;font-weight:400}
-.parlay-leg{grid-template-columns:62px minmax(0,1fr) minmax(0,1fr);gap:12px;padding:0 0 16px;margin-bottom:16px;border-color:var(--calc-line)}
-.bet-check{white-space:nowrap;gap:6px;color:var(--calc-copy);padding-bottom:13px}
-.bet-check input{accent-color:var(--calc-green);width:16px;height:16px}
-.bet-form-actions{gap:18px;margin:22px 0 24px}
-.bet-submit{min-height:42px;padding:0 19px;background:var(--calc-green);border:1px solid var(--calc-green);border-radius:24px;color:#14210d;font-size:12px;font-weight:700}
-.bet-submit:hover{background:#a7ff8b;border-color:#a7ff8b}
-.bet-reset{color:var(--calc-copy);font-weight:450}
-.bet-reset:hover{color:var(--calc-text)}
-.bet-result{padding:18px 16px 0;background:transparent;border:1px solid var(--calc-line);border-radius:16px}
-.bet-result-top{align-items:center;color:var(--calc-muted);font-size:10px}
-#bet-result-status{padding:4px 8px;border-radius:20px;color:var(--calc-copy);background:var(--calc-inset);font-size:10px}
-.bet-result.is-positive #bet-result-status{color:var(--calc-green);background:#25321e}
-.bet-result.is-negative #bet-result-status{color:var(--calc-red);background:#35231f}
-.bet-result h3{margin:17px 0 8px;color:var(--calc-text);font-size:18px;font-weight:600;letter-spacing:-.03em}
-.bet-result.is-positive #bet-result-title{color:var(--calc-text)}
-.bet-result.is-negative #bet-result-title{color:var(--calc-red)}
-.bet-result>p{margin:0 0 18px;color:var(--calc-muted);font-size:12px;line-height:1.6}
-.bet-result dl{gap:0;border-top:1px solid var(--calc-line)}
-.bet-result dl:empty{border:0}
-.bet-result dt,.bet-result dd{padding:14px 0;border-color:var(--calc-line);font-size:12px;line-height:1.45}
-.bet-result dt{padding-right:20px;color:var(--calc-copy)}
-.bet-result dd{align-content:center;color:var(--calc-text);font-weight:650}
-.bet-result dt:nth-last-child(2),.bet-result dd:last-child{border:0}
-.bet-tool-note{margin:21px 0 0;padding:0;border:0;color:var(--calc-muted);font-size:10px;line-height:1.6}
-#main .article-widget .widget-range-label{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:24px 0 6px;color:var(--calc-copy);font-size:12px;line-height:1.5}
-#main .article-widget .widget-range-label output{color:var(--calc-text);font-weight:650;white-space:nowrap}
-#main .article-widget input.widget-range{display:block;width:100%;min-height:32px;margin:0 0 20px;accent-color:var(--calc-green);cursor:pointer}
-#main .article-widget .widget-results{display:block;margin:24px 0 20px;padding:0 16px;border:1px solid var(--calc-line);border-radius:14px}
-#main .article-widget .widget-results>div{display:flex;justify-content:space-between;align-items:center;gap:20px;min-height:56px;padding:14px 0;border-bottom:1px solid var(--calc-line);font-size:12px;line-height:1.5}
-#main .article-widget .widget-results>div:last-child{border:0}
-#main .article-widget .widget-results span{color:var(--calc-copy)}
-#main .article-widget .widget-results strong{color:var(--calc-text);text-align:right;font-size:15px;font-weight:650}
-#main .article-widget .widget-results strong[data-tone=positive]{color:var(--calc-green)}
-#main .article-widget .widget-results strong[data-tone=negative]{color:var(--calc-red)}
-#main .article-widget p.widget-result{margin:20px 0;padding:14px 16px;border-radius:12px;background:var(--calc-inset);color:var(--calc-copy);font-size:12px;line-height:1.6}
-#main .article-widget>small,#main .article-widget .comparison-controls>small{display:block;margin-top:20px;color:var(--calc-muted);font-size:10px;line-height:1.65}
-#main .article-widget .comparison-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px}
-#main .article-widget .comparison-toolbar>strong{color:var(--calc-copy);font-size:12px;font-weight:500}
-#main .article-widget .widget-toggle{display:flex;gap:3px;padding:3px;background:var(--calc-inset);border:1px solid var(--calc-line);border-radius:24px}
-#main .article-widget .widget-toggle button{min-height:36px;padding:6px 12px;background:transparent;border:0;border-radius:20px;color:var(--calc-muted);font-family:inherit;font-size:11px;font-weight:500;line-height:1.4;cursor:pointer}
-#main .article-widget .widget-toggle button[aria-pressed=true]{background:#303030;color:var(--calc-text)}
-#main .article-widget .comparison-table{overflow:hidden;border:1px solid var(--calc-line);border-radius:14px}
-#main .article-widget .comparison-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(80px,110px) minmax(70px,90px);align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--calc-line);color:var(--calc-copy);font-size:12px}
+#main .bet-control:has(i) input{padding-left:25px}
+#main :is(.bet-input select,.article-widget select){cursor:pointer;padding-right:25px}
+#main :is(.bet-tool,.article-widget) :is(input,select):hover{border-color:var(--calc-line-strong);background:var(--calc-control)}
+#main :is(.bet-tool,.article-widget) :focus-visible{outline:2px solid var(--calc-accent);outline-offset:3px}
+#main :is(.bet-tool,.article-widget) :is(input,select):focus{border-color:var(--calc-accent);outline:none;background:var(--calc-inset)}
+#main :is(.bet-input small,.widget-input-grid small){margin:0;color:var(--calc-muted);font-size:10px;line-height:1.4;font-weight:300}
+#main .parlay-leg{display:grid;grid-template-columns:46px minmax(0,1fr) minmax(0,1fr);align-items:end;gap:10px;padding:0 0 12px;margin:0 0 12px;border-bottom:1px solid var(--calc-line)}
+#main .parlay-leg:last-child{margin:0;padding:0;border:0}
+#main .bet-check{display:flex;align-items:center;gap:5px;white-space:nowrap;padding:0 0 10px;color:var(--calc-copy);font-size:11px}
+#main .bet-check input{width:14px;height:14px;margin:0;accent-color:var(--calc-accent)}
+#main .bet-result{margin:22px 0 0;padding:0;background:none;border:0;border-radius:0;min-width:0}
+#main .calc-summary{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:48px;margin:20px 0;padding:13px 15px;background:var(--calc-inset);border:0;border-radius:12px;color:var(--calc-muted);font-size:13px;font-weight:300}
+#main .bet-result>.calc-summary{margin-top:0}
+#main .calc-summary strong{color:var(--calc-text);font-size:16px;font-weight:550;line-height:1.3;text-align:right}
+#main .calc-summary small{display:block;font-size:10px;color:var(--calc-muted)}
+#main :is(.bet-tool,.article-widget) :is(.calc-summary,.widget-results) strong[data-tone=positive]{color:var(--calc-green)}
+#main :is(.bet-tool,.article-widget) :is(.calc-summary,.widget-results) strong[data-tone=negative]{color:var(--calc-red)}
+#main :is(.calc-metrics,.widget-results){display:block;margin:20px 0 0;padding:0;background:none;border:1px solid var(--calc-line);border-radius:12px;overflow:hidden}
+#main .calc-metric-row,#main .article-widget .widget-results>div{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:13px 14px;margin:0;min-height:46px;border:0;border-bottom:1px solid var(--calc-line)}
+#main .calc-metric-row:last-child,#main .article-widget .widget-results>div:last-child{border-bottom:0}
+#main .calc-metric-row :is(dt,dd){margin:0;padding:0;border:0;font-family:inherit;font-size:13px;line-height:1.4}
+#main .calc-metric-row dt{color:var(--calc-copy);font-weight:300}
+#main .calc-metric-row dd{color:var(--calc-text);text-align:right;font-weight:550}
+#main .calc-outcome-row{min-height:62px}
+#main .calc-outcome-row dt{color:var(--calc-text);font-weight:400}
+#main .calc-outcome-row dt small{display:block;margin-top:2px;color:var(--calc-muted);font-size:11px;font-weight:300}
+#main .calc-outcome-row dd{display:flex;align-items:center;gap:13px;flex-shrink:0}
+#main .calc-probability{font-size:14px;font-weight:550}
+#main .calc-probability small{display:block;margin-top:1px;color:var(--calc-muted);font-size:9px;font-weight:300}
+#main .calc-pill{display:inline-block;padding:3px 8px;border-radius:20px;background:var(--calc-accent-soft);color:var(--calc-accent);font-size:10px;line-height:1.2;font-weight:450;white-space:nowrap}
+#main #bet-result-extra .calc-metric-row{border:0;min-height:38px;padding:9px 14px}
+#main #bet-result-extra{padding:4px 0}
+#main #bet-result-extra dt{color:var(--calc-muted)}
+#main .bet-result p.calc-footnote,#main .article-widget>small,#main .article-widget .comparison-controls>small{display:block;margin:20px 0 0;padding:0;border:0;color:var(--calc-muted);font-size:11px;line-height:1.5;font-weight:300}
+#main .bet-result.is-negative:has(.calc-metrics[hidden]) .calc-footnote{color:var(--calc-red)}
+#main .article-widget .widget-range-label{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 2px;color:var(--calc-muted);font-size:12px;font-weight:300}
+#main .article-widget .widget-range-label output{color:var(--calc-text);font-weight:500;white-space:nowrap}
+#main .article-widget input.widget-range{display:block;width:100%;min-height:28px;margin:0;accent-color:var(--calc-accent);cursor:pointer}
+#main .article-widget .widget-results span{color:var(--calc-muted);font-size:13px;font-weight:300}
+#main .article-widget .widget-results strong{color:var(--calc-text);text-align:right;font-size:15px;font-weight:550}
+#main .article-widget p.widget-result{margin:14px 0 0;padding:0;border:0;background:none;color:var(--calc-muted);font-size:11px;line-height:1.5;font-weight:300}
+#main .article-widget .comparison-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+#main .article-widget .comparison-toolbar>strong{color:var(--calc-copy);font-size:12px;font-weight:400}
+#main .article-widget .widget-toggle{display:flex;gap:2px;padding:3px;background:var(--calc-inset);border:0;border-radius:22px}
+#main .article-widget .widget-toggle button{min-height:30px;padding:5px 10px;background:none;border:0;border-radius:20px;color:var(--calc-muted);font-family:inherit;font-size:11px;font-weight:400;line-height:1.4;cursor:pointer}
+#main .article-widget .widget-toggle button[aria-pressed=true]{background:var(--calc-accent-soft);color:var(--calc-accent)}
+#main .article-widget .comparison-table{overflow:hidden;border:1px solid var(--calc-line);border-radius:12px}
+#main .article-widget .comparison-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(76px,110px) minmax(65px,90px);align-items:center;gap:12px;padding:11px 13px;border-bottom:1px solid var(--calc-line);color:var(--calc-text);font-size:13px}
 #main .article-widget .comparison-row:last-child{border-bottom:0}
-#main .article-widget .comparison-header{background:var(--calc-inset);color:var(--calc-muted);font-size:10px}
-#main .article-widget .comparison-break-even{text-align:right;color:var(--calc-text);font-weight:650}
+#main .article-widget .comparison-header{color:var(--calc-muted);font-size:10px;font-weight:300}
+#main .article-widget .comparison-break-even{text-align:right;font-weight:550}
 #main .article-widget .comparison-row[data-best=true] .comparison-break-even{color:var(--calc-green)}
-#main .article-widget .comparison-row[data-best=true] label::after{display:block;width:max-content;margin-top:5px;padding:2px 7px;border-radius:20px;background:#25321e;color:var(--calc-green);font-size:9px;content:'Best price'}
+#main .article-widget .comparison-row[data-best=true] label::after{display:block;width:max-content;margin-top:3px;padding:1px 6px;border-radius:15px;background:color-mix(in srgb,var(--calc-green) 14%,transparent);color:var(--calc-green);font-size:9px;content:'Best price'}
 #main .article-widget input[aria-invalid=true]{border-color:var(--calc-red)}
-#main .article-widget [hidden]{display:none}
-.widget-article-link a{color:#b1de9f}
-@media(min-width:640px){#main .article-widget[data-article-widget=pickem] .widget-input-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+#main :is(.bet-tool,.article-widget) [hidden]{display:none}
+.widget-article-link a{color:var(--edu-accent-strong,#92e1e9)}
+@media(min-width:640px){#main .article-widget[data-article-widget=pickem] .widget-input-grid,#main .bet-field-grid:has(>.bet-input:nth-child(3):last-child){grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:520px){
-  .bet-tool,#main .article-widget{padding:20px 16px;border-radius:22px}
-  .bet-tool-heading h2,#main .article-widget .article-widget-heading h2{font-size:18px}
-  .bet-field-grid,#main .article-widget .widget-input-grid{grid-template-columns:minmax(0,1fr);gap:16px}
-  .parlay-leg{grid-template-columns:54px minmax(0,1fr);gap:10px}
-  .parlay-leg .bet-input:last-child{grid-column:2}
-  .bet-result{padding:16px 12px 0}
-  .bet-result dt,.bet-result dd{font-size:11px}
-  .bet-result dl{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-  .bet-result dd{overflow-wrap:anywhere}
-  #main .article-widget .widget-results{padding:0 12px}
-  #main .article-widget .widget-results>div{gap:12px}
-  #main .article-widget .widget-results strong{font-size:14px}
-  #main .article-widget .comparison-row{grid-template-columns:minmax(0,1fr) 76px 62px;gap:8px;padding:12px 10px;font-size:11px}
+  #main :is(.bet-tool,.article-widget){margin:24px 0;padding:18px 16px;border-radius:22px}
+  #main :is(.bet-tool-heading,.article-widget-heading) h2{font-size:18px}
+  #main :is(.bet-field-grid,.widget-input-grid){gap:12px}
+  #main :is(.bet-input input,.bet-input select,.article-widget input:not([type=range]),.article-widget select){height:40px;min-height:40px;font-size:16px;padding-inline:10px}
+  #main :is(.bet-input,.widget-input-grid label){font-size:12px}
+  #main .parlay-leg{grid-template-columns:38px minmax(0,1fr) minmax(0,1fr);gap:7px}
+  #main .parlay-leg .bet-input:last-child{grid-column:auto}
+  #main .bet-check{padding-bottom:12px}
+  #main .calc-metric-row,#main .article-widget .widget-results>div{gap:10px;padding:12px}
+  #main .calc-metric-row :is(dt,dd){font-size:12px;overflow-wrap:anywhere}
+  #main .calc-outcome-row dd{gap:8px}
+  #main .calc-pill{padding:3px 6px;font-size:9px}
+  #main .calc-summary{padding:12px;font-size:12px}
+  #main .article-widget .comparison-row{grid-template-columns:minmax(0,1fr) 76px 62px;gap:7px;padding:10px;font-size:12px}
   #main .article-widget .comparison-header{font-size:9px}
-  #main .article-widget .comparison-row input{padding:0 8px;font-size:12px}
+  #main .article-widget .comparison-row input{padding:0 7px;font-size:14px}
 }
-@media(prefers-reduced-motion:reduce){.bet-tool input,.bet-tool select,#main .article-widget input,#main .article-widget select{transition:none}}
+@media(max-width:350px){#main .widget-input-grid{grid-template-columns:minmax(0,1fr)}#main .calc-outcome-row dd{gap:5px}#main .calc-pill{font-size:8px}}
+@media(prefers-reduced-motion:reduce){#main :is(.bet-tool,.article-widget) :is(input,select){transition:none}}

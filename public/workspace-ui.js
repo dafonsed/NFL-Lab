@@ -530,22 +530,8 @@ function workspaceViews(heading, views, parameter) {
 }
 
 if (document.body.dataset.section === 'bets') {
-  const overview=$('#bet-overview'),ledger=$('.tracker-ledger-section');
-  const selectView=workspaceViews(workspaceHeading,[{key:'tickets',label:'Tickets',nodes:[ledger]},{key:'performance',label:'Performance',developer:true,nodes:[overview,$('.tracker-alltime')]}],'workspace');
-  const period=document.createElement('label');period.className='ticket-period';period.innerHTML='<span class="sr-only">Ticket month</span><input type="month" min="1900-01" max="2100-12" required aria-label="Ticket month">';
-  $('.tracker-ledger-heading').append(period);
-  const filters=$('.tracker-filters');filters.classList.add('workspace-controlbar');ledger.prepend(filters);filters.append(period);
-  const exportButton=$('#export-bets');workspaceHeading.querySelector('.masthead-actions')?.prepend(exportButton);
-  const ticketHeading=$('.tracker-ledger-heading');
-  const ticketTabs=$('.picks-tabs');ticketTabs.append($('#bet-count'));
-  ticketHeading.hidden=true;ticketTabs.after($('.tracking-bar'));ticketTabs.append($('#refresh-lines'));
-  const input=period.querySelector('input'),sync=()=>{const original=overview.querySelector('[data-calendar-month]');if(original)input.value=original.value;period.hidden=$('#ticket-range').value==='all';};
-  input.addEventListener('change',()=>{const original=overview.querySelector('[data-calendar-month]');if(original&&input.checkValidity()){original.value=input.value;original.dispatchEvent(new Event('change',{bubbles:true}));}});
-  new MutationObserver(sync).observe(overview,{childList:true});$('#ticket-range').addEventListener('change',sync);sync();
-  overview.addEventListener('click',e=>{if(e.target.closest('[data-calendar-day]')){selectView('tickets');$('#tickets-title').scrollIntoView({block:'nearest'});}});
-  // Keep storage information accessible beside import/export, away from the board.
-  const storage=$('.tracker-storage');
-  if(storage){const details=document.createElement('details');details.className='workspace-storage';details.innerHTML='<summary>Storage & backup</summary>';storage.before(details);details.append(storage);$('.tracker-ledger-section').append(details);}
+  // The tracker keeps performance, the calendar and ticket activity in one reading flow.
+  // Its own month controls and filters remain next to the information they change.
 }
 
 if (document.body.dataset.section === 'performance') {

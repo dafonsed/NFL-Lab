@@ -15,16 +15,17 @@
   <link rel="stylesheet" href="/landing-atmosphere.css?v=6">
   <link rel="stylesheet" href="/landing-pricing.css?v=1">
   <link rel="stylesheet" href="/landing-nav.css?v=5">
-  <script type="module" src="/landing.js?v=9"></script>
+  <link rel="stylesheet" href="/landing-product.css?v=2">
+  <script type="module" src="/landing.js?v=11"></script>
   <script type="module" src="/landing-reviews.js?v=2"></script>
-  <script type="module" src="/landing-pricing.js?v=1"></script>
+  <script type="module" src="/landing-pricing.js?v=2"></script>
   <script type="module" src="/landing-nav.js?v=2"></script>
 </head>
 <body class="landing-page">
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="home-header"><div class="home-header-inner">
     <a class="home-brand" href="/" aria-label="SportsLab home"><img src="/favicon.svg" width="37" height="37" alt=""><span>SportsLab</span></a>
-    <nav class="home-nav" id="home-nav" aria-label="Main navigation"><a href="/#explore">How it works</a><a href="/research">Product</a><a href="/#plans">Pricing</a><a href="/#reviews">Testimonials</a><a href="/online-sportsbooks">Sportsbooks</a><a href="/bets">My picks</a></nav>
+    <nav class="home-nav" id="home-nav" aria-label="Main navigation"><a href="/#explore">How it works</a><a href="/research">Product</a><a href="/#plans">Pricing</a><a href="/#reviews">Testimonials</a><a href="/online-sportsbooks">Sportsbooks</a><a href="/ev/tracker">My picks</a></nav>
     <a class="home-button home-header-action" href="/research">Dashboard</a>
     <button class="home-menu-toggle" type="button" aria-controls="home-nav" aria-expanded="false" aria-label="Open menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
   </div></header>
@@ -41,18 +42,17 @@
           <ul class="hero-brand-set" aria-hidden="true"><li title="BetMGM"><img src="/assets/brands/betmgm.png" alt="BetMGM"></li><li title="bet365"><img src="/assets/brands/bet365.png" alt="bet365"></li><li title="BetRivers"><img src="/assets/brands/betrivers.png" alt="BetRivers"></li><li title="Caesars Sportsbook"><img src="/assets/brands/caesars.png" alt="Caesars Sportsbook"></li><li title="DraftKings Sportsbook"><img src="/assets/brands/draftkings.png" alt="DraftKings Sportsbook"></li><li title="Fanatics Sportsbook" class="brand-on-light"><img src="/assets/brands/fanatics.png" alt="Fanatics Sportsbook"></li><li title="FanDuel Sportsbook"><img src="/assets/brands/fanduel.png" alt="FanDuel Sportsbook"></li><li title="Hard Rock Bet"><img src="/assets/brands/hardrock.png" alt="Hard Rock Bet"></li><li title="theScore Bet"><img src="/assets/brands/thescore.png" alt="theScore Bet"></li><li title="Bally Bet"><img src="/assets/brands/bally.png" alt="Bally Bet"></li><li title="Desert Diamond Sports"><img src="/assets/brands/desertdiamond.png" alt="Desert Diamond Sports"></li><li title="DraftKings Fantasy"><img src="/assets/brands/draftkings.png" alt="DraftKings Fantasy"></li><li title="FanDuel Fantasy"><img src="/assets/brands/fanduel.png" alt="FanDuel Fantasy"></li><li title="PrizePicks"><img src="/assets/brands/prizepicks.png" alt="PrizePicks"></li><li title="Underdog Fantasy" class="brand-on-light"><img src="/assets/brands/underdog.png" alt="Underdog Fantasy"></li><li title="Sleeper Picks"><img src="/assets/brands/sleeper.png" alt="Sleeper Picks"></li><li title="Betr Picks"><img src="/assets/brands/betr.png" alt="Betr Picks"></li><li title="Dabble"><img src="/assets/brands/dabble.png" alt="Dabble"></li><li title="Chalkboard"><img src="/assets/brands/chalkboard.png" alt="Chalkboard"></li><li title="ParlayPlay"><img src="/assets/brands/parlayplay.png" alt="ParlayPlay"></li><li title="OwnersBox"><img src="/assets/brands/ownersbox.png" alt="OwnersBox"></li><li title="Boom Fantasy"><img src="/assets/brands/boom.png" alt="Boom Fantasy"></li><li title="Vivid Picks"><img src="/assets/brands/vivid.png" alt="Vivid Picks"></li><li title="Novig"><img src="/assets/brands/novig.png" alt="Novig"></li><li title="ProphetX"><img src="/assets/brands/prophetx.png" alt="ProphetX"></li><li title="Sporttrade"><img src="/assets/brands/sporttrade.png" alt="Sporttrade"></li><li title="BettorEdge"><img src="/assets/brands/bettoredge.png" alt="BettorEdge"></li><li title="Kalshi"><img src="/assets/brands/kalshi.png" alt="Kalshi"></li><li title="Polymarket"><img src="/assets/brands/polymarket.png" alt="Polymarket"></li></ul>
         </div>
     </div>
-    <section class="home-section home-live" id="live-games" aria-labelledby="live-title"><div class="home-wide home-split">
-      <div class="home-copy"><h2 id="live-title">Follow the game<br>as it changes.</h2><p class="home-lede">Move from a matchup to its score, game state, and available markets. Feed timing stays beside the data.</p><ul class="home-points"><li>Choose a sport and scheduled game.</li><li>Read the score or upcoming state in context.</li><li>Check when the public feed last updated.</li></ul><a class="home-text-link" href="/live">Open live game center <span aria-hidden="true">↗</span></a></div>
-      <div class="home-screen live-screen" id="home-live-panel" aria-live="polite"><p class="home-loading">Connecting to the game feed…</p></div>
+    <section class="home-section home-tools" id="explore" aria-labelledby="tools-title"><div class="home-feature-grid">
+      <div class="home-feature-copy"><span class="home-feature-label">Player research</span><h2 id="tools-title">Know the player.<br>See the pattern.</h2><p>Put the line next to the history. Explore recent games, compare results, and find the details that matter to your pick.</p><ul class="home-feature-list"><li>Switch between the last 5, 10, or 20 games.</li><li>Compare the line with real, completed results.</li><li>Open any game to check the source.</li></ul><a class="home-feature-link" href="/research">Explore player research <span data-icon="arrow" aria-hidden="true"></span></a></div>
+      <div id="home-tool-panel" class="home-product-preview" aria-label="Player research preview" aria-live="polite"><p class="home-loading">Loading player history…</p></div>
     </div></section>
-    <section class="home-section home-tools" id="explore" aria-labelledby="tools-title"><div class="home-narrow">
-      <div class="home-tools-heading"><h2 id="tools-title">Your way into the game.</h2><p>Research a player, follow the feed, test a scenario, or return to your own record.</p></div>
-      <div class="home-tool-layout"><div class="home-tool-tabs" role="tablist" aria-label="SportsLab product views">
-        <button type="button" role="tab" data-home-tool="research" aria-controls="home-tool-panel" aria-selected="false" tabindex="-1"><span class="tool-symbol" aria-hidden="true">▥</span><span><strong>Player research</strong><small>Completed games and lines</small></span></button>
-        <button type="button" role="tab" data-home-tool="live" aria-controls="home-tool-panel" aria-selected="false" tabindex="-1"><span class="tool-symbol" aria-hidden="true">◉</span><span><strong>Live games</strong><small>Score and feed timing</small></span></button>
-        <button type="button" role="tab" data-home-tool="simulation" aria-controls="home-tool-panel" aria-selected="false" tabindex="-1"><span class="tool-symbol" aria-hidden="true">◇</span><span><strong>Simulation</strong><small>Inputs and score ranges</small></span></button>
-        <button type="button" role="tab" data-home-tool="picks" aria-controls="home-tool-panel" aria-selected="true" tabindex="0"><span class="tool-symbol" aria-hidden="true">✓</span><span><strong>My picks</strong><small>Saved in this browser</small></span></button>
-      </div><div class="home-screen home-tool-panel" id="home-tool-panel" role="tabpanel" aria-live="polite"><p class="home-loading">Loading your product view…</p></div></div>
+    <section class="home-section home-markets" id="compare-odds" aria-labelledby="markets-title"><div class="home-feature-grid home-feature-reverse">
+      <div class="home-feature-copy"><span class="home-feature-label">Odds comparison</span><h2 id="markets-title">Same game.<br>Different prices.</h2><p>See both sides of a market together. Compare entered prices across books and keep the best available number in view.</p><ul class="home-feature-list"><li>Compare matching lines side by side.</li><li>Move between game markets and player props.</li><li>Explore EV and arbitrage in the workspace.</li></ul><a class="home-feature-link" href="/ev#odds">Explore the odds screen <span data-icon="arrow" aria-hidden="true"></span></a></div>
+      <div id="home-market-panel" class="home-product-preview" aria-label="Example odds comparison" aria-live="polite"><p class="home-loading">Loading example prices…</p></div>
+    </div></section>
+    <section class="home-section home-live" id="live-games" aria-labelledby="live-title"><div class="home-feature-grid">
+      <div class="home-feature-copy"><span class="home-feature-label">Live game center</span><h2 id="live-title">Follow more<br>than the score.</h2><p>The matchup, the players, the next possession. Keep the game in view with scores, available markets, and player production together.</p><ul class="home-feature-list"><li>NFL, NBA, WNBA, and MLB in one place.</li><li>Game stats alongside regulation estimates.</li><li>Clear source times with every update.</li></ul><a class="home-feature-link" href="/live">Open the game center <span data-icon="arrow" aria-hidden="true"></span></a></div>
+      <div class="home-product-preview live-screen" id="home-live-panel" aria-live="polite"><p class="home-loading">Connecting to the game feed…</p></div>
     </div></section>
     <section class="home-pricing" id="plans" aria-labelledby="plans-title"><div class="home-pricing-inner">
       <div class="home-pricing-heading">
@@ -71,7 +71,7 @@
     </div></section>
     <dialog class="home-pricing-dialog" id="home-pricing-dialog" aria-labelledby="plan-dialog-title"><button class="home-pricing-dialog-close" type="button" data-plan-close aria-label="Close">×</button><h2 id="plan-dialog-title">Plan preview</h2><p>These example plans are here for layout review. Subscriptions and free trials are not available yet.</p><a class="home-button" href="/research">Explore SportsLab</a></dialog>
     <section class="home-section home-tracker-section" id="bet-tracker" aria-labelledby="tracker-title"><div class="home-wide home-split home-tracker-layout">
-      <div class="home-copy"><h2 id="tracker-title">Your picks,<br>day by day.</h2><p class="home-lede">Save a bet in My Picks and see its settled result on the date you entered. Your net profit updates from the record kept in this browser.</p><p class="home-fine">The calendar shows example results when no picks are saved.</p><a class="home-button" href="/bets">Open My Picks</a></div>
+      <div class="home-copy"><h2 id="tracker-title">Your picks,<br>day by day.</h2><p class="home-lede">Save a bet in My Picks and see its settled result on the date you entered. Your net profit updates from the record kept in this browser.</p><p class="home-fine">The calendar shows example results when no picks are saved.</p><a class="home-button" href="/ev/tracker">Open My Picks</a></div>
       <div class="hero-tracker" id="hero-tracker" aria-live="polite"><p class="home-loading">Loading your pick record…</p></div>
     </div></section>
     <nav class="home-sports" id="sports" aria-label="Research by sport">
@@ -130,7 +130,7 @@
         <a href="/live">Live game center</a>
         <a href="/simulation">Game simulation</a>
         <a href="/ev">EV workbench</a>
-        <a href="/bets">My picks</a>
+        <a href="/ev/tracker">My picks</a>
         <a href="/#bet-tracker">Bet tracker</a>
       </nav>
       <nav class="home-footer-column" aria-labelledby="footer-live-title">

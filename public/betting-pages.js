@@ -1,3 +1,5 @@
+import './trends-controls.js';
+
 const form = document.querySelector('#bet-form');
 const search = document.querySelector('#bet-search');
 
@@ -200,17 +202,59 @@ function calculate(kind, formData) {
   throw Error('This calculator could not load. Refresh the page and try again.');
 }
 
+const primaryMetric = {
+  arbitrage: 'Estimated net profit', ev: 'Expected net value', freebet: 'Estimated cash value',
+  halfpoint: 'Estimated EV change', hold: 'Estimated overround', novig: 'Fair American odds', vig: 'Estimated overround',
+  implied: 'Implied probability', odds: 'Implied probability', kelly: 'Suggested stake',
+  parlay: 'Break-even probability', parlaybuilder: 'Break-even probability', spread: 'Net profit or loss',
+  poisson: 'Estimated probability', roundrobin: 'Total ticket cost', lowhold: 'Best-price combined hold',
+  middle: 'Net if both bets win', boosts: 'Estimated EV added',
+};
+function metricRow(label, value) {
+  const row = document.createElement('div'), term = document.createElement('dt'), detail = document.createElement('dd');
+  row.className = 'calc-metric-row'; term.textContent = label; detail.textContent = value;
+  row.append(term, detail); return row;
+}
+function outcomeRow(side, raw, fair, odds) {
+  const row = document.createElement('div'), term = document.createElement('dt'), detail = document.createElement('dd');
+  const caption = document.createElement('small'), probability = document.createElement('span'), badge = document.createElement('span');
+  row.className = 'calc-metric-row calc-outcome-row'; term.textContent = 'Outcome ' + side;
+  caption.textContent = 'American odds ' + (Number(odds) > 0 ? '+' : '') + odds; term.append(caption);
+  probability.className = 'calc-probability'; probability.textContent = raw;
+  const label = document.createElement('small'); label.textContent = 'Implied'; probability.append(label);
+  badge.className = 'calc-pill'; badge.textContent = fair + ' fair';
+  badge.setAttribute('aria-label', 'Outcome ' + side + ' fair probability ' + fair);
+  detail.append(probability, badge); row.append(term, detail); return row;
+}
 function show(outcome, initial = false) {
-  const box = document.querySelector('.bet-result');
-  box.className = `bet-result is-${outcome.status}`;
-  document.querySelector('#bet-result-status').textContent = initial ? 'Example inputs' : 'Updated from your inputs';
+  const box = document.querySelector('.bet-result'), kind = form.dataset.tool;
+  box.className = 'bet-result is-' + outcome.status;
+  document.querySelector('#bet-result-status').textContent = initial ? 'Example inputs' : 'Results updated';
   document.querySelector('#bet-result-title').textContent = outcome.title;
-  document.querySelector('#bet-result-note').textContent = outcome.note;
-  const list = document.querySelector('#bet-result-values');
-  list.replaceChildren(...outcome.metrics.flatMap(([label, value]) => {
-    const dt = document.createElement('dt'), dd = document.createElement('dd');
-    dt.textContent = label; dd.textContent = value; return [dt, dd];
-  }));
+  document.querySelector('#bet-result-note').textContent = outcome.metrics.length ? 'Manual example. ' + outcome.note : outcome.note;
+  const primary = outcome.metrics.find(([label]) => label === primaryMetric[kind]) || outcome.metrics[0];
+  document.querySelector('#bet-summary-label').textContent = primary?.[0] || outcome.title;
+  if (primary && ['arbitrage', 'lowhold', 'middle'].includes(kind)) {
+    const context = document.createElement('small');
+    context.textContent = outcome.title;
+    document.querySelector('#bet-summary-label').append(context);
+  }
+  document.querySelector('#bet-summary-value').textContent = primary?.[1] || '—';
+  const list = document.querySelector('#bet-result-values'), extra = document.querySelector('#bet-result-extra');
+  extra.replaceChildren(); extra.hidden = true;
+  const twoWay = ['hold', 'novig', 'vig'].includes(kind) && outcome.metrics.length;
+  if (twoWay) {
+    const metrics = new Map(outcome.metrics), inputs = new FormData(form);
+    list.replaceChildren(...['A', 'B'].map(side => outcomeRow(side, metrics.get('Outcome ' + side + ' raw probability'), metrics.get('Outcome ' + side + ' fair probability'), inputs.get('odds' + side))));
+    const supplemental = outcome.metrics.filter(([label]) => ['Combined implied probability', 'Estimated overround', 'Fair American odds'].includes(label) && label !== primary[0]);
+    extra.replaceChildren(...supplemental.map(([label, value]) => metricRow(label, value))); extra.hidden = false;
+  } else {
+    list.replaceChildren(...outcome.metrics.filter(metric => metric !== primary).map(([label, value]) => metricRow(label, value)));
+  }
+  list.hidden = !list.children.length;
+  // Only signed value or profit summaries use gain/loss colors; probability is neutral.
+  const valueMetric = /\b(?:value|profit|ev|return)\b/i.test(primary?.[0] || '');
+  document.querySelector('#bet-summary-value').dataset.tone = valueMetric ? outcome.status : 'neutral';
 }
 function showError(error) {
   show(result('Check the entered values', error.message, [], 'negative'));

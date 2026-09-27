@@ -15,7 +15,7 @@ export function mountHeroTracker() {
     let bets;
     try { bets = readBets(localStorage); }
     catch {
-      root.innerHTML = '<p class="hero-tracker-error">Your pick record is unavailable in this browser. <a href="/bets">Open My Picks</a></p>';
+      root.innerHTML = '<p class="hero-tracker-error">Your pick record is unavailable in this browser. <a href="/ev/tracker">Open My Picks</a></p>';
       return;
     }
     const demo = bets.length === 0;

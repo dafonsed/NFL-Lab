@@ -1,5 +1,6 @@
 // One stroke, size and view box for navigation and controls across the app.
 const paths = {
+  tag: '<path d="M3 3h7l11 11-7 7L3 10Z"/><circle cx="7" cy="7" r="1"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v.01"/>',
   players: '<circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 4v3"/>',
   research: '<path d="M4 19V9m5 10V4m6 15v-7m5 7V7"/>',

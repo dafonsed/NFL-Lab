@@ -20,10 +20,12 @@ export const probabilityToAmerican = probability => {
   if (!(p > 0 && p < 1)) return NaN;
   return Math.round(p >= .5 ? -100 * p / (1 - p) : 100 * (1 - p) / p);
 };
-export const marketKey = q => [q.event, q.market, q.type === 'spread' || q.type === 'alternate' && !['over','under'].includes(String(q.side).toLowerCase()) ? Math.abs(Number(q.line)) : q.line, q.live ? 'live' : 'pregame'].join('|');
-export const familyKey = q => [q.event, q.market, q.live ? 'live' : 'pregame'].join('|');
+const marketKind = q => q.type === 'alternate' ? (['over','under'].includes(String(q.side).toLowerCase()) ? 'total' : 'spread') : q.type || '';
+const marketIdentity = q => [q.sport || '', q.eventId || q.event, q.period || 'full', q.playerId || q.player || '', q.marketId || q.market, marketKind(q)];
+export const marketKey = q => JSON.stringify([...marketIdentity(q), q.type === 'spread' || q.type === 'alternate' && !['over','under'].includes(String(q.side).toLowerCase()) ? Math.abs(Number(q.line)) : q.line ?? '', q.live ? 'live' : 'pregame']);
+export const familyKey = q => JSON.stringify([...marketIdentity(q), q.live ? 'live' : 'pregame']);
 export const validQuote = q => q && q.event && q.market && q.side && q.book && Number.isFinite(decimal(q.odds));
-export const fresh = (q, now = Date.now()) => !q.live || now - Date.parse(q.ts) <= 90_000;
+export const fresh = (q, now = Date.now()) => !q.live || (Number.isFinite(Date.parse(q.ts)) && now - Date.parse(q.ts) <= 90_000 && Date.parse(q.ts) <= now + 5_000);
 
 export function groups(quotes, mode = null) {
   const map = new Map();

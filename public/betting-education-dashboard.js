@@ -7,10 +7,20 @@ const countLabel = document.querySelector('[data-education-count-label]');
 const emptyState = document.querySelector('[data-education-empty]');
 const clearButton = document.querySelector('[data-education-clear]');
 const indexability = document.querySelector('[data-education-indexability]');
+const statusOptions = [...document.querySelectorAll('[data-education-status]')];
+const statusLabel = document.querySelector('[data-education-status-label]');
 const pagination = document.querySelector('[data-education-pagination]');
 let activeCategory = 'all';
 let activeIndexability = 'all';
 let currentPage = 1;
+
+function syncStatusControl() {
+  for (const option of statusOptions) {
+    const selected = option.dataset.educationStatus === activeIndexability;
+    option.setAttribute('aria-pressed', String(selected));
+    if (selected && statusLabel) statusLabel.textContent = option.textContent.trim();
+  }
+}
 
 function renderPagination(totalPages) {
   const first = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
@@ -61,10 +71,27 @@ if (cards.length) {
     update();
   });
 
-  indexability?.addEventListener('change', () => {
-    activeIndexability = indexability.value || 'all';
+  indexability?.addEventListener('click', event => {
+    const option = event.target.closest('[data-education-status]');
+    if (!option) return;
+    activeIndexability = option.dataset.educationStatus || 'all';
     currentPage = 1;
+    syncStatusControl();
     update();
+    indexability.open = false;
+    indexability.querySelector('summary')?.focus({ preventScroll: true });
+  });
+
+  document.addEventListener('click', event => {
+    if (indexability?.open && !indexability.contains(event.target)) indexability.open = false;
+  });
+
+  indexability?.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && indexability.open) {
+      event.preventDefault();
+      indexability.open = false;
+      indexability.querySelector('summary')?.focus({ preventScroll: true });
+    }
   });
 
   clearButton?.addEventListener('click', () => {
@@ -72,7 +99,8 @@ if (cards.length) {
     activeCategory = 'all';
     activeIndexability = 'all';
     currentPage = 1;
-    if (indexability) indexability.value = 'all';
+    syncStatusControl();
+    if (indexability) indexability.open = false;
     for (const filter of filters) {
       const selected = filter.dataset.educationCategory === 'all';
       filter.classList.toggle('is-active', selected);

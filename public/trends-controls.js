@@ -5,16 +5,22 @@ const enhanced=new WeakSet();
 const selectors='#td-week,#td-league,#td-game,#td-sort,#td-venue';
 const labels={'td-week':'NFL week','td-league':'League','td-game':'Matchup','td-sort':'Sort players','td-venue':'Game venue'};
 const symbols={'td-week':'calendar','td-league':'soccer','td-game':'calendar','td-sort':'settings','td-venue':'filter'};
+const captions={'ev-reference-date':'Date range','ev-reference-max-odds':'Max odds'};
 let active;
 let sequence=0;
+document.body.classList.add('tool-dropdowns');
+if(!document.querySelector('link[data-tool-dropdowns]')) {
+  const style=document.createElement('link');style.rel='stylesheet';style.href='/tool-dropdowns.css?v=1';style.dataset.toolDropdowns='true';document.head.append(style);
+}
 
 export function enhanceTrendControls(root=document,selector=selectors) {
   const selects=[...(root.matches?.(selector)?[root]:[]),...root.querySelectorAll(selector)];
   for(const select of selects) {
-    if(enhanced.has(select))continue;
+    if(enhanced.has(select)||select.multiple||select.size>1)continue;
     enhanced.add(select);
     if(!select.id)select.id='ui-select-'+(++sequence);
     const label=labels[select.id]||select.getAttribute('aria-label')||[...select.labels||[]].map(el=>{const copy=el.cloneNode(true);copy.querySelectorAll('select,input,button,small,.field-help,.field-hint').forEach(child=>child.remove());return copy.textContent.trim();}).find(Boolean)||'Select option';
+    if(select.parentElement.tagName==='LABEL')select.parentElement.classList.add('choice-field');
     const wrap=document.createElement('div');wrap.className='td-choice ui-choice';wrap.dataset.control=select.id;
     if(select.classList.contains('filter-desktop-control')&&!['sort','td-sort'].includes(select.id))wrap.classList.add('filter-desktop-control');
     select.before(wrap);wrap.append(select);select.dataset.choiceNative='true';
@@ -25,8 +31,9 @@ export function enhanceTrendControls(root=document,selector=selectors) {
     const sync=()=>{
       wrap.hidden=select.hidden;
       const value=select.selectedOptions[0]?.textContent||'Select';
-      trigger.innerHTML=(symbols[select.id]?icon(symbols[select.id]):'')+`<span></span>`+icon('chevron');
-      trigger.querySelector('span').textContent=value;
+      trigger.innerHTML=(symbols[select.id]?icon(symbols[select.id]):'')+`<span class="choice-trigger-copy"><span class="choice-trigger-label"></span><strong></strong></span>`+icon('chevron');
+      trigger.querySelector('.choice-trigger-label').textContent=captions[select.id]||label.replace(/^Filter by /,'');
+      trigger.querySelector('strong').textContent=value;
       trigger.setAttribute('aria-label',label+': '+value);trigger.disabled=select.disabled;
     };
     const close=(focus=false)=>{if(menu.matches(':popover-open'))menu.hidePopover();menu.hidden=true;trigger.setAttribute('aria-expanded','false');if(active?.wrap===wrap)active=null;if(focus)trigger.focus();};
@@ -42,7 +49,8 @@ export function enhanceTrendControls(root=document,selector=selectors) {
       for(const option of select.options){
         const item=document.createElement('button');item.type='button';item.className='td-choice-option';item.tabIndex=-1;
         item.setAttribute('role','option');item.setAttribute('aria-selected',String(option.selected));item.disabled=option.disabled||option.parentElement.matches('optgroup:disabled');
-        const text=document.createElement('span');text.textContent=option.textContent;item.append(text);item.insertAdjacentHTML('beforeend',icon('check'));
+        const text=document.createElement('span');text.className='choice-option-copy';text.textContent=option.textContent;item.append(text);item.insertAdjacentHTML('beforeend',icon('check'));
+        if(option.dataset.description){const detail=document.createElement('small');detail.textContent=option.dataset.description;text.append(detail);}
         item.addEventListener('click',()=>{select.value=option.value;close(true);sync();select.dispatchEvent(new Event('change',{bubbles:true}));});
         list.append(item);
       }
@@ -52,9 +60,12 @@ export function enhanceTrendControls(root=document,selector=selectors) {
       menu.showPopover();
       const bounds=trigger.getBoundingClientRect(),below=innerHeight-bounds.bottom-12,above=bounds.top-12;
       const opensAbove=below<180&&above>below;
-      menu.style.maxHeight=Math.max(100,Math.min(336,opensAbove?above:below))+'px';menu.style.width=Math.min(Math.max(bounds.width,240),320,innerWidth-24)+'px';menu.style.minWidth='0';
+      menu.style.setProperty('max-height',Math.max(100,Math.min(520,opensAbove?above:below))+'px','important');
+      menu.style.setProperty('width',Math.min(Math.max(bounds.width,300),420,innerWidth-24)+'px','important');menu.style.setProperty('min-width','0','important');
       const box=menu.getBoundingClientRect();menu.style.left=Math.max(12,Math.min(bounds.left,innerWidth-box.width-12))+'px';menu.style.top=(opensAbove?Math.max(12,bounds.top-box.height-6):bounds.bottom+6)+'px';
-      (search||menu.querySelector('[aria-selected=true]:not(:disabled)')||menu.querySelector('button:not(:disabled)'))?.focus();
+      const selected=menu.querySelector('[aria-selected=true]:not(:disabled)');
+      (search||selected||menu.querySelector('button:not(:disabled)'))?.focus({preventScroll:true});
+      if(selected&&!search)list.scrollTop=Math.max(0,selected.offsetTop-list.offsetTop-list.clientHeight/2);
     };
     trigger.addEventListener('click',()=>menu.hidden?open():close());
     trigger.addEventListener('keydown',e=>{if(['ArrowDown','ArrowUp'].includes(e.key)){e.preventDefault();open();}});
@@ -78,3 +89,11 @@ document.addEventListener('click',e=>{if(active&&!active.wrap.contains(e.target)
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&active){e.preventDefault();active.close(true);}});
 window.addEventListener('resize',()=>active?.close());
 document.addEventListener('scroll',e=>{if(active&&!active.wrap.contains(e.target))active.close();},true);
+
+// Include selectors in every tool and any controls added by filters or dialogs.
+const enhanceAll=root=>enhanceTrendControls(root,'select:not([multiple])');
+queueMicrotask(()=>enhanceAll(document));
+new MutationObserver(records=>{
+  if(active&&!active.wrap.isConnected)active.close();
+  for(const record of records)for(const node of record.addedNodes)if(node instanceof Element)enhanceAll(node);
+}).observe(document.body,{childList:true,subtree:true});

@@ -1,4 +1,4 @@
-@import url('/longform-articles.css');
+@import url('/longform-articles.css?v=3');
 @font-face{font-family:LabInter;src:url('/assets/fonts/InterVariable.woff2') format('woff2');font-style:normal;font-weight:100 900;font-display:swap}
 :root{color-scheme:dark;--bet-bg:#080d12;--bet-panel:#101921;--bet-panel-soft:#14202a;--bet-control:#17242e;--bet-line:#273743;--bet-line-strong:#3b5669;--bet-text:#f6f9fb;--bet-copy:#b6c6d1;--bet-muted:#81929f;--bet-blue:#33b2ef;--bet-green:#62c68e;--bet-red:#f18382;--bet-font:LabInter,Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
 *{box-sizing:border-box}

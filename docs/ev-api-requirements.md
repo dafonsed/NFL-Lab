@@ -1,0 +1,131 @@
+# EV API handoff for all Sportslab tools
+
+## What is already configured
+
+The LAN endpoint and key are stored in the ignored root `.env.local`. The local Sportslab Node server forwards the documented health, status, quotes, matches and reserved scrape routes, attaching `X-API-Key` to every request. Credentials do not belong in browser code or examples.
+
+The quote workspace has manual sync and opt-in auto-refresh (15, 30 or 60 seconds). Auto-refresh starts off on every page load, pauses in background tabs and while editing, and backs off after transient failures. Configuration, authentication and invalid-payload errors pause retries until a manual retry. No requests or runtime tests were made during setup.
+
+Only the supplied quote routes are connected to this LAN API. **The additional route names below are proposals, not claims that your server implements them.** A single snapshot endpoint could carry several datasets instead; actual response examples or an OpenAPI document are needed before wiring their adapters.
+
+## Coverage of all 18 tools
+
+| Tool | Required data | Current LAN connection |
+| --- | --- | --- |
+| Odds comparison | Available quotes for the same event, market, period, selection, line and bookmaker | Quote sync prepared |
+| Positive EV — pregame | Offered price plus complete opposing outcomes at reference books | Quote sync prepared; data completeness determines results |
+| Positive EV — live | Same, with real observation times and frequent live updates | Quote sync prepared; live quotes expire after 90 seconds |
+| Arbitrage — pregame | Complete opposing outcomes at different books, identical settlement rules | Quote sync prepared for two-outcome markets |
+| Arbitrage — live | Same, with current live observations | Quote sync prepared for two-outcome markets |
+| Middles | Opposing total/spread lines for the same event and period | Quote sync prepared |
+| Low holds | Complete opposing available prices | Quote sync prepared |
+| Promo / bonus converter | Hedge quotes; bonus amount, type and account-specific terms | Quotes connected; terms remain user inputs |
+| Parlay builder | Prices and fair probabilities for independent selections from one book | Quote sync prepared; executable book/SGP pricing is separate |
+| Sharp money / Pro | Exchange quotes, available liquidity, opposing book quotes and depth observations | Works from quote records when exchange fields are supplied |
+| Fantasy lines | DFS platform/player lines and selection probabilities | Separate DFS dataset needed; saved/imported props work |
+| Fantasy optimizer | DFS props, probabilities, payout tables and entry restrictions | Separate DFS dataset needed |
+| Fantasy slip builder | Same, with the selected app's exact payout rules | Separate DFS dataset needed |
+| Fantasy alerts | New/changed DFS props with stable IDs and timestamps | Separate DFS dataset needed; browser alert engine exists |
+| Prediction traders | Contracts, bids/asks, depth, positions and trades | Separate datasets needed; saved/imported records work |
+| Bet tracker & CLV | Linked selections, event results, book settlement rules and closing prices | Existing game-results connection; LAN quote-to-ticket linking and closing prices still needed |
+| Player prop trends | Historical player statistics aligned to game IDs and market definitions | Separate results dataset needed |
+| Movement & price alerts | Current quotes, observed movements and timestamps | Local history/alerts update from quote sync; historical backfill requires a history source |
+
+## 1. Complete sportsbook and exchange quotes
+
+Use the existing `GET /quotes`. It must return a **complete current snapshot**, either a JSON array or `{ "quotes": [...] }`. An empty array means there are no active quotes and clears the previous API snapshot. A failed request must use a failure response, not a successful empty array. Exclude suspended, closed and unavailable prices from this snapshot. Partial or paginated snapshots cannot replace the workspace safely; delta delivery needs a separate adapter.
+
+Required on every quote: `id`, `sport`, `event`, `market`, `side`, `book`, American `odds`, and `ts` (real observation time in ISO 8601 with timezone). Send `type`, `live` and `line` explicitly; total/spread/alternate markets need a numeric line. The small example in the supplied guide omits `id`, `book` and `ts`; its eventual GET response must include them.
+
+```json
+{
+  "quotes": [{
+    "id": "provider:event-123:full:total:44.5:over:book-a",
+    "sport": "NFL", "league": "NFL",
+    "eventId": "event-123", "event": "Arizona vs Seattle",
+    "startTime": "2026-10-01T00:00:00Z", "period": "full",
+    "marketId": "event-123:full:total", "market": "Game total",
+    "type": "total", "line": 44.5, "side": "Over", "outcomes": 2,
+    "book": "Book A", "odds": -110, "live": false,
+    "exchange": false, "liquidity": 0,
+    "ts": "2026-09-25T18:00:00Z"
+  }]
+}
+```
+
+This is an illustrative schema, not current market data. Also return the other outcomes and books for complete comparisons.
+
+- IDs must remain stable across price updates. Use common event, market and player IDs across books; a quote ID identifies one book/selection/line. Market IDs must identify the comparable market, not a book-specific quote.
+- Send `playerId` and `player` for player props. Give periods distinct values so a first-half market cannot match a full-game market.
+- Use consistent sport, bookmaker and side names. `soccer` and standard lowercase league names are normalized; `1x2` is treated as three-way. Full outcomes are needed: home/draw/away for three-way; declared field size for futures.
+- Use selection-perspective spread lines, e.g. home `-3.5`, away `+3.5`. `+100` is numeric `100` in JSON. Blank/missing lines are only suitable for markets that have no line.
+- Exchange entries need `exchange: true` and numeric available dollar `liquidity`. A complete depth ladder requires selection ID, price, available size and timestamp for each level; the current quote adapter only represents the supplied quote/liquidity records.
+- True stake constraints need max/min stake and exchange fee/commission information. The current calculators do not enforce book limits or execute wagers.
+- Send accurate `ts` values, even when prices do not move. Do not replace the observation timestamp with the time an HTTP response is delivered.
+
+## 2. DFS data and payouts
+
+Proposed routes: `GET /dfs/props` and `GET /dfs/payouts`.
+
+```json
+{
+  "dfs": [{
+    "id": "platform:event:player:market:line:side",
+    "sport": "NBA", "event": "Example Away vs Example Home",
+    "player": "Example Player", "market": "Points",
+    "line": 24.5, "side": "Over", "app": "PrizePicks",
+    "probability": 0.54, "ts": "2026-09-25T18:00:00Z"
+  }],
+  "paytables": { "PrizePicks": { "2": [0, 0, 3] } }
+}
+```
+
+Payout values are **illustrative**, not official current rules. Each array index is the exact hit count; the value is total return including stake. Supply actual rules by app, entry size and entry type (power/flex), plus boosts, reduced-payout picks, DNP/void/push handling and same-game restrictions. Distinct entry types need a confirmed schema and adapter; the basic workspace format stores payout arrays by app and size.
+
+Supply probabilities from a documented model or a complete matching sportsbook market. A DFS line alone does not provide a hit probability. Include probability source, model/version and observation time so uncertainty and freshness can be shown. Player/event IDs must match other feeds for sportsbook comparisons.
+
+## 3. Prediction contracts, depth and personal records
+
+Proposed routes: `GET /prediction/contracts`, `GET /prediction/orderbooks`, and, if account integration is wanted, `GET /prediction/positions` and `GET /prediction/trades`.
+
+Contract records need `id`, `sport`, `platform`, `event`, Yes `bid` and `ask` in cents (0–100), `last`, `volume`, `ts`, settlement time and contract rules. Order-book records need contract ID, side, price level, available quantity and observation timestamp. Clearly distinguish shares/contracts from dollars.
+
+Current local positions use `id`, `name`, `contractId`, `side` (`Yes`/`No`), `quantity`, and `entry` in cents. Trades use `id`, `trader`, `contractId`, `side`, `quantity`, `price`, and `ts`. Real account records require the user's account authorization; manual/imported records remain available. These are tracking inputs, not trading/execution endpoints.
+
+## 4. Historical results and event identity
+
+Proposed route: `GET /players/results` with sport/player/date filters and pagination for backfills.
+
+The current trends workspace expects `id`, `sport`, `player`, `market`, `game` (stable game ID), `date`, `line` and numeric `result`. Supply the underlying game statistics, player IDs, opponents, participation/minutes, event status and correction timestamps. Historical hit rates need the matching historical line or an explicitly selected comparison threshold; do not silently invent past lines. Correlation requires aligned game IDs.
+
+Use the existing `/matches` route to expose a stable event catalogue, or propose `/events`: sport, league, event ID, participant IDs/names, scheduled start, live/final/postponed status and period. Confirm how cancelled events and stat corrections are represented.
+
+## 5. Closing lines and settlement
+
+Proposed routes: `GET /odds/history` and `GET /odds/closing`. Return quote/selection/event/market/book IDs, period, line, odds, observed timestamp and the definition of the closing observation. Historical line movement before the page was opened also needs this source. A live price after kickoff is not a pregame closing line.
+
+The tracker already reads `/api/bets/catalog` and `/api/bets/game` through the app's separate game-data provider. It uses game IDs and structured legs to refresh results. Reuse that integration where coverage is sufficient. The EV feed needs an explicit mapping from its event/player/selection IDs to tracker IDs; matching names alone is insufficient.
+
+For settlement outside current coverage, supply final scores/stat values, completion/void/cancellation status, overtime inclusion, DNP rules and corrected-result versions. Personal tickets still need booked odds, stake, book, placement time and linked selections. Never infer a ticket or stake from a public odds feed. Book-specific parlay repricing and cash-outs require the actual book's returned amount or manual entry.
+
+## 6. Operational details to provide with the API
+
+1. **Schema:** OpenAPI file or sanitized sample success, empty and error responses for each supplied dataset. No additional copy of the API key is needed.
+2. **Coverage:** sports/leagues, bookmakers/exchanges/DFS apps, markets/periods, live coverage and historical date range. Confirm a real producer updates `/quotes`; `/scrape` remains reserved.
+3. **Delivery:** allowed polling interval, quota/rate limits, `429`/`Retry-After`, max response size and timeout. The app can request at 15/30/60 seconds; choose a rate the host supports. Subsecond delivery needs a stream/delta design and reconnect semantics.
+4. **Consistency:** ID stability, complete-snapshot semantics, removals/suspensions, timestamp timezone, corrections, and whether multi-book prices are captured together.
+5. **Errors/health:** status codes for invalid keys, unavailable upstream data, rate limiting and partial failures. `/status` should identify enabled datasets and the last successful observation for each.
+6. **Hosting:** the current local app must share the API host's network. A public Sportslab deployment needs a reachable authenticated HTTPS service and a deployed server bridge; a private LAN address alone cannot serve it.
+
+## App work completed independently of the missing datasets
+
+- Manual sync plus session-only opt-in refresh, with no automatic request on initial load.
+- Last successful sync and source-observation ages shown separately; expired live quotes are identified.
+- One request at a time, retry backoff, rate-limit delay, and pauses for hidden tabs/editing.
+- Saved prices retained on network/auth/config errors and malformed, duplicate-ID or partial snapshots.
+- Manual prices retained on sync; imported workspaces cannot be overwritten by an earlier in-flight request.
+- Movement history records actual price/line changes; the latest 5,000 API movement entries are retained locally. Manual history is retained separately.
+- Tool labels distinguish quote snapshots from DFS, prediction and results data.
+- Quote grouping uses sport, event, player, period and market identity to avoid comparing unrelated selections.
+
+Remaining adapters depend on confirmed schemas and sample responses. Verification against the real server remains pending by request.

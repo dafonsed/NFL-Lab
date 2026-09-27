@@ -156,3 +156,7 @@ Run `npm run evaluate:nfl` to reproduce the fixed historical evaluation. Product
 Open the **Live** tab at `/nfl/live` for a separate in-game workload model across eight player markets. It shows recorded stats, remaining production, projected regulation totals, and each player's exact weights. ESPN box scores refresh every 15 seconds while visible; prior workload uses completed nflverse games. Enter the current full-game sportsbook total manually to compare it with the projection. Stale inputs, unsupported game states, and expired lines are visibly withheld.
 
 Role shifts toward observed usage (up to 70% live); efficiency retains at least 80% historical weight; pace blends 65% historical / 35% live after five minutes. Score, clock, possession and pass/run mix adjust remaining opportunities. This is experimental and has no calibrated live betting probabilities. See [inputs, equations, limitations, and refresh policy](docs/nfl-live-method.md).
+
+## Development previews and deployment
+
+See [SITE-SYNC.md](SITE-SYNC.md) for the canonical frontend source, local previews, and the GitHub-to-Vercel release workflow.

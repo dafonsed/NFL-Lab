@@ -18,7 +18,7 @@ const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: sport === 'mlb'
 const storageKey = 'sports-lab-trends-watchlist-' + sport;
 let saved = [];
 try { const value = JSON.parse(localStorage.getItem(storageKey)); if (Array.isArray(value)) saved = value.map(String); } catch {}
-const state = { market: params.get('market') || defaults[sport], date: params.get('date') || today(), season: params.get('season'), week: params.get('week'), league: params.get('league') || 'eng.1', game: params.get('game') || (sport === 'wnba' ? 'all' : ''), search: '', sort: 'rate', window: '10', side: 'over', venue: 'all', posted: false, savedOnly: false, saved: new Set(saved), selected: params.get('researchPlayer'), manualLine: null, statMethod: 'average', profiles: [], board: null, catalog: null, count: 50 };
+const state = { market: params.get('market') || defaults[sport], date: params.get('date') || today(), season: params.get('season'), week: params.get('week'), league: params.get('league') || 'eng.1', game: params.get('game') || (sport === 'wnba' ? 'all' : ''), search: params.get('search') || '', sort: 'rate', window: '10', side: 'over', venue: 'all', posted: false, savedOnly: params.get('saved') === '1', saved: new Set(saved), selected: params.get('researchPlayer'), manualLine: null, statMethod: 'average', profiles: [], board: null, catalog: null, count: 50 };
 state.contextTab='matchup';
 state.filters=defaultTrendFilters();
 const boardOptions=(changes={})=>{const next={...state,...changes};return {...next,window:next.filters.sample,venue:next.filters.venue};};
@@ -37,6 +37,12 @@ function query(market = state.market) {
 }
 function updateUrl() {
   const q = query(); q.set('view', 'trends'); q.delete('sport');
+  if (state.savedOnly) q.set('saved', '1');
+  if (state.search) q.set('search', state.search);
+  document.querySelectorAll('[data-nav-section=watchlist],[data-nav-section=trends]').forEach(link => {
+    const active = link.dataset.navSection === (state.savedOnly ? 'watchlist' : 'trends');
+    if (active) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
+  });
   if (state.selected) q.set('researchPlayer',state.selected);
   if (sport === 'nfl' || sport === 'mlb') { if (state.game) q.set('game', state.game); }
   history.replaceState(null, '', '/' + sport + '?' + q);
@@ -202,13 +208,15 @@ function openBreakdown() {
   openPlayerResearch({ profile, loadDetails });
 }
 $('#td-week-label').hidden = sport !== 'nfl'; $('#td-date-label').hidden = sport === 'nfl'; $('#td-league-label').hidden = sport !== 'soccer';
+$('#td-search').value = state.search;
+$('#td-saved').setAttribute('aria-pressed', String(state.savedOnly));
 $('#td-date').value = state.date; $('#td-league').value = state.league;
 if (sport === 'nfl') marketButtons(NFL_MARKETS);
 $('#trend-refresh').addEventListener('click', () => load({ force: true }));
-$('#td-search').addEventListener('input', e => { state.search = e.target.value; state.count = 50; render(); });
+$('#td-search').addEventListener('input', e => { state.search = e.target.value; state.count = 50; updateUrl(); render(); });
 $('#td-sort').addEventListener('change', e => { state.sort = e.target.value; render(); });
 $('#td-posted').addEventListener('click', () => { state.posted = !state.posted; render(); });
-$('#td-saved').addEventListener('click', () => { state.savedOnly = !state.savedOnly; render(); });
+$('#td-saved').addEventListener('click', () => { state.savedOnly = !state.savedOnly; updateUrl(); render(); });
 $('#td-week').addEventListener('change', e => { [state.season, state.week] = e.target.value.split(':'); state.game = ''; load(); });
 $('#td-date').addEventListener('change', e => { if (!e.target.value) return; state.date = e.target.value; state.game = sport === 'wnba' ? 'all' : ''; load(); });
 $('#td-league').addEventListener('change', e => { state.league = e.target.value; state.game = ''; load(); });

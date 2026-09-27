@@ -352,6 +352,55 @@ html:has(body.market-guide-site){background:#080d12;color-scheme:dark}
 .market-guide-site .market-article .article-pagination{border-color:#20313e}
 .market-guide-site .edu-footer{border-color:#20313e;background:#080d12;color:#748592}
 .market-guide-site .edu-footer a{color:#a8b6c0}
+
+/* Shared editorial directory style for location guide collections */
+.market-guide-site .market-hub{width:min(100% - 64px,1280px)}
+.market-guide-site .market-library-heading{max-width:1200px;margin:38px 0 26px}
+.market-guide-site .market-library-heading h1{margin:12px 0;color:#eaf0f4;font-size:clamp(38px,4.4vw,52px);letter-spacing:-.06em;line-height:1.03}
+.market-guide-site .market-library-heading>p{max-width:780px;margin:0;color:#bdcbd3;font-size:16px;line-height:1.65}
+.market-guide-site .market-library-heading .market-library-note{margin-top:12px;color:#748592;font-size:12px}
+.market-guide-site .market-library-heading>a{display:inline-flex;gap:8px;margin-top:18px;color:#92e1e9;font-size:13px;font-weight:700;text-decoration:none}
+.market-guide-site .market-library-heading>a:hover{text-decoration:underline}
+.market-guide-site .market-hub .market-method{max-width:960px;margin:0 auto 33px;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.market-guide-site .market-hub .market-method h2{margin:0 0 8px;font-size:20px}
+.market-guide-site .market-hub .market-method p{font-size:13px;line-height:1.7}
+.market-guide-site .market-category-tabs{display:flex;gap:22px;overflow-x:auto;border-bottom:1px solid #20313e;scrollbar-width:thin}
+.market-guide-site .market-category-tabs a{display:flex;align-items:center;gap:7px;min-height:46px;color:#a8b6c0;font-size:12px;text-decoration:none;white-space:nowrap}
+.market-guide-site .market-category-tabs a:hover{color:#92e1e9}
+.market-guide-site .market-category-tabs a span{color:#748592;font-size:10px}
+.market-guide-site .market-library-toolbar{display:flex;align-items:center;gap:15px;padding:18px 0 20px}
+.market-guide-site .market-library-toolbar .market-search-label{margin:0;color:#748592;font-size:11px}
+.market-guide-site .market-search-wrap{display:flex;align-items:center;gap:10px;width:min(100%,410px);min-height:42px;margin-left:auto;padding:0 11px;border:1px solid #2a404c;border-radius:5px;background:#0c151b;color:#a8b6c0}
+.market-guide-site .market-search-wrap:focus-within{outline:2px solid #92e1e9;outline-offset:2px}
+.market-guide-site .market-search-wrap>span{font-size:19px;line-height:1}
+.market-guide-site .market-search-wrap .market-search{width:auto;height:auto;flex:1;min-width:0;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;color:#eaf0f4;font:13px var(--edu-font)}
+.market-guide-site .market-search-wrap .market-search::placeholder{color:#748592}
+.market-guide-site .market-search-wrap kbd{padding:2px 5px;border:1px solid #2c414c;border-radius:3px;color:#748592;font:10px var(--edu-font)}
+.market-guide-site .market-result-count{color:#748592;font-size:11px}
+.market-guide-site .market-result-count strong{color:#eaf0f4;font-size:14px}
+.market-guide-site .market-hub .market-directory{padding:23px 0 34px}
+.market-guide-site .market-hub .guide-list-heading{margin-bottom:20px;padding-bottom:13px;border-bottom:1px solid #20313e}
+.market-guide-site .market-hub .guide-list-heading h2{font-size:25px}
+.market-guide-site .market-hub .guide-list-heading>span{padding:0;border:0;background:transparent;color:#748592;font-size:11px}
+.market-guide-site .market-state-grid,.market-guide-site .market-region-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:35px 27px;margin:0;padding:0;border:0;list-style:none}
+.market-guide-site .market-hub .market-region-section{margin:28px 0 35px}
+.market-guide-site .market-hub .market-region-section h2{margin:0 0 15px;font-size:17px}
+.market-guide-site .market-hub .market-guide-card{display:flex;min-width:0;min-height:0;flex-direction:column;align-items:flex-start;gap:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;color:inherit;text-decoration:none;transition:none}
+.market-guide-site .market-hub .market-guide-card:hover{transform:none;border:0;background:transparent;color:inherit;box-shadow:none}
+.market-guide-site .market-hub .market-guide-art{display:block;width:100%;aspect-ratio:1.62;overflow:hidden;margin-bottom:13px;border:1px solid #243b48;border-radius:6px;background-color:#12212b;background-image:url("/assets/longform-editorial-sprite.png");background-repeat:no-repeat;background-size:206% 206%;transition:filter .18s ease,transform .18s ease}
+.market-guide-site .market-hub .market-guide-card:hover .market-guide-art{filter:brightness(1.12);transform:translateY(-2px)}
+.market-guide-site .market-hub .market-guide-card strong{margin:1px 0 5px;color:#eaf0f4;font-size:21px;font-weight:680;letter-spacing:-.035em;line-height:1.25}
+.market-guide-site .market-hub .market-guide-card:hover strong{color:#92e1e9}
+.market-guide-site .market-hub .market-guide-card small{color:#a8b6c0;font-size:12px;line-height:1.55}
+.market-guide-site .market-hub .market-state-status{margin-bottom:8px}
+.market-guide-site .market-hub .market-card-link{display:flex;width:100%;justify-content:space-between;gap:8px;margin-top:auto;padding-top:12px;color:#92e1e9;font-size:11px;font-weight:650}
+.market-guide-site .market-hub .market-directory.market-canada>p{max-width:900px;color:#a8b6c0;font-size:13px;line-height:1.65}
+.market-guide-site .market-hub .market-no-results{margin:0;padding:22px 0;color:#a8b6c0;font-size:13px}
+.market-guide-site .market-hub .editorial-note{margin:20px 0 45px}
+.market-guide-site .market-hub .market-guide-card[hidden]{display:none}
+@media(max-width:800px){.market-guide-site .market-hub{width:min(100% - 36px,1280px)}.market-guide-site .market-library-heading{margin:31px 0 23px}.market-guide-site .market-state-grid,.market-guide-site .market-region-cards{gap:28px 18px}}
+@media(max-width:560px){.market-guide-site .market-hub{width:min(100% - 32px,1280px)}.market-guide-site .market-library-heading{margin:26px 0 23px}.market-guide-site .market-library-heading h1{font-size:39px}.market-guide-site .market-library-heading>p{font-size:14px}.market-guide-site .market-hub .market-method h2{font-size:18px}.market-guide-site .market-hub .market-method p{font-size:12px}.market-guide-site .market-library-toolbar{flex-wrap:wrap;gap:11px}.market-guide-site .market-library-toolbar .market-search-label{flex:1}.market-guide-site .market-search-wrap{order:3;flex-basis:100%;width:100%;margin-left:0}.market-guide-site .market-result-count{margin-left:auto}.market-guide-site .market-state-grid,.market-guide-site .market-region-cards{grid-template-columns:1fr;gap:26px}.market-guide-site .market-hub .market-guide-art{aspect-ratio:1.58}.market-guide-site .market-hub .market-guide-card strong{font-size:20px}.market-guide-site .market-hub .market-region-section{margin:24px 0 30px}}
+@media(prefers-reduced-motion:reduce){.market-guide-site .market-guide-art{transition:none}}
 .market-guide-site .market-contents{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 17px;padding:14px 16px;border:1px solid #263945;border-radius:11px;background:#0d171e}
 .market-guide-site .market-contents strong{margin-right:3px;color:#dce6ec;font-size:11px;letter-spacing:.04em}
 .market-guide-site .market-contents a{padding:5px 9px;border:1px solid #293e49;border-radius:999px;color:#a9c7ca;font-size:10px;font-weight:650;text-decoration:none}

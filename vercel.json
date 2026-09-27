@@ -3,7 +3,7 @@
   "functions": {
     "server.mjs": {
       "maxDuration": 300,
-      "includeFiles": "{public,lib/artifacts}/**"
+      "includeFiles": "{public,lib/artifacts,docs}/**"
     }
   },
   "crons": [

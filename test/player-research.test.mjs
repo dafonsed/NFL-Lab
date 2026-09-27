@@ -90,7 +90,7 @@ test('opponent tables distinguish team and position-group totals and omit missin
 test('every sport exposes Trends and Dev mode, and changing sport preserves Trends', () => {
   for (const sport of ['nfl', 'mlb', 'nba', 'wnba', 'nhl', 'soccer']) {
     const url = new URL(`https://example.com/${sport}?view=trends`), $ = load(siteHeader(url));
-    assert.equal(siteContext(url).section, 'trends'); assert.equal($('.site-navigation [aria-current]').text(), 'Trends');
+    assert.equal(siteContext(url).section, 'trends'); assert.equal($('.site-navigation [aria-current]').text(), 'Player trends');
     assert.equal($('[data-dev-toggle]').length, 1); assert.ok($('.site-sports a').toArray().every(a => $(a).attr('href').endsWith('?view=trends')));
   }
   const html = renderSitePage('<html><head></head><body><!--site-header--></body></html>', new URL('https://example.com/nfl'));

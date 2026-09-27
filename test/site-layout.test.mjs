@@ -32,12 +32,12 @@ test('sport tool capabilities prevent cross-sport pages and unsupported destinat
     assert.equal(keys.includes('simulation'), ['nfl','mlb','nba','wnba'].includes(sport));
     for (const section of ['research','ev','trends','live','simulation','performance','paper','home','bets']) {
       const $ = load(siteHeader(new URL(sportDestination(sport,section), 'http://localhost')));
-      if(section === 'ev') {
-        assert.equal($('.ev-primary-nav a').first().attr('href'), '/research?sport=' + sport);
+      if(['ev','bets'].includes(section)) {
+        assert.equal($('.ev-primary-nav a').first().attr('href'), '/ev/dashboard?sport=' + sport);
         assert.equal($('.ev-primary-nav a[href="/ev?sport='+sport+'#odds"]').length,1);
       } else {
         assert.equal($('.site-sports [aria-current]').text(), sport === 'soccer' ? 'Soccer' : sport.toUpperCase());
-        assert.equal($('.site-overview-link').attr('href'), '/research?sport=' + sport);
+        assert.equal($('.site-overview-link').attr('href'), (section === 'trends' ? '/trends' : '/models') + '?sport=' + sport);
       }
       if(sport !== 'nfl') assert.equal($('.site-navigation a[href="/performance"]').length,0);
       if(!['nfl','mlb'].includes(sport)) assert.equal($('.site-navigation a[href^="/paper"]').length,0);
@@ -50,13 +50,14 @@ test('sport tool capabilities prevent cross-sport pages and unsupported destinat
   assert.equal(sportDestination('invalid','research'), '/research');
 });
 
-test('mobile navigation keeps Model and Trends separate and preserves the selected sport', () => {
+test('mobile trends navigation keeps its watchlist and product switcher sport-aware', () => {
   for(const sport of ['nfl','mlb','nba','wnba','nhl','soccer']) {
     const $=load(siteHeader(new URL('http://localhost/'+sport+'?view=trends')));
-    assert.equal($('.mobile-navigation [data-nav-section=research]').text(),'Model');
-    assert.equal($('.mobile-navigation [data-nav-section=research]').attr('href'),'/'+sport);
-    assert.equal($('.mobile-navigation [aria-current]').text(),'Trends');
-    assert.equal($('.site-tracker').attr('href'),'/bets?sport='+sport);
+    assert.equal($('.mobile-navigation [data-nav-section=watchlist]').text(),'Watchlist');
+    assert.equal($('.mobile-navigation [data-nav-section=watchlist]').attr('href'),'/'+sport+'?view=trends&saved=1');
+    assert.equal($('.mobile-navigation [aria-current]').text(),'Player trends');
+    assert.equal($('.site-product-menu [data-product=models]').attr('href'),'/models?sport='+sport);
+    assert.equal($('.site-product-menu [data-product=ev]').attr('href'),'/ev/dashboard?sport='+sport);
   }
 });
 
@@ -67,8 +68,9 @@ test('EV workbench keeps sport context and loads its own page assets', async () 
   const $ = load(renderSitePage(template,url));
   assert.equal($('.ev-site-brand').text().trim(),'SPORTSLAB');
   assert.equal($('.ev-primary-nav a[href="/ev?sport=wnba#fantasy"]').text(),'DFS Props');
-  assert.equal($('script[src="/ev.js?v=14"]').length,1);
-  assert.equal($('link[rel="stylesheet"]').last().attr('href'),'/ev.css?v=15');
+  assert.equal($('script[src^="/ev.js?"]').length,1);
+  assert.equal($('link[rel="stylesheet"][href^="/ev.css?"]').length,1);
+  assert.equal($('link[rel="stylesheet"]').last().attr('href'),'/ev-more-tools.css?v=1');
 });
 
 test('overview shortcuts use the selected sport before scripts or data requests finish', async () => {
@@ -84,7 +86,7 @@ test('overview shortcuts use the selected sport before scripts or data requests 
 const routes = [
   ['/nfl?view=games', 'index', '/nfl/live'], ['/nfl/', 'index', '/nfl/live'], ['/mlb', 'mlb', '/mlb/live'], ['/nba', 'sports', '/nba/live'], ['/wnba/', 'sports', '/wnba/live'],
   ['/nhl', 'sports', null], ['/soccer', 'sports', null], ['/nfl/live', 'live', '/nfl/live'], ['/mlb/live', 'live-sports', '/mlb/live'],
-  ['/nba/live', 'live-sports', '/nba/live'], ['/wnba/live', 'live-sports', '/wnba/live'], ['/bets', 'bets', '/live'], ['/performance', 'performance', '/nfl/live'],
+  ['/nba/live', 'live-sports', '/nba/live'], ['/wnba/live', 'live-sports', '/wnba/live'], ['/performance', 'performance', '/nfl/live'],
   ['/paper', 'paper', '/nfl/live'], ['/paper?sport=mlb', 'paper', '/mlb/live'], ['/live', 'live-hub', '/live']
 ];
 
@@ -105,13 +107,13 @@ test('public homepage is separate from the sport-aware research workspace', asyn
   assert.equal($('#hero-tracker').length, 1);
   assert.equal($('#home-pricing-grid').length, 1);
   assert.equal($('#home-review-viewport').length, 1);
-  assert.equal($('script[src="/landing.js?v=9"]').length, 1);
-  assert.equal($('link[rel="stylesheet"]').last().attr('href'), '/landing-nav.css?v=5');
+  assert.equal($('script[src="/landing.js?v=11"]').length, 1);
+  assert.equal($('link[rel="stylesheet"]').last().attr('href'), '/landing-product.css?v=2');
   const workspace = new URL('http://localhost/research?sport=wnba');
   assert.deepEqual(siteContext(workspace), { sport: 'wnba', section: 'home' });
   const nav = load(siteHeader(workspace));
   assert.equal(nav('.site-sports [aria-current="page"]').attr('href'), '/research?sport=wnba');
-  assert.equal(nav('.site-overview-link').attr('href'), '/research?sport=wnba');
+  assert.equal(nav('.site-overview-link').attr('href'), '/models?sport=wnba');
   assert.equal(nav('.workspace-home-link').length, 0, 'No duplicate overview shortcut');
   assert.equal(nav('.site-brand').attr('href'), '/');
 });
@@ -133,13 +135,13 @@ test('every page renders the same working navigation and Live link before any Ja
     assert.equal($('.site-live-link').length, target ? 1 : 0, route);
     assert.equal($('.site-live-link').attr('href') || null, target, route);
     const sport=siteContext(new URL(route,'http://localhost')).sport;
-    const labels=!sport?['Live sports']:['Model','EV tools','Trends',...(['nfl','mlb','nba','wnba'].includes(sport)?['Live games','Simulation']:[]),...(sport==='nfl'?['Performance']:[]),...(['nfl','mlb'].includes(sport)?['Paper returns']:[])];
+    const labels=!sport?['Live sports']:['Projections',...(['nfl','mlb','nba','wnba'].includes(sport)?['Live games','Simulation']:[]),...(sport==='nfl'?['Performance']:[]),...(['nfl','mlb'].includes(sport)?['Paper returns']:[])];
     assert.deepEqual($('.site-navigation a').map((_, a) => $(a).text().trim()).get(), labels, route);
     assert.ok($('.site-navigation a').toArray().every(a => $(a).attr('aria-label')), 'Icon rail links retain accessible labels');
     assert.deepEqual($('.site-sports a').map((_, a) => $(a).text()).get(), ['NFL', 'MLB', 'NBA', 'WNBA', 'NHL', 'Soccer'], route);
-    assert.equal($('.site-tracker').attr('href'), '/bets'+(sport?'?sport='+sport:''));
+    assert.equal($('.site-product-menu [data-product=ev]').attr('href'), '/ev/dashboard?sport='+(sport||'all'));
     assert.equal($('body.site-layout').length, 1); assert.equal($('main#main').length, 1);
-    assert.equal($('.page-heading h1,.tracker-page-heading h1').length, 1); assert.equal($('link[rel="stylesheet"]').last().attr('href'), '/dashboard-unified.css?v=2');
+    assert.equal($('.page-heading h1,.tracker-page-heading h1').length, 1); assert.equal($('link[rel="stylesheet"][href="/dashboard-unified.css?v=2"]').length, 1);
     assert.equal($('body.ui-theme').length,1,'Every workspace uses the shared control theme');
     assert.equal(html.includes('<!--site-header-->'), false);
     const ids = $('[id]').map((_, e) => $(e).attr('id')).get(); assert.equal(new Set(ids).size, ids.length, `Duplicate IDs on ${route}`);

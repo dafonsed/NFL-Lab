@@ -19,17 +19,19 @@ if (grid && cycle && dialog) {
     'Arbitrage Feed',
   ];
   const plans = [
-    { name: 'Premium', monthly: 19.99, included: 6, action: 'Start Your Free Trial', tone: 'mint' },
-    { name: 'Premium+', monthly: 29.99, included: 8, action: 'Get Premium+ Early Bird Rate', tone: 'cyan', featured: true },
-    { name: 'Pro', monthly: 79.99, included: 13, action: 'Get Pro', tone: 'violet' },
+    { name: 'Premium', monthly: 19.99, included: 6, action: 'Preview Premium' },
+    { name: 'Premium+', monthly: 29.99, included: 8, action: 'Preview Premium+', featured: true },
+    { name: 'Pro', monthly: 79.99, included: 13, action: 'Preview Pro' },
   ];
   const planCard = (plan, index) => `<article class="home-plan${plan.featured ? ' is-featured' : ''}">
-    <div class="home-plan-name"><span class="home-plan-glyph is-${plan.tone}" aria-hidden="true">◆</span><h3>${plan.name}</h3></div>
+    <div class="home-plan-name"><h3>${plan.name}</h3>${plan.featured ? '<span>More research tools</span>' : ''}</div>
+    <div class="home-plan-body">
     <div class="home-plan-price"><span>$</span><strong data-plan-price="${index}">${plan.monthly.toFixed(2)}</strong><small>/mo</small></div>
     <p class="home-plan-billing" data-plan-billing="${index}">&nbsp;</p>
-    <h4>What do I get?</h4>
-    <ul class="home-plan-features">${features.map((feature, featureIndex) => `<li class="${featureIndex < plan.included ? 'is-included' : 'is-excluded'}"><span aria-hidden="true">✓</span>${feature}</li>`).join('')}</ul>
+    <h4>${index ? `Everything in ${plans[index - 1].name}, plus` : 'Your research essentials'}</h4>
+    <ul class="home-plan-features">${features.slice(index ? plans[index - 1].included : 0, plan.included).map(feature => `<li class="is-included"><span aria-hidden="true">✓</span>${feature}</li>`).join('')}</ul>
     <button class="home-plan-action" type="button" data-plan-select="${index}">${plan.action}</button>
+    </div>
   </article>`;
 
   grid.innerHTML = plans.map(planCard).join('');
@@ -47,7 +49,11 @@ if (grid && cycle && dialog) {
   });
 
   grid.addEventListener('click', event => {
-    if (event.target.closest('[data-plan-select]')) dialog.showModal();
+    const button = event.target.closest('[data-plan-select]');
+    if (button) {
+      dialog.querySelector('#plan-dialog-title').textContent = plans[Number(button.dataset.planSelect)].name + ' plan preview';
+      dialog.showModal();
+    }
   });
   dialog.querySelector('[data-plan-close]').addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });

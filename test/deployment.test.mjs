@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 
 test('Vercel can import the default server without starting a listener or background sync', async () => {
-  const script = `
+  const script = String.raw`
     import assert from 'node:assert/strict';
     import path from 'node:path';
     import os from 'node:os';
+    import { load } from 'cheerio';
     import server from './server.mjs';
     import { DATA_DIR } from './lib/providers.mjs';
     assert.equal(server.listening, false);
@@ -43,7 +44,27 @@ test('Vercel can import the default server without starting a listener or backgr
       assert.equal((await fetch(base+'/performance')).status,200);
       assert.equal((await fetch(base+'/forecast.css')).status,200);
       const betsPage = await fetch(base+'/bets');
-      assert.equal(betsPage.status,200); assert.match(await betsPage.text(), /My picks/);
+      assert.equal(betsPage.status,200); assert.match(await betsPage.text(), /Bet tracker/i);
+      assert.equal(new URL(betsPage.url).pathname, '/ev/tracker');
+      const assets = new Set();
+      for (const route of ['/ev?sport=nfl','/ev/dashboard?sport=nfl','/ev/tracker?sport=nfl']) {
+        const response=await fetch(base+route); assert.equal(response.status,200,route);
+        const $=load(await response.text());
+        assert.equal($('[data-more-tool]').length,12,route);
+        $('script[src],link[rel="stylesheet"]').each((_,element)=>assets.add(new URL($(element).attr('src')||$(element).attr('href'),base).href));
+      }
+      for (const asset of assets) {
+        const response=await fetch(asset); assert.equal(response.status,200,asset);
+        const content=await response.text(), type=response.headers.get('content-type');
+        if (new URL(asset).pathname.endsWith('.js')) {
+          assert.match(type,/javascript/,asset);
+          for (const match of content.matchAll(/(?:\bfrom\s*|\bimport\s*)(['"])([^'"]+)\1/g)) {
+            if(match[2].startsWith('.')||match[2].startsWith('/')) assets.add(new URL(match[2],asset).href);
+          }
+        } else assert.match(type,/css/,asset);
+      }
+      const requirements=await fetch(base+'/ev-api-requirements.md'); assert.equal(requirements.status,200);
+      assert.match(requirements.headers.get('content-type'),/text\/markdown/);
       for (const asset of ['/bets/', '/bets.js', '/bet-utils.js', '/bet-legs.js', '/bet-editor.js', '/bets.css']) assert.equal((await fetch(base+asset)).status,200,asset);
       assert.equal((await fetch(base+'/api/bets/catalog?sport=invalid&date=2026-09-22')).status,400);
       assert.equal((await fetch(base+'/api/bets/game?sport=wnba&date=2026-09-22&game=invalid')).status,400);
@@ -57,7 +78,7 @@ test('Vercel can import the default server without starting a listener or backgr
       assert.equal((await fetch(base+'/site-layout.css')).status,200);
       for (const route of ['/nfl/','/mlb/','/nba/','/wnba/','/nhl/','/soccer/','/bets/','/performance','/paper','/live','/live/']) {
         const page=await fetch(base+route);assert.equal(page.status,200,route);
-        const html=await page.text();if(!['/nhl','/nhl/','/soccer','/soccer/'].includes(route))assert.match(html,/class="site-live-link|class="site-nav-link site-live-link/);assert.ok(html.includes('href="/site-layout.css"'));
+        const html=await page.text();if(!['/nhl','/nhl/','/soccer','/soccer/','/bets/'].includes(route))assert.match(html,/class="site-live-link|class="site-nav-link site-live-link/);assert.ok(html.includes('href="/site-layout.css"'));
         assert.equal(html.includes('<!--site-header-->'),false);
       }
       assert.equal((await fetch(base+'/api/nfl/live?game=invalid')).status,400);

@@ -1,3 +1,5 @@
+import './trends-controls.js';
+
 const money = value => Number.isFinite(value) ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(value) : '—';
 const tone = value => !Number.isFinite(value) || value === 0 ? 'neutral' : value > 0 ? 'positive' : 'negative';
 const percent = value => Number.isFinite(value) ? `${(value * 100).toFixed(2)}%` : '—';
@@ -23,6 +25,8 @@ document.querySelectorAll('[data-article-widget="comparison"]').forEach(widget =
       inputs[i].setAttribute('aria-invalid', String(!validAmerican(odds)));
       if (validAmerican(odds) && (best < 0 || odds > current[best])) best = i;
     });
+    widget.querySelector('[data-comparison-source]').textContent = best < 0 ? '' : rows[best].querySelector('label').textContent;
+    widget.querySelector('[data-comparison-best]').textContent = best < 0 ? '—' : (current[best] > 0 ? '+' : '') + current[best];
     rows.forEach((row, i) => {
       row.dataset.best = String(i === best);
       row.hidden = bestOnly && i !== best;
@@ -148,10 +152,12 @@ document.querySelectorAll('[data-article-widget="contract-converter"]').forEach(
       fields.fractional.setAttribute('aria-invalid', String(!Number.isFinite(probability) || probability <= 0 || probability >= 1));
     }
     if (!Number.isFinite(probability) || probability <= 0 || probability >= 1) {
+      widget.querySelector('[data-converter-probability]').textContent = '—';
       note.textContent = 'Enter a valid price: 1–99 cents, decimal odds above 1, valid American odds, or a positive fraction.';
       editing = false;
       return;
     }
+    widget.querySelector('[data-converter-probability]').textContent = percent(probability);
     fields.cents.value = String(Math.max(1, Math.min(99, Math.round(probability * 100))));
     fields.decimal.value = (1 / probability).toFixed(2);
     const american = probability < 0.5 ? Math.round(100 * (1 - probability) / probability) : -Math.round(100 * probability / (1 - probability));

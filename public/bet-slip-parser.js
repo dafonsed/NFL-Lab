@@ -1,3 +1,4 @@
+import { detectPlatform } from './platform-catalog.js';
 // Receipt text is a draft, never a source for automatic settlement or game IDs.
 const clean = text => String(text || '').normalize('NFKC').replace(/[−–—]/g, '-').replace(/[’‘]/g, "'").replace(/\r/g, '').slice(0, 24000);
 const validDate = text => /^\d{4}-\d{2}-\d{2}$/.test(text) && Number.isFinite(Date.parse(text)) && new Date(text).toISOString().slice(0, 10) === text;
@@ -31,7 +32,7 @@ function selectionName(lines, index, prefix) {
 export function parseBetSlip(rawText) {
   const text=clean(rawText),lines=text.split('\n').map(line=>line.trim()).filter(Boolean),issues=[];
   const bookPatterns=[['FanDuel',/fan\s*duel/i],['DraftKings',/draft\s*kings/i],['BetMGM',/bet\s*mgm/i],['bet365',/bet\s*365/i],['Caesars',/caesars/i],['ESPN BET',/espn\s*bet/i],['Fanatics',/fanatics/i],['Hard Rock Bet',/hard\s*rock/i],['BetRivers',/bet\s*rivers/i],['Bovada',/bovada/i]];
-  const book=bookPatterns.find(([,pattern])=>pattern.test(text))?.[0]||'';
+  const book=detectPlatform(text) || bookPatterns.find(([,pattern])=>pattern.test(text))?.[0] || '';
   const sports=[...new Set([...text.matchAll(/\b(NFL|WNBA|NBA|MLB|NHL|Soccer)\b/gi)].map(match=>match[1].toLowerCase()==='soccer'?'Soccer':match[1].toUpperCase()))];
   const sport=sports.length===1?sports[0]:'Other',date=receiptDate(text);
   const amountMatch=text.match(/\b(?:total\s+(?:stake|wager)|stake|wager(?: amount)?|bet amount|amount wagered|risk)\s*:?\s*\$?\s*(\d[\d,]*(?:\.\d{1,2})?)/i);

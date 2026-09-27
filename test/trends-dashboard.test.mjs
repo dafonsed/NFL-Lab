@@ -23,8 +23,9 @@ test('research overview opens with six sports and accessible loading state', asy
 test('main navigation preserves the current sport and the brand returns to the public homepage', () => {
   for (const sport of ['nfl', 'mlb', 'nba', 'wnba', 'nhl', 'soccer']) {
     const $ = load(siteHeader(new URL(`http://localhost/${sport}?view=trends`)));
-    assert.deepEqual($('.site-navigation a[data-nav-section="research"],.site-navigation a[data-nav-section="trends"]').map((_, a) => $(a).attr('href')).get(), ['/' + sport, '/' + sport + '?view=trends']);
-    assert.equal($('.site-navigation [aria-current]').text(), 'Trends');
+    assert.deepEqual($('.site-navigation a[data-nav-section="trends"],.site-navigation a[data-nav-section="watchlist"]').map((_, a) => $(a).attr('href')).get(), ['/' + sport + '?view=trends', '/' + sport + '?view=trends&saved=1']);
+    assert.equal($('.site-product-menu [data-product=models]').attr('href'), '/models?sport=' + sport);
+    assert.equal($('.site-navigation [aria-current]').text(), 'Player trends');
     assert.equal($('.site-brand').attr('href'), '/');
   }
 });

@@ -12,7 +12,7 @@ These are favicon-sized brand marks retrieved September 24, 2026 through Google'
 | Fanatics Sportsbook | betfanatics.com |
 | FanDuel | fanduel.com |
 | Hard Rock Bet | hardrock.bet |
-| theScore Bet | thescore.bet |
+| theScore Bet | Publisher artwork from the [official App Store listing](https://apps.apple.com/us/app/thescore-bet-sportsbook-casino/id6463805689), retrieved September 25, 2026; replaces the favicon with opaque white corners. |
 | Bally Bet | ballys.com |
 | Desert Diamond Sports | betdesertdiamond.com |
 | PrizePicks | prizepicks.com |
@@ -31,3 +31,5 @@ These are favicon-sized brand marks retrieved September 24, 2026 through Google'
 | BettorEdge | bettoredge.com |
 | Kalshi | kalshi.com |
 | Polymarket | polymarket.com |
+
+| Pinnacle | pinnacle.com (favicon retrieved September 25, 2026) |

@@ -57,7 +57,7 @@ test('saved records round-trip; unreadable data is preserved and storage errors 
   assert.throws(() => readBets(storage));
   writeBets(storage, [...bets, ...bets]);
   assert.throws(() => readBets(storage));
-  assert.throws(() => writeBets({ setItem() { throw new Error('Quota exceeded'); } }, bets), /Quota/);
+  assert.throws(() => writeBets({ getItem() { return null; }, setItem() { throw new Error('Quota exceeded'); } }, bets), /Quota/);
 });
 
 test('CSV preserves quotes, notes, and empty open results and neutralizes formulas', () => {
@@ -65,6 +65,6 @@ test('CSV preserves quotes, notes, and empty open results and neutralizes formul
   assert.ok(csv.includes('"\'=HYPERLINK(""example"")"'));
   assert.ok(csv.includes('"First leg\nSecond leg, ""under"""'));
   assert.ok(csv.includes('"Open","",""'));
-  assert.ok(csv.includes(',-110,25,"Open"'));
+  assert.ok(csv.includes(',-110,"","",25,"Open"'));
   assert.ok(betsCsv([ticket({ status: 'lost' })]).includes(',"Lost",0,-25,'));
 });

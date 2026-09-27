@@ -5,7 +5,7 @@ import { exampleWorkspace } from '../public/ev-demo.js';
 
 test('market math calculates no-vig EV from other complete books', () => {
   const state = exampleWorkspace();
-  const offer = state.quotes.find(q => q.book === 'Book A' && q.market === 'Game total' && q.line === 44.5 && q.side === 'Over');
+  const offer = state.quotes.find(q => q.book === 'DraftKings' && q.market === 'Game total' && q.line === 44.5 && q.side === 'Over');
   const group = state.quotes.filter(q => q.event === offer.event && q.market === offer.market && q.line === offer.line && !q.live);
   assert.equal(decimal(115), 2.15);
   assert.equal(implied(-110).toFixed(6), (110/210).toFixed(6));
@@ -72,8 +72,8 @@ test('movement alerts identify a new line snapshot', () => {
 
 test('sharp screen returns only the best sportsbook price that improves on the exchange', () => {
   const matches = sharpMatches(exampleWorkspace().quotes,1000);
-  const prop = matches.find(x => x.exchange.market === 'Example QB passing yards' && x.exchange.side === 'Over');
-  assert.equal(prop.sportsbook.book,'Book B');
+  const prop = matches.find(x => x.exchange.market === 'Kyler Murray passing yards' && x.exchange.side === 'Over');
+  assert.equal(prop.sportsbook.book,'bet365');
   assert.ok(prop.improvement > 0);
   assert.ok(matches.every(x => !x.opposite || decimal(x.sportsbook.odds) > decimal(x.opposite.odds)));
 });

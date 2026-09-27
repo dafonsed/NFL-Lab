@@ -22,7 +22,7 @@ const endpointGroups = [
   ] },
   { name: 'Records', endpoints: [
     ['Prediction traders', '/ev#prediction'],
-    ['Bet tracker & CLV', '/ev#tracker'],
+    ['Bet tracker & CLV', '/ev/tracker'],
     ['Player prop trends', '/ev#trends'],
     ['Movement & price alerts', '/ev#line-alerts']
   ] }
