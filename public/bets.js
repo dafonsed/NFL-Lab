@@ -7,7 +7,7 @@ import { LEG_RESULTS, legState, ticketSettlement, gameKey, refreshTicket, format
 import { icon } from './ui-icons.js';
 import { BetDashboard } from './bet-dashboard-v3.js?v=5';
 import { BetSlipImport } from './bet-slip-import.js';
-import { inlineBetCard as betComparisonCard, bindInlineComparison as bindComparison } from './bet-inline.js?v=3';
+import { inlineBetCard as betComparisonCard, bindInlineComparison as bindComparison } from './bet-inline.js?v=bet-comparison-polish-1';
 import { sampleBets } from './bet-sample-data.js?v=3';
 
 const $ = selector => document.querySelector(selector);
