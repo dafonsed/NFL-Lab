@@ -1,12 +1,12 @@
-/* Shared long-form reading layout: Sportslab ink, cyan, and editorial paper artwork. */
+/* Shared long-form reading layout: VisualOdds ink, cyan, and editorial paper artwork. */
 :root{
-  --longform-ink:#080d12;
-  --longform-panel:#101820;
+  --longform-ink:#000000;
+  --longform-panel:#141416;
   --longform-line:#20313e;
   --longform-copy:#c5d0d7;
   --longform-muted:#92a1ab;
-  --longform-cyan:#92e1e9;
-  --longform-cyan-deep:#78c7d4;
+  --longform-cyan:#b4e0e6;
+  --longform-cyan-deep:#76cbd2;
 }
 html{scroll-padding-top:104px}
 .article-reading-time{color:#a7cbd0;font-weight:600}
@@ -204,8 +204,8 @@ html{scroll-padding-top:104px}
 .market-guide-site .market-article-page .breadcrumbs{width:min(100%,960px);margin:0 auto;color:#748592}
 .market-guide-site .market-article-page .breadcrumbs a{color:#a8b6c0}
 .market-guide-site .market-article-page .breadcrumbs span:last-child{color:#eaf0f4}
-.market-guide-site .edu-header nav a[aria-current=page]{color:#92e1e9}
-.market-guide-site .edu-header nav .edu-workspace-link{border-color:#335363;background:#10212b;color:#92e1e9}
+.market-guide-site .edu-header nav a[aria-current=page]{color:#b4e0e6}
+.market-guide-site .edu-header nav .edu-workspace-link{border-color:#335363;background:#10212b;color:#b4e0e6}
 .sportsbook-guide-article.has-longform{max-width:960px}
 .sportsbook-guide-article.has-longform>.longform-article-grid>.article-content{max-width:none}
 .sportsbook-guide-article.has-longform>.article-pagination{max-width:none}
@@ -259,9 +259,9 @@ html{scroll-padding-top:104px}
 
 /* Shared article FAQ panels. Native details retain keyboard and no-script support. */
 #main :is(.bet-faq,.faq,.market-faq):has(>details){
-  --faq-panel:var(--bet-panel,var(--edu-surface,#101820));
+  --faq-panel:var(--bet-panel,var(--edu-surface,#141416));
   --faq-line:var(--bet-line,var(--edu-line,#20313e));
-  --faq-accent:var(--bet-blue,var(--edu-accent-strong,#92e1e9));
+  --faq-accent:var(--bet-blue,var(--edu-accent-strong,#b4e0e6));
   --faq-text:var(--bet-text,var(--edu-text,#eaf0f4));
   --faq-copy:var(--longform-copy,#c5d0d7);
   padding-top:22px;border-top:0;

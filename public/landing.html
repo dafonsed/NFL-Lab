@@ -3,86 +3,434 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#000000">
-  <meta name="description" content="SportsLab brings completed player history, live game context, simulations, and saved picks into one sports research workspace.">
-  <title>SportsLab — Sports research with the source in view</title>
+  <meta name="theme-color" content="#07090b">
+  <meta name="description" content="VisualOdds brings odds from 30+ sportsbooks, positive EV and arbitrage finders, player research, live games, simulations and a bet tracker into one transparent sports betting workspace.">
+  <title>VisualOdds — Find the edge. Track every result.</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preload" href="/assets/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/landing-home.css?v=3">
-  <link rel="stylesheet" href="/landing-header.css?v=11">
-  <link rel="stylesheet" href="/landing-footer.css?v=1">
-  <link rel="stylesheet" href="/landing-atmosphere.css?v=6">
-  <link rel="stylesheet" href="/landing-pricing.css?v=1">
-  <link rel="stylesheet" href="/landing-nav.css?v=5">
-  <link rel="stylesheet" href="/landing-product.css?v=2">
+  <link rel="stylesheet" href="/landing-widgets.css?v=19">
+  <link rel="stylesheet" href="/landing-2026.css?v=7">
   <script type="module" src="/landing.js?v=11"></script>
   <script type="module" src="/landing-reviews.js?v=2"></script>
   <script type="module" src="/landing-pricing.js?v=2"></script>
   <script type="module" src="/landing-nav.js?v=2"></script>
+  <script type="module" src="/landing-motion.js?v=8"></script>
 </head>
-<body class="landing-page">
+<body class="landing-page sl-landing">
   <a class="skip-link" href="#main">Skip to content</a>
-  <header class="home-header"><div class="home-header-inner">
-    <a class="home-brand" href="/" aria-label="SportsLab home"><img src="/favicon.svg" width="37" height="37" alt=""><span>SportsLab</span></a>
-    <nav class="home-nav" id="home-nav" aria-label="Main navigation"><a href="/#explore">How it works</a><a href="/research">Product</a><a href="/#plans">Pricing</a><a href="/#reviews">Testimonials</a><a href="/online-sportsbooks">Sportsbooks</a><a href="/ev/tracker">My picks</a></nav>
-    <a class="home-button home-header-action" href="/research">Dashboard</a>
-    <button class="home-menu-toggle" type="button" aria-controls="home-nav" aria-expanded="false" aria-label="Open menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
-  </div></header>
+
+  <div class="sl-announce" role="region" aria-label="Announcement">
+    <a href="/ev/dashboard"><span class="sl-announce-tag">New</span><span>Positive EV, arbitrage, middles and DFS props now share one market workspace</span><span class="sl-announce-arrow" data-icon="arrow" aria-hidden="true"></span></a>
+  </div>
+
+  <header class="home-header">
+    <div class="home-header-inner">
+      <a class="home-brand" href="/" aria-label="VisualOdds home"><img src="/favicon.svg" width="34" height="34" alt=""><span>Visual<em>Odds</em></span></a>
+      <nav class="home-nav" id="home-nav" aria-label="Main navigation">
+        <a href="/#tools">Tools</a>
+        <a href="/#how">How it works</a>
+        <a href="/#plans">Pricing</a>
+        <a href="/#reviews">Reviews</a>
+        <a href="/online-sportsbooks">Sportsbooks</a>
+        <a href="/betting-education">Learn</a>
+        <a class="home-nav-login" href="/login">Log in</a>
+      </nav>
+      <div class="home-header-end">
+        <a class="home-login" href="/login">Log in</a>
+        <a class="home-button home-header-action" href="/research">Get started</a>
+        <button class="home-menu-toggle" type="button" aria-controls="home-nav" aria-expanded="false" aria-label="Open menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+      </div>
+    </div>
+  </header>
+
   <main id="main">
     <section class="home-hero home-section" id="product" aria-labelledby="hero-title">
+      <div class="sl-hero-backdrop" aria-hidden="true"><span class="sl-hero-grid"></span><span class="sl-hero-orb sl-hero-orb-a"></span><span class="sl-hero-orb sl-hero-orb-b"></span></div>
       <div class="home-hero-content">
-        <div class="home-hero-mark" aria-hidden="true"><img src="/favicon.svg" width="72" height="72" alt=""></div>
-        <div class="home-copy"><h1 id="hero-title">See the trend.<br>Track the result.</h1><p class="home-lede">Research player trends, follow live games, and track every pick in one place.</p><div class="home-actions"><a class="home-button" href="/research">Explore SportsLab</a></div></div>
+        <a class="sl-eyebrow sl-rise" href="/research"><span class="sl-pulse" aria-hidden="true"></span>Research boards for NFL, MLB, NBA, WNBA, NHL &amp; soccer</a>
+        <div class="home-copy">
+          <h1 id="hero-title" class="sl-rise" style="--d:80ms">Find the edge.<br><span class="sl-gradient-text">Track every result.</span></h1>
+          <p class="home-lede sl-rise" style="--d:160ms">Odds from 30+ books, positive EV and arbitrage finders, player history, live games and your bet record — in one fast workspace that shows the source behind every number.</p>
+          <div class="home-actions sl-rise" style="--d:240ms">
+            <a class="home-button" href="/research">Start researching <span data-icon="arrow" aria-hidden="true"></span></a>
+            <a class="home-button home-button-ghost" href="/ev/dashboard?demo=1">Explore the +EV tools</a>
+          </div>
+          <ul class="sl-proof sl-rise" style="--d:320ms" aria-label="Highlights">
+            <li><span class="sl-check" aria-hidden="true"></span>6 leagues</li>
+            <li><span class="sl-check" aria-hidden="true"></span>17 market tools</li>
+            <li><span class="sl-check" aria-hidden="true"></span>Free bet tracker</li>
+            <li><span class="sl-check" aria-hidden="true"></span>Sources on every number</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="sl-stage sl-rise" style="--d:380ms">
+        <div class="sl-float sl-float-left sl-chip" aria-hidden="true">
+          <span class="sl-float-icon is-lime"><svg viewBox="0 0 24 24"><path d="M8 4H5v17l7-4 7 4V4h-3M9 3h6v4H9Z"/></svg></span>
+          <span class="sl-chip-copy"><small>Bet tracker · this month</small><strong class="is-lime">+$184.20</strong></span>
+        </div>
+        <div class="sl-float sl-float-right sl-chip" aria-hidden="true">
+          <span class="sl-float-icon is-cyan"><svg viewBox="0 0 24 24"><path d="m3 16 6-6 4 4 8-10M15 4h6v6"/></svg></span>
+          <span class="sl-chip-copy"><small>Line moved · BUF</small><strong>−3.5 <i>→</i> −4.5</strong></span>
+          <svg class="sl-chip-spark" viewBox="0 0 64 24"><path d="M1 19 10 17l8 2 10-7 9 1 9-7 8 1 8-5"/></svg>
+        </div>
+
+        <div class="sl-window">
+          <div class="sl-window-bar">
+            <div class="sl-window-tabs" role="tablist" aria-label="Example VisualOdds tools">
+              <button type="button" role="tab" id="mock-tab-ev" aria-controls="mock-ev" aria-selected="true">Positive EV</button>
+              <button type="button" role="tab" id="mock-tab-arb" aria-controls="mock-arb" aria-selected="false" tabindex="-1">Arbitrage</button>
+              <button type="button" role="tab" id="mock-tab-odds" aria-controls="mock-odds" aria-selected="false" tabindex="-1">Odds screen</button>
+              <button type="button" role="tab" id="mock-tab-props" aria-controls="mock-props" aria-selected="false" tabindex="-1">Player props</button>
+            </div>
+            <span class="sl-window-flag">Example data</span>
+          </div>
+          <div class="sl-window-body">
+            <div class="sl-window-main">
+              <section class="sl-mock oj-mock" id="mock-ev" role="tabpanel" aria-labelledby="mock-tab-ev">
+                <header class="oj-feed-head"><p><i class="lx-dot is-live" aria-hidden="true"></i><strong>Positive EV feed</strong> · prices above the no-vig fair line</p><span>Showing 3 of 24</span></header>
+                <div class="oj-feed" data-feed>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">5.8%</span><span class="oj-chip">~$5.80 / $100</span><span class="oj-when">Sun 1:00 PM</span></div><span class="oj-league">NFL</span><h4>J. Cook Over 64.5</h4><p>Rushing yards · Bills at Dolphins</p></div><div class="oj-split"><div><span class="oj-side-label">FanDuel price</span><span class="oj-row"><strong>$14.33</strong><span class="oj-price is-hot"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>+102</b></span></span></div><div><span class="oj-side-label">Fair price</span><span class="oj-row"><strong>52.4%</strong><span class="oj-price"><b>−110</b></span></span></div></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">5.0%</span><span class="oj-chip">~$5.00 / $100</span><span class="oj-when">Today 7:10 PM</span></div><span class="oj-league">MLB</span><h4>A. Judge to hit a home run</h4><p>Home runs · Yankees at Red Sox</p></div><div class="oj-split"><div><span class="oj-side-label">BetMGM price</span><span class="oj-row"><strong>$3.91</strong><span class="oj-price is-hot"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>+320</b></span></span></div><div><span class="oj-side-label">Fair price</span><span class="oj-row"><strong>25.0%</strong><span class="oj-price"><b>+300</b></span></span></div></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">4.2%</span><span class="oj-chip">~$4.20 / $100</span><span class="oj-when">Today 8:00 PM</span></div><span class="oj-league">WNBA</span><h4>A. Wilson Over 24.5</h4><p>Points · Aces vs Liberty</p></div><div class="oj-split"><div><span class="oj-side-label">DraftKings price</span><span class="oj-row"><strong>$11.32</strong><span class="oj-price is-hot"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>−108</b></span></span></div><div><span class="oj-side-label">Fair price</span><span class="oj-row"><strong>54.1%</strong><span class="oj-price"><b>−118</b></span></span></div></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">3.6%</span><span class="oj-chip">~$3.60 / $100</span><span class="oj-when">Sun 4:25 PM</span></div><span class="oj-league">NFL</span><h4>Under 45.5 total points</h4><p>Game total · Chiefs vs Chargers</p></div><div class="oj-split"><div><span class="oj-side-label">Caesars price</span><span class="oj-row"><strong>$9.28</strong><span class="oj-price is-hot"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>−104</b></span></span></div><div><span class="oj-side-label">Fair price</span><span class="oj-row"><strong>52.8%</strong><span class="oj-price"><b>−112</b></span></span></div></div></article>
+                </div>
+                <p class="oj-feed-note">Stake is a ¼ Kelly bet on a $1,000 bankroll. Fair price removes the books' margin.</p>
+              </section>
+
+              <section class="sl-mock oj-mock" id="mock-arb" role="tabpanel" aria-labelledby="mock-tab-arb" hidden>
+                <header class="oj-feed-head"><p><i class="lx-dot is-live" aria-hidden="true"></i><strong>Arbitrage feed</strong> · both sides priced to profit</p><span>Stakes for $100 total</span></header>
+                <div class="oj-feed" data-feed>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">2.1%</span><span class="oj-chip">~$2.11</span><span class="oj-when">Today 7:00 PM</span></div><span class="oj-league">NHL</span><h4>Rangers at Devils</h4><p>Moneyline</p></div><div class="oj-split"><div><span class="oj-side-label">Rangers</span><span class="oj-row"><strong>$45.38</strong><span class="oj-price is-hot"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>+125</b></span></span></div><div><span class="oj-side-label">Devils</span><span class="oj-row"><strong>$54.62</strong><span class="oj-price is-hot"><img src="/assets/brands/bet365.png" alt="bet365" width="22" height="22"><b>−115</b></span></span></div></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">1.9%</span><span class="oj-chip">~$1.92</span><span class="oj-when">Sun 8:20 PM</span></div><span class="oj-league">NFL</span><h4>Eagles at Cowboys</h4><p>Game total 47.5</p></div><div class="oj-split"><div><span class="oj-side-label">Over 47.5</span><span class="oj-row"><strong>$48.53</strong><span class="oj-price is-hot"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>+110</b></span></span></div><div><span class="oj-side-label">Under 47.5</span><span class="oj-row"><strong>$51.47</strong><span class="oj-price is-hot"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>−102</b></span></span></div></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">1.5%</span><span class="oj-chip">~$1.48</span><span class="oj-when">Today 9:40 PM</span></div><span class="oj-league">MLB</span><h4>Dodgers vs Padres</h4><p>Moneyline</p></div><div class="oj-split"><div><span class="oj-side-label">Dodgers</span><span class="oj-row"><strong>$57.36</strong><span class="oj-price is-hot"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>−130</b></span></span></div><div><span class="oj-side-label">Padres</span><span class="oj-row"><strong>$42.64</strong><span class="oj-price is-hot"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>+138</b></span></span></div></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">1.2%</span><span class="oj-chip">~$1.23</span><span class="oj-when">Today 7:30 PM</span></div><span class="oj-league">WNBA</span><h4>C. Clark assists</h4><p>Over / Under 7.5 · Lynx vs Fever</p></div><div class="oj-split"><div><span class="oj-side-label">Over 7.5</span><span class="oj-row"><strong>$49.38</strong><span class="oj-price is-hot"><img src="/assets/brands/bet365.png" alt="bet365" width="22" height="22"><b>+105</b></span></span></div><div><span class="oj-side-label">Under 7.5</span><span class="oj-row"><strong>$50.62</strong><span class="oj-price is-hot"><img src="/assets/brands/fanatics.png" alt="Fanatics" width="22" height="22"><b>+100</b></span></span></div></div></article>
+                </div>
+                <p class="oj-feed-note">One side wins, one side loses, and the return is the same either way.</p>
+              </section>
+
+              <section class="sl-mock oj-mock" id="mock-odds" role="tabpanel" aria-labelledby="mock-tab-odds" hidden>
+                <header class="oj-feed-head"><p><i class="lx-dot is-live" aria-hidden="true"></i><strong>Line shopping</strong> · Bills at Dolphins, six books</p><span>Per $100 bet</span></header>
+                <div class="oj-feed" data-feed>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">−105</span><span class="oj-chip">Best</span><span class="oj-when">+$8.28 vs worst</span></div><span class="oj-league">NFL · Point spread</span><h4>BUF −3.5</h4><p>Bills at Dolphins</p></div><div class="oj-books"><span class="oj-price"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>−110</b></span><span class="oj-price"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>−108</b></span><span class="oj-price"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>−112</b></span><span class="oj-price"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>−110</b></span><span class="oj-price is-hot"><img src="/assets/brands/bet365.png" alt="bet365" width="22" height="22"><b>−105</b></span><span class="oj-price is-cold"><img src="/assets/brands/fanatics.png" alt="Fanatics" width="22" height="22"><b>−115</b></span></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">+158</span><span class="oj-chip">Best</span><span class="oj-when">+$13.00 vs worst</span></div><span class="oj-league">NFL · Moneyline</span><h4>MIA to win</h4><p>Bills at Dolphins</p></div><div class="oj-books"><span class="oj-price"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>+152</b></span><span class="oj-price is-hot"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>+158</b></span><span class="oj-price is-cold"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>+145</b></span><span class="oj-price"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>+150</b></span><span class="oj-price"><img src="/assets/brands/bet365.png" alt="bet365" width="22" height="22"><b>+148</b></span><span class="oj-price"><img src="/assets/brands/fanatics.png" alt="Fanatics" width="22" height="22"><b>+155</b></span></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">−104</span><span class="oj-chip">Best</span><span class="oj-when">+$6.86 vs worst</span></div><span class="oj-league">NFL · Game total</span><h4>Over 47.5</h4><p>Bills at Dolphins</p></div><div class="oj-books"><span class="oj-price is-cold"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>−112</b></span><span class="oj-price is-hot"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>−104</b></span><span class="oj-price"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>−110</b></span><span class="oj-price"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>−108</b></span><span class="oj-price"><img src="/assets/brands/bet365.png" alt="bet365" width="22" height="22"><b>−110</b></span><span class="oj-price is-cold"><img src="/assets/brands/fanatics.png" alt="Fanatics" width="22" height="22"><b>−112</b></span></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">−102</span><span class="oj-chip">Best</span><span class="oj-when">+$11.08 vs worst</span></div><span class="oj-league">NFL · Point spread</span><h4>MIA +3.5</h4><p>Bills at Dolphins</p></div><div class="oj-books"><span class="oj-price"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>−110</b></span><span class="oj-price"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>−112</b></span><span class="oj-price"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>−108</b></span><span class="oj-price"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>−110</b></span><span class="oj-price is-cold"><img src="/assets/brands/bet365.png" alt="bet365" width="22" height="22"><b>−115</b></span><span class="oj-price is-hot"><img src="/assets/brands/fanatics.png" alt="Fanatics" width="22" height="22"><b>−102</b></span></div></article>
+                </div>
+                <p class="oj-feed-note">Green is the best price for the bet, red is the worst. Same bet, different payout.</p>
+              </section>
+
+              <section class="sl-mock oj-mock" id="mock-props" role="tabpanel" aria-labelledby="mock-tab-props" hidden>
+                <header class="oj-feed-head"><p><i class="lx-dot is-live" aria-hidden="true"></i><strong>Player trends</strong> · last 10 games against today's line</p><span>Receiving yards</span></header>
+                <div class="oj-feed" data-feed>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">7/10</span><span class="oj-chip">L10 over</span><span class="oj-when">CIN vs PIT</span></div><span class="oj-league">NFL · WR</span><h4>Ja'Marr Chase</h4><p>Over 74.5 receiving yards</p></div><div class="oj-trend"><span class="oj-bars" aria-hidden="true" style="--line:52%"><i class="up" style="--h:64%"></i><i style="--h:40%"></i><i class="up" style="--h:88%"></i><i class="up" style="--h:72%"></i><i style="--h:30%"></i><i class="up" style="--h:95%"></i><i class="up" style="--h:68%"></i><i class="up" style="--h:77%"></i><i style="--h:45%"></i><i class="up" style="--h:82%"></i></span><span class="oj-row"><span class="oj-side-label">Proj. <strong>82.1</strong></span><span class="oj-price"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>−114</b></span></span></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">6/10</span><span class="oj-chip">L10 over</span><span class="oj-when">MIN vs GB</span></div><span class="oj-league">NFL · WR</span><h4>Justin Jefferson</h4><p>Over 81.5 receiving yards</p></div><div class="oj-trend"><span class="oj-bars" aria-hidden="true" style="--line:60%"><i class="up" style="--h:92%"></i><i style="--h:56%"></i><i class="up" style="--h:85%"></i><i style="--h:50%"></i><i class="up" style="--h:97%"></i><i style="--h:58%"></i><i class="up" style="--h:88%"></i><i style="--h:44%"></i><i class="up" style="--h:90%"></i><i class="up" style="--h:83%"></i></span><span class="oj-row"><span class="oj-side-label">Proj. <strong>88.3</strong></span><span class="oj-price"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>−112</b></span></span></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">6/10</span><span class="oj-chip">L10 over</span><span class="oj-when">LAR vs SF</span></div><span class="oj-league">NFL · WR</span><h4>Puka Nacua</h4><p>Over 68.5 receiving yards</p></div><div class="oj-trend"><span class="oj-bars" aria-hidden="true" style="--line:50%"><i class="up" style="--h:58%"></i><i class="up" style="--h:70%"></i><i style="--h:35%"></i><i class="up" style="--h:62%"></i><i style="--h:44%"></i><i class="up" style="--h:80%"></i><i style="--h:41%"></i><i class="up" style="--h:66%"></i><i class="up" style="--h:74%"></i><i style="--h:46%"></i></span><span class="oj-row"><span class="oj-side-label">Proj. <strong>71.4</strong></span><span class="oj-price"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>−110</b></span></span></div></article>
+                  <article class="oj-card is-cold"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">3/10</span><span class="oj-chip">L10 over</span><span class="oj-when">KC vs LAC</span></div><span class="oj-league">NFL · TE</span><h4>Travis Kelce</h4><p>Over 52.5 receiving yards</p></div><div class="oj-trend"><span class="oj-bars" aria-hidden="true" style="--line:50%"><i style="--h:40%"></i><i class="up" style="--h:55%"></i><i style="--h:33%"></i><i style="--h:46%"></i><i class="up" style="--h:60%"></i><i style="--h:28%"></i><i style="--h:44%"></i><i class="up" style="--h:57%"></i><i style="--h:37%"></i><i style="--h:49%"></i></span><span class="oj-row"><span class="oj-side-label">Proj. <strong>47.9</strong></span><span class="oj-price"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>+105</b></span></span></div></article>
+                </div>
+                <p class="oj-feed-note">Green bars cleared the line, red bars fell short. Dashed line is today's number.</p>
+              </section>
+            </div>
+          </div>
+        </div>
+        <div class="sl-horizon" aria-hidden="true"></div>
       </div>
     </section>
+
     <div class="hero-brands" role="region" aria-label="Sportsbooks and sports apps">
-        <div class="hero-brand-track">
-          <ul class="hero-brand-set"><li title="BetMGM"><img src="/assets/brands/betmgm.png" alt="BetMGM"></li><li title="bet365"><img src="/assets/brands/bet365.png" alt="bet365"></li><li title="BetRivers"><img src="/assets/brands/betrivers.png" alt="BetRivers"></li><li title="Caesars Sportsbook"><img src="/assets/brands/caesars.png" alt="Caesars Sportsbook"></li><li title="DraftKings Sportsbook"><img src="/assets/brands/draftkings.png" alt="DraftKings Sportsbook"></li><li title="Fanatics Sportsbook" class="brand-on-light"><img src="/assets/brands/fanatics.png" alt="Fanatics Sportsbook"></li><li title="FanDuel Sportsbook"><img src="/assets/brands/fanduel.png" alt="FanDuel Sportsbook"></li><li title="Hard Rock Bet"><img src="/assets/brands/hardrock.png" alt="Hard Rock Bet"></li><li title="theScore Bet"><img src="/assets/brands/thescore.png" alt="theScore Bet"></li><li title="Bally Bet"><img src="/assets/brands/bally.png" alt="Bally Bet"></li><li title="Desert Diamond Sports"><img src="/assets/brands/desertdiamond.png" alt="Desert Diamond Sports"></li><li title="DraftKings Fantasy"><img src="/assets/brands/draftkings.png" alt="DraftKings Fantasy"></li><li title="FanDuel Fantasy"><img src="/assets/brands/fanduel.png" alt="FanDuel Fantasy"></li><li title="PrizePicks"><img src="/assets/brands/prizepicks.png" alt="PrizePicks"></li><li title="Underdog Fantasy" class="brand-on-light"><img src="/assets/brands/underdog.png" alt="Underdog Fantasy"></li><li title="Sleeper Picks"><img src="/assets/brands/sleeper.png" alt="Sleeper Picks"></li><li title="Betr Picks"><img src="/assets/brands/betr.png" alt="Betr Picks"></li><li title="Dabble"><img src="/assets/brands/dabble.png" alt="Dabble"></li><li title="Chalkboard"><img src="/assets/brands/chalkboard.png" alt="Chalkboard"></li><li title="ParlayPlay"><img src="/assets/brands/parlayplay.png" alt="ParlayPlay"></li><li title="OwnersBox"><img src="/assets/brands/ownersbox.png" alt="OwnersBox"></li><li title="Boom Fantasy"><img src="/assets/brands/boom.png" alt="Boom Fantasy"></li><li title="Vivid Picks"><img src="/assets/brands/vivid.png" alt="Vivid Picks"></li><li title="Novig"><img src="/assets/brands/novig.png" alt="Novig"></li><li title="ProphetX"><img src="/assets/brands/prophetx.png" alt="ProphetX"></li><li title="Sporttrade"><img src="/assets/brands/sporttrade.png" alt="Sporttrade"></li><li title="BettorEdge"><img src="/assets/brands/bettoredge.png" alt="BettorEdge"></li><li title="Kalshi"><img src="/assets/brands/kalshi.png" alt="Kalshi"></li><li title="Polymarket"><img src="/assets/brands/polymarket.png" alt="Polymarket"></li></ul>
-          <ul class="hero-brand-set" aria-hidden="true"><li title="BetMGM"><img src="/assets/brands/betmgm.png" alt="BetMGM"></li><li title="bet365"><img src="/assets/brands/bet365.png" alt="bet365"></li><li title="BetRivers"><img src="/assets/brands/betrivers.png" alt="BetRivers"></li><li title="Caesars Sportsbook"><img src="/assets/brands/caesars.png" alt="Caesars Sportsbook"></li><li title="DraftKings Sportsbook"><img src="/assets/brands/draftkings.png" alt="DraftKings Sportsbook"></li><li title="Fanatics Sportsbook" class="brand-on-light"><img src="/assets/brands/fanatics.png" alt="Fanatics Sportsbook"></li><li title="FanDuel Sportsbook"><img src="/assets/brands/fanduel.png" alt="FanDuel Sportsbook"></li><li title="Hard Rock Bet"><img src="/assets/brands/hardrock.png" alt="Hard Rock Bet"></li><li title="theScore Bet"><img src="/assets/brands/thescore.png" alt="theScore Bet"></li><li title="Bally Bet"><img src="/assets/brands/bally.png" alt="Bally Bet"></li><li title="Desert Diamond Sports"><img src="/assets/brands/desertdiamond.png" alt="Desert Diamond Sports"></li><li title="DraftKings Fantasy"><img src="/assets/brands/draftkings.png" alt="DraftKings Fantasy"></li><li title="FanDuel Fantasy"><img src="/assets/brands/fanduel.png" alt="FanDuel Fantasy"></li><li title="PrizePicks"><img src="/assets/brands/prizepicks.png" alt="PrizePicks"></li><li title="Underdog Fantasy" class="brand-on-light"><img src="/assets/brands/underdog.png" alt="Underdog Fantasy"></li><li title="Sleeper Picks"><img src="/assets/brands/sleeper.png" alt="Sleeper Picks"></li><li title="Betr Picks"><img src="/assets/brands/betr.png" alt="Betr Picks"></li><li title="Dabble"><img src="/assets/brands/dabble.png" alt="Dabble"></li><li title="Chalkboard"><img src="/assets/brands/chalkboard.png" alt="Chalkboard"></li><li title="ParlayPlay"><img src="/assets/brands/parlayplay.png" alt="ParlayPlay"></li><li title="OwnersBox"><img src="/assets/brands/ownersbox.png" alt="OwnersBox"></li><li title="Boom Fantasy"><img src="/assets/brands/boom.png" alt="Boom Fantasy"></li><li title="Vivid Picks"><img src="/assets/brands/vivid.png" alt="Vivid Picks"></li><li title="Novig"><img src="/assets/brands/novig.png" alt="Novig"></li><li title="ProphetX"><img src="/assets/brands/prophetx.png" alt="ProphetX"></li><li title="Sporttrade"><img src="/assets/brands/sporttrade.png" alt="Sporttrade"></li><li title="BettorEdge"><img src="/assets/brands/bettoredge.png" alt="BettorEdge"></li><li title="Kalshi"><img src="/assets/brands/kalshi.png" alt="Kalshi"></li><li title="Polymarket"><img src="/assets/brands/polymarket.png" alt="Polymarket"></li></ul>
-        </div>
+      <p class="sl-brands-caption"><span>28+ sportsbooks, exchanges &amp; pick'em apps</span></p>
+      <div class="hero-brand-track">
+        <ul class="hero-brand-set">
+          <li title="BetMGM"><img src="/assets/brands/betmgm.png" alt="BetMGM"><span>BetMGM</span></li>
+          <li title="bet365"><img src="/assets/brands/bet365.png" alt="bet365"><span>bet365</span></li>
+          <li title="BetRivers"><img src="/assets/brands/betrivers.png" alt="BetRivers"><span>BetRivers</span></li>
+          <li title="Caesars Sportsbook"><img src="/assets/brands/caesars.png" alt="Caesars Sportsbook"><span>Caesars</span></li>
+          <li title="DraftKings Sportsbook"><img src="/assets/brands/draftkings.png" alt="DraftKings Sportsbook"><span>DraftKings</span></li>
+          <li title="Fanatics Sportsbook"><img src="/assets/brands/fanatics.png" alt="Fanatics Sportsbook"><span>Fanatics</span></li>
+          <li title="FanDuel Sportsbook"><img src="/assets/brands/fanduel.png" alt="FanDuel Sportsbook"><span>FanDuel</span></li>
+          <li title="Hard Rock Bet"><img src="/assets/brands/hardrock.png" alt="Hard Rock Bet"><span>Hard Rock Bet</span></li>
+          <li title="theScore Bet"><img src="/assets/brands/thescore.png" alt="theScore Bet"><span>theScore Bet</span></li>
+          <li title="Pinnacle"><img src="/assets/brands/pinnacle.png" alt="Pinnacle"><span>Pinnacle</span></li>
+          <li title="Bally Bet"><img src="/assets/brands/bally.png" alt="Bally Bet"><span>Bally Bet</span></li>
+          <li title="Desert Diamond Sports"><img src="/assets/brands/desertdiamond.png" alt="Desert Diamond Sports"><span>Desert Diamond</span></li>
+          <li title="PrizePicks"><img src="/assets/brands/prizepicks.png" alt="PrizePicks"><span>PrizePicks</span></li>
+          <li title="Underdog Fantasy" class="brand-on-light"><img src="/assets/brands/underdog.png" alt="Underdog Fantasy"><span>Underdog</span></li>
+          <li title="Sleeper Picks"><img src="/assets/brands/sleeper.png" alt="Sleeper Picks"><span>Sleeper</span></li>
+          <li title="Betr Picks"><img src="/assets/brands/betr.png" alt="Betr Picks"><span>Betr</span></li>
+          <li title="Dabble"><img src="/assets/brands/dabble.png" alt="Dabble"><span>Dabble</span></li>
+          <li title="Chalkboard"><img src="/assets/brands/chalkboard.png" alt="Chalkboard"><span>Chalkboard</span></li>
+          <li title="ParlayPlay"><img src="/assets/brands/parlayplay.png" alt="ParlayPlay"><span>ParlayPlay</span></li>
+          <li title="OwnersBox"><img src="/assets/brands/ownersbox.png" alt="OwnersBox"><span>OwnersBox</span></li>
+          <li title="Boom Fantasy"><img src="/assets/brands/boom.png" alt="Boom Fantasy"><span>Boom</span></li>
+          <li title="Vivid Picks"><img src="/assets/brands/vivid.png" alt="Vivid Picks"><span>Vivid Picks</span></li>
+          <li title="Novig"><img src="/assets/brands/novig.png" alt="Novig"><span>Novig</span></li>
+          <li title="ProphetX"><img src="/assets/brands/prophetx.png" alt="ProphetX"><span>ProphetX</span></li>
+          <li title="Sporttrade"><img src="/assets/brands/sporttrade.png" alt="Sporttrade"><span>Sporttrade</span></li>
+          <li title="BettorEdge"><img src="/assets/brands/bettoredge.png" alt="BettorEdge"><span>BettorEdge</span></li>
+          <li title="Kalshi"><img src="/assets/brands/kalshi.png" alt="Kalshi"><span>Kalshi</span></li>
+          <li title="Polymarket"><img src="/assets/brands/polymarket.png" alt="Polymarket"><span>Polymarket</span></li>
+        </ul>
+        <ul class="hero-brand-set" aria-hidden="true">
+          <li><img src="/assets/brands/betmgm.png" alt=""><span>BetMGM</span></li>
+          <li><img src="/assets/brands/bet365.png" alt=""><span>bet365</span></li>
+          <li><img src="/assets/brands/betrivers.png" alt=""><span>BetRivers</span></li>
+          <li><img src="/assets/brands/caesars.png" alt=""><span>Caesars</span></li>
+          <li><img src="/assets/brands/draftkings.png" alt=""><span>DraftKings</span></li>
+          <li><img src="/assets/brands/fanatics.png" alt=""><span>Fanatics</span></li>
+          <li><img src="/assets/brands/fanduel.png" alt=""><span>FanDuel</span></li>
+          <li><img src="/assets/brands/hardrock.png" alt=""><span>Hard Rock Bet</span></li>
+          <li><img src="/assets/brands/thescore.png" alt=""><span>theScore Bet</span></li>
+          <li><img src="/assets/brands/pinnacle.png" alt=""><span>Pinnacle</span></li>
+          <li><img src="/assets/brands/bally.png" alt=""><span>Bally Bet</span></li>
+          <li><img src="/assets/brands/desertdiamond.png" alt=""><span>Desert Diamond</span></li>
+          <li><img src="/assets/brands/prizepicks.png" alt=""><span>PrizePicks</span></li>
+          <li class="brand-on-light"><img src="/assets/brands/underdog.png" alt=""><span>Underdog</span></li>
+          <li><img src="/assets/brands/sleeper.png" alt=""><span>Sleeper</span></li>
+          <li><img src="/assets/brands/betr.png" alt=""><span>Betr</span></li>
+          <li><img src="/assets/brands/dabble.png" alt=""><span>Dabble</span></li>
+          <li><img src="/assets/brands/chalkboard.png" alt=""><span>Chalkboard</span></li>
+          <li><img src="/assets/brands/parlayplay.png" alt=""><span>ParlayPlay</span></li>
+          <li><img src="/assets/brands/ownersbox.png" alt=""><span>OwnersBox</span></li>
+          <li><img src="/assets/brands/boom.png" alt=""><span>Boom</span></li>
+          <li><img src="/assets/brands/vivid.png" alt=""><span>Vivid Picks</span></li>
+          <li><img src="/assets/brands/novig.png" alt=""><span>Novig</span></li>
+          <li><img src="/assets/brands/prophetx.png" alt=""><span>ProphetX</span></li>
+          <li><img src="/assets/brands/sporttrade.png" alt=""><span>Sporttrade</span></li>
+          <li><img src="/assets/brands/bettoredge.png" alt=""><span>BettorEdge</span></li>
+          <li><img src="/assets/brands/kalshi.png" alt=""><span>Kalshi</span></li>
+          <li><img src="/assets/brands/polymarket.png" alt=""><span>Polymarket</span></li>
+        </ul>
+      </div>
     </div>
-    <section class="home-section home-tools" id="explore" aria-labelledby="tools-title"><div class="home-feature-grid">
-      <div class="home-feature-copy"><span class="home-feature-label">Player research</span><h2 id="tools-title">Know the player.<br>See the pattern.</h2><p>Put the line next to the history. Explore recent games, compare results, and find the details that matter to your pick.</p><ul class="home-feature-list"><li>Switch between the last 5, 10, or 20 games.</li><li>Compare the line with real, completed results.</li><li>Open any game to check the source.</li></ul><a class="home-feature-link" href="/research">Explore player research <span data-icon="arrow" aria-hidden="true"></span></a></div>
-      <div id="home-tool-panel" class="home-product-preview" aria-label="Player research preview" aria-live="polite"><p class="home-loading">Loading player history…</p></div>
-    </div></section>
-    <section class="home-section home-markets" id="compare-odds" aria-labelledby="markets-title"><div class="home-feature-grid home-feature-reverse">
-      <div class="home-feature-copy"><span class="home-feature-label">Odds comparison</span><h2 id="markets-title">Same game.<br>Different prices.</h2><p>See both sides of a market together. Compare entered prices across books and keep the best available number in view.</p><ul class="home-feature-list"><li>Compare matching lines side by side.</li><li>Move between game markets and player props.</li><li>Explore EV and arbitrage in the workspace.</li></ul><a class="home-feature-link" href="/ev#odds">Explore the odds screen <span data-icon="arrow" aria-hidden="true"></span></a></div>
-      <div id="home-market-panel" class="home-product-preview" aria-label="Example odds comparison" aria-live="polite"><p class="home-loading">Loading example prices…</p></div>
-    </div></section>
-    <section class="home-section home-live" id="live-games" aria-labelledby="live-title"><div class="home-feature-grid">
-      <div class="home-feature-copy"><span class="home-feature-label">Live game center</span><h2 id="live-title">Follow more<br>than the score.</h2><p>The matchup, the players, the next possession. Keep the game in view with scores, available markets, and player production together.</p><ul class="home-feature-list"><li>NFL, NBA, WNBA, and MLB in one place.</li><li>Game stats alongside regulation estimates.</li><li>Clear source times with every update.</li></ul><a class="home-feature-link" href="/live">Open the game center <span data-icon="arrow" aria-hidden="true"></span></a></div>
-      <div class="home-product-preview live-screen" id="home-live-panel" aria-live="polite"><p class="home-loading">Connecting to the game feed…</p></div>
-    </div></section>
-    <section class="home-pricing" id="plans" aria-labelledby="plans-title"><div class="home-pricing-inner">
-      <div class="home-pricing-heading">
-        <img src="/favicon.svg" width="58" height="58" alt="" aria-hidden="true">
-        <span class="home-pricing-kicker">SportsLab plan preview</span>
-        <h2 id="plans-title">Which plan is right for you?</h2>
-        <p>Compare the research tools in each example tier.</p>
+
+    <section class="sl-stats" aria-label="VisualOdds at a glance">
+      <div class="home-wide sl-stats-grid">
+        <div data-reveal><strong data-count="6">6</strong><span>Leagues with research boards</span></div>
+        <div data-reveal><strong data-count="28" data-suffix="+">28+</strong><span>Books, exchanges &amp; pick'em apps</span></div>
+        <div data-reveal><strong data-count="17">17</strong><span>Market and betting tools</span></div>
+        <div data-reveal><strong>L5 · L10 · L20</strong><span>Game windows on every player</span></div>
       </div>
-      <div class="home-pricing-cycle" role="group" aria-label="Billing preview">
-        <span class="is-active" data-cycle-label="monthly">Monthly plans</span>
-        <button class="home-pricing-switch" type="button" role="switch" aria-checked="false" aria-label="Show annual preview prices"><span></span></button>
-        <span data-cycle-label="annual">Annual plans</span><em>Save 17%</em>
+    </section>
+
+    <section class="home-section sl-tools" id="tools" aria-labelledby="tools-grid-title">
+      <div class="home-wide">
+        <header class="sl-section-head" data-reveal>
+          <span class="sl-kicker">The toolkit</span>
+          <h2 id="tools-grid-title">Everything between<br>the line and your bet.</h2>
+          <p>Whether you're checking one prop or scanning the whole market, every tool shares the same data, filters and bet slip.</p>
+        </header>
+        <div class="sl-tool-grid">
+          <a class="sl-tool is-feature" href="/ev?demo=1#ev-pre" data-reveal>
+            <span class="sl-tool-icon"><svg viewBox="0 0 24 24"><path d="M3 17h4l3-10 4 13 3-8h4"/><path d="M3 4h18"/></svg></span>
+            <span class="sl-tool-tag">Positive EV</span>
+            <h3>Bet where the price beats fair value</h3>
+            <p>We strip the vig from comparable books to estimate a fair line, then surface prices that sit above it — with the math one click away.</p>
+            <span class="sl-tool-cta">Open Positive EV <span data-icon="arrow" aria-hidden="true"></span></span>
+            <span class="sl-tool-visual" aria-hidden="true"><span><b>+5.8%</b><small>J. Cook O 64.5</small></span><span><b>+5.0%</b><small>A. Judge HR</small></span><span><b>+4.2%</b><small>A. Wilson O 24.5</small></span></span>
+          </a>
+          <a class="sl-tool" href="/ev?demo=1#arb-pre" data-reveal>
+            <span class="sl-tool-icon"><svg viewBox="0 0 24 24"><path d="M7 7h11l-3-3m3 13H6l3 3"/></svg></span>
+            <span class="sl-tool-tag">Arbitrage</span>
+            <h3>Both sides, priced to profit</h3>
+            <p>Find markets where opposite sides at different books add up to a guaranteed return, with stakes calculated for you.</p>
+          </a>
+          <a class="sl-tool" href="/ev?demo=1#odds" data-reveal>
+            <span class="sl-tool-icon"><svg viewBox="0 0 24 24"><path d="M4 19V9m5 10V4m6 15v-7m5 7V7"/></svg></span>
+            <span class="sl-tool-tag">Odds screen</span>
+            <h3>Every book on one row</h3>
+            <p>Spreads, totals, moneylines and props side by side, with the best available number highlighted.</p>
+          </a>
+          <a class="sl-tool" href="/research" data-reveal>
+            <span class="sl-tool-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 4v3"/></svg></span>
+            <span class="sl-tool-tag">Player research</span>
+            <h3>The line next to the history</h3>
+            <p>Last 5, 10 and 20 games against the current line, with projections and a box score behind every bar.</p>
+          </a>
+          <a class="sl-tool" href="/ev?demo=1#fantasy" data-reveal>
+            <span class="sl-tool-icon"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+            <span class="sl-tool-tag">DFS props</span>
+            <h3>Pick'em slips with an edge</h3>
+            <p>Compare PrizePicks, Underdog and more against sharp sportsbook prices before you build a slip.</p>
+          </a>
+          <a class="sl-tool" href="/ev?demo=1#sharp" data-reveal>
+            <span class="sl-tool-icon"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-9Z"/><path d="M16 3.9A9 9 0 0 1 20.1 8H16Z"/></svg></span>
+            <span class="sl-tool-tag">Smart money</span>
+            <h3>Follow the market's movement</h3>
+            <p>Line moves and market signals across books, so you see where prices are heading.</p>
+          </a>
+          <a class="sl-tool" href="/live" data-reveal>
+            <span class="sl-tool-icon"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></span>
+            <span class="sl-tool-tag">Live games</span>
+            <h3>More than the score</h3>
+            <p>Scores, markets and player production in one live game center for NFL, NBA, WNBA and MLB.</p>
+          </a>
+          <a class="sl-tool" href="/simulation" data-reveal>
+            <span class="sl-tool-icon"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8 8h.01M16 8h.01M12 12h.01M8 16h.01M16 16h.01" stroke-width="3"/></svg></span>
+            <span class="sl-tool-tag">Simulation</span>
+            <h3>Play the game ten thousand times</h3>
+            <p>Run matchup simulations and see the range of outcomes behind team and player props.</p>
+          </a>
+        </div>
       </div>
-      <div class="home-pricing-grid" id="home-pricing-grid"></div>
-      <p class="home-pricing-disclaimer">Illustrative plan preview. SportsLab subscriptions, trials, and checkout are not active yet.</p>
-    </div></section>
-    <dialog class="home-pricing-dialog" id="home-pricing-dialog" aria-labelledby="plan-dialog-title"><button class="home-pricing-dialog-close" type="button" data-plan-close aria-label="Close">×</button><h2 id="plan-dialog-title">Plan preview</h2><p>These example plans are here for layout review. Subscriptions and free trials are not available yet.</p><a class="home-button" href="/research">Explore SportsLab</a></dialog>
-    <section class="home-section home-tracker-section" id="bet-tracker" aria-labelledby="tracker-title"><div class="home-wide home-split home-tracker-layout">
-      <div class="home-copy"><h2 id="tracker-title">Your picks,<br>day by day.</h2><p class="home-lede">Save a bet in My Picks and see its settled result on the date you entered. Your net profit updates from the record kept in this browser.</p><p class="home-fine">The calendar shows example results when no picks are saved.</p><a class="home-button" href="/ev/tracker">Open My Picks</a></div>
-      <div class="hero-tracker" id="hero-tracker" aria-live="polite"><p class="home-loading">Loading your pick record…</p></div>
-    </div></section>
+    </section>
+
+    <section class="home-section home-tools sl-feature" id="explore" aria-labelledby="tools-title">
+      <div class="home-wide home-feature-grid">
+        <div class="home-feature-copy" data-reveal>
+          <span class="home-feature-label">Player research</span>
+          <h2 id="tools-title">Know the player.<br>See the pattern.</h2>
+          <p>Put the line next to the history. Explore recent games, compare results and open the box score behind any number before you decide.</p>
+          <ul class="home-feature-list">
+            <li>Switch between the last 5, 10 or 20 games.</li>
+            <li>Compare the line with real, completed results.</li>
+            <li>Open any game to check the source.</li>
+          </ul>
+          <a class="home-feature-link" href="/research"><span>Explore player research</span><span class="home-feature-arrow" data-icon="arrow" aria-hidden="true"></span></a>
+        </div>
+        <div id="home-tool-panel" class="home-product-preview" data-play aria-label="Player research preview" aria-live="polite" data-reveal><p class="home-loading">Loading player history…</p></div>
+      </div>
+    </section>
+
+    <section class="home-section home-markets sl-feature" id="compare-odds" aria-labelledby="markets-title">
+      <div class="home-wide home-feature-grid home-feature-reverse">
+        <div class="home-feature-copy" data-reveal>
+          <span class="home-feature-label">Odds comparison</span>
+          <h2 id="markets-title">Same game.<br>Different prices.</h2>
+          <p>See both sides of a market together. Compare prices across books and keep the best available number in view — the fastest edge there is.</p>
+          <ul class="home-feature-list">
+            <li>Compare matching lines side by side.</li>
+            <li>Move between game markets and player props.</li>
+            <li>Jump straight into EV and arbitrage.</li>
+          </ul>
+          <a class="home-feature-link" href="/ev?demo=1#odds"><span>Explore the odds screen</span><span class="home-feature-arrow" data-icon="arrow" aria-hidden="true"></span></a>
+        </div>
+        <div id="home-market-panel" class="home-product-preview" data-play aria-label="Example odds comparison" aria-live="polite" data-reveal><p class="home-loading">Loading example prices…</p></div>
+      </div>
+    </section>
+
+    <section class="home-section home-live sl-feature" id="live-games" aria-labelledby="live-title">
+      <div class="home-wide home-feature-grid">
+        <div class="home-feature-copy" data-reveal>
+          <span class="home-feature-label">Live game center</span>
+          <h2 id="live-title">Follow more<br>than the score.</h2>
+          <p>The matchup, the players, the next possession. Keep the game in view with scores, available markets and player production together.</p>
+          <ul class="home-feature-list">
+            <li>NFL, NBA, WNBA and MLB in one place.</li>
+            <li>Game stats alongside regulation estimates.</li>
+            <li>Clear source times with every update.</li>
+          </ul>
+          <a class="home-feature-link" href="/live"><span>Open the game center</span><span class="home-feature-arrow" data-icon="arrow" aria-hidden="true"></span></a>
+        </div>
+        <div class="home-product-preview live-screen" id="home-live-panel" data-play aria-live="polite" data-reveal><p class="home-loading">Connecting to the game feed…</p></div>
+      </div>
+    </section>
+
+    <section class="home-section sl-how" id="how" aria-labelledby="how-title">
+      <div class="home-wide">
+        <header class="sl-section-head is-center" data-reveal>
+          <span class="sl-kicker">How it works</span>
+          <h2 id="how-title">Data-driven betting,<br>in three steps.</h2>
+          <p>No hunches and no black boxes. Every step shows its inputs, its sources and its limits.</p>
+        </header>
+        <ol class="sl-steps">
+          <li data-reveal>
+            <span class="sl-step-num">01</span>
+            <h3>Compare the market</h3>
+            <p>Prices from many books are lined up for the same selection. Removing each book's margin gives a fair, no-vig estimate.</p>
+            <div class="sl-step-visual" aria-hidden="true"><span>FanDuel <b>+102</b></span><span>DraftKings <b>−105</b></span><span class="is-fair">Fair <b>−110</b></span></div>
+          </li>
+          <li data-reveal data-play>
+            <span class="sl-step-num">02</span>
+            <h3>Check the evidence</h3>
+            <p>Recent results, projections, matchup context and live game state sit next to the price, each with its sample and source time.</p>
+            <div class="sl-step-visual sl-step-bars" aria-hidden="true"><em class="sl-step-line"></em><i class="is-miss" style="--h:48%"></i><i style="--h:80%"></i><i class="is-miss" style="--h:36%"></i><i style="--h:92%"></i><i style="--h:68%"></i><i style="--h:74%"></i><i class="is-miss" style="--h:44%"></i><i style="--h:86%"></i></div>
+          </li>
+          <li data-reveal>
+            <span class="sl-step-num">03</span>
+            <h3>Track every result</h3>
+            <p>Log the bet, grade it when it settles and watch profit, ROI and closing-line value build up over time.</p>
+            <div class="sl-step-visual" aria-hidden="true"><span>Record <b>27–14–1</b></span><span class="is-fair">Net <b>+$258.31</b></span></div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="home-section home-tracker-section sl-feature" id="bet-tracker" aria-labelledby="tracker-title">
+      <div class="home-wide home-feature-grid home-feature-reverse home-tracker-layout">
+        <div class="home-copy home-feature-copy" data-reveal>
+          <span class="home-feature-label">Bet tracker · Free</span>
+          <h2 id="tracker-title">Your picks,<br>day by day.</h2>
+          <p class="home-lede">Save a bet in My Picks and see its settled result on the date you placed it. Profit, ROI and your record update automatically.</p>
+          <p class="home-fine">The calendar shows example results until you save your own picks.</p>
+          <a class="home-button" href="/ev/tracker">Open My Picks <span data-icon="arrow" aria-hidden="true"></span></a>
+        </div>
+        <div class="hero-tracker" id="hero-tracker" data-play aria-live="polite" data-reveal><p class="home-loading">Loading your pick record…</p></div>
+      </div>
+    </section>
+
     <nav class="home-sports" id="sports" aria-label="Research by sport">
-      <div class="home-sport-track">
-        <div class="home-sport-set"><a href="/research?sport=nfl" aria-label="Explore NFL research"><img src="/assets/leagues/nfl.png" width="68" height="52" alt="NFL" decoding="async"></a><a href="/research?sport=nba" aria-label="Explore NBA research"><img src="/assets/leagues/nba.png" width="68" height="52" alt="NBA" decoding="async"></a><a href="/research?sport=wnba" aria-label="Explore WNBA research"><img src="/assets/leagues/wnba.png" width="68" height="52" alt="WNBA" decoding="async"></a><a href="/research?sport=mlb" aria-label="Explore MLB research"><img src="/assets/leagues/mlb.png" width="68" height="52" alt="MLB" decoding="async"></a><a href="/research?sport=nhl" aria-label="Explore NHL research"><img src="/assets/leagues/nhl.png" width="68" height="52" alt="NHL" decoding="async"></a><a class="home-soccer-link" href="/research?sport=soccer" aria-label="Explore soccer research"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m12 7 5 4-2 5H9l-2-5Zm0-4v4M3.5 9l3.5 2m-1 8 3-3m9 3-3m5.5-7L17 11"/></svg><span>Soccer</span></a></div>
-        <div class="home-sport-set" aria-hidden="true"><a href="/research?sport=nfl" tabindex="-1"><img src="/assets/leagues/nfl.png" width="68" height="52" alt="" loading="lazy"></a><a href="/research?sport=nba" tabindex="-1"><img src="/assets/leagues/nba.png" width="68" height="52" alt="" loading="lazy"></a><a href="/research?sport=wnba" tabindex="-1"><img src="/assets/leagues/wnba.png" width="68" height="52" alt="" loading="lazy"></a><a href="/research?sport=mlb" tabindex="-1"><img src="/assets/leagues/mlb.png" width="68" height="52" alt="" loading="lazy"></a><a href="/research?sport=nhl" tabindex="-1"><img src="/assets/leagues/nhl.png" width="68" height="52" alt="" loading="lazy"></a><a class="home-soccer-link" href="/research?sport=soccer" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m12 7 5 4-2 5H9l-2-5Zm0-4v4M3.5 9l3.5 2m-1 8 3-3m9 3-3m5.5-7L17 11"/></svg><span>Soccer</span></a></div>
+      <p class="sl-brands-caption"><span>Six leagues, one workspace</span></p>
+      <div class="home-sport-viewport">
+        <div class="home-sport-track">
+          <div class="home-sport-set">
+            <a href="/research?sport=nfl" aria-label="Explore NFL research"><img src="/assets/leagues/nfl.png" width="68" height="52" alt="NFL" decoding="async"><span>NFL</span></a>
+            <a href="/research?sport=nba" aria-label="Explore NBA research"><img src="/assets/leagues/nba.png" width="68" height="52" alt="NBA" decoding="async"><span>NBA</span></a>
+            <a href="/research?sport=wnba" aria-label="Explore WNBA research"><img src="/assets/leagues/wnba.png" width="68" height="52" alt="WNBA" decoding="async"><span>WNBA</span></a>
+            <a href="/research?sport=mlb" aria-label="Explore MLB research"><img src="/assets/leagues/mlb.png" width="68" height="52" alt="MLB" decoding="async"><span>MLB</span></a>
+            <a href="/research?sport=nhl" aria-label="Explore NHL research"><img src="/assets/leagues/nhl.png" width="68" height="52" alt="NHL" decoding="async"><span>NHL</span></a>
+            <a class="home-soccer-link" href="/research?sport=soccer" aria-label="Explore soccer research"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m12 7 5 4-2 5H9l-2-5Zm0-4v4M3.5 9l3.5 2m-1 8 3-3m9 3-3-3m5.5-7L17 11"/></svg><span>Soccer</span></a>
+          </div>
+          <div class="home-sport-set" aria-hidden="true">
+            <a href="/research?sport=nfl" tabindex="-1"><img src="/assets/leagues/nfl.png" width="68" height="52" alt="" decoding="async"><span>NFL</span></a>
+            <a href="/research?sport=nba" tabindex="-1"><img src="/assets/leagues/nba.png" width="68" height="52" alt="" decoding="async"><span>NBA</span></a>
+            <a href="/research?sport=wnba" tabindex="-1"><img src="/assets/leagues/wnba.png" width="68" height="52" alt="" decoding="async"><span>WNBA</span></a>
+            <a href="/research?sport=mlb" tabindex="-1"><img src="/assets/leagues/mlb.png" width="68" height="52" alt="" decoding="async"><span>MLB</span></a>
+            <a href="/research?sport=nhl" tabindex="-1"><img src="/assets/leagues/nhl.png" width="68" height="52" alt="" decoding="async"><span>NHL</span></a>
+            <a class="home-soccer-link" href="/research?sport=soccer" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m12 7 5 4-2 5H9l-2-5Zm0-4v4M3.5 9l3.5 2m-1 8 3-3m9 3-3-3m5.5-7L17 11"/></svg><span>Soccer</span></a>
+          </div>
+          <div class="home-sport-set" aria-hidden="true">
+            <a href="/research?sport=nfl" tabindex="-1"><img src="/assets/leagues/nfl.png" width="68" height="52" alt="" decoding="async"><span>NFL</span></a>
+            <a href="/research?sport=nba" tabindex="-1"><img src="/assets/leagues/nba.png" width="68" height="52" alt="" decoding="async"><span>NBA</span></a>
+            <a href="/research?sport=wnba" tabindex="-1"><img src="/assets/leagues/wnba.png" width="68" height="52" alt="" decoding="async"><span>WNBA</span></a>
+            <a href="/research?sport=mlb" tabindex="-1"><img src="/assets/leagues/mlb.png" width="68" height="52" alt="" decoding="async"><span>MLB</span></a>
+            <a href="/research?sport=nhl" tabindex="-1"><img src="/assets/leagues/nhl.png" width="68" height="52" alt="" decoding="async"><span>NHL</span></a>
+            <a class="home-soccer-link" href="/research?sport=soccer" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m12 7 5 4-2 5H9l-2-5Zm0-4v4M3.5 9l3.5 2m-1 8 3-3m9 3-3-3m5.5-7L17 11"/></svg><span>Soccer</span></a>
+          </div>
+          <div class="home-sport-set" aria-hidden="true">
+            <a href="/research?sport=nfl" tabindex="-1"><img src="/assets/leagues/nfl.png" width="68" height="52" alt="" decoding="async"><span>NFL</span></a>
+            <a href="/research?sport=nba" tabindex="-1"><img src="/assets/leagues/nba.png" width="68" height="52" alt="" decoding="async"><span>NBA</span></a>
+            <a href="/research?sport=wnba" tabindex="-1"><img src="/assets/leagues/wnba.png" width="68" height="52" alt="" decoding="async"><span>WNBA</span></a>
+            <a href="/research?sport=mlb" tabindex="-1"><img src="/assets/leagues/mlb.png" width="68" height="52" alt="" decoding="async"><span>MLB</span></a>
+            <a href="/research?sport=nhl" tabindex="-1"><img src="/assets/leagues/nhl.png" width="68" height="52" alt="" decoding="async"><span>NHL</span></a>
+            <a class="home-soccer-link" href="/research?sport=soccer" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m12 7 5 4-2 5H9l-2-5Zm0-4v4M3.5 9l3.5 2m-1 8 3-3m9 3-3-3m5.5-7L17 11"/></svg><span>Soccer</span></a>
+          </div>
+        </div>
       </div>
     </nav>
+
+    <section class="home-pricing" id="plans" aria-labelledby="plans-title">
+      <div class="home-pricing-inner">
+        <div class="home-pricing-heading sl-section-head is-center" data-reveal>
+          <span class="home-pricing-kicker sl-kicker">VisualOdds plans</span>
+          <h2 id="plans-title">Which plan is right for you?</h2>
+          <p>Find your starting point, then choose the Premium option that fits you.</p>
+        </div>
+        <div class="home-pricing-cycle" role="group" aria-label="Billing preview">
+          <span class="is-active" data-cycle-label="monthly">Monthly</span>
+          <button class="home-pricing-switch" type="button" role="switch" aria-checked="false" aria-label="Show annual preview prices"><span></span></button>
+          <span data-cycle-label="annual">Annual</span>
+          <em>Preview only</em>
+        </div>
+        <div class="home-pricing-grid" id="home-pricing-grid"></div>
+        <p class="home-pricing-disclaimer">Basic $14.99, Pro $24.99, Premium $49.99, and Premium Max $99.99 per month. Prices shown are plan previews; checkout availability is shown with each plan.</p>
+      </div>
+    </section>
+    <dialog class="home-pricing-dialog" id="home-pricing-dialog" aria-labelledby="plan-dialog-title"><button class="home-pricing-dialog-close" type="button" data-plan-close aria-label="Close">×</button><h2 id="plan-dialog-title">Plan preview</h2><p>These example plans are here for layout review. Subscriptions and free trials are not available yet.</p><a class="home-button" href="/research">Explore VisualOdds</a></dialog>
+
     <section class="home-reviews" id="reviews" aria-labelledby="reviews-title">
-      <div class="home-reviews-heading home-wide">
-        <span class="home-reviews-kicker">Reviews</span>
+      <div class="home-reviews-heading home-wide sl-section-head" data-reveal>
+        <span class="home-reviews-kicker sl-kicker">Reviews</span>
         <h2 id="reviews-title">The community has spoken</h2>
         <div class="home-reviews-stars" aria-hidden="true">
           <svg viewBox="0 0 24 24" focusable="false"><path d="m12 1.8 3.08 6.24 6.89 1-4.98 4.85 1.18 6.86L12 17.5l-6.17 3.25 1.18-6.86-4.98-4.85 6.89-1L12 1.8Z"/></svg>
@@ -90,9 +438,10 @@
           <svg viewBox="0 0 24 24" focusable="false"><path d="m12 1.8 3.08 6.24 6.89 1-4.98 4.85 1.18 6.86L12 17.5l-6.17 3.25 1.18-6.86-4.98-4.85 6.89-1L12 1.8Z"/></svg>
           <svg viewBox="0 0 24 24" focusable="false"><path d="m12 1.8 3.08 6.24 6.89 1-4.98 4.85 1.18 6.86L12 17.5l-6.17 3.25 1.18-6.86-4.98-4.85 6.89-1L12 1.8Z"/></svg>
           <svg viewBox="0 0 24 24" focusable="false"><path d="m12 1.8 3.08 6.24 6.89 1-4.98 4.85 1.18 6.86L12 17.5l-6.17 3.25 1.18-6.86-4.98-4.85 6.89-1L12 1.8Z"/></svg>
+          <span>From our Discord community</span>
         </div>
       </div>
-      <div class="home-review-viewport" id="home-review-viewport" tabindex="0" role="region" aria-label="SportsLab Discord reviews; scroll horizontally for more">
+      <div class="home-review-viewport" id="home-review-viewport" tabindex="0" role="region" aria-label="VisualOdds Discord reviews; scroll horizontally for more">
         <div class="home-review-track">
           <figure class="home-review-card"><blockquote>Best tool I’ve found for comparing lines. It keeps the research in one place and saves me from jumping between a bunch of apps.</blockquote><figcaption><span class="home-review-avatar" aria-hidden="true">D</span><span><strong>Community member</strong><small>Discord</small></span></figcaption></figure>
           <figure class="home-review-card"><blockquote>I’ve been using this tool for a few weeks, and it’s made my research routine a lot quicker. The layout is clean and easy to figure out.</blockquote><figcaption><span class="home-review-avatar" aria-hidden="true">D</span><span><strong>Community member</strong><small>Discord</small></span></figcaption></figure>
@@ -108,13 +457,50 @@
         </div>
       </div>
     </section>
+
+    <section class="home-section sl-faq" id="faq" aria-labelledby="faq-title">
+      <div class="home-wide sl-faq-grid">
+        <header class="sl-section-head" data-reveal>
+          <span class="sl-kicker">Questions</span>
+          <h2 id="faq-title">Straight answers.</h2>
+          <p>Still curious? The <a href="/help">help center</a> covers every tool in detail.</p>
+          <a class="sl-faq-help" href="/help"><span class="sl-faq-help-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17h.01"/></svg></span><span><strong>Visit the help center</strong><small>Guides for every tool, market and calculator</small></span><span class="sl-faq-help-arrow" aria-hidden="true">→</span></a>
+        </header>
+        <div class="sl-faq-list" data-reveal>
+          <details><summary><span class="sl-faq-num">01</span><span class="sl-faq-q">Does VisualOdds place bets for me?</span><span class="sl-faq-icon" aria-hidden="true"></span></summary><div class="sl-faq-answer"><p>No. VisualOdds is a research and tracking workspace. You compare prices and evidence here, then place any bet yourself at a licensed sportsbook.</p></div></details>
+          <details><summary><span class="sl-faq-num">02</span><span class="sl-faq-q">Where do the numbers come from?</span><span class="sl-faq-icon" aria-hidden="true"></span></summary><div class="sl-faq-answer"><p>Player history comes from public datasets and box scores, and prices come from connected feeds or entries you make. Every view shows its sample size, source and capture time so you can check it.</p></div></details>
+          <details><summary><span class="sl-faq-num">03</span><span class="sl-faq-q">What does positive EV mean?</span><span class="sl-faq-icon" aria-hidden="true"></span></summary><div class="sl-faq-answer"><p>A bet has positive expected value when its price pays more than the fair, no-vig probability implies. It is an estimate over many bets, not a promise that any single bet wins.</p></div></details>
+          <details><summary><span class="sl-faq-num">04</span><span class="sl-faq-q">Are projections guaranteed?</span><span class="sl-faq-icon" aria-hidden="true"></span></summary><div class="sl-faq-answer"><p>No. Projections and simulations are experimental estimates under stated assumptions. Historical hit rates describe the past; they are not future probabilities.</p></div></details>
+          <details><summary><span class="sl-faq-num">05</span><span class="sl-faq-q">Is the bet tracker free?</span><span class="sl-faq-icon" aria-hidden="true"></span></summary><div class="sl-faq-answer"><p>Yes. Every account includes the bet tracker and saved filters. Research, models and the market tools are part of the paid plans shown above.</p></div></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="sl-cta" aria-labelledby="cta-title">
+      <div class="home-wide sl-cta-inner" data-reveal>
+        <img src="/favicon.svg" width="64" height="64" alt="" aria-hidden="true">
+        <h2 id="cta-title">Start with the<br><span class="sl-gradient-text">whole picture.</span></h2>
+        <p>Open the research workspace in seconds. No sportsbook account needed.</p>
+        <div class="home-actions">
+          <a class="home-button" href="/research">Get started <span data-icon="arrow" aria-hidden="true"></span></a>
+          <a class="home-button home-button-ghost" href="/register">Create a free account</a>
+        </div>
+      </div>
+    </section>
   </main>
+
   <footer class="home-footer">
-    <div class="home-wide home-footer-grid">
+    <div class="home-wide home-footer-top">
       <div class="home-footer-brand">
-        <a class="home-brand" href="/" aria-label="SportsLab home"><img src="/favicon.svg" width="36" height="36" alt=""><span>sports<strong>lab</strong></span></a>
+        <a class="home-brand" href="/" aria-label="VisualOdds home"><img src="/favicon.svg" width="34" height="34" alt=""><span>Visual<em>Odds</em></span></a>
         <p>Sports research with the source in view.</p>
       </div>
+      <div class="home-footer-actions">
+        <a class="home-button home-footer-cta" href="/research">Open the workspace <span data-icon="arrow" aria-hidden="true"></span></a>
+        <a class="home-button home-button-ghost home-footer-cta" href="/help">Help center</a>
+      </div>
+    </div>
+    <div class="home-wide home-footer-grid">
       <nav class="home-footer-column" aria-labelledby="footer-research-title">
         <h2 id="footer-research-title">Sports research</h2>
         <a href="/research?sport=nfl">NFL research</a>
@@ -125,7 +511,7 @@
         <a href="/research?sport=soccer">Soccer research</a>
       </nav>
       <nav class="home-footer-column" aria-labelledby="footer-tools-title">
-        <h2 id="footer-tools-title">SportsLab tools</h2>
+        <h2 id="footer-tools-title">VisualOdds tools</h2>
         <a href="/research">Player research</a>
         <a href="/live">Live game center</a>
         <a href="/simulation">Game simulation</a>
@@ -151,6 +537,7 @@
       </nav>
       <nav class="home-footer-column" aria-labelledby="footer-guides-title">
         <h2 id="footer-guides-title">Guides and tools</h2>
+        <a href="/help">Help center</a>
         <a href="/sportsbooks">Sportsbooks</a>
         <a href="/online-sports-betting">Betting by state</a>
         <a href="/betting-education">Betting education</a>
@@ -159,7 +546,10 @@
         <a href="/odds-api">Odds API guide</a>
       </nav>
     </div>
-    <div class="home-wide home-footer-bottom"><span>Public feeds may lag. SportsLab does not place bets.</span><span>© 2026 SportsLab</span></div>
+    <div class="home-wide home-footer-bottom">
+      <p class="home-footer-legal"><span class="home-footer-age">21+</span>Public feeds may lag. VisualOdds does not place bets. Gambling problem? Call <a href="tel:18004262537">1-800-GAMBLER</a>.</p>
+      <p class="home-footer-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><span>© 2026 VisualOdds</span></p>
+    </div>
   </footer>
 </body>
 </html>

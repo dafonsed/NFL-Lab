@@ -60,6 +60,21 @@ test('missing stats are withheld, real zero and negative yards remain recorded',
 test('stale, upcoming, completed, OT, last-two-minute, short-history and incomplete team states cannot project', () => {
   for (const overrides of [{ stale: true }, { prior: null }, { prior: { ...prior, count: 2 } }, { team: { ...team, sacks: null } }, { team: { ...team, targets: 3 } }, ...[{ state: 'pre' }, { state: 'post' }, { period: 5 }, { remainingSeconds: 119 }, { remainingSeconds: null }].map(g => ({ game: { ...game, ...g } }))]) assert.equal(project(overrides).projection, null, JSON.stringify(overrides));
 });
+
+test('a fresh delayed or suspended NFL game preserves recorded stats and withholds future production', () => {
+  for (const status of ['Game delayed','Game suspended']) {
+    const result=project({game:{...game,interrupted:true,status}});
+    assert.equal(result.current,48);
+    assert.equal(result.projection,null);
+    assert.equal(result.remaining,null);
+    assert.equal(result.status,'withheld');
+    assert.match(result.reasons.join(' '),/delayed or suspended/i);
+    const combined=project({market:'rush_rec_yds',game:{...game,interrupted:true,status}});
+    assert.equal(combined.current,56);
+    assert.equal(combined.projection,null);
+  }
+  assert.ok(Number.isFinite(project({game:{...game,interrupted:false}}).projection));
+});
 test('ESPN normalization uses named fields, stable IDs, actual zeros, missing categories and valid clocks', () => {
   const { summary } = fixture(), n = normalizeSummary(summary, game), receiver = n.players.find(p => p.id === '100');
   assert.equal(receiver.stats.receiving_yards, 48); assert.equal(receiver.stats.rushing_yards, 0);

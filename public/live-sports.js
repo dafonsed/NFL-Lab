@@ -1,11 +1,13 @@
 import {playerPortrait,teamMark} from './sports-identity.js';
 import {requestData,mountLiveWorkspace,renderLiveEmptyState} from './product-ui.js';
 import { baseballSituation, preserveLiveFocus, withheldSummary } from './presentation.js';
-import { compareLiveLine } from './live-utils.js';
+import { compareLiveLine, stableLiveOrder, liveDisplayRevision } from './live-utils.js';
 import { gameScoreboardHtml, renderGameOdds, updateGameOdds, finalPlayerHtml } from './live-game.js';
 const $ = s => document.querySelector(s);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (x, digits = 1) => Number.isFinite(x) ? x.toFixed(digits) : '—';
+// Share of the projected total already recorded; drives the row's progress bar.
+const liveProgress = (f, paused) => !paused && Number.isFinite(f?.current) && Number.isFinite(f?.projection) && f.projection > 0 ? Math.min(100, Math.round(f.current / f.projection * 100)) + '%' : '0%';
 const pct = x => Number.isFinite(x) ? Math.round(x * 100) + '%' : '—';
 
 const safe = url => /^https:\/\//.test(url || '') ? esc(url) : '#';
@@ -13,7 +15,7 @@ const time = t => t ? new Date(t).toLocaleTimeString([], { hour: 'numeric', minu
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 const sport = location.pathname.split('/')[1], label = sport.toUpperCase(), params = new URLSearchParams(location.search);
 const state = { data: null, game: params.get('game') || '', date: params.get('date') || today(), followToday: !params.has('date'), market: params.get('market') || (sport === 'mlb' ? 'hits' : 'points'), search: '', loading: false, error: '', quotes: new Map(), drafts: new Map(), paused: new Set(), expanded: new Set() };
-let controller, requestId = 0;
+let controller, requestId = 0, orderKey = '', readingOrder = [], lastRevision = '';
 const key = id => `${sport}:${state.game}:${id}:${state.market}`;
 const playerKey = id => `${sport}:${state.game}:${id}`;
 $('#back-link').href = `/${sport}`;
@@ -22,11 +24,12 @@ document.title = label + ' Lab · Live odds & props'; $('#date').value = state.d
 function updateUrl() {
   const q = new URLSearchParams({ date: state.date, market: state.market }); if (state.game) q.set('game', state.game);
   q.set('panel',document.querySelector('[data-live-panel][aria-selected=true]')?.dataset.livePanel||'game');
-  history.replaceState(null, '', `/${sport}/live?` + q);
+  history.replaceState(history.state, '', `/${sport}/live?` + q);
 }
 async function load({ clear = false } = {}) {
   if (state.followToday && state.date !== today()) { state.date = today(); state.game = ''; $('#date').value = state.date; clear = true; }
   controller?.abort(); controller = new AbortController(); const id = ++requestId;
+  const hadError=Boolean(state.error);
   state.loading = true; state.error = ''; $('#refresh').disabled = true; $('#refresh').setAttribute('aria-label','Refreshing data'); $('#players').setAttribute('aria-busy', 'true');
   if (clear) { state.data = null; render(); } else updateFreshness();
   const q = new URLSearchParams({ date: state.date }); if (state.game) q.set('game', state.game);
@@ -35,7 +38,9 @@ async function load({ clear = false } = {}) {
     if (id !== requestId) return;
     state.data = data; state.game = data.selected || '';
     if (!Object.hasOwn(data.markets, state.market)) state.market = sport === 'mlb' ? 'hits' : 'points';
-    updateUrl(); render();
+    const revision=liveDisplayRevision(data);updateUrl();
+    if(clear||hadError||revision!==lastRevision)render();else updateFreshness();
+    lastRevision=revision;
   } catch (e) { if (e.name === 'AbortError' || id !== requestId) return; state.error = e.message; render(); }
   finally { if (id === requestId) { state.loading = false; $('#refresh').disabled = false; $('#refresh').setAttribute('aria-label','Refresh live'); $('#players').setAttribute('aria-busy', 'false'); renderLiveEmptyState(state.data,state); updateFreshness(); } }
 }
@@ -50,7 +55,7 @@ function render() {
   $('#warnings').innerHTML = [...new Set([...(d?.warnings || []), ...(state.error ? [state.error] : [])])].map(w => `<p class="live-warning">${esc(w)}</p>`).join('');
   $('#game').innerHTML = d?.events.length ? d.events.map(e => `<option value="${esc(e.id)}" ${e.id === state.game ? 'selected' : ''}>${esc(e.teams.find(t => t.homeAway === 'away')?.abbreviation)} @ ${esc(e.teams.find(t => t.homeAway === 'home')?.abbreviation)} · ${esc(e.status)}</option>`).join('') : `<option value="">${!d && state.loading ? 'Loading games…' : (state.error||d?.stale) ? 'Games unavailable · refresh to retry' : 'No games on this date'}</option>`;
   $('#markets').innerHTML = Object.entries(d?.markets || {}).map(([k, m]) => `<button class="market-tab ${k === state.market ? 'active' : ''}" data-market="${esc(k)}" aria-pressed="${k === state.market}">${esc(m.label)}</button>`).join('');
-  $('#scoreboard').innerHTML = g ? gameScoreboardHtml(g,sport,gameClock(g)) : '';
+  $('#scoreboard').innerHTML = g ? gameScoreboardHtml(g,sport,gameClock(g),d.gameModel) : '';
   renderGameOdds($('#odds'), d); renderLiveEmptyState(d,state); renderPlayers();
   const method = d?.method;
   $('#method-content').innerHTML = method ? `<div class="live-formula">${esc(method.formula)}</div><div class="live-method-grid">${method.sections.map(([title, description], i) => `<article><h3>0${i + 1} / ${esc(title)}</h3><p>${esc(description)}</p></article>`).join('')}</div><p class="live-method-note">${esc(method.limits)}</p>` : 'The model specification appears when the feed connects.';
@@ -65,7 +70,10 @@ function breakdown(f) {
 function renderPlayers() {
   const restoreFocus = preserveLiveFocus($('#players'));
   const focus = document.activeElement?.dataset.line, d = state.data, query = state.search.trim().toLowerCase(), title = d?.markets[state.market]?.label || 'Player projections';
-  const rows = (d?.players || []).filter(p => p.projections[state.market] && (!query || `${p.name} ${p.team}`.toLowerCase().includes(query))).sort((a, b) => (b.projections[state.market].projection ?? b.projections[state.market].current ?? -1) - (a.projections[state.market].projection ?? a.projections[state.market].current ?? -1));
+  const nextKey=state.game+':'+state.market;if(nextKey!==orderKey){orderKey=nextKey;readingOrder=[];}
+  const ordered=stableLiveOrder((d?.players||[]).filter(p=>p.projections[state.market]).sort((a,b)=>(b.projections[state.market].projection??b.projections[state.market].current??-1)-(a.projections[state.market].projection??a.projections[state.market].current??-1)),readingOrder);
+  readingOrder=ordered.map(p=>p.id);
+  const rows=ordered.filter(p=>!query||`${p.name} ${p.team}`.toLowerCase().includes(query));
   $('#market-title').textContent = title;
   document.body.classList.toggle('live-final', d?.game?.state === 'post');
   $('#players-count').textContent = `${rows.length} players · ${d?.game?.state === 'post' ? 'Final box score · live comparisons closed' : 'Regulation projection · no calibrated live probabilities'}`;
@@ -77,7 +85,7 @@ function renderPlayers() {
     const f = p.projections[state.market], paused = state.paused.has(playerKey(p.id)), draft = state.drafts.get(key(p.id)) ?? '', prior = sport === 'mlb' ? p.prior?.[d.markets[state.market].group] : p.prior;
     if(f.status==='final') return finalPlayerHtml({...p,sport},f,title,[p.team,p.position,Number.isFinite(p.minutes)?num(p.minutes)+' min':null].filter(Boolean).join(' · '),prior?.sample,state.expanded.has(key(p.id)));
     const disabled = !Number.isFinite(f.projection) || paused;
-    return `<article class="live-card" data-live-player="${esc(p.id)}"><div class="live-card-header"><div class="live-player-identity">${playerPortrait({...p,sport})}<div><h3>${esc(p.name)}</h3><p>${esc(p.team)} · ${esc(p.position || 'Player')}${Number.isFinite(p.minutes) ? ' · ' + num(p.minutes) + ' MIN' : ''} · ${prior?.count || 0} prior games</p></div></div><span class="live-tag ${disabled ? 'withheld' : ''}">${paused ? 'PAUSED' : f.status === 'final' ? 'FINAL' : disabled ? 'WITHHELD' : 'EXPERIMENTAL'}</span></div><div class="live-values"><div><small>RECORDED</small><strong>${num(f.current)}</strong></div><div><small>STILL TO COME</small><strong>${paused ? '—' : num(f.remaining)}</strong></div><div class="projected"><small>PROJECTED TOTAL</small><strong>${paused ? '—' : num(f.projection)}</strong></div></div>${!Number.isFinite(f.projection)&&f.reasons?.length?`<p class="live-withheld-reason">${esc(withheldSummary(f.reasons))}</p>`:""}<div class="live-inputs"><form data-quote="${esc(p.id)}"><label for="line-${esc(p.id)}">Your full-game ${esc(title.toLowerCase())} line<input id="line-${esc(p.id)}" data-line="${esc(p.id)}" type="number" min="0" max="1500" step="0.5" placeholder="Enter live total" value="${esc(draft)}" required ${disabled ? 'disabled' : ''}></label><button class="button subtle" type="submit" ${disabled ? 'disabled' : ''}>Confirm line</button></form><p class="live-comparison" data-comparison="${esc(p.id)}"></p><label class="pause-player"><input type="checkbox" data-pause="${esc(p.id)}" ${paused ? 'checked' : ''}> Pause player · injury or uncertain role</label></div><details class="live-breakdown" data-detail="${esc(p.id)}" ${state.expanded.has(key(p.id)) ? 'open' : ''}><summary>Projection inputs</summary>${f.reasons.length ? `<p>${f.reasons.map(esc).join(' ')}</p>` : breakdown(f)}${prior?.sample?.length ? `<p>Earlier games: ${prior.sample.map(s => esc(s.date.slice(0, 10))).join(' · ')}.</p>` : ''}<p>Check in-game substitutions and injuries. Projections exclude ${sport === 'mlb' ? 'extra innings' : 'overtime'}.</p></details></article>`;
+    return `<article class="live-card" data-live-player="${esc(p.id)}"><div class="live-card-header"><div class="live-player-identity">${playerPortrait({...p,sport})}<div><h3>${esc(p.name)}</h3><p>${esc(p.team)} · ${esc(p.position || 'Player')}${Number.isFinite(p.minutes) ? ' · ' + num(p.minutes) + ' MIN' : ''} · ${prior?.count || 0} prior games</p></div></div><span class="live-tag ${disabled ? 'withheld' : ''}">${paused ? 'PAUSED' : f.status === 'final' ? 'FINAL' : disabled ? 'WITHHELD' : 'EXPERIMENTAL'}</span></div><div class="live-values" style="--live-progress:${liveProgress(f,paused)}"><div><small>RECORDED</small><strong>${num(f.current)}</strong></div><div><small>STILL TO COME</small><strong>${paused ? '—' : num(f.remaining)}</strong></div><div class="projected"><small>PROJECTED TOTAL</small><strong>${paused ? '—' : num(f.projection)}</strong></div></div>${!Number.isFinite(f.projection)&&f.reasons?.length?`<p class="live-withheld-reason">${esc(withheldSummary(f.reasons))}</p>`:""}<div class="live-inputs"><form data-quote="${esc(p.id)}"><label for="line-${esc(p.id)}">Your full-game ${esc(title.toLowerCase())} line<input id="line-${esc(p.id)}" data-line="${esc(p.id)}" type="number" min="0" max="1500" step="0.5" placeholder="Enter live total" value="${esc(draft)}" required ${disabled ? 'disabled' : ''}></label><button class="button subtle" type="submit" ${disabled ? 'disabled' : ''}>Confirm line</button></form><p class="live-comparison" data-comparison="${esc(p.id)}"></p><label class="pause-player"><input type="checkbox" data-pause="${esc(p.id)}" ${paused ? 'checked' : ''}> Pause player · injury or uncertain role</label></div><details class="live-breakdown" data-detail="${esc(p.id)}" ${state.expanded.has(key(p.id)) ? 'open' : ''}><summary>Projection inputs</summary>${f.reasons.length ? `<p>${f.reasons.map(esc).join(' ')}</p>` : breakdown(f)}${prior?.sample?.length ? `<p>Earlier games: ${prior.sample.map(s => esc(s.date.slice(0, 10))).join(' · ')}.</p>` : ''}<p>Check in-game substitutions and injuries. Projections exclude ${sport === 'mlb' ? 'extra innings' : 'overtime'}.</p></details></article>`;
   }).join('');
   $('#players').querySelectorAll('[data-detail]').forEach(el => el.addEventListener('toggle', () => el.open ? state.expanded.add(key(el.dataset.detail)) : state.expanded.delete(key(el.dataset.detail))));
   if (focus) document.getElementById('line-' + focus)?.focus({ preventScroll: true });
@@ -122,8 +130,11 @@ $('#players').addEventListener('submit', e => {
   if (!input.value.trim() || !Number.isFinite(line) || line < 0 || line > 1500 || !input.checkValidity() || feedStale() || state.paused.has(playerKey(id))) return;
   state.quotes.set(key(id), { line, at: Date.now(), snapshot: state.data.snapshot }); updateFreshness();
 });
-setInterval(() => { if (!document.hidden && $('#auto').checked && !state.loading) load(); }, 15000);
+setInterval(() => { if (!document.hidden && navigator.onLine !== false && $('#auto').checked && !state.loading) load(); }, 15000);
 setInterval(() => { if (!document.hidden) updateFreshness(); }, 1000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { updateFreshness(); if ($('#auto').checked && !state.loading) load(); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { updateFreshness(); if (navigator.onLine !== false && $('#auto').checked && !state.loading) load(); } });
+try { $('#auto').checked = localStorage.getItem('sportslab-live-auto') !== 'false'; } catch {}
+$('#auto').addEventListener('change',()=>{try{localStorage.setItem('sportslab-live-auto',String($('#auto').checked));}catch{}});
+window.addEventListener('online',()=>{if(!document.hidden&&$('#auto').checked&&!state.loading)load();});
 mountLiveWorkspace();
 load();

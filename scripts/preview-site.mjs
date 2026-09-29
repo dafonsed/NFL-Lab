@@ -1,7 +1,7 @@
 import http from 'node:http';
 import { stat } from 'node:fs/promises';
 
-// Preview the same artifact used for the Sportslab Sites deployment.
+// Preview the same artifact used for the VisualOdds Sites deployment.
 const entry = new URL('../sites-unified-sync/dist/server/index.js', import.meta.url);
 const port = Number(process.env.PORT || 4182);
 let loadedAt;

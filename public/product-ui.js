@@ -1,12 +1,14 @@
 import {escape as esc, finite, number as num, selectGames, summarize} from './research-data.js';
 import {icon} from './ui-icons.js';
 import {playerPortrait,teamMark} from './sports-identity.js';
+import {platformAsset} from './platform-catalog.js';
 
 // The same compact book mark is used beside prices on every research surface.
 export function sportsbookMark(book) {
   if (/^draftkings(?:sportsbook)?$/.test(String(book||'').toLowerCase().replace(/[^a-z]/g,''))) return '<span class="sportsbook-symbol" title="DraftKings"><img src="/assets/sportsbooks/draftkings.svg" alt="DraftKings" width="18" height="18"></span>';
-  return /^fanduel(?:sportsbook)?$/.test(String(book||'').toLowerCase().replace(/[^a-z]/g,''))
-    ? '<span class="td-sportsbook-logo" title="FanDuel"><img src="/assets/sportsbooks/fanduel.png" alt="FanDuel" width="1920" height="1080"></span>' : '';
+  // Every other catalog book gets its square brand mark.
+  const asset=book?platformAsset(book):null;
+  return asset?`<span class="sportsbook-symbol sportsbook-brand" title="${esc(book)}"><img src="${esc(asset)}" alt="${esc(book)}" width="18" height="18"></span>`:'';
 }
 
 // A request boundary for presentation code; source and model results are not altered.
@@ -36,6 +38,24 @@ export function emptyBoard(title, description, actions = '') {
   return `<div class="product-empty"><span class="empty-symbol">${icon('calendar')}</span><div><h2>${esc(title)}</h2><p>${esc(description)}</p>${actions ? `<div class="empty-actions">${actions}</div>` : ''}</div></div>`;
 }
 
+// Filter and sort the complete result set first; mount only one page in the DOM.
+export function paginateRows(rows, requestedPage = 1, pageSize = 25) {
+  const size = Number.isFinite(Number(pageSize)) ? Math.max(1, Math.min(100, Math.floor(Number(pageSize)))) : 25;
+  const total = rows.length, totalPages = Math.max(1, Math.ceil(total / size));
+  const requested = Number.isFinite(Number(requestedPage)) ? Math.floor(Number(requestedPage)) : 1;
+  const page = Math.max(1, Math.min(totalPages, requested)), offset = (page - 1) * size;
+  return { rows: rows.slice(offset, offset + size), page, pageSize:size, total, totalPages, start:total ? offset + 1 : 0, end:Math.min(offset + size, total) };
+}
+
+export function paginationControls(info, { label = 'Players' } = {}) {
+  if (!info.total) return '';
+  const { page, totalPages, start, end, total } = info;
+  const numbers = [...new Set([1, totalPages, ...Array.from({length:3}, (_, i) => page + i - 1)])].filter(n => n > 0 && n <= totalPages).sort((a,b) => a-b);
+  const button = (n, text, attributes = '') => `<button type="button" data-board-page="${n}" ${attributes}>${text}</button>`;
+  const pages = numbers.map((n, index) => `${index && n > numbers[index-1] + 1 ? '<span class="board-page-gap" aria-hidden="true">…</span>' : ''}${button(n, `${n}${n === page ? `<span class="board-page-total" aria-hidden="true"> / ${totalPages}</span>` : ''}`, `class="board-page-number" aria-label="Page ${n}"${n === page ? ' aria-current="page"' : ''}`)}`).join('');
+  return `<nav class="board-pagination" aria-label="${esc(label)} pages"><p class="board-page-summary" role="status"><strong>${start}–${end}</strong> of ${total}<span class="board-page-noun"> ${esc(label.toLowerCase())}</span></p>${totalPages > 1 ? `<div class="board-page-controls">${button(Math.max(1,page-1), icon('chevron'), `class="board-page-arrow board-page-previous" aria-label="Previous page" title="Previous page"${page === 1 ? ' disabled' : ''}`)}${pages}${button(Math.min(totalPages,page+1), icon('chevron'), `class="board-page-arrow" aria-label="Next page" title="Next page"${page === totalPages ? ' disabled' : ''}`)}</div>` : ''}</nav>`;
+}
+
 export function miniHistory(profile, side = 'over') {
   const games = selectGames(profile, {window:'10'}).slice().reverse(), line = finite(profile.prop?.line);
   if (!games.length) return '<span class="history-unavailable">No prior games</span>';
@@ -57,7 +77,7 @@ export function mountLiveWorkspace() {
   const sync=()=>{empty.hidden=!odds.hidden;};new MutationObserver(sync).observe(odds,{attributes:true,attributeFilter:['hidden']});sync();
   const playerPanel=document.createElement('section');playerPanel.id='live-players-panel';playerPanel.setAttribute('role','tabpanel');playerPanel.setAttribute('aria-labelledby','live-players-tab');game.after(playerPanel);
   for(const selector of ['#markets','.live-filter-row','.live-line-note','#players']){const node=document.querySelector(selector);if(node)playerPanel.append(node);}
-  function select(panel){for(const b of tabs.querySelectorAll('button')){const active=b.dataset.livePanel===panel;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;}game.hidden=panel!=='game';playerPanel.hidden=panel!=='players';const url=new URL(location.href);url.searchParams.set('panel',panel);history.replaceState(null,'',url);}
+  function select(panel){for(const b of tabs.querySelectorAll('button')){const active=b.dataset.livePanel===panel;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;}game.hidden=panel!=='game';playerPanel.hidden=panel!=='players';const url=new URL(location.href);url.searchParams.set('panel',panel);history.replaceState(history.state,'',url);}
   tabs.addEventListener('click',e=>{const button=e.target.closest('[data-live-panel]');if(button)select(button.dataset.livePanel);});
   tabs.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const next=e.key==='Home'?'game':e.key==='End'?'players':game.hidden?'game':'players';select(next);tabs.querySelector('[aria-selected=true]').focus();});
   select(new URLSearchParams(location.search).get('panel')==='players'?'players':'game');
@@ -82,11 +102,11 @@ export function propRow(profile, {open='data-player', id=profile.key, save='data
   const modelValue=tdChance?(finite(p.raw?.modelScore)!==null&&!p.availability?.unavailable?`${num(p.raw.modelScore)}%`:'—'):num(f.point,p.sport==='mlb'?2:1);
   const status=p.availability?.concern||p.availability?.unavailable?p.availability.status:p.lineup==='confirmed'?`Batting ${p.battingOrder}`:p.lineup==='probable'?'Probable starter':'';
   const odds=finite(quote?.prices?.[side]?.american);
-  return `<article class="research-row ${kind}" data-research-row="${esc(p.key)}"><header class="research-identity"><button class="research-player player-detail-link" ${open}="${esc(id)}" aria-haspopup="dialog">${playerPortrait(p)}<span><strong>${esc(p.name)}</strong><small><span class="position">${esc(p.position||p.sport.toUpperCase())}</span> · ${esc(p.team)} vs ${esc(p.opponent||'TBD')}${p.raw?.gameNumber>1?' · Game '+p.raw.gameNumber:''}</small>${status?`<small class="player-status">${esc(status)}</small>`:''}</span></button></header>
+  return `<article class="research-row ${kind}" data-research-row="${esc(p.key)}"><header class="research-identity"><button class="research-player player-detail-link" ${open}="${esc(id)}" aria-haspopup="dialog">${playerPortrait(p)}<span><strong>${esc(p.name)}</strong><small><span class="position">${esc(p.position||p.sport.toUpperCase())}</span> · ${esc(p.team)} vs ${esc(p.opponent||'TBD')}${p.raw?.gameNumber>1?' · Game '+p.raw.gameNumber:''}</small>${status?`<small class="player-status${p.availability?.concern||p.availability?.unavailable?' is-concern':' is-good'}">${esc(status)}</small>`:''}</span></button></header>
   <div class="research-line" title="${esc(source)}${quote?' · '+esc(quote.bookmaker):''}"><span class="row-field-label">Sportsbook line</span><strong>${quote?`${p.market==='any_td'?'1+ TD':num(quote.line)}`:'—'}</strong><small>${quote?esc(quote.bookmaker):'No posted line'}</small><span class="quote-kind">${source}</span></div>
   <div class="research-odds" title="${esc(source)}${quote?' · '+esc(quote.bookmaker):''}"><span class="row-field-label">Book odds</span>${odds!==null?sportsbookMark(quote?.bookmaker):''}<strong>${odds===null?'—':(odds>0?'+':'')+num(odds,0)}</strong>${odds!==null&&!sportsbookMark(quote?.bookmaker)?`<small>${esc(quote?.bookmaker||'')}</small>`:''}</div>
-  <div class="research-estimate"><span class="row-field-label">${esc(label)}</span><strong>${modelValue}</strong><small>${tdChance?'0–100 ranking score':finite(f.point)===null?'Estimate unavailable':`${f.sampleCount??p.rows.length} prior games`}</small>${!tdChance&&finite(p.raw?.modelScore)!==null?`<small class="row-rating">Research rating ${num(p.raw.modelScore)} / 100</small>`:''}</div>
-  ${tdChance?'':`<div class="research-probability"><span class="row-field-label">Model ${esc(side)} chance</span><strong>${probabilityText}</strong><small>${probability===null?'No comparable estimate':'At posted line'}</small></div>`}
+  <div class="research-estimate"><span class="row-field-label">${esc(label)}</span><strong>${modelValue}</strong>${tdChance&&modelValue!=='—'?`<i class="model-meter" aria-hidden="true" style="--model-pct:${Math.max(0,Math.min(100,Number(p.raw.modelScore)))}%"></i>`:''}<small>${tdChance?'0–100 ranking score':finite(f.point)===null?'Estimate unavailable':`${f.sampleCount??p.rows.length} prior games`}</small>${!tdChance&&finite(p.raw?.modelScore)!==null?`<small class="row-rating">Research rating ${num(p.raw.modelScore)} / 100</small>`:''}</div>
+  ${tdChance?'':`<div class="research-probability"><span class="row-field-label">Model ${esc(side)} chance</span><strong>${probabilityText}</strong>${probability===null?'':`<i class="model-meter" aria-hidden="true" style="--model-pct:${Math.max(0,Math.min(100,Math.round(probability*100)))}%"></i>`}<small>${probability===null?'No comparable estimate':'At posted line'}</small></div>`}
   <div class="research-result"><span class="row-field-label">Actual result</span><strong>${final?num(outcome.actual):'—'}</strong><small>${esc(resultLabel)}</small></div>
   <div class="research-actions${compare?' mlb-card-actions':''}"><button class="save-player" ${save}="${esc(saveId)}" aria-label="${saved?'Unsave':'Save'} ${esc(p.name)}" title="${saved?'Remove saved player':'Save player'}" aria-pressed="${saved}">${icon(saved?'check':'bookmark')}</button>${compare?`<button data-compare="${esc(id)}" aria-pressed="${comparing}" aria-label="${comparing?'Remove':'Compare'} ${esc(p.name)}" title="Compare player">${icon(comparing?'check':'plus')}</button><button ${open}="${esc(id)}" class="row-open" aria-label="Details for ${esc(p.name)}" title="Player details">${icon('chevron')}</button>`:''}</div></article>`;
 }
@@ -94,22 +114,36 @@ export function propRow(profile, {open='data-player', id=profile.key, save='data
 export function propBoard(rows, options={}) {
   const tdChance=rows[0]?.sport==='nfl'&&rows[0]?.market==='any_td', side=options.side||'over';
   const estimate=tdChance?'Model strength':'Projected '+(rows[0]?.label||'amount').toLowerCase();
-  return `<div class="research-board model-board${tdChance?' td-chance-board':''}"><div class="research-board-guide"><span><b>Sportsbook</b> Line and American odds are the posted market.</span><span><b>${esc(estimate)}</b> ${tdChance?'A 0–100 ranking score based on player usage, scoring role and matchup. The percentage shows strength on that scale.':'Model estimate in the selected stat.'} The model percentage is not the sportsbook’s implied probability.</span>${tdChance?'':`<span><b>Model ${esc(side)} chance</b> Estimated chance of clearing the posted line.</span>`}</div><div class="research-columns" aria-hidden="true"><span>Player / matchup</span><span>Sportsbook line</span><span>Book odds</span><span>${esc(estimate)}${tdChance?' %':''}</span>${tdChance?'':`<span>Model ${esc(side)} chance</span>`}<span class="research-column-result">Actual result</span><span></span></div>${rows.map(p=>propRow(p,typeof options.row==='function'?{...options,...options.row(p)}:options)).join('')}</div>`;
+  return `<div class="research-board model-board${tdChance?' td-chance-board':''}"><details class="research-board-help"><summary>About these numbers</summary><div class="research-board-guide"><span><b>Sportsbook</b> Line and American odds are the posted market.</span><span><b>${esc(estimate)}</b> ${tdChance?'A 0–100 ranking score based on player usage, scoring role and matchup. The percentage shows strength on that scale.':'Model estimate in the selected stat.'} The model percentage is not the sportsbook’s implied probability.</span>${tdChance?'':`<span><b>Model ${esc(side)} chance</b> Estimated chance of clearing the posted line.</span>`}</div></details><div class="research-columns" aria-hidden="true"><span>Player / matchup</span><span>Sportsbook line</span><span>Book odds</span><span>${esc(estimate)}${tdChance?' %':''}</span>${tdChance?'':`<span>Model ${esc(side)} chance</span>`}<span class="research-column-result">Actual result</span><span></span></div>${rows.map(p=>propRow(p,typeof options.row==='function'?{...options,...options.row(p)}:options)).join('')}</div>`;
+}
+
+// Last ten results at the line, oldest to newest: lime dash = hit, grey = miss, dim = push.
+function formDots(p,line,side,venue){
+  if(finite(line)===null)return '';
+  const games=selectGames(p,{window:'10',venue}).map(r=>finite(r.value)).filter(v=>v!==null).reverse();
+  if(!games.length)return '';
+  const hits=games.filter(v=>side==='under'?v<line:v>line).length;
+  return `<span class="trend-dots" role="img" aria-label="${hits} of ${games.length} recent games ${side} ${num(line)}">${games.map(v=>`<i class="${v===line?'is-push':(side==='under'?v<line:v>line)?'is-hit':''}"></i>`).join('')}</span>`;
 }
 
 // Each window uses only the recorded games available for this player.
-export function trendTable(rows, {side='over', venue='all', saved=new Set()}={}) {
+export function trendTable(rows, {side='over', venue='all', saved=new Set(), sort=null, window='10'}={}) {
   const windows=[['5','L5'],['10','L10'],['20','L20'],['h2h','H2H']];
+  const rankedWindow=sort==='rate'&&windows.some(([key])=>key===window)?window:null;
+  const averageWindow=sort==='average'?window:'all',averageRanked=sort==='average';
+  const averageLabel=averageWindow==='all'?'Available games':averageWindow==='h2h'?'H2H games':`Last ${averageWindow} games`;
+  const rankedHeader=active=>active?' class="trend-ranked" aria-sort="descending"':'';
   const rates=(p,line)=>windows.map(([window,label])=>{
     const s=summarize(selectGames(p,{window,venue}),line,side);
     const tone=s.rate===null?'missing':s.rate>=.7?'high':s.rate>=.5?'mid':'low';
-    return `<td class="trend-rate ${tone}" data-window-label="${label}" title="${label}: ${s.rate===null?'No comparison line':s.hits+' hits'} · ${s.n} recorded games${s.pushes?' · '+s.pushes+' pushes':''}"><strong>${s.rate===null?'—':Math.round(s.rate*100)+'%'}</strong><small>${s.rate===null?s.n+' games':s.hits+'/'+s.n}</small></td>`;
+    const heat=s.rate===null?'none':s.rate>=.7?'hot':s.rate>=.55?'warm':s.rate>=.4?'cool':'cold';
+    return `<td class="trend-rate ${tone}${window===rankedWindow?' trend-ranked':''}" data-heat="${heat}" data-window-label="${label}" title="${label}: ${s.rate===null?'No comparison line':s.hits+' hits'} · ${s.n} recorded games${s.pushes?' · '+s.pushes+' pushes':''}"><strong>${s.rate===null?'—':Math.round(s.rate*100)+'%'}</strong><small>${s.rate===null?s.n+' games':s.hits+'/'+s.n}</small></td>`;
   }).join('');
-  return `<div class="trend-table-scroll" tabindex="0" role="region" aria-label="Player trends table"><table class="trend-table"><caption class="sr-only">Historical hit rates by player. L5, L10 and L20 use up to 5, 10 and 20 recorded games. H2H uses available games against the current opponent. Pushes remain in each sample.</caption><thead><tr><th scope="col"><span class="sr-only">Watchlist</span></th><th scope="col">Proposition</th><th scope="col">Line</th><th scope="col">Odds</th>${windows.map(([,label])=>`<th scope="col">${label}</th>`).join('')}<th scope="col">Average<small>Available games</small></th></tr></thead><tbody>${rows.map(({p,line})=>{
+  return `<div class="trend-table-scroll" tabindex="0" role="region" aria-label="Player trends table"><table class="trend-table"><caption class="sr-only">Historical hit rates by player. L5, L10 and L20 use up to 5, 10 and 20 recorded games. H2H uses available games against the current opponent. Pushes remain in each sample.</caption><thead><tr><th scope="col"><span class="sr-only">Watchlist</span></th><th scope="col">Proposition</th><th scope="col">Line</th><th scope="col">Odds</th>${windows.map(([key,label])=>`<th scope="col"${rankedHeader(key===rankedWindow)}>${label}</th>`).join('')}<th scope="col"${rankedHeader(averageRanked)}>Average<small>${esc(averageLabel)}</small></th></tr></thead><tbody>${rows.map(({p,line})=>{
     const watched=saved.has(String(p.playerId)),odds=finite(p.prop?.prices?.[side]?.american),quote=p.prop;
     const kind=!quote?'No posted line':quote.stale?'Saved quote':quote.basis==='published_archive'?'Archived quote':quote.basis==='in_play'?'In play':'Posted quote';
-    const all=summarize(selectGames(p,{window:'all',venue}),null,side);
-    return `<tr data-trend-row="${esc(p.key)}"><td><button class="trend-save" data-watch-player="${esc(p.playerId)}" aria-label="${watched?'Unsave':'Save'} ${esc(p.name)}" aria-pressed="${watched}">${icon(watched?'check':'plus')}</button></td><th scope="row"><button class="td-player-name trend-player-link" data-player="${esc(p.key)}">${playerPortrait(p)}<span><span class="trend-player-topline"><strong>${esc(p.name)}</strong><small>${esc(p.team)} vs ${esc(p.opponent||'TBD')}${p.raw?.gameNumber>1?' · Game '+p.raw.gameNumber:''}</small></span><b>${line===null?esc(p.label):`${side==='over'?'Over':'Under'} ${num(line)} ${esc(p.label)}`}</b><small class="trend-mobile-quote sr-only">${esc(kind)}</small></span></button></th><td class="trend-line" title="${esc(kind)}"><strong>${num(line)}</strong><small class="sr-only">${esc(kind)}</small></td><td class="trend-odds" title="${esc(quote?.bookmaker||'No odds')}">${odds!==null&&/fanduel/i.test(quote?.bookKey||quote?.bookmaker||'')?'<span class="td-sportsbook-logo"><img src="/assets/sportsbooks/fanduel.png" alt="FanDuel" width="1920" height="1080"></span>':''}<strong>${odds===null?'—':(odds>0?'+':'')+num(odds,0)}</strong><small class="sr-only">${esc(quote?.bookmaker||'Unavailable')}</small></td>${rates(p,line)}<td class="trend-average"><strong>${num(all.average)}</strong><small>${all.n} games</small></td></tr>`;
+    const average=summarize(selectGames(p,{window:averageWindow,venue}),null,side);
+    return `<tr data-trend-row="${esc(p.key)}"><td><button class="trend-save" data-watch-player="${esc(p.playerId)}" aria-label="${watched?'Unsave':'Save'} ${esc(p.name)}" aria-pressed="${watched}">${icon(watched?'check':'plus')}</button></td><th scope="row"><button class="td-player-name trend-player-link" data-player="${esc(p.key)}">${playerPortrait(p)}<span><span class="trend-player-topline"><strong>${esc(p.name)}</strong><small>${esc(p.team)} vs ${esc(p.opponent||'TBD')}${p.raw?.gameNumber>1?' · Game '+p.raw.gameNumber:''}</small></span><b>${line===null?esc(p.label):`${side==='over'?'Over':'Under'} ${num(line)} ${esc(p.label)}`}</b>${formDots(p,line,side,venue)}<small class="trend-mobile-quote sr-only">${esc(kind)}</small></span></button></th><td class="trend-line" title="${esc(kind)}"><strong>${num(line)}</strong><small class="sr-only">${esc(kind)}</small></td><td class="trend-odds" title="${esc(quote?.bookmaker||'No odds')}">${odds!==null&&/fanduel/i.test(quote?.bookKey||quote?.bookmaker||'')?'<span class="td-sportsbook-logo"><img src="/assets/sportsbooks/fanduel.png" alt="FanDuel" width="1920" height="1080"></span>':''}<strong>${odds===null?'—':(odds>0?'+':'')+num(odds,0)}</strong><small class="sr-only">${esc(quote?.bookmaker||'Unavailable')}</small></td>${rates(p,line)}<td class="trend-average${averageRanked?' trend-ranked':''}"><strong>${num(average.average)}</strong><small>${average.n} games</small></td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 

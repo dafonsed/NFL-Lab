@@ -1,5 +1,5 @@
 /* Shared tool dropdowns, based on the DFS slip selector. */
-body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body){--choice-panel:#1f2429;--choice-control:#1b2025;--choice-line:#363e45;--choice-selected:#2b3137;--choice-ink:#f0f3f5;--choice-muted:#a7b2bc;--choice-accent:#b3da85}
+body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body){--choice-panel:var(--panel2);--choice-control:var(--control);--choice-line:var(--border-strong);--choice-selected:var(--ui-selected);--choice-ink:var(--text);--choice-muted:var(--muted);--choice-accent:var(--accent)}
 body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-choice{position:relative;display:inline-block;min-width:0;max-width:100%;vertical-align:middle}
 body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-choice>select[data-choice-native]{display:none!important}
 html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-choice>.td-choice-trigger{
@@ -9,8 +9,8 @@ html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-ch
   border:1px solid var(--choice-line)!important;border-radius:24px!important;background:var(--choice-control)!important;color:var(--choice-ink)!important;box-shadow:none!important;
   font-family:inherit!important;font-size:15px!important;font-weight:450!important;line-height:1.3!important;text-align:left;cursor:pointer;white-space:normal;
 }
-html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-choice>.td-choice-trigger:hover{border-color:#53616b!important}
-html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-choice>.td-choice-trigger[aria-expanded=true]{border-color:#657560!important}
+html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-choice>.td-choice-trigger:hover{border-color:var(--border-strong)!important}
+html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-choice>.td-choice-trigger[aria-expanded=true]{border-color:var(--violet)!important}
 html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-choice>.td-choice-trigger:disabled{opacity:.5;cursor:default}
 body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .choice-trigger-copy{display:grid;gap:4px;min-width:0;flex:1}
 body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .choice-trigger-label{display:block;color:var(--choice-muted);font-size:12px;line-height:1.2;font-weight:400}
@@ -23,12 +23,12 @@ html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .dfs-s
 html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ev-bookbar-select .ev-book-menu,
 html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .desk-market-menu>[popover]{
   box-sizing:border-box;padding:10px!important;border:1px solid var(--choice-line)!important;border-radius:26px!important;background:var(--choice-panel)!important;color:var(--choice-ink)!important;
-  box-shadow:0 18px 48px #0005!important;scrollbar-width:thin;scrollbar-color:#485158 transparent;font-family:inherit;
+  box-shadow:0 18px 48px #0005!important;scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent;font-family:inherit;
 }
 html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-choice .td-choice-menu{position:fixed;inset:auto;margin:0;z-index:100;display:flex;flex-direction:column;max-width:calc(100vw - 24px);overflow:auto}
 html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-choice .td-choice-menu[hidden]{display:none!important}
 html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-choice .choice-heading{padding:10px 16px 8px!important;color:var(--choice-muted)!important;font-size:12px!important;font-weight:450!important;line-height:1.3}
-html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-choice .choice-options{display:grid;gap:5px;padding:0!important;min-height:0;overflow:auto;scrollbar-width:thin;scrollbar-color:#485158 transparent}
+html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-choice .choice-options{display:grid;gap:5px;padding:0!important;min-height:0;overflow:auto;scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
 html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-choice .td-choice-menu .td-choice-option,
 html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .dfs-workspace .dfs-slip-options button,
 html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .desk-market-menu>[popover] :is(button,a){
@@ -47,7 +47,7 @@ html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-ch
 html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-choice .td-choice-option[aria-selected=true]>.ui-icon{opacity:1}
 body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .choice-option-copy{min-width:0;overflow-wrap:anywhere}
 body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .choice-option-copy small{display:block;margin-top:8px;color:var(--choice-muted);font-size:14px;font-weight:400;line-height:1.4}
-html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-choice .choice-search{display:flex;align-items:center;gap:10px;flex:none;min-height:44px;height:44px;margin:4px 8px 10px!important;padding:0 12px!important;border:1px solid var(--choice-line)!important;border-radius:16px!important;background:#191e23!important;color:var(--choice-muted)}
+html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-choice .choice-search{display:flex;align-items:center;gap:10px;flex:none;min-height:44px;height:44px;margin:4px 8px 10px!important;padding:0 12px!important;border:1px solid var(--choice-line)!important;border-radius:16px!important;background:var(--control)!important;color:var(--choice-muted)}
 html body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .ui-choice .choice-search input{width:100%;min-width:0;min-height:0;height:40px!important;padding:0!important;border:0!important;box-shadow:none!important;background:transparent!important;color:var(--choice-ink)!important;font:400 15px/1.4 inherit}
 body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .choice-search>.ui-icon{width:17px;height:17px;flex:none}
 body.tool-dropdowns:is(.site-layout.ui-theme.reference-design, body) .choice-empty{padding:20px;color:var(--choice-muted);font-size:14px}

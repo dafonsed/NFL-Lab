@@ -1,57 +1,129 @@
-body .bet-inline-mount{margin:12px 0 18px;min-width:0;grid-column:1/-1}
-body tr.bet-inline-mount>td{padding:12px!important;border:0!important;background:#10171b!important;white-space:normal!important}
-body .bet-inline-card{box-sizing:border-box;position:relative;width:100%;padding:20px 26px 10px 20px!important;border:1px solid #303b43!important;border-radius:20px!important;background:#1b242b!important;color:#e1e9f1!important;font:14px/1.45 'Reference Sans',Arial,sans-serif!important;text-align:left}
-body .bet-inline-card [hidden]{display:none!important}
-body .bet-inline-card .bet-inline-summary{display:grid;grid-template-columns:28px minmax(240px,1.25fr) minmax(220px,1.3fr) 96px 105px 48px;align-items:center;gap:16px;min-height:96px;padding:4px 0 24px!important;margin:0!important;border-bottom:1px solid #303b43!important;background:transparent!important}
-body .bet-inline-card h3{margin:0 0 7px!important;font-size:16px!important;font-weight:600!important;line-height:1.35!important;letter-spacing:-.02em!important;color:#e7eff7!important}
-body .bet-inline-card p{margin:0 0 5px;color:#98b0c6;font-size:14px}
-body .bet-inline-card small{color:#8ca6be;font-size:12px;font-weight:400}
-body .bet-inline-card .bet-inline-selection,body .bet-inline-card .bet-inline-fair,body .bet-inline-card .bet-inline-probability{display:grid;gap:17px;align-content:center}
-body .bet-inline-card .bet-inline-selection strong{display:flex;align-items:center;gap:9px;font-size:16px;font-weight:600;color:#e5edf6;line-height:1.4}
-body .bet-inline-selection .team-mark{width:24px;height:24px;flex-shrink:0}body .bet-inline-selection .team-mark img{width:24px;height:24px}body .bet-inline-selection .team-mark>span{display:none}
-body .bet-inline-card .bet-inline-fair strong{display:flex;align-items:center;gap:13px;font-weight:400;color:#d2e2ef}
-body .bet-inline-card .bet-inline-fair img{width:34px!important;height:36px!important;object-fit:contain!important;border-radius:6px!important}
-body .bet-inline-card .bet-inline-probability{justify-items:start;gap:10px}
-body .bet-inline-card .bet-inline-probability>strong{padding:9px 14px;border:1px solid #647849;border-radius:24px;color:#c3e391;background:#28372a;font-size:16px;font-weight:600;white-space:nowrap}
-body .bet-inline-card .bet-inline-toggles{display:grid;gap:11px;justify-items:center}
-body .bet-inline-card .bet-inline-icon{display:grid!important;place-items:center!important;min-width:30px!important;min-height:30px!important;width:30px!important;height:30px!important;border:0!important;padding:4px!important;box-shadow:none!important;border-radius:8px!important;background:transparent!important;color:#a4b0bd!important;cursor:pointer}
-body .bet-inline-card .bet-inline-icon svg{width:22px;height:22px}
-body .bet-inline-card .bet-inline-icon:hover{color:#d8e9cf!important;background:#29373b!important}
-body .bet-inline-card .bet-inline-icon:disabled{opacity:.3;cursor:not-allowed}
-body .bet-inline-card .bet-inline-icon[aria-pressed=true]{color:#c8e79e!important;background:#2b3d30!important}
-body .bet-inline-card .bet-inline-summary>[data-comparison-action=pin]{width:34px!important;height:36px!important;border:2px solid #89a85e!important;border-radius:6px!important;padding:6px!important}
-body .bet-inline-card .bet-inline-summary>[data-comparison-action=pin] svg{opacity:0}body .bet-inline-card .bet-inline-summary>[data-comparison-action=pin][aria-pressed=true] svg{opacity:1}
-body .bet-inline-card .bet-inline-collapse{display:grid!important;place-items:center!important;width:48px!important;height:48px!important;min-height:0!important;padding:13px!important;border:0!important;border-radius:50%!important;background:#293e32!important;color:#c9e7b0!important;cursor:pointer;box-shadow:none!important}
-body .bet-inline-collapse svg{width:22px;height:22px}
-body .bet-inline-card .bet-inline-toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:42px;color:#91aac2;font-size:14px}
-body .bet-inline-toolbar>span>b{display:inline-block;margin-left:10px;padding:4px 10px;border-radius:4px;background:#24303a;color:#c4d5e4;font-size:12px;font-weight:500}
-body .bet-inline-toolbar>div{display:flex;align-items:center;gap:7px}
-body .bet-inline-more{position:relative}body .bet-inline-more>summary{list-style:none;display:grid;place-items:center;width:30px;height:30px;font-size:23px;cursor:pointer;color:#a4b0bd}body .bet-inline-more>summary::-webkit-details-marker{display:none}
-body .bet-inline-more>div{position:absolute;right:0;top:35px;display:flex;gap:6px;z-index:4;padding:8px;border:1px solid #36464f;border-radius:9px;background:#182229;box-shadow:0 10px 25px #0006}
-body .bet-inline-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:8px;scrollbar-width:thin;scrollbar-color:#52616a transparent}
-body .bet-inline-prices{display:grid;grid-template-columns:100px repeat(var(--book-count),minmax(96px,1fr));gap:8px;min-width:max-content}
-body .bet-inline-card .bet-inline-book{display:grid;grid-template-rows:48px 52px 52px;align-items:center;min-width:0;padding:0 8px;border:0;border-radius:0;background:transparent;text-align:center}
-body .bet-inline-row-labels{display:grid;grid-template-rows:48px 52px 52px;align-items:center;padding:0 6px 0 0;color:#94afc7;font-size:12px;position:sticky;left:0;z-index:1;background:#1b242b}
-body .bet-inline-price{display:grid;justify-items:center;gap:3px;white-space:nowrap}
-body .bet-inline-card .bet-inline-price>button{display:flex!important;align-items:center!important;gap:7px!important;padding:0!important;min-height:0!important;background:transparent!important;border:0!important;color:#d3e5f5!important;font-size:16px!important;box-shadow:none!important;cursor:pointer;font-weight:500!important}
-body .bet-inline-price>button>span{font-size:12px;color:#6d8b9d}
-body .bet-inline-price>button>strong{font-size:14px!important;font-weight:600!important;color:#d3e5f5!important}
-body .bet-inline-brand{position:relative;display:grid;justify-items:center;gap:3px;color:#c8deed;font-size:11px}
-body .bet-inline-brand>span:not(:has(img)){position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-body .bet-inline-brand>.bet-inline-unavailable{position:static;width:auto;height:auto;overflow:visible;clip-path:none}
-body .bet-inline-row-labels>span:first-child{font-size:10px}
-body .bet-inline-card .bet-inline-brand>img,body .bet-inline-card .bet-inline-brand>span:has(img)>img{display:block;width:22px!important;height:22px!important;max-width:22px!important;object-fit:contain!important;border-radius:5px!important}
-body .bet-inline-card .bet-inline-brand>small{color:#acd2b3;font-size:10px}
-body .bet-inline-card .bet-inline-footer{display:flex;justify-content:space-between;gap:20px;margin-top:8px;color:#8fa4b3;font-size:10px;min-height:14px}
-body .bet-inline-footer details{margin-left:auto}body .bet-inline-footer summary{cursor:pointer}body .bet-inline-footer p{font-size:12px;max-width:800px}
-body .bet-inline-card .bet-comparison-calculator{display:flex;gap:25px;flex-wrap:wrap;padding:15px;margin-bottom:15px;background:#182229;border:1px solid #34464b;border-radius:10px}
-body .bet-inline-card .bet-comparison-calculator :is(label,div){display:grid;gap:7px;font-size:12px;color:#95adbf}
-body .bet-inline-card .bet-comparison-calculator input{width:120px;padding:8px;border:1px solid #42545b;background:#111b22;color:#dfebf2;border-radius:7px}
-body .bet-inline-card :is(button,summary,input,[tabindex]):focus-visible{outline:2px solid #b2d28b!important;outline-offset:3px}
-@media(max-width:1050px){body .bet-inline-card .bet-inline-summary{grid-template-columns:28px minmax(180px,1fr) minmax(170px,1fr) 95px 100px 40px;gap:12px}body .bet-inline-card .bet-inline-collapse{width:40px!important;height:40px!important;padding:9px!important}}
-@media(max-width:760px){body .bet-inline-card{padding:15px!important;max-width:calc(100vw - 46px)}body .bet-inline-card .bet-inline-summary{grid-template-columns:25px 1fr 90px 36px;gap:15px 10px;min-height:0;padding-bottom:20px!important}body .bet-inline-market{grid-column:2/4}body .bet-inline-toggles{grid-column:4;grid-row:1/3}body .bet-inline-selection{grid-column:2/4}body .bet-inline-fair{grid-column:2}body .bet-inline-probability{grid-column:3}body .bet-inline-card .bet-inline-selection{gap:7px}body .bet-inline-card .bet-inline-probability>strong{font-size:14px;padding:6px 9px}body .bet-inline-card .bet-inline-toolbar{font-size:12px;gap:6px;min-height:42px}body .bet-inline-toolbar>span>b{margin-left:0}body .bet-inline-toolbar>div{gap:3px}body .bet-inline-prices{grid-template-columns:85px repeat(var(--book-count),96px)}body .bet-inline-row-labels{font-size:12px;position:sticky;left:0;background:#1b242b;z-index:1}body .bet-inline-footer{flex-wrap:wrap}}
-body .bet-inline-card{max-width:calc(100vw - 92px)}body .bet-inline-card .bet-inline-footer{padding:0!important;line-height:1.4!important;border:0!important;background:transparent!important}body .bet-inline-card .bet-inline-brand>small{color:#acd2b3!important}body .bet-inline-card .bet-inline-price small{color:#8ca6be!important}body .ev-book-mark .ev-brand-mark{width:30px!important;height:30px!important;object-fit:contain!important}@media(max-width:760px){body .bet-inline-card{max-width:calc(100vw - 70px)}}
+/* One reference card: selection summary, tool rail, then the sportsbook matrix. */
+body .bet-inline-mount{margin:14px 0 18px;min-width:0;grid-column:1/-1}
+body tr.bet-inline-mount>td{padding:12px!important;border:0!important;background:var(--bg)!important;white-space:normal!important}
+html body .bet-inline-card{
+  box-sizing:border-box;container-type:inline-size;position:relative;left:auto;width:100%;max-width:100%!important;min-width:0;margin:0;padding:24px 26px 16px!important;
+  border:1px solid var(--border-strong)!important;border-radius:22px!important;background:var(--panel)!important;color:var(--text)!important;
+  font:14px/1.45 var(--font,'Reference Sans',Arial,sans-serif)!important;text-align:left;box-shadow:none!important;
+  & *{box-sizing:border-box}
+  & [hidden]{display:none!important}
+  & .bet-inline-summary{display:grid;grid-template-columns:28px minmax(180px,1.2fr) minmax(160px,1.05fr) minmax(100px,.65fr) minmax(112px,.65fr);align-items:center;gap:22px;min-height:92px;margin:0!important;padding:0 0 20px!important;border:0!important;background:transparent!important}
+  & .bet-inline-summary>div{min-width:0}
+  & h3{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 10px;margin:0 0 7px!important;color:var(--text)!important;font-size:16px!important;line-height:1.35!important;letter-spacing:-.025em!important;font-weight:600!important}
+  & h3>small{font-size:11px;color:var(--muted);font-weight:450;letter-spacing:0}
+  & .bet-inline-league{display:inline-flex;align-items:center;gap:5px}
+  & .bet-inline-league .league-mark{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;flex:0 0 16px;margin:0;background:none}
+  & .bet-inline-league .league-mark :is(img,svg){width:16px;height:16px;max-width:16px;max-height:16px;object-fit:contain}
+  & .bet-inline-event{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+  & .bet-inline-event .team-mark{display:inline-flex;width:21px;height:21px;flex:0 0 21px;background:none}
+  & .bet-inline-event .team-mark img{width:21px;height:21px;max-width:21px;max-height:21px;object-fit:contain}
+  & .bet-inline-event .team-mark>span{display:none}
+  & p{margin:0;color:var(--secondary);font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+  & small{color:var(--muted);font-size:11px;font-weight:400;line-height:1.4}
+  & .bet-inline-market>small{display:block;margin-top:4px}
+  & :is(.bet-inline-selection,.bet-inline-fair,.bet-inline-probability){display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:8px;min-width:0}
+  & .bet-inline-selection strong{display:flex;align-items:center;gap:9px;color:var(--text);font-size:18px;line-height:1.35;font-weight:550;letter-spacing:-.025em;overflow-wrap:anywhere}
+  & .bet-inline-selection strong>span{min-width:0}
+  & .bet-open-detail{display:block!important;min-width:0!important;min-height:0!important;max-width:100%;padding:0!important;border:0!important;border-radius:4px!important;background:transparent!important;color:var(--text)!important;box-shadow:none!important;font:inherit!important;text-align:left!important;white-space:normal;cursor:pointer}
+  & .bet-open-detail:hover strong{color:var(--bright)}
+  & .bet-inline-selection .team-mark{display:flex;align-items:center;justify-content:center;width:24px;height:24px;flex:0 0 24px;background:none}
+  & .bet-inline-selection .team-mark img{width:24px;height:24px;object-fit:contain}
+  & .bet-inline-selection .team-mark>span{display:none}
+  & .bet-inline-fair strong{display:flex;align-items:center;gap:8px;color:var(--text);font-size:20px;font-weight:500;line-height:1.25;letter-spacing:-.025em}
+  & .bet-inline-fair strong img{width:27px!important;height:27px!important;max-width:27px!important;object-fit:contain;border-radius:5px}
+  & .bet-inline-probability>strong{display:inline-flex;align-items:center;padding:6px 12px;min-height:34px;border:1px solid var(--border-strong);border-radius:999px;color:var(--accent);background:var(--panel2);font-size:15px;font-weight:550;white-space:nowrap;line-height:1.3}
+  & .bet-inline-metrics{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px 24px;margin:0 0 18px;padding:0 0 0 50px}
+  & .bet-inline-metrics>div{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px}
+  & .bet-inline-metrics dt{color:var(--muted);font-size:11px;font-weight:400}
+  & .bet-inline-metrics dd{margin:0;color:var(--secondary);font-size:12px;font-weight:550;font-variant-numeric:tabular-nums}
+  & .bet-inline-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;min-height:62px;padding:12px 0;margin:0;border-top:1px solid var(--line);color:var(--muted);font-size:11px}
+  & .bet-inline-source{display:flex;align-items:center;flex-wrap:wrap;gap:8px;min-width:0}
+  & .bet-inline-source b{padding:2px 7px;border-radius:5px;background:var(--panel2);color:var(--secondary);font-size:10px;font-weight:500;white-space:nowrap}
+  & .bet-inline-tools{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px;min-width:0;max-width:100%;margin-left:auto}
+  & :is(.bet-inline-icon,.bet-inline-collapse){display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:0 0 34px;min-width:34px!important;min-height:34px!important;width:34px!important;height:34px!important;padding:7px!important;border:1px solid var(--line)!important;border-radius:50%!important;background:var(--panel2)!important;color:var(--secondary)!important;font:inherit;box-shadow:none!important;cursor:pointer;transform:none!important}
+  & :is(.bet-inline-icon,.bet-inline-collapse) svg{display:block;flex:none;width:18px;height:18px}
+  & .bet-inline-icon:disabled{opacity:.35;cursor:default}
+  & :is(.bet-inline-icon,.bet-inline-collapse):not(:disabled):hover{background:var(--surface-hover)!important;color:var(--text)!important;border-color:var(--border-strong)!important}
+  & .bet-inline-icon[aria-pressed=true]{color:var(--accent)!important;background:var(--accent-wash)!important;border-color:var(--border-strong)!important}
+  & .bet-inline-summary>[data-comparison-action=pin]{width:24px!important;height:24px!important;min-width:24px!important;min-height:24px!important;flex-basis:24px;padding:4px!important;border:2px solid var(--border-strong)!important;border-radius:50%!important;background:transparent!important}
+  & .bet-inline-summary>[data-comparison-action=pin] svg{width:14px;height:14px;opacity:0}
+  & .bet-inline-summary>[data-comparison-action=pin][aria-pressed=true]{border-color:var(--accent)!important}
+  & .bet-inline-summary>[data-comparison-action=pin][aria-pressed=true] svg{opacity:1}
+  & .bet-inline-view-switch{display:flex;align-items:center;gap:4px;padding:3px;border:1px solid var(--line);border-radius:999px;background:var(--surface-sunken)}
+  & .bet-inline-view-switch .bet-inline-icon{width:28px!important;height:28px!important;min-width:28px!important;min-height:28px!important;flex-basis:28px;padding:5px!important;border:0!important;background:transparent!important}
+  & .bet-inline-view-switch .bet-inline-icon[aria-pressed=true]{background:var(--panel2)!important;color:var(--accent)!important}
+  & .bet-inline-pin-tool{display:none!important}
+  & :is(.bet-comparison-data,.bet-comparison-history){min-width:0;max-width:100%}
+  & .bet-inline-scroll{width:100%;max-width:100%;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;padding:0 0 7px;scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+  & .bet-inline-prices{width:100%;margin:0!important;border-collapse:collapse!important;table-layout:auto;background:transparent!important;font-variant-numeric:tabular-nums}
+  & .bet-inline-prices :is(th,td){min-width:100px;height:55px;padding:9px 8px!important;border:0!important;border-bottom:1px solid var(--line)!important;background:transparent!important;color:var(--text)!important;text-align:center!important;vertical-align:middle;white-space:nowrap;box-shadow:none!important}
+  & .bet-inline-prices thead th{height:52px;padding-top:5px!important;padding-bottom:10px!important}
+  & .bet-inline-prices :is(thead th:first-child,tbody th){position:sticky;left:0;z-index:1;width:108px;min-width:108px;max-width:150px;padding-left:0!important;background:var(--panel)!important;text-align:left!important;white-space:normal;overflow-wrap:anywhere;color:var(--muted)!important;font-size:12px;font-weight:450}
+  & .bet-inline-prices thead th:first-child{font-size:10px}
+  & .bet-inline-prices tbody tr:last-child>*{border-bottom:0!important}
+  & .bet-inline-brand{display:inline-flex!important;flex-direction:column;align-items:center!important;justify-content:center!important;gap:4px!important;min-height:32px!important;max-width:100%;padding:0!important;border:0!important;border-radius:5px!important;background:transparent!important;color:var(--secondary)!important;box-shadow:none!important;cursor:pointer}
+  & .bet-inline-brand :is(img,span:has(img)>img){display:block;width:28px!important;height:28px!important;max-width:28px!important;max-height:28px!important;object-fit:contain!important;border-radius:5px!important}
+  & .bet-inline-book-name{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  & .bet-inline-unavailable{font-size:11px;line-height:1.3;white-space:normal}
+  & .bet-inline-brand>small{font-size:10px;color:var(--muted)}
+  & .bet-inline-price{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0}
+  & .bet-inline-price>button{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;min-height:26px!important;height:auto!important;padding:0!important;border:0!important;border-radius:4px!important;background:transparent!important;color:var(--text)!important;box-shadow:none!important;font:inherit!important;cursor:pointer}
+  & .bet-inline-price>button strong{color:var(--text)!important;font-size:14px!important;line-height:1.35;font-weight:550!important;white-space:nowrap}
+  & .bet-inline-price>button>span{color:var(--muted);font-size:11px}
+  & .bet-inline-price em{color:var(--violet);font-size:11px;font-style:normal;line-height:1.25}
+  & .bet-inline-price small{color:var(--muted)!important;font-size:10px}
+  & .bet-inline-empty{padding:22px 0;color:var(--muted)}
+  & .bet-inline-footer{position:static;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px 16px;margin:8px 0 0;padding:0!important;border:0!important;background:transparent!important;color:var(--muted);font-size:10px;line-height:1.4}
+  & .bet-inline-footer>span:empty{display:none}
+  & .bet-inline-footer details{min-width:0;margin:0 0 0 auto!important;padding:0!important;border:0!important;background:transparent!important}
+  & .bet-inline-footer summary{padding:0!important;min-height:0!important;color:var(--muted);font-size:10px!important;line-height:1.4!important;cursor:pointer;text-align:right}
+  & .bet-inline-footer p{max-width:80ch;margin-top:8px;color:var(--muted);font-size:12px;line-height:1.6}
+  & .bet-comparison-calculator{display:flex;align-items:start;flex-wrap:wrap;gap:18px 25px;padding:16px;margin:0 0 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface-sunken)}
+  & .bet-comparison-calculator :is(label,div){display:grid;gap:7px;min-width:0;font-size:12px;color:var(--secondary)}
+  & .bet-comparison-calculator input{width:120px;max-width:100%;padding:8px;border:1px solid var(--border-strong);border-radius:7px;background:var(--control);color:var(--text)}
+  & .bet-comparison-feedback{margin:0 0 12px;color:var(--secondary);font-size:12px}
+  & :is(button,summary,input,[tabindex]):focus-visible{outline:2px solid var(--ui-focus,var(--accent))!important;outline-offset:3px}
+}
+html body .wager-card>.bet-inline-mount{width:100%;min-width:0;margin:0;padding:16px 0 0;border-top:1px solid var(--line)}
+html body .wager-card>.bet-inline-mount .bet-inline-card{padding:0!important;border:0!important;border-radius:0!important;background:transparent!important}
+html body .wager-card>.bet-inline-mount .bet-inline-summary{display:flex!important;align-items:center;flex-wrap:wrap;gap:14px 20px;min-height:0;padding:0 0 14px!important}
+html body .wager-card>.bet-inline-mount .bet-inline-summary>.bet-inline-market,
+html body .wager-card>.bet-inline-mount .bet-inline-summary>[data-comparison-action=pin]{display:none!important}
+html body .wager-card>.bet-inline-mount .bet-inline-selection{flex:1 1 180px}
+html body .wager-card>.bet-inline-mount :is(.bet-inline-fair,.bet-inline-probability){flex:0 1 auto}
+html body .wager-card>.bet-inline-mount .bet-inline-metrics{padding:0}
+html body .wager-card>.bet-inline-mount .bet-inline-toolbar{padding-top:0;border-top:0}
+html body .wager-card>.bet-inline-mount .bet-inline-pin-tool{display:inline-flex!important}
+@container(max-width:850px){
+  html body .bet-inline-card .bet-inline-summary{grid-template-columns:24px minmax(155px,1fr) minmax(130px,1fr) 100px 112px;gap:14px}
+  html body .bet-inline-card .bet-inline-selection strong{font-size:16px}
+}
+@container(max-width:680px){
+  html body .bet-inline-card .bet-inline-summary{grid-template-columns:24px minmax(0,1fr) minmax(0,1fr);gap:16px 12px;min-height:0;padding-bottom:18px!important}
+  html body .bet-inline-card .bet-inline-summary>[data-comparison-action=pin]{grid-column:1;grid-row:1;align-self:start;margin-top:3px}
+  html body .bet-inline-card .bet-inline-market{grid-column:2/4;grid-row:1}
+  html body .bet-inline-card .bet-inline-selection{grid-column:2/4;grid-row:2;gap:5px}
+  html body .bet-inline-card .bet-inline-fair{grid-column:2;grid-row:3;gap:5px}
+  html body .bet-inline-card .bet-inline-probability{grid-column:3;grid-row:3;gap:5px}
+  html body .bet-inline-card .bet-inline-metrics{padding:0;gap:8px 16px}
+  html body .bet-inline-card .bet-inline-toolbar{gap:10px;padding:12px 0}
+  html body .bet-inline-card .bet-inline-source{width:100%;font-size:10px}
+  html body .bet-inline-card .bet-inline-tools{gap:6px}
+  html body .bet-inline-card .bet-inline-prices :is(thead th:first-child,tbody th){width:88px;min-width:88px;font-size:11px}
+  html body .bet-inline-card .bet-inline-prices :is(th,td){min-width:92px}
+}
+@media(max-width:540px){
+  html body .bet-inline-card{padding:18px 16px 13px!important;border-radius:18px!important}
+  html body .bet-inline-card .bet-inline-probability>strong{padding:5px 10px;font-size:14px}
+  html body .bet-inline-card .bet-inline-market h3{font-size:15px!important}
+  html body .bet-inline-card .bet-inline-price>button{min-height:32px!important}
+  html body .bet-inline-card :is(.bet-inline-icon,.bet-inline-collapse){width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;flex-basis:36px}
+  html body .bet-inline-card .bet-inline-view-switch .bet-inline-icon{width:30px!important;height:30px!important;min-width:30px!important;min-height:30px!important;flex-basis:30px}
+}
 
-body .bet-inline-card{position:sticky;left:12px;max-width:calc(100vw - 92px)!important}body .bet-inline-card .bet-inline-footer summary{padding:0!important;min-height:0!important;font-size:10px!important;line-height:14px!important}body .bet-inline-card .bet-inline-footer details{padding:0!important;margin:0 0 0 auto!important;border:0!important;background:transparent!important}@media(max-width:760px){body .bet-inline-card{max-width:calc(100vw - 70px)!important}}
-body .bet-inline-card{container-type:inline-size}body .bet-inline-card .bet-inline-book,body .bet-inline-row-labels{grid-template-rows:48px 52px 52px}body .bet-inline-card .bet-inline-footer{position:absolute;bottom:4px;right:26px;left:20px;margin-top:0}@container(max-width:720px){body .bet-inline-card .bet-inline-summary{grid-template-columns:25px 1fr 90px 36px;gap:15px 10px;min-height:0;padding-bottom:20px!important}body .bet-inline-market{grid-column:2/4}body .bet-inline-toggles{grid-column:4;grid-row:1/3}body .bet-inline-selection{grid-column:2/4}body .bet-inline-fair{grid-column:2}body .bet-inline-probability{grid-column:3}body .bet-inline-summary>div{min-width:0}body .bet-inline-card .bet-inline-toolbar{font-size:12px;gap:6px}body .bet-inline-prices{grid-template-columns:85px repeat(var(--book-count),96px)}}
-body .bet-inline-card:has(.bet-inline-footer details[open]) .bet-inline-footer{position:static;margin-top:12px;padding-top:8px!important;align-items:start}
+/* Summary cards expand into the comparison only after an explicit click. */
+html body .ev-reference-card[hidden]{display:none!important}
+html body .ev-reference-card[data-open-quote]{cursor:pointer}
+html body .ev-reference-card .bet-inline-metrics{margin-bottom:0}
+html body .ev-reference-card .bet-open-detail:focus-visible{outline:2px solid var(--accent);outline-offset:5px}
+html body .ev-reference-mount>.bet-inline-mount:has(.bet-expanded-card){margin:0}

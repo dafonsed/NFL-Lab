@@ -1,17 +1,17 @@
-/* Article calculators inherit the surrounding Sportslab page palette. */
+/* Article calculators inherit the surrounding VisualOdds page palette. */
 @font-face{font-family:CalcOutfit;src:url('/assets/fonts/OutfitVariable.ttf') format('truetype');font-style:normal;font-weight:100 900;font-display:swap}
 #main :is(.bet-tool,.article-widget){
-  --calc-bg:var(--bet-panel,var(--edu-surface,#101820));
-  --calc-inset:var(--bet-bg,var(--edu-bg,#080d12));
+  --calc-bg:var(--bet-panel,var(--edu-surface,#141416));
+  --calc-inset:var(--bet-bg,var(--edu-bg,#000000));
   --calc-control:var(--bet-panel-soft,var(--edu-surface-2,#121e28));
   --calc-line:var(--bet-line,var(--edu-line,#20313e));
   --calc-line-strong:var(--bet-line-strong,#3b5669);
   --calc-text:var(--bet-text,var(--edu-text,#eaf0f4));
   --calc-copy:var(--bet-copy,var(--edu-muted,#b6c6d1));
   --calc-muted:var(--longform-muted,#92a1ab);
-  --calc-accent:var(--bet-blue,var(--edu-accent-strong,#92e1e9));
+  --calc-accent:var(--bet-blue,var(--edu-accent-strong,#b4e0e6));
   --calc-accent-soft:color-mix(in srgb,var(--calc-accent) 12%,transparent);
-  --calc-green:var(--bet-green,#62c68e);--calc-red:var(--bet-red,#f18382);
+  --calc-green:var(--bet-green,#76cbd2);--calc-red:var(--bet-red,#f18382);
   display:block;box-sizing:border-box;width:min(100%,620px);min-width:0;margin:30px 0;
   padding:22px;background:var(--calc-bg);border:0;border-radius:26px;
   color:var(--calc-text);color-scheme:dark;font:400 13px/1.5 CalcOutfit,system-ui,sans-serif;
@@ -93,7 +93,7 @@
 #main .article-widget .comparison-row[data-best=true] label::after{display:block;width:max-content;margin-top:3px;padding:1px 6px;border-radius:15px;background:color-mix(in srgb,var(--calc-green) 14%,transparent);color:var(--calc-green);font-size:9px;content:'Best price'}
 #main .article-widget input[aria-invalid=true]{border-color:var(--calc-red)}
 #main :is(.bet-tool,.article-widget) [hidden]{display:none}
-.widget-article-link a{color:var(--edu-accent-strong,#92e1e9)}
+.widget-article-link a{color:var(--edu-accent-strong,#b4e0e6)}
 @media(min-width:640px){#main .article-widget[data-article-widget=pickem] .widget-input-grid,#main .bet-field-grid:has(>.bet-input:nth-child(3):last-child){grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:520px){
   #main :is(.bet-tool,.article-widget){margin:24px 0;padding:18px 16px;border-radius:22px}

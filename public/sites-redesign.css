@@ -1,4 +1,4 @@
-/* Sportslab's compact, data-led visual system. The product content remains its own. */
+/* VisualOdds's compact, data-led visual system. The product content remains its own. */
 body.site-layout.reference-design {
   --font: "Segoe UI Variable", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
@@ -103,7 +103,7 @@ body.landing-page .landing-closing{padding:0 0 76px}
 body.landing-page .landing-sports-list a{min-height:90px!important}
 body.landing-page :is(a,button,input,select,summary):focus-visible{outline:2px solid #7ad1fa;outline-offset:3px}
 
-/* The workspace uses the same restrained palette as the Sportslab homepage. */
+/* The workspace uses the same restrained palette as the VisualOdds homepage. */
 body.site-layout.ui-theme.reference-design{
   --bg:#080c10;--panel:#11181d;--panel2:#151d23;--control:#151c22;
   --surface-sunken:#090d11;--surface-hover:#202b33;--line:#29343d;
@@ -112,8 +112,8 @@ body.site-layout.ui-theme.reference-design{
   --accent-wash:#41baf21a;--violet-wash:#41baf21a;
   --ui-fill:#172027;--ui-hover:#24323d;--ui-selected:#dceef7;
   --ui-selected-text:#09141b;--selected:#dceef7;--ui-selection-wash:#142937;
-  --action-fill:#3bb8ef;--trend:#68dc9e;--trend-dim:#68dc9e18;
-  --tracker-accent:#41baf2;--tracker-positive:#68dc9e;
+  --action-fill:#3bb8ef;--trend:#76cbd2;--trend-dim:#76cbd218;
+  --tracker-accent:#41baf2;--tracker-positive:#76cbd2;
   --desk-canvas:#080c10;--desk-panel:#11181d;--desk-row:#131b20;
   --desk-row-alt:#10171b;--desk-rule:#29343d;--desk-heading:#0d1418;
   --desk-hover:#1d2c34;
@@ -127,7 +127,7 @@ body.site-layout.ui-theme.reference-design :is([data-ui-control],.calendar-trigg
 body.site-layout.ui-theme.reference-design [data-ui-control=primary]{--button-fill:#40baf2;--button-border:#40baf2;--button-ink:#08151d}
 body.site-layout.ui-theme.reference-design [data-ui-control=primary]:hover:not(:disabled){--button-fill:#75d1fc;--button-border:#75d1fc}
 body.site-layout.ui-theme.reference-design [data-ui-control=segment]:is(.active,[aria-pressed=true],[aria-selected=true]){--button-fill:#dceef7;--button-ink:#0b1820}
-body.site-layout.ui-theme.reference-design .pr-bar.hit{fill:#63d798!important}
+body.site-layout.ui-theme.reference-design .pr-bar.hit{fill:#76cbd2!important}
 body.site-layout.ui-theme.reference-design .pr-bar.miss{fill:#d66958!important}
 body.site-layout.ui-theme.reference-design .pr-redesign .pr-save{background:#41baf2!important;color:#091a23!important}
 body.site-layout.ui-theme.reference-design .pr-redesign .pr-priced-quote{border-color:#3b8eac;background:#102934}
@@ -162,15 +162,15 @@ body.site-layout.ui-theme.research-console.reference-design .research-row{backgr
 body.site-layout.ui-theme.research-console.reference-design .research-row:nth-child(odd){background:#121a1f}
 body.site-layout.ui-theme.research-console.reference-design .research-row:hover{background:#20303a}
 body.site-layout.ui-theme.research-console.reference-design .research-player small{color:#a2b0b8}
-body.site-layout.ui-theme.research-console.reference-design .research-row .research-probability{background:#10251f}
-body.site-layout.ui-theme.research-console.reference-design .research-row .research-probability>strong{color:#70dfa1}
+body.site-layout.ui-theme.research-console.reference-design .research-row .research-probability{background:#122126}
+body.site-layout.ui-theme.research-console.reference-design .research-row .research-probability>strong{color:#b4e0e6}
 body.site-layout.ui-theme.research-console.reference-design .research-row :is(.research-line,.research-odds,.research-estimate,.research-result)>strong{color:#d7e2e7}
 body.site-layout.ui-theme.research-console.reference-design .trend-table-scroll{background:#11181d;border:1px solid #2c3942;border-radius:7px;margin:0 20px}
 body.site-layout.ui-theme.research-console.reference-design .trend-table thead th{background:#10171b;color:#b6c5cd;border-color:#2d3a43}
 body.site-layout.ui-theme.research-console.reference-design .trend-table tbody tr{background:#151d22}
 body.site-layout.ui-theme.research-console.reference-design .trend-table tbody tr:nth-child(even){background:#121a1f}
 body.site-layout.ui-theme.research-console.reference-design .trend-table tbody :is(th,td){border-bottom-color:#27333a}
-body.site-layout.ui-theme.research-console.reference-design .trend-table .trend-rate.high{color:#70dfa1;background:#113127}
+body.site-layout.ui-theme.research-console.reference-design .trend-table .trend-rate.high{color:#b4e0e6;background:#122126}
 body.site-layout.ui-theme.reference-design :is(.summary-card,.performance-stat,.sports-card,.mlb-card,.live-card,.method-card,.matchup,.live-directory-card){border-color:#2c3942;border-radius:8px;background:#121a1f}
 body.site-layout.ui-theme.reference-design :is(.ui-choice .td-choice-menu,.calendar-popover){border-color:#394954!important;border-radius:8px!important;background:#141e24!important}
 body.site-layout.ui-theme.reference-design :is(.filter-dialog-header,.model-filter-dialog .sheet-header,.filter-dialog-footer,.model-filter-dialog .sheet-footer){background:#111a20}
@@ -184,8 +184,8 @@ body.site-layout.ui-theme.reference-design .pr-redesign .pr-panel{background:#14
 body.site-layout.ui-theme.reference-design .pr-redesign :is(.pr-markets,.pr-mode-tabs){background:#0d151a;border-color:#2b3a44}
 body.site-layout.ui-theme.reference-design .pr-redesign .pr-aside-tabs{background:#10191f;border:1px solid #34434d;border-radius:7px}
 body.site-layout.ui-theme.reference-design .pr-redesign .pr-aside-tabs button[aria-pressed=true]{background:#273b48!important;color:#eff9fc!important}
-body.site-layout.ui-theme.reference-design .pr-redesign .pr-chart-heading h3{color:#75dca4}
-body.site-layout.ui-theme.reference-design .pr-redesign .pr-sample-splits b{color:#75dca4}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-chart-heading h3{color:#b4e0e6}
+body.site-layout.ui-theme.reference-design .pr-redesign .pr-sample-splits b{color:#b4e0e6}
 body.site-layout.ui-theme.reference-design .pr-redesign .reference-movement table{background:#101920;border-radius:7px}
 
 @media(max-width:1050px) and (min-width:701px){
@@ -209,5 +209,5 @@ body.site-layout.ui-theme.reference-design .pr-redesign .reference-movement tabl
   body.site-layout.ui-theme.research-console.reference-design .research-board,
   body.site-layout.ui-theme.research-console.reference-design .trend-table-scroll{margin-inline:10px;border-radius:7px}
   body.site-layout.ui-theme.research-console.reference-design .research-row{background:#151e24!important;border-color:#34414a}
-  body.site-layout.ui-theme.research-console.reference-design .research-row .research-probability{background:#10251f}
+  body.site-layout.ui-theme.research-console.reference-design .research-row .research-probability{background:#122126}
 }

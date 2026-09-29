@@ -2,6 +2,11 @@ import { finite, selectGames, summarize, recentChange } from './research-data.js
 
 export const comparisonLine = profile => finite(profile.prop?.line) ?? (profile.sport === 'nfl' && profile.market === 'any_td' ? 0.5 : null);
 export const defaultTrendFilters = () => ({sample:'10',venue:'all',minRate:0,minGames:0,teams:[],positions:[],book:'',minLine:'',maxLine:'',minOdds:'',maxOdds:'',hideUnavailable:false,startersOnly:false});
+export const defaultTrendOptions = () => ({filters:defaultTrendFilters(),posted:false,savedOnly:false,sort:'rate',side:'over'});
+export function trendSortLabel(sort, sample='10') {
+  const window=sample==='all'?'All games':sample==='h2h'?'H2H':`L${sample}`;
+  return sort==='rate'?`${window} hit rate · high to low`:sort==='average'?`${window} average · high to low`:sort==='change'?'Biggest form change':'Player name · A to Z';
+}
 export function trendFilterCount(filters={}) {return Object.entries(defaultTrendFilters()).filter(([key,value])=>Array.isArray(value)?filters[key]?.length:filters[key]!==undefined&&filters[key]!==value).length;}
 export function trendRows(profiles, { search = '', game = '', posted = false, savedOnly = false, saved = new Set(), window = '10', side = 'over', venue = 'all', sort = 'rate', filters = {} } = {}) {
   const query = search.trim().toLowerCase();

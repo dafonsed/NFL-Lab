@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0a1d2b">
   <meta name="robots" content="noindex,follow">
-  <meta name="description" content="Sportslab EV workspace tool and local API reference.">
-  <title>EV Tools &amp; API | Sportslab Documentation</title>
+  <meta name="description" content="VisualOdds EV workspace tool and local API reference.">
+  <title>EV Tools &amp; API | VisualOdds Documentation</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/docs.css">
   <script type="module" src="/docs.js"></script>
@@ -27,7 +27,7 @@
   <a class="skip-link" href="#content">Jump to Content</a>
   <header class="site-header">
     <div class="header-upper">
-      <a class="header-logo" href="/" aria-label="Sportslab home"><img src="/favicon.svg" width="42" height="42" alt=""><span>sports<span>lab</span></span></a>
+      <a class="header-logo" href="/" aria-label="VisualOdds home"><img src="/favicon.svg" width="42" height="42" alt=""><span>Visual<span>Odds</span></span></a>
       <div class="header-upper-actions"><a href="/ev">Open EV tools</a><button type="button" class="theme-button" id="theme-toggle" aria-label="Toggle color scheme"><svg><use href="#i-moon"/></svg></button></div>
     </div>
     <div class="header-lower">
@@ -55,12 +55,12 @@
           <a class="sidebar-page" href="#local-api">EV API routes</a>
           <a class="sidebar-page" href="#integration">Connect the EV API</a>
           <a class="sidebar-page" href="#api-requirements">Data needed for all tools</a>
-          <a class="sidebar-page" href="/odds-api">Sportslab API overview</a>
+          <a class="sidebar-page" href="/odds-api">VisualOdds API overview</a>
         </section>
         <section class="sidebar-section" id="endpoints-group"><h2>EV Tools</h2><div id="endpoint-nav"></div></section>
       </nav>
       <p class="filter-empty" id="filter-empty" hidden>No matching pages.</p>
-      <div class="sidebar-credit"><span>Sportslab</span><strong>EV documentation</strong></div>
+      <div class="sidebar-credit"><span>VisualOdds</span><strong>EV documentation</strong></div>
     </aside>
 
     <main class="docs-main" id="content" tabindex="-1">
@@ -68,12 +68,13 @@
         <header class="article-header">
           <div class="copy-controls"><button type="button" id="copy-page"><svg><use href="#i-copy"/></svg>Copy Page</button><button type="button" id="copy-more" aria-label="More copy options" aria-expanded="false"><svg><use href="#i-chevron"/></svg></button><div class="copy-menu" id="copy-menu" hidden><button type="button" id="copy-link">Copy link</button><button type="button" id="copy-markdown">Copy as Markdown</button></div></div>
           <h1>EV Tools &amp; API</h1>
-          <p>One guide to the Sportslab EV workbench, its 18 tools, the quote data contract, and the EV API connection.</p>
+          <p>One guide to the VisualOdds EV workbench, its 18 tools, the quote data contract, and the EV API connection.</p>
         </header>
         <div class="article-body">
-          <h1 id="welcome">Welcome to the <a href="/ev">Sportslab EV workspace</a></h1>
+          <h1 id="welcome">Welcome to the <a href="/ev">VisualOdds EV workspace</a></h1>
           <p>The workbench brings price comparison, expected value, arbitrage, fantasy, and tracking into one local workspace. Every tool below opens directly to its matching screen.</p>
           <h2 id="workflow">Workspace workflow</h2>
+          <p><strong>Permanent design demo is enabled.</strong> All EV+ tools are populated with illustrative prices, props, tickets, history and alerts. Demo data remains across reloads, and live examples stay fresh. Edits use separate demo storage. API sync is paused until demo mode is turned off.</p>
           <p>Start in <a href="/ev#odds">Odds comparison</a>. Press <strong>Sync API</strong> to load the configured EV server’s quotes, add prices manually, or import a version 1 workspace JSON file. Choose a sport and market, then move among tools without leaving the workspace.</p>
           <p>Records are saved in this browser. Export a JSON copy to move them between browsers or machines. The calculation tools use the same saved records, so a price entered for comparison can also appear in Positive EV, arbitrage, low holds, and alert screens.</p>
           <h2 id="data">Quote data contract</h2>
@@ -108,7 +109,7 @@
             <li><a href="/ev#line-alerts">Movement &amp; price alerts</a> — manage thresholds and review local notifications.</li>
           </ul>
           <h2 id="local-api">EV API routes</h2>
-          <p>Sportslab connects to the EV Tool server over the local network on port <code>8000</code>. Browser requests use the Sportslab routes below. The Sportslab server attaches the required <code>X-API-Key</code> header to every upstream request, including health and status. The key stays in server configuration.</p>
+          <p>VisualOdds connects to the EV Tool server over the local network on port <code>8000</code>. Browser requests use the VisualOdds routes below. The VisualOdds server attaches the required <code>X-API-Key</code> header to every upstream request, including health and status. The key stays in server configuration.</p>
           <ul>
             <li><code>GET /api/ev/health</code> and <code>GET /api/ev/status</code> — local service health and quote counts.</li>
             <li><code>GET /api/ev/quotes</code> — normalized sportsbook quotes for the workbench.</li>
@@ -118,7 +119,7 @@
             <li><code>POST /api/ev/scrape?url=…</code> — reserved for future use.</li>
           </ul>
           <h2 id="integration">Connect the EV API</h2>
-          <p>Run the Sportslab Node app on a computer connected to the same WiFi or network as the EV API host. Configure the connection in the project’s ignored <code>.env.local</code> file using these server-only settings. Environment variables override the file when supplied.</p>
+          <p>Run the VisualOdds Node app on a computer connected to the same WiFi or network as the EV API host. Configure the connection in the project’s ignored <code>.env.local</code> file using these server-only settings. Environment variables override the file when supplied.</p>
           <pre><code>EV_TOOL_API_URL=http://&lt;server-lan-ip&gt;:8000/
 EV_TOOL_API_KEY=&lt;your-api-key&gt;</code></pre>
           <p>Open the <a href="/ev">EV workspace</a> and press <strong>Sync API</strong> when the server is available, or enable <strong>Auto-refresh</strong> every 15, 30 or 60 seconds. Auto-refresh starts off on every page load, pauses in background tabs and while editing, and backs off after temporary errors. Choose an interval your server supports. A successful sync replaces the previous API snapshot and example sportsbook quotes, preserves manual prices, and shares the result across comparison, EV, arbitrage, builders, and alerts. The hosted site cannot reach this LAN connection.</p>
@@ -134,7 +135,7 @@ EV_TOOL_API_KEY=&lt;your-api-key&gt;</code></pre>
     "live": false, "ts": "2026-09-25T00:00:00Z"
   }
 ]</code></pre>
-          <p>Manual and imported records remain available when the API is offline. The quote sync does not populate fantasy props, prediction contracts, or personal bet records; those still use their own workspace records. The bundled Python folder remains available as an optional development scaffold. The <a href="/odds-api">Sportslab API overview</a> describes the app’s separate public preview routes.</p>
+          <p>Manual and imported records remain available when the API is offline. The quote sync does not populate fantasy props, prediction contracts, or personal bet records; those still use their own workspace records. The bundled Python folder remains available as an optional development scaffold. The <a href="/odds-api">VisualOdds API overview</a> describes the app’s separate public preview routes.</p>
           <h2 id="api-requirements">Data needed for all tools</h2>
           <p>The connection credentials are configured. To populate every tool, the API must supply the datasets below. Additional endpoint names and response formats need to be confirmed before their adapters can be connected.</p>
           <ul>
@@ -148,7 +149,7 @@ EV_TOOL_API_KEY=&lt;your-api-key&gt;</code></pre>
           </ul>
           <p>Promo amounts and terms can be entered manually. Executable sportsbook parlay pricing, correlated same-game pricing and automatic account imports require additional provider support. <a href="/ev-api-requirements.md" download>Download the full API handoff</a> for all 18 tools, field examples and proposed routes.</p>
         </div>
-        <footer class="article-footer"><p class="updated">Sportslab EV documentation</p><div class="next"><h3>What's Next</h3><p>Open the EV workspace or review the existing Sportslab API overview.</p><ul><li><a href="/ev">Open all EV tools</a></li><li><a href="/odds-api">Sportslab API overview</a></li></ul></div><div class="feedback"><span>Did this page help you?</span><button type="button" data-feedback="yes">Yes</button><button type="button" data-feedback="no">No</button><p id="feedback-message" role="status" hidden>Thanks for the feedback.</p></div></footer>
+        <footer class="article-footer"><p class="updated">VisualOdds EV documentation</p><div class="next"><h3>What's Next</h3><p>Open the EV workspace or review the existing VisualOdds API overview.</p><ul><li><a href="/ev">Open all EV tools</a></li><li><a href="/odds-api">VisualOdds API overview</a></li></ul></div><div class="feedback"><span>Did this page help you?</span><button type="button" data-feedback="yes">Yes</button><button type="button" data-feedback="no">No</button><p id="feedback-message" role="status" hidden>Thanks for the feedback.</p></div></footer>
       </article>
     </main>
     <aside class="docs-toc" aria-label="Table of contents"><nav><a class="toc-parent" href="#welcome">EV workspace</a><a href="#workflow">Workspace workflow</a><a href="#data">Quote data contract</a><a href="#markets">Markets</a><a href="#builders">Builders &amp; research</a><a href="#fantasy">Fantasy tools</a><a href="#records">Records &amp; alerts</a><a href="#local-api">EV API routes</a><a href="#integration">Connect the EV API</a><a href="#api-requirements">Data needed for all tools</a></nav></aside>

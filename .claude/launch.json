@@ -4,9 +4,25 @@
     {
       "name": "sportslab",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["server.mjs"],
-      "env": { "PORT": "3101" },
+      "runtimeArgs": [
+        "server.mjs"
+      ],
+      "env": {
+        "PORT": "3101"
+      },
       "port": 3101
+    },
+    {
+      "name": "sportslab-design",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--env-file-if-exists=.env.local",
+        "scripts/design-preview.mjs"
+      ],
+      "env": {
+        "PORT": "3103"
+      },
+      "port": 3103
     }
   ]
 }

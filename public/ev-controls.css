@@ -1,0 +1,206 @@
+/* Shared workspace controls: sportsbook rail, stake panel and filter chips.
+   The panels follow the approved mockup: bold 16px headings, 48px inputs,
+   42px icon chips. ID scope outranks the older per-screen skins. */
+html body.ev-page #main{
+  --evc-panel:var(--panel,#0e1215);
+  --evc-tile:var(--control,#13181c);
+  --evc-line:var(--line,#1b2328);
+  --evc-edge:var(--border-strong,#262f36);
+  --evc-text:var(--text,#edf2ee);
+  --evc-muted:var(--muted,#7e8a86);
+  --evc-lime:var(--accent,#a3f06b);
+  --evc-chip-line:#2a3036;
+  --evc-input:#0b0e11;
+  --evc-value:#d3d9dd;
+  --evc-green:#1f9d55;
+}
+
+/* Sportsbook rail */
+html body.ev-page #main .ev-bookbar-select:not([hidden]){height:auto!important;min-height:72px!important;padding:12px 14px!important;gap:10px!important;border:1px solid var(--evc-line)!important;border-radius:16px!important;background:var(--evc-panel)!important;box-shadow:none!important;margin-bottom:14px}
+html body.ev-page #main .ev-bookbar-select .ev-book-list{gap:8px!important;padding:3px 0!important}
+html body.ev-page #main .ev-bookbar-select .ev-book-list button.ev-selected-book{width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important;padding:6px!important}
+html body.ev-page #main .ev-bookbar-select .ev-selected-book .ev-book-logo{width:28px;height:28px}
+html body.ev-page #main .ev-bookbar-select :is(#ev-books-more,.ev-book-list button.ev-book-overflow){width:36px!important;min-width:36px!important;height:36px!important;min-height:36px!important}
+html body.ev-page #main .ev-bookbar-select .ev-timing-toggle{width:136px!important;height:40px!important;min-height:40px!important;padding:3px!important;border-radius:10px!important;font-size:13px}
+html body.ev-page #main .ev-bookbar-select .ev-timing-toggle span{height:32px!important;border-radius:7px!important}
+html body.ev-page #main .ev-bookbar-select .ev-find-button{width:auto!important;min-width:148px!important;height:42px!important;min-height:42px!important;padding:0 18px!important;gap:10px!important;border-radius:10px!important;font-size:15px!important;font-weight:650!important;box-shadow:none!important}
+html body.ev-page #main .ev-bookbar-select .ev-find-button span{font-size:16px!important}
+
+/* Panels */
+html body.ev-page #main .ev-control-grid{grid-template-columns:minmax(340px,420px) minmax(0,1fr)!important;align-items:stretch!important;gap:20px!important;margin-bottom:20px!important}
+html body.ev-page #main .ev-control-grid :is(.ev-stake-panel,.ev-filter-panel){box-sizing:border-box;height:auto!important;min-height:118px!important;padding:16px 18px 18px!important;border:1px solid var(--evc-line)!important;border-radius:14px!important;background:var(--evc-panel)!important;box-shadow:none!important}
+
+/* Stake panel: bold heading above each input */
+html body.ev-page #main .ev-control-grid .ev-stake-panel{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;align-items:start!important;align-content:start!important;justify-content:stretch!important;gap:20px!important}
+html body.ev-page #main .ev-control-grid :is(.ev-stake-panel>label,.ev-multiplier-field){display:grid!important;grid-template-columns:auto minmax(0,1fr)!important;align-items:center!important;row-gap:12px!important;column-gap:0!important;width:auto!important;min-width:0;height:auto!important;margin:0!important;padding:0!important;border:0!important;background:none!important;color:var(--evc-text)!important;font-size:16px!important;font-weight:600!important;line-height:24px!important;text-align:left!important;white-space:nowrap}
+html body.ev-page #main .ev-control-grid .ev-multiplier-field>label{display:flex!important;align-items:center;grid-column:1/-1;height:24px;margin:0!important;padding:0!important;border:0!important;background:none!important;color:inherit!important;font:inherit!important;line-height:24px!important}
+html body.ev-page #main .ev-control-grid #ev-multiplier-label{margin:0!important;color:inherit!important;font:inherit!important;text-transform:capitalize}
+html body.ev-page #main .ev-control-grid :is(.ev-stake-panel>label>span[title],.ev-multiplier-field>label>span:not([id])){display:inline-grid!important;place-items:center;width:15px;height:15px;margin-left:8px!important;border:1.3px solid var(--evc-muted);border-radius:50%;font-size:0!important;line-height:0!important;justify-self:start}
+html body.ev-page #main .ev-control-grid :is(.ev-stake-panel>label>span[title],.ev-multiplier-field>label>span:not([id]))::before{content:"i";color:var(--evc-muted);font:600 9px/1 var(--font)}
+html body.ev-page #main .ev-control-grid .ev-input-wrap{position:relative;display:block;grid-column:1/-1;width:100%!important;height:48px;margin:0!important}
+html body.ev-page #main .ev-control-grid .ev-input-wrap input{box-sizing:border-box;width:100%!important;height:48px!important;min-height:0!important;padding:0 46px 0 14px!important;border:1px solid var(--evc-chip-line)!important;border-radius:9px!important;background:var(--evc-input)!important;color:var(--evc-text)!important;font:500 16px/46px var(--font)!important;font-variant-numeric:tabular-nums;box-shadow:none!important;outline:none}
+html body.ev-page #main .ev-control-grid .ev-input-wrap input:focus{border-color:var(--evc-edge)!important}
+html body.ev-page #main .ev-control-grid .ev-input-wrap em{position:absolute;top:50%;right:14px!important;transform:translateY(-50%);color:var(--evc-muted)!important;font-size:11px!important;font-style:normal;font-weight:500}
+html body.ev-page #main .ev-control-grid .ev-kelly-stepper{top:50%!important;right:8px!important;gap:2px}
+html body.ev-page #main .ev-control-grid .ev-kelly-stepper button{width:22px!important;height:13px!important;color:var(--evc-text)!important}
+
+/* Filter heading: title, green sort pill, Clear all */
+html body.ev-page #main .ev-control-grid .ev-filter-heading{display:flex!important;align-items:center;gap:22px!important;height:31px!important;min-height:31px!important;margin:0 0 9px!important}
+html body.ev-page #main .ev-control-grid .ev-filter-heading>strong{color:var(--evc-text);font-size:16px!important;font-weight:600;line-height:24px}
+html body.ev-page #main .ev-control-grid .ev-recommend{flex:0 0 auto!important;width:auto!important;min-width:142px}
+html body.ev-page #main .ev-control-grid .ev-recommend .ui-choice>.td-choice-trigger{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:14px!important;height:31px!important;min-height:31px!important;padding:0 12px 0 14px!important;border:1px solid var(--evc-green)!important;border-radius:8px!important;background:rgba(31,157,85,.1)!important;box-shadow:none!important}
+html body.ev-page #main .ev-control-grid .ev-recommend .choice-trigger-label{display:none!important}
+html body.ev-page #main .ev-control-grid .ev-recommend .choice-trigger-copy>strong{color:var(--evc-text)!important;font-size:13px!important;font-weight:500!important}
+html body.ev-page #main .ev-control-grid .ev-recommend .td-choice-trigger>svg:last-child{width:13px!important;height:13px!important;color:var(--evc-text)!important}
+html body.ev-page #main .ev-control-grid #ev-reset-filters{height:31px!important;min-height:31px!important;margin-left:auto;padding:0 14px!important;border:1px solid var(--evc-chip-line)!important;border-radius:8px!important;background:transparent!important;color:var(--evc-value)!important;font-size:13px!important;font-weight:500!important}
+html body.ev-page #main .ev-control-grid #ev-reset-filters:hover{border-color:var(--evc-edge)!important;color:var(--evc-text)!important}
+
+/* Filter chips: icon, label, current value (hidden at its default), chevron */
+html body.ev-page[data-ev-screen^="ev-"] #main .ev-control-grid .ev-reference-filters,html body.ev-page #main .ev-control-grid #ev-design-filters:not(:empty){display:flex!important;flex-wrap:nowrap;gap:12px!important;margin:0!important;padding:0!important}
+html body.ev-page #main .ev-control-grid :is(.ev-reference-filters,#ev-design-filters)>label{flex:1 1 auto;min-width:0;height:42px!important;min-height:42px!important;margin:0!important;padding:0!important;border:0!important;background:none!important}
+html body.ev-page #main .ev-control-grid :is(.ev-reference-filters,#ev-design-filters)>label.choice-field>:is(.ev-design-icon,.ev-design-prefix){display:none!important}
+html body.ev-page #main .ev-control-grid .ui-choice{display:block;width:100%;height:100%;min-width:0}
+html body.ev-page #main :is(.ev-reference-filters,#ev-design-filters,.dfs-controls,.os-screen,.sharp-workspace) .ui-choice>.td-choice-trigger{box-sizing:border-box;display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;width:100%!important;min-width:0!important;height:42px!important;min-height:42px!important;padding:0 13px!important;border:1px solid var(--evc-chip-line)!important;border-radius:9px!important;background:transparent!important;box-shadow:none!important;white-space:nowrap;overflow:hidden}
+html body.ev-page #main :is(.ev-reference-filters,#ev-design-filters,.dfs-controls,.os-screen,.sharp-workspace) .td-choice-trigger .choice-trigger-copy{display:flex!important;flex:0 1 auto!important;flex-direction:row!important;align-items:baseline!important;gap:10px!important;width:auto!important;min-width:0;overflow:hidden}
+html body.ev-page #main :is(.ev-reference-filters,#ev-design-filters,.dfs-controls,.os-screen,.sharp-workspace) .td-choice-trigger .choice-trigger-label{flex:none;display:inline!important;color:var(--evc-text)!important;font-size:14px!important;font-weight:500!important;line-height:20px!important;text-transform:none!important;letter-spacing:0!important}
+html body.ev-page #main :is(.ev-reference-filters,#ev-design-filters,.dfs-controls,.os-screen,.sharp-workspace) .td-choice-trigger .choice-trigger-copy>strong{overflow:hidden;color:var(--evc-value)!important;font-size:14px!important;font-weight:400!important;line-height:20px!important;text-overflow:ellipsis}
+html body.ev-page #main :is(.ev-reference-filters,#ev-design-filters,.dfs-controls,.os-screen,.sharp-workspace) .td-choice-trigger[data-empty="true"] .choice-trigger-copy>strong{display:none!important}
+html body.ev-page #main :is(.ev-reference-filters,#ev-design-filters,.dfs-controls,.os-screen,.sharp-workspace) .td-choice-trigger>svg:last-child{flex:none;width:13px!important;height:13px!important;margin:0!important;color:var(--evc-text)!important}
+html body.ev-page #main :is(.ev-reference-filters,#ev-design-filters,.dfs-controls,.os-screen,.sharp-workspace) .td-choice-trigger:is(:hover,[aria-expanded=true]){border-color:var(--evc-edge)!important;background:rgba(255,255,255,.02)!important}
+html body.ev-page #main .ev-control-grid :is(button,input):focus-visible,html body.ev-page #main :is(.dfs-controls,.os-screen,.sharp-workspace) .td-choice-trigger:focus-visible{outline:2px solid var(--evc-lime)!important;outline-offset:2px}
+
+/* Chip icons from the ev-icons set */
+html body.ev-page #main .ui-choice:is([data-control="ev-reference-sport"],[data-control="dfs-sport"],[data-control="os-sport"],[data-control="sharp-sport"],:has(select[data-filter="sport"])){--evc-icon:url(/ev-icons/sports.svg)}
+html body.ev-page #main .ui-choice:is([data-control="ev-reference-league"],:has(select[data-filter="league"])){--evc-icon:url(/ev-icons/leagues.svg)}
+html body.ev-page #main .ui-choice:is([data-control="ev-reference-market"],[data-control="dfs-market"],[data-control="os-market"],[data-control="sharp-market"],:has(select[data-filter="market"])){--evc-icon:url(/ev-icons/markets.svg)}
+html body.ev-page #main .ui-choice:is([data-control="ev-reference-date"],[data-control="os-event"],:has(select[data-filter="date"]),:has(select[data-filter="period"])){--evc-icon:url(/ev-icons/date.svg)}
+html body.ev-page #main .ui-choice:is([data-control="ev-reference-max-odds"],:has(select[data-filter="odds"]),:has(select[data-filter="edge"]),:has(select[data-filter="side"]),:has(select[data-filter="platform"])){--evc-icon:url(/ev-icons/odds.svg)}
+html body.ev-page #main .ui-choice:is([data-control^="ev-reference-"],[data-control="dfs-sport"],[data-control="dfs-market"],[data-control="os-sport"],[data-control="os-event"],[data-control="os-market"],[data-control="sharp-sport"],[data-control="sharp-market"],:has(select[data-filter]))>.td-choice-trigger::before{content:"";flex:none;width:17px;height:17px;background:var(--evc-text);-webkit-mask:var(--evc-icon) center/contain no-repeat;mask:var(--evc-icon) center/contain no-repeat}
+
+/* Arbitrage number filter (first stake) as a chip */
+html body.ev-page #main .ev-control-grid #ev-design-filters>label:not(.choice-field){display:flex!important;flex-direction:row!important;align-items:center;justify-content:center;gap:10px;box-sizing:border-box;padding:0 13px!important;border:1px solid var(--evc-chip-line)!important;border-radius:9px!important;background:transparent!important}
+html body.ev-page #main .ev-control-grid #ev-design-filters>label:not(.choice-field)>.ev-design-icon{display:none!important}
+html body.ev-page #main .ev-control-grid #ev-design-filters>label:not(.choice-field)>.ev-design-prefix{display:inline!important;color:var(--evc-text)!important;font-size:14px!important;font-weight:500!important;white-space:nowrap}
+html body.ev-page #main .ev-control-grid #ev-design-filters>label:not(.choice-field) input{width:56px!important;height:24px!important;min-height:0!important;padding:0!important;border:0!important;background:transparent!important;color:var(--evc-value)!important;font:400 14px/24px var(--font)!important;box-shadow:none!important}
+
+/* Arbitrage has six chips; give them the full row before they would clip. */
+@media (max-width:1800px){
+  html body.ev-page[data-ev-screen^="arb-"] #main .ev-control-grid{grid-template-columns:minmax(0,1fr)!important}
+  html body.ev-page[data-ev-screen^="arb-"] #main .ev-control-grid .ev-stake-panel{grid-template-columns:repeat(2,minmax(0,220px))!important}
+}
+/* Narrower desktops: tighter chips first, then stack the panels before any label clips. */
+@media (max-width:1700px){
+  html body.ev-page #main .ev-control-grid{grid-template-columns:minmax(300px,330px) minmax(0,1fr)!important}
+  html body.ev-page #main .ev-control-grid :is(.ev-reference-filters,#ev-design-filters:not(:empty)){gap:8px!important}
+  html body.ev-page #main :is(.ev-reference-filters,#ev-design-filters) .ui-choice>.td-choice-trigger{gap:6px!important;padding:0 10px!important}
+  html body.ev-page #main :is(.ev-reference-filters,#ev-design-filters) .td-choice-trigger .choice-trigger-copy{gap:6px!important}
+}
+@media (max-width:1440px){
+  html body.ev-page #main .ev-control-grid{grid-template-columns:minmax(0,1fr)!important}
+  html body.ev-page #main .ev-control-grid .ev-stake-panel{grid-template-columns:repeat(2,minmax(0,220px))!important}
+}
+@media (max-width:800px){
+  html body.ev-page #main .ev-bookbar-select{min-height:60px!important;padding:8px 10px!important;border-radius:14px!important}
+  html body.ev-page #main .ev-bookbar-select .ev-book-list button.ev-selected-book{width:36px!important;min-width:36px!important;height:36px!important;min-height:36px!important;padding:4px!important}
+  html body.ev-page #main .ev-bookbar-select .ev-find-button{min-width:0!important;height:38px!important;min-height:38px!important;padding:0 12px!important;font-size:12px!important}
+  html body.ev-page #main .ev-bookbar-select .ev-timing-toggle{width:104px!important;height:36px!important;min-height:36px!important;font-size:11px}
+  html body.ev-page #main .ev-bookbar-select .ev-timing-toggle span{height:28px!important}
+  html body.ev-page #main .ev-control-grid :is(.ev-stake-panel,.ev-filter-panel){padding:14px!important}
+  html body.ev-page #main .ev-control-grid .ev-stake-panel{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+  html body.ev-page #main .ev-control-grid :is(.ev-reference-filters,#ev-design-filters)>label{flex:1 1 calc(50% - 6px)}
+}
+
+/* DFS Props filter bar: one panel of chips like the Filters panel. */
+html body.ev-page #main .dfs-controls{display:flex!important;flex-wrap:wrap;align-items:center;gap:12px!important;box-sizing:border-box;padding:16px 18px 18px!important;border:1px solid var(--evc-line)!important;border-radius:14px!important;background:var(--evc-panel)!important}
+html body.ev-page #main .dfs-controls>:is(.dfs-filter,.dfs-slip-type){flex:1 1 0;min-width:150px;height:42px!important;min-height:42px!important;margin:0!important;padding:0!important;border:0!important;background:none!important}
+html body.ev-page #main .dfs-controls .dfs-filter>span:first-child:not(.dfs-app-value){display:none!important}
+html body.ev-page #main .dfs-controls .dfs-app-value{display:block!important;width:100%;height:100%}
+html body.ev-page #main .dfs-controls .dfs-app-value>img{display:none!important}
+html body.ev-page #main .dfs-controls .dfs-slip-trigger{box-sizing:border-box;display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;width:100%!important;height:42px!important;min-height:42px!important;padding:0 13px!important;border:1px solid var(--evc-chip-line)!important;border-radius:9px!important;background:transparent!important;box-shadow:none!important}
+html body.ev-page #main .dfs-controls .dfs-slip-trigger>span{display:flex!important;flex-direction:row!important;align-items:baseline;gap:10px!important;color:var(--evc-text)!important;font-size:14px!important;font-weight:500!important;line-height:20px!important}
+html body.ev-page #main .dfs-controls .dfs-slip-trigger strong{color:var(--evc-value)!important;font-size:14px!important;font-weight:400!important;line-height:20px!important}
+html body.ev-page #main .dfs-controls .dfs-slip-trigger>svg{flex:none;width:13px!important;height:13px!important;color:var(--evc-text)!important}
+html body.ev-page #main .dfs-controls .dfs-search{display:flex!important;align-items:center;gap:8px;flex:1.4 1 0;min-width:200px;box-sizing:border-box;height:42px!important;min-height:42px!important;margin:0!important;padding:0 13px!important;border:1px solid var(--evc-chip-line)!important;border-radius:9px!important;background:transparent!important}
+html body.ev-page #main .dfs-controls .dfs-search>svg{flex:none;width:16px;height:16px;color:var(--evc-muted)}
+html body.ev-page #main .dfs-controls .dfs-search input{flex:1;min-width:0;height:40px!important;padding:0!important;border:0!important;background:transparent!important;color:var(--evc-text)!important;font:500 14px/40px var(--font)!important;box-shadow:none!important;outline:none}
+html body.ev-page #main .dfs-controls .dfs-search:focus-within{border-color:var(--evc-edge)!important}
+html body.ev-page #main .ui-choice[data-control="dfs-platform"]{--evc-icon:url(/ev-icons/leagues.svg)}
+html body.ev-page #main .ui-choice[data-control="dfs-platform"]>.td-choice-trigger::before{content:"";flex:none;width:17px;height:17px;background:var(--evc-text);-webkit-mask:var(--evc-icon) center/contain no-repeat;mask:var(--evc-icon) center/contain no-repeat}
+html body.ev-page #main .dfs-summary-side .dfs-sort-label .td-choice-trigger{height:32px!important;min-height:32px!important;padding:0 10px!important;border-radius:8px!important}
+html body.ev-page #main .dfs-summary-side .dfs-sort-label .choice-trigger-copy>strong{font-size:12px!important;font-weight:550!important}
+html body.ev-page #main .dfs-controls>.dfs-app-filter{flex:1.35 1 0!important;min-width:190px}
+
+/* Workspace tool bar (Pricing & filters, Alerts, Performance, All tools · view toggle) */
+html body.ev-page #main #ev-suite-controls{display:flex!important;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:0 0 20px!important;padding:6px!important;border:1px solid var(--evc-line)!important;border-radius:14px!important;background:var(--evc-panel)!important;box-shadow:none!important}
+html body.ev-page #main #ev-suite-controls>nav,html body.ev-page #main #ev-suite-controls .evx-toolbar-end{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+html body.ev-page #main #ev-suite-controls :is(nav>button,.evx-toolbar-end>button,.evx-tools-menu>summary){display:inline-flex;align-items:center;gap:6px;height:34px!important;min-height:34px!important;margin:0!important;padding:0 14px!important;border:1px solid transparent!important;border-radius:9px!important;background:transparent!important;color:#c9d0d4!important;font:550 13px/1 var(--font)!important;box-shadow:none!important;cursor:pointer;list-style:none}
+html body.ev-page #main #ev-suite-controls .evx-tools-menu>summary::-webkit-details-marker{display:none}
+html body.ev-page #main #ev-suite-controls .evx-tools-menu>summary::after{content:"";width:7px;height:7px;margin:-3px 0 0 4px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg)}
+html body.ev-page #main #ev-suite-controls :is(nav>button,.evx-toolbar-end>button,.evx-tools-menu>summary):hover{background:rgba(255,255,255,.05)!important;color:var(--evc-text)!important}
+html body.ev-page #main #ev-suite-controls :is(nav>button[aria-current],.evx-tools-menu[open]>summary){border-color:var(--evc-chip-line)!important;background:var(--evc-tile)!important;color:var(--evc-text)!important}
+html body.ev-page #main #ev-suite-controls .evx-view-toggle{display:inline-flex;gap:2px;padding:3px!important;border:1px solid var(--evc-chip-line)!important;border-radius:10px!important;background:var(--evc-input)!important}
+html body.ev-page #main #ev-suite-controls .evx-view-toggle button{height:28px!important;min-height:28px!important;padding:0 12px!important;border:0!important;border-radius:7px!important;background:transparent!important;color:var(--evc-muted)!important;font:550 12px/1 var(--font)!important;box-shadow:none!important}
+html body.ev-page #main #ev-suite-controls .evx-view-toggle button[aria-pressed=true]{background:var(--evc-text)!important;color:#0b0d10!important}
+html body.ev-page #main #ev-suite-controls .evx-toolbar-end>button:last-child{border-color:var(--evc-chip-line)!important}
+html body.ev-page #main #ev-suite-controls .evx-feedback{flex-basis:100%;margin:2px 8px 4px;color:var(--evc-lime);font-size:12px}
+
+/* Workspace forms: one field style (label above a 42px control) */
+html body.ev-page #main :is(.evx-workspace,.evx-dialog) .evx-fields{gap:16px!important}
+html body.ev-page #main :is(.evx-workspace,.evx-dialog) .evx-fields>label{display:flex!important;flex-direction:column;justify-content:flex-start;gap:7px!important;min-width:0;margin:0!important;color:#aab4b9!important;font:500 12px/1.3 var(--font)!important;letter-spacing:0!important;text-transform:none!important}
+html body.ev-page #main :is(.evx-workspace,.evx-dialog) .evx-fields>label.choice-field{font-size:12px!important}
+html body.ev-page #main :is(.evx-workspace,.evx-dialog) .evx-fields>label :is(input:not([type=checkbox]):not([type=radio]),textarea){box-sizing:border-box;width:100%!important;height:42px!important;min-height:42px!important;margin:0!important;padding:0 12px!important;border:1px solid var(--evc-chip-line)!important;border-radius:9px!important;background:var(--evc-input)!important;color:var(--evc-text)!important;font:500 14px/40px var(--font)!important;box-shadow:none!important;outline:none}
+html body.ev-page #main :is(.evx-workspace,.evx-dialog) .evx-fields>label textarea{height:auto!important;padding:10px 12px!important;line-height:1.4!important}
+html body.ev-page #main :is(.evx-workspace,.evx-dialog) .evx-fields>label :is(input,textarea):focus{border-color:var(--evc-edge)!important;box-shadow:0 0 0 3px rgba(163,240,107,.1)!important}
+html body.ev-page #main :is(.evx-workspace,.evx-dialog) .evx-fields>label .ui-choice{display:block;width:100%}
+html body.ev-page #main :is(.evx-workspace,.evx-dialog) .evx-fields>label .td-choice-trigger{box-sizing:border-box;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;width:100%!important;height:42px!important;min-height:42px!important;padding:0 12px!important;border:1px solid var(--evc-chip-line)!important;border-radius:9px!important;background:var(--evc-input)!important;box-shadow:none!important}
+html body.ev-page #main :is(.evx-workspace,.evx-dialog) .evx-fields>label .td-choice-trigger .choice-trigger-label{display:none!important}
+html body.ev-page #main :is(.evx-workspace,.evx-dialog) .evx-fields>label .td-choice-trigger .choice-trigger-copy>strong{color:var(--evc-text)!important;font-size:14px!important;font-weight:500!important;text-transform:capitalize}
+html body.ev-page #main :is(.evx-workspace,.evx-dialog) .evx-fields>label .td-choice-trigger>svg:last-child{width:13px;height:13px;color:var(--evc-muted)}
+html body.ev-page #main :is(.evx-workspace,.evx-dialog) button.evx-primary,html body.ev-page #main :is(.evx-workspace,.evx-dialog) form>button[type=submit]{height:40px!important;min-height:40px!important;padding:0 18px!important;border:1px solid var(--evc-lime)!important;border-radius:10px!important;background:var(--evc-lime)!important;color:#0b1206!important;font:650 13px/1 var(--font)!important;box-shadow:none!important}
+html body.ev-page #main :is(.evx-workspace,.evx-dialog) .evx-check{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:10px;color:var(--evc-text)!important;font:500 13px/1.3 var(--font)!important}
+
+/* Switches (settings options and inline checks) */
+html body.ev-page #main :is(.evs-toggle,.evx-check) input[type=checkbox]{appearance:none;-webkit-appearance:none;position:relative;flex:none;width:38px!important;height:22px!important;min-height:0!important;margin:0!important;padding:0!important;border:1px solid var(--evc-chip-line)!important;border-radius:999px!important;background:var(--evc-input)!important;box-shadow:none!important;cursor:pointer;transition:background .15s,border-color .15s}
+html body.ev-page #main :is(.evs-toggle,.evx-check) input[type=checkbox]::before{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#8a969c;transition:transform .15s,background .15s}
+html body.ev-page #main :is(.evs-toggle,.evx-check) input[type=checkbox]:checked{border-color:var(--evc-lime)!important;background:var(--evc-lime)!important}
+html body.ev-page #main :is(.evs-toggle,.evx-check) input[type=checkbox]:checked::before{background:#0b1206;transform:translateX(16px)}
+html body.ev-page #main :is(.evs-toggle,.evx-check) input[type=checkbox]:focus-visible{outline:2px solid var(--evc-lime)!important;outline-offset:2px}
+
+/* Pricing & filters page: grouped sections and a sticky save bar */
+html body.ev-page #main .evs-settings>.evx-panel:first-child{padding:0!important;overflow:visible}
+html body.ev-page #main .evs-settings>.evx-panel:first-child>header{padding:24px 28px 20px!important;margin:0!important}
+html body.ev-page #main .evs-form{margin:0}
+html body.ev-page #main .evs-group{display:grid;grid-template-columns:minmax(200px,260px) minmax(0,1fr);gap:32px;padding:24px 28px;border-top:1px solid var(--evc-line)}
+html body.ev-page #main .evs-group>header h4{margin:0 0 6px;color:var(--evc-text);font-size:15px;font-weight:600;letter-spacing:-.01em}
+html body.ev-page #main .evs-group>header p{margin:0;color:var(--evc-muted);font-size:13px;line-height:1.45}
+html body.ev-page #main .evs-group .evs-fields{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))!important;margin:0!important}
+html body.ev-page #main .evs-toggles{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+html body.ev-page #main .evs-toggle{display:flex!important;flex-direction:row!important;align-items:flex-start;gap:14px;margin:0!important;padding:14px 16px!important;border:1px solid var(--evc-line);border-radius:12px;background:var(--evc-input);cursor:pointer}
+html body.ev-page #main .evs-toggle:hover{border-color:var(--evc-chip-line)}
+html body.ev-page #main .evs-toggle-copy{display:flex;flex-direction:column;gap:3px}
+html body.ev-page #main .evs-toggle-copy strong{color:var(--evc-text);font-size:13.5px;font-weight:550}
+html body.ev-page #main .evs-toggle-copy small{color:var(--evc-muted);font-size:12px;line-height:1.4}
+html body.ev-page #main .evs-savebar{position:sticky;bottom:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 28px;border-top:1px solid var(--evc-line);border-radius:0 0 16px 16px;background:rgba(14,18,21,.92);backdrop-filter:blur(8px)}
+html body.ev-page #main .evs-savebar p{margin:0;color:var(--evc-muted);font-size:12px}
+html body.ev-page #main .evs-settings .evx-panel{border:1px solid var(--evc-line)!important;border-radius:16px!important;background:var(--evc-panel)!important}
+@media (max-width:900px){
+  html body.ev-page #main .evs-group{grid-template-columns:1fr;gap:14px;padding:20px 18px}
+  html body.ev-page #main .evs-settings>.evx-panel:first-child>header{padding:20px 18px 16px!important}
+  html body.ev-page #main .evs-savebar{padding:12px 18px}
+  html body.ev-page #main .evs-savebar p{display:none}
+}
+html body.ev-page #main #ev-view :is(.evs-toggle,.evx-check) input[type=checkbox]:checked{border-color:var(--evc-lime)!important;background:var(--evc-lime)!important;background-image:none!important}
+html body.ev-page #main #ev-view :is(.evs-toggle,.evx-check) input[type=checkbox]{background-image:none!important;accent-color:var(--evc-lime)}
+html body.ev-page #main #ev-view :is(.evs-toggle,.evx-check) input[type=checkbox]::after{content:none!important;display:none!important}
+/* DFS: content-sized chips, search fills the rest (same pattern as the Odds Screen). */
+html body.ev-page #main .dfs-controls>:is(.dfs-filter,.dfs-slip-type),html body.ev-page #main .dfs-controls>.dfs-app-filter{flex:0 0 auto!important;min-width:0!important;height:40px!important;min-height:40px!important}
+html body.ev-page #main .dfs-controls :is(.ui-choice,.dfs-app-value){width:auto!important}
+html body.ev-page #main .dfs-controls :is(.ui-choice>.td-choice-trigger,.dfs-slip-trigger){width:auto!important;height:40px!important;min-height:40px!important;padding:0 12px!important}
+html body.ev-page #main .dfs-controls .dfs-search{flex:1 1 220px!important;height:40px!important;min-height:40px!important;background:var(--evc-input)!important}
+html body.ev-page #main .dfs-controls{padding:14px 16px!important;gap:10px!important}
+@media (max-width:720px){
+  html body.ev-page #main .dfs-controls>:is(.dfs-filter,.dfs-slip-type,.dfs-app-filter){flex:1 1 calc(50% - 5px)!important}
+  html body.ev-page #main .dfs-controls :is(.ui-choice,.dfs-app-value,.ui-choice>.td-choice-trigger,.dfs-slip-trigger){width:100%!important}
+  html body.ev-page #main .dfs-controls .dfs-search{flex-basis:100%!important}
+}
+html body.ev-page #main #ev-view .dfs-controls .dfs-search input{border:0!important;background:transparent!important;box-shadow:none!important}

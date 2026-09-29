@@ -1,30 +1,41 @@
 import {escape as esc,finite,number as num,selectGames,summarize,supportingStats} from './research-data.js';
 import {gameChart,movement} from './player-research.js';
-import {teamMark,playerPortrait,opponentIdentity} from './sports-identity.js';
+import {teamMark,playerPortrait,opponentIdentity,sportsbookBadge} from './sports-identity.js';
 import {availabilityLabel} from './presentation.js';
 import {icon} from './ui-icons.js';
 
 const windows=[['5','L5'],['10','L10'],['20','L20'],['h2h','H2H'],['all','All']];
 const pct=value=>value===null?'—':Math.round(value*100)+'%';
 
+export function trendPlayerHeader(p,{line,side,manual,saved=false}) {
+  const dateKey=String(p.displayDate||'').slice(0,10),date=Number.isFinite(Date.parse(dateKey))?new Date(dateKey+'T12:00Z').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}):'';
+  const threshold=finite(line),market=p.label+(threshold===null?'':` - ${side==='under'?'Under':'Over'} ${num(threshold)}`);
+  return `<header class="td-player-hero"><div class="td-player-heading"><div class="td-player-identity">${playerPortrait(p,{size:'hero',eager:true})}<div class="td-player-copy"><span class="td-kicker"><span class="player-detail-matchup">${esc(p.team)} ${p.raw?.home===false?'@':'vs'} ${esc(p.opponent||'TBD')}</span>${date?` <time datetime="${esc(dateKey)}">${esc(date)}</time>`:''}</span><h2 class="player-detail-headline"><span class="player-detail-name">${esc(p.name)}</span>${p.position?` <small class="player-detail-position">${esc(p.position)}</small>`:''} <span class="player-detail-market">${esc(market)}</span></h2></div></div><button type="button" class="primary" data-watch aria-pressed="${saved}" aria-label="${saved?'Remove from':'Add to'} watchlist">${icon(saved?'check':'bookmark')}<span>${saved?'Saved':'Save player'}</span></button></div>${trendQuoteBar(p,{line:threshold,side,manual})}</header>`;
+}
+
 export function trendQuoteBar(p,{line,side,manual}) {
   const quote=p.prop;
   const price=value=>finite(value)===null?'—':(value>0?'+':'')+num(value,0);
-  const isFanDuel=[quote?.bookKey,quote?.bookmaker].some(value=>/^fanduel(?:sportsbook)?$/.test(String(value||'').toLowerCase().replace(/[^a-z]/g,'')));
-  const bookmaker=isFanDuel?'<span class="td-sportsbook-logo" title="FanDuel"><img src="/assets/sportsbooks/fanduel.png" alt="FanDuel" width="1920" height="1080"></span>':'';
-  const prices=['over','under'].map(side=>{
-    const value=quote?.prices?.[side]?.american,available=finite(value)!==null,label=side==='over'?'Over':'Under';
-    return `<span${available&&quote?.bookmaker?` title="${esc(quote.bookmaker)}"`:''}><small>${label}</small><span class="td-quote-value">${available?bookmaker:''}<strong>${price(value)}</strong></span></span>`;
+  const prices=['over','under'].map(valueSide=>{
+    const value=quote?.prices?.[valueSide]?.american,label=valueSide==='over'?'Over':'Under';
+    return `<span class="td-quote-price${valueSide===side?' is-selected':''}"><small>${label}</small><strong>${price(value)}</strong></span>`;
   }).join('');
-  return `<div class="td-line-banner td-quote-bar"><div class="td-quote-selection">${icon('research')}<div><span>${manual?'Your line':esc(p.label)}</span><strong>${line===null?'Set a comparison line':(side==='over'?'Over':'Under')+' '+num(line)}</strong></div></div>${manual?(quote?'<div class="td-quote-custom"><button type="button" data-reset-line>Use book line</button></div>':''):`<div class="td-quote-prices" aria-label="Sportsbook quote">${prices}</div>`}</div>`;
+  return `<div class="td-line-banner td-quote-bar"><div class="td-quote-selection">${icon('research')}<div><span>${manual?'Your line':'Comparison'}</span><strong>${line===null?'Set a comparison line':(side==='over'?'Over':'Under')+' '+num(line)}</strong></div></div>${manual?(quote?'<div class="td-quote-custom"><button type="button" data-reset-line>Use book line</button></div>':''):`<div class="td-book-quote">${sportsbookBadge(quote)}<div class="td-quote-prices" aria-label="Sportsbook quote">${prices}</div></div>`}</div>`;
 }
+
+// Sub-line for the average and median tiles: where the value sits against the comparison line.
+const versusLine=(value,line)=>{
+  const v=finite(value),l=finite(line);
+  if(v===null||l===null)return 'Per game';
+  return `${v>l?'Above':v<l?'Below':'On'} the ${num(l)} line`;
+};
 
 export function trendChartPanel(p,{games,line,side,window,venue,manual,width}) {
   const s=summarize(games,line,side),sample=window==='h2h'?'Head to head':window==='all'?'Available history':`Last ${window} games`;
   return `<section class="td-chart-card" aria-label="Player performance chart">
     <header class="td-chart-card-heading"><div><h3>${icon('trends')}${esc(p.name)} · ${esc(p.label)}</h3><span>${esc(sample)} <i>·</i> ${s.n} recorded</span></div><div class="td-venue-control"><select id="td-venue" aria-label="Game venue"><option value="all" ${venue==='all'?'selected':''}>Home + away</option><option value="home" ${venue==='home'?'selected':''}>Home only</option><option value="away" ${venue==='away'?'selected':''}>Away only</option></select></div></header>
     <div class="td-chart-toolbar"><div class="td-windows" role="group" aria-label="Game window">${windows.map(([value,label])=>`<button data-window="${value}" aria-pressed="${window===value}"><span>${label}</span></button>`).join('')}</div></div>
-    <div class="td-summary-stats"><div class="td-hit-stat"><span>${esc(sample.replace(' games',''))}</span><strong class="td-positive">${pct(s.rate)}</strong><small>${!s.n?'No games in sample':s.rate===null?'Set a line to compare':`${s.hits} of ${s.n} games${s.pushes?' · '+s.pushes+' pushes':''}`}</small><i class="td-stat-meter" style="--rate:${(s.rate??0)*100}%" aria-hidden="true"></i></div><div><span>Average</span><strong>${num(s.average)}</strong></div><div><span>Median</span><strong>${num(s.median)}</strong></div><div><span>Range</span><strong>${s.n?num(s.min)+'–'+num(s.max):'—'}</strong></div></div>
+    <div class="td-summary-stats"><div class="td-hit-stat"><span>${esc(sample.replace(' games',''))}</span><strong class="td-positive">${pct(s.rate)}</strong><small>${!s.n?'No games in sample':s.rate===null?'Set a line to compare':`${s.hits} of ${s.n} games${s.pushes?' · '+s.pushes+' pushes':''}`}</small><i class="td-stat-meter" style="--rate:${(s.rate??0)*100}%" aria-hidden="true"></i></div><div><span>Average</span><strong>${num(s.average)}</strong><small>${versusLine(s.average,line)}</small></div><div><span>Median</span><strong>${num(s.median)}</strong><small>${versusLine(s.median,line)}</small></div><div><span>Range</span><strong>${s.n?num(s.min)+'–'+num(s.max):'—'}</strong><small>Low – high</small></div></div>
     <div class="td-main-chart">${gameChart(games,line,side,false,width,p.sport)}</div>
     <div class="td-legend" aria-label="Chart legend">${line===null?'<span><i class="neutral"></i>Recorded result</span>':`<span><i class="hit"></i>${side==='over'?'Above':'Below'} line</span><span><i class="miss"></i>${side==='over'?'Below':'Above'} line</span><span><i class="push"></i>Push</span><span><i class="line"></i>Line</span>`}</div>
     <div class="td-chart-bottom"><div class="td-side td-chart-side" role="group" aria-label="Chart comparison side">${['over','under'].map(value=>`<button data-side="${value}" aria-pressed="${side===value}">${value==='over'?'Over':'Under'}</button>`).join('')}</div><form id="td-line-form"><label for="td-line">Line</label><div class="td-line-stepper"><button type="button" data-line-step="-0.5" aria-label="Decrease comparison line">−</button><input id="td-line" name="line" aria-label="Compare line" type="number" min="-100" max="1000" step="any" value="${line??''}" placeholder="—" required><button type="button" data-line-step="0.5" aria-label="Increase comparison line">+</button></div><button class="td-apply-line" type="submit" aria-label="Apply comparison line">${icon('check')}<span>Apply</span></button>${manual?'<button class="td-reset-line" type="button" data-reset-line aria-label="Reset to sportsbook line">Reset</button>':''}</form></div>

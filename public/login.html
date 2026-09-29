@@ -5,17 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#080e13">
   <meta name="robots" content="noindex,follow">
-  <meta name="description" content="SportsLab account sign in preview.">
-  <title>Sign in · SportsLab</title>
+  <meta name="description" content="Sign in to your VisualOdds account.">
+  <meta name="referrer" content="no-referrer">
+  <title>Sign in · VisualOdds</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="/assets/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/auth.css">
+  <link rel="stylesheet" href="/account-system.css"><link rel="stylesheet" href="/account-mobile.css"><link rel="stylesheet" href="/account-2026.css?v=1">
   <script type="module" src="/auth.js"></script>
 </head>
 <body class="account-page" data-account-mode="login">
   <a class="account-skip" href="#main">Skip to sign in</a>
   <header class="account-header">
-    <a class="account-brand" href="/" aria-label="SportsLab home"><img src="/favicon.svg" width="34" height="34" alt=""><span>sports<span>lab</span></span></a>
+    <a class="account-brand" href="/" aria-label="VisualOdds home"><img src="/favicon.svg" width="34" height="34" alt=""><span>Visual<span>Odds</span></span></a>
     <a class="account-header-link" href="/research">Explore workspace <span aria-hidden="true">↗</span></a>
   </header>
   <main id="main" class="account-layout">
@@ -25,10 +27,10 @@
         <p class="account-story-label">Sports research, in context</p>
         <h1 id="account-story-title">Know what sits behind the line.</h1>
         <p class="account-story-copy">Game history, market prices, and source details belong in the same view.</p>
-        <div class="account-story-list" aria-label="SportsLab tools">
+        <div class="account-story-list" aria-label="VisualOdds tools">
           <div><span class="account-story-mark" aria-hidden="true"></span><strong>Research the matchup</strong><span>See the sample behind a player trend.</span></div>
           <div><span class="account-story-mark" aria-hidden="true"></span><strong>Compare the market</strong><span>View entered prices and their capture times.</span></div>
-          <div><span class="account-story-mark" aria-hidden="true"></span><strong>Keep your record</strong><span>Track picks in your browser workspace.</span></div>
+          <div><span class="account-story-mark" aria-hidden="true"></span><strong>Keep your record</strong><span>Bring your research and settings with you.</span></div>
         </div>
       </div>
     </section>
@@ -36,16 +38,16 @@
       <div class="account-access-inner">
         <nav class="account-tabs" aria-label="Account pages"><a href="/login" aria-current="page">Sign in</a><a href="/register">Create account</a></nav>
         <h2 id="account-title">Welcome back.</h2>
-        <p class="account-subtitle">Sign in to your SportsLab account.</p>
-        <p class="account-preview"><span aria-hidden="true">i</span> Account access is coming soon. This form is a preview; details are not sent or saved.</p>
-        <form id="account-form" novalidate>
+        <p class="account-subtitle">Sign in to your VisualOdds account.</p>
+        <form method="post" id="account-form" novalidate>
           <div class="account-field"><label for="account-email">Email address</label><input id="account-email" name="email" type="email" placeholder="you@example.com" autocomplete="email" required></div>
           <div class="account-field"><label for="account-password">Password</label><div class="account-password-field"><input id="account-password" name="password" type="password" placeholder="Enter your password" autocomplete="current-password" required><button type="button" data-toggle-password="account-password" aria-pressed="false">Show</button></div></div>
+          <div class="account-form-options"><label class="account-check"><input type="checkbox" name="rememberMe" checked> Keep me signed in</label><a href="/forgot-password">Forgot password?</a></div>
           <button class="account-submit" type="submit">Sign in</button>
           <p id="account-status" class="account-status" role="status" aria-live="polite" hidden></p>
         </form>
-        <p class="account-switch">New to SportsLab? <a href="/register">Create an account</a></p>
-        <p class="account-explore">No account needed to explore. <a href="/research">Open the workspace</a></p>
+        <p class="account-switch">New to VisualOdds? <a href="/register">Create an account</a></p>
+        <p class="account-explore"><a href="/">Back to VisualOdds</a></p>
       </div>
     </section>
   </main>

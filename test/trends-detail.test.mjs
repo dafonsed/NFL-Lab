@@ -11,17 +11,20 @@ const options={games,line:0,side:'under',window:'10',venue:'all',manual:true,wid
 test('quote strip keeps saved prices separate from a custom historical comparison',()=>{
  const quoted={...p,prop:{line:.5,bookmaker:'Book <A>',stale:true,prices:{over:{american:-200},under:{american:150}}}};
  const book=load(trendQuoteBar(quoted,{line:.5,side:'over',manual:false}));
- assert.equal(book('.td-quote-selection strong').text(),'Over 0.5');assert.equal(book('.td-quote-prices>span').first().attr('title'),'Book <A>');
+ assert.equal(book('.td-quote-selection strong').text(),'Over 0.5');assert.equal(book('.quote-book-copy strong').text(),'Book <A>');assert.equal(book('.quote-book-copy a').length,0);
  assert.equal(book('.td-quote-source').length,0);assert.match(book('.td-quote-prices').text(),/-200.*\+150/);
  const custom=load(trendQuoteBar(quoted,{line:0,side:'under',manual:true}));
  assert.equal(custom('.td-quote-selection strong').text(),'Under 0');assert.equal(custom('.td-quote-prices').length,0);
- assert.equal(custom('.td-sportsbook-logo').length,0);assert.equal(custom('[data-reset-line]').length,1);
+ assert.equal(custom('.quote-book-badge').length,0);assert.equal(custom('[data-reset-line]').length,1);
  const missing=load(trendQuoteBar(p,{line:null,side:'over',manual:false}));
- assert.equal(missing('.td-sportsbook-logo').length,0);assert.doesNotMatch(missing('.td-quote-prices').text(),/undefined|NaN/);
+ assert.equal(missing('.quote-book-badge').length,0);assert.doesNotMatch(missing('.td-quote-prices').text(),/undefined|NaN/);
  const fanDuel=load(trendQuoteBar({...p,prop:{bookmaker:'FanDuel',prices:{over:{american:-200},under:{american:null}}}},{line:.5,side:'over',manual:false}));
- assert.equal(fanDuel('.td-quote-prices>span').first().find('img[alt=FanDuel]').length,1);
- assert.equal(fanDuel('.td-quote-prices>span').last().find('img').length,0);
+ assert.equal(fanDuel('.quote-book-badge').length,1);assert.equal(fanDuel('.quote-book-copy strong').text(),'FanDuel');
+ assert.equal(fanDuel('.quote-book-mark img').attr('src'),'/assets/brands/fanduel.png');assert.equal(fanDuel('.td-quote-prices img').length,0);
  assert.equal(fanDuel('.td-quote-prices>span').last().find('strong').text(),'—');
+ const otherBook=load(trendQuoteBar({...quoted,prop:{...quoted.prop,bookKey:'draftkings',stale:true}},{line:.5,side:'under',manual:false}));
+ assert.equal(otherBook('.quote-book-copy strong').text(),'DraftKings');assert.equal(otherBook('.quote-book-copy small').text(),'Saved quote');
+ assert.equal(otherBook('.quote-book-mark img').attr('src'),'/assets/brands/draftkings.png');assert.equal(otherBook('.td-quote-price.is-selected small').text(),'Under');
 });
 
 test('comparison controls and window tiles preserve pushes, zero lines and sample sizes',()=>{

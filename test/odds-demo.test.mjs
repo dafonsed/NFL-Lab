@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {load} from 'cheerio';
 import {createOddsDemoQuotes,oddsWorkspaceQuotes,oddsDemoHistory,ODDS_DEMO_ENABLED,ODDS_DEMO_BOOKS} from '../public/odds-demo.js';
 import {buildOddsBoard,createOddsScreen} from '../public/odds-screen.js';
 import {decimal,implied,fairProbability} from '../public/ev-core.js';
@@ -58,13 +59,30 @@ test('reload produces stable odds and tomorrow rolls the schedule forward',()=>{
   assert.ok(history.every(q=>q.demo&&Date.parse(q.ts)<=Date.parse(data[0].ts)));
 });
 
-test('each sport renders all event headers with one game expanded initially',()=>{
-  for(const [sport,count] of Object.entries(expected)) {
-    const screen=createOddsScreen({getQuotes:()=>data,brandMark:()=>'',onSport:()=>{},redraw:()=>{}});
-    const html=screen.render({sport,demo:true});
-    assert.match(html,/Demo mode/);
-    assert.equal((html.match(/class="os-event"/g)||[]).length,count);
-    assert.equal((html.match(/aria-label="Collapse [^"]* vs /g)||[]).length,1);
-    assert.ok((html.match(/class="os-side/g)||[]).length>=30);
+test('each sport opens on a main-market grid with every game expanded',()=>{
+  const original=globalThis.document;
+  globalThis.document={querySelector:()=>null,querySelectorAll:()=>[]};
+  try {
+    for(const [sport,count] of Object.entries(expected)) {
+      const screen=createOddsScreen({getQuotes:()=>data,brandMark:()=>'',onSport:()=>{},redraw:()=>{}});
+      let html=screen.render({sport,demo:true});
+      assert.match(html,/Demo mode/);
+      assert.equal((html.match(/class="os-event-heading"/g)||[]).length,count);
+      assert.equal((html.match(/aria-label="Collapse [^"]* vs /g)||[]).length,count);
+      const $=load(html);
+      assert.equal($('.os-tab[aria-pressed="true"]').text(),'Main markets');
+      // Moneyline (two or three-way), spread and total for every game, one column per book.
+      assert.equal($('tbody tr.os-row').length,count*(sport==='Soccer'?7:6),sport);
+      assert.equal($('thead .os-book-head').length,11);
+      assert.equal($('tbody tr.os-row').first().find('.os-book-cell').length,11);
+      // The full slate of every market still opens one game at a time.
+      screen.click({target:{closest:selector=>selector.includes('data-line-history')?null:{dataset:{osTab:'group:all'}}}});
+      html=screen.render({sport,demo:true});
+      assert.equal((html.match(/class="os-event-heading"/g)||[]).length,count);
+      assert.equal((html.match(/aria-label="Collapse [^"]* vs /g)||[]).length,1);
+      assert.ok(load(html)('tbody tr.os-row').length>=30);
+    }
+  } finally {
+    if(original===undefined)delete globalThis.document;else globalThis.document=original;
   }
 });

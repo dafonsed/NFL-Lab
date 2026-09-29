@@ -813,7 +813,7 @@ html:has(body.site-layout dialog[open]){overflow:hidden}
 @media(min-width:701px) and (max-width:1099px){.trends-workspace.site-layout .td-research-grid .td-context-grid{grid-template-rows:min-content 1fr}}
 
 /* Player research: compact dark surfaces, teal signals and integrated context. */
-.trends-workspace.site-layout{--accent:rgb(var(--ui-accent-rgb));--accent-strong:rgb(var(--ui-accent-rgb));--bright:rgb(var(--ui-accent-light-rgb));--ui-focus:rgb(var(--ui-accent-rgb));--ui-selection-wash:rgb(var(--ui-tone-42));--accent-rgb:98 201 188;--accent-strong-rgb:57 187 170}
+.trends-workspace.site-layout{--accent:rgb(var(--ui-accent-rgb));--accent-strong:rgb(var(--ui-accent-rgb));--bright:rgb(var(--ui-accent-light-rgb));--ui-focus:rgb(var(--ui-accent-rgb));--ui-selection-wash:rgb(var(--ui-tone-42));--accent-rgb:118 203 210;--accent-strong-rgb:98 184 194}
 .trends-workspace.site-layout .site-nav-link[aria-current=page]{background:rgb(var(--ui-tone-42));border-color:rgb(var(--ui-tone-62));color:rgb(var(--ui-accent-light-rgb))}
 .trends-workspace.site-layout .trends-heading{background:radial-gradient(ellipse at 5% -45%,rgb(var(--ui-accent-rgb) / 0.4),transparent 62%),radial-gradient(ellipse at 100% -75%,#b6764540,transparent 70%),rgb(var(--ui-tone-22));border-color:rgb(var(--ui-tone-42))}
 .trends-workspace.site-layout .td-player-heading{background:radial-gradient(ellipse at 0 0,rgb(var(--ui-tone-94) / 0.502),transparent 65%),radial-gradient(ellipse at 100% -45%,#96623955,transparent 65%),rgb(var(--ui-tone-22))}

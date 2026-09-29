@@ -1,5 +1,14 @@
 import {escape as esc} from './research-data.js';
 import {icon} from './ui-icons.js';
+import {findPlatform} from './platform-catalog.js';
+
+export function sportsbookBadge(quote) {
+  if(!quote)return '';
+  const platform=findPlatform(quote.bookKey)||findPlatform(quote.bookmaker);
+  const name=platform?.name||quote.bookmaker||quote.bookKey||'Sportsbook';
+  const status=quote.stale?'Saved quote':quote.basis==='published_archive'?'Archived quote':quote.basis==='in_play'?'In play':'Sportsbook';
+  return `<span class="quote-book-badge">${platform?`<span class="quote-book-mark"><img src="${esc(platform.asset)}" alt="" width="24" height="24"></span>`:''}<span class="quote-book-copy"><strong>${esc(name)}</strong><small>${status}</small></span></span>`;
+}
 
 const imageHosts=new Set(['a.espncdn.com','img.mlbstatic.com','static.www.nfl.com']);
 function trustedImage(value) {
@@ -69,7 +78,51 @@ export function playerPortrait(profile,{size='row',eager=false}={}) {
   const name=profile.name||profile.player||'',initials=name.split(/\s+/).filter(Boolean).slice(0,2).map(n=>n[0]).join('');
   const logo=teamLogo(profile),photo=profile.position==='TEAM'?logo:playerPhoto(profile),team=String(profile.team||'');
   const displayLogo=overlayLogo(logo);
-  return `<span class="player-portrait portrait-${size==='hero'?'hero':'row'}${profile.position==='TEAM'?' portrait-team':''}" aria-hidden="true"><span class="portrait-face"><span class="portrait-fallback">${esc(initials||team||'—')}</span>${photo?`<img class="portrait-photo" src="${esc(photo)}" alt="" width="96" height="96" loading="${eager?'eager':'lazy'}" decoding="async" referrerpolicy="no-referrer" data-identity-image>`:''}</span>${team&&profile.position!=='TEAM'?`<span class="portrait-team-badge" title="${esc(team)}"><span>${esc(team)}</span>${logo?`<img class="portrait-team-logo" src="${esc(displayLogo)}"${displayLogo!==logo?` data-identity-fallback="${esc(logo)}"`:""} alt="" width="32" height="32" loading="${eager?'eager':'lazy'}" decoding="async" data-identity-image>`:''}</span>`:''}</span>`;
+  return `<span class="player-portrait portrait-${size==='hero'?'hero':'row'}${profile.position==='TEAM'?' portrait-team':''}" aria-hidden="true"><span class="portrait-face"><span class="portrait-fallback">${esc(initials||team||'—')}</span>${photo?`<img class="portrait-photo" src="${esc(photo)}" alt="" width="96" height="96" loading="${eager?'eager':'lazy'}" decoding="${eager?'sync':'async'}" referrerpolicy="no-referrer" data-identity-image>`:''}</span>${team&&profile.position!=='TEAM'?`<span class="portrait-team-badge" title="${esc(team)}"><span>${esc(team)}</span>${logo?`<img class="portrait-team-logo" src="${esc(displayLogo)}"${displayLogo!==logo?` data-identity-fallback="${esc(logo)}"`:""} alt="" width="32" height="32" loading="${eager?'eager':'lazy'}" decoding="async" data-identity-image>`:''}</span>`:''}</span>`;
+}
+
+const identityImages=new WeakMap();
+const identitySource=img=>`${img.src}\n${img.srcset||''}`;
+
+// Dimensions may be available before an asynchronously decoded bitmap can paint.
+// Keep the initials visible until this exact image request has finished decoding.
+export function prepareIdentityImages(root) {
+  const images=root.matches?.('[data-identity-image]')?[root]:[...root.querySelectorAll?.('[data-identity-image]')||[]];
+  for(const img of images) {
+    if(img.tagName!=='IMG')continue;
+    const existing=identityImages.get(img);
+    if(existing){existing();continue;}
+    let source=identitySource(img),revision=0,status='idle';
+    const reset=()=>{revision++;status='idle';img.classList.remove('identity-loaded');};
+    const recover=()=>{
+      reset();status='failed';
+      const fallback=img.dataset.identityFallback;
+      if(fallback){delete img.dataset.identityFallback;img.src=fallback;}
+    };
+    const sync=()=>{
+      const next=identitySource(img);
+      if(next!==source){source=next;reset();}
+      if(!img.complete||status!=='idle')return;
+      if(!img.naturalWidth){recover();return;}
+      const expectedSource=source,expectedRevision=revision;
+      status='decoding';
+      const current=()=>revision===expectedRevision&&identitySource(img)===expectedSource;
+      let decoded;
+      try {decoded=typeof img.decode==='function'?img.decode():Promise.resolve();}
+      catch {recover();return;}
+      Promise.resolve(decoded).then(()=>{
+        if(!current())return;
+        if(!img.complete||!img.naturalWidth){recover();return;}
+        status='ready';img.classList.add('identity-loaded');
+      },()=>{if(current())recover();});
+    };
+    reset();
+    img.dataset.identityReady='true';
+    img.addEventListener('load',()=>{if(status==='failed')reset();sync();});
+    img.addEventListener('error',recover);
+    identityImages.set(img,sync);
+    sync();
+  }
 }
 
 export function leagueMark(sport) {

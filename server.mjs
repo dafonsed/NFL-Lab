@@ -12,9 +12,13 @@ import { mlbModelReport } from './lib/mlb/forecast.mjs';
 import { LiveNflStore } from './lib/live-nfl.mjs';
 import { LiveSportsStore } from './lib/live-sports.mjs';
 import { BetTrackerStore } from './lib/bet-tracker.mjs';
-import { legacyBetTrackerUrl } from './public/navigation.js';
+import { legacyBetTrackerUrl, productDashboardUrl } from './public/navigation.js';
 import { renderProductDashboard } from './lib/product-dashboards.mjs';
-import { renderSitePage, siteContext, legacyResearchUrl } from './lib/site-layout.mjs';
+import { renderAdminPage } from './lib/admin-page.mjs';
+import { renderConnectedAdminPage } from './lib/admin-connected-page.mjs';
+import { resolveHelpCenterRequest } from './lib/help-center-routing.mjs';
+import { renderHelpCenterPage } from './lib/help-center-page.mjs';
+import { renderSitePage, siteContext, legacyResearchUrl, sidebarGroup } from './lib/site-layout.mjs';
 import { isEducationPath, renderEducationPage, renderEducationRobots, renderEducationSitemap } from './lib/betting-education.mjs';
 import { isMarketGuidePath, renderMarketGuidePage, renderMarketGuideSitemapEntries } from './lib/online-sports-betting.mjs';
 import { isSportsbookGuidePath, renderSportsbookGuidePage, renderSportsbookGuideSitemapEntries } from './lib/online-sportsbook-guides.mjs';
@@ -23,6 +27,10 @@ import { SimulationPropsStore, createSimulationPropStores } from './lib/simulati
 import { renderBettingPage, renderBettingSitemapEntries } from './lib/betting-pages.mjs';
 import { renderOddsApiPage } from './lib/odds-api-page.mjs';
 import { handleEvApi } from './lib/ev-api-proxy.mjs';
+import { accountRuntime } from './lib/accounts/runtime.mjs';
+import { accountJson, enforceAccountAccess } from './lib/accounts/http.mjs';
+import { readMarketControls } from './lib/admin-market-controls.mjs';
+import { sendPublicResponse } from './lib/http-compression.mjs';
 
 const publicDir = fileURLToPath(new URL('./public/', import.meta.url));
 const store = new SourceStore();
@@ -41,7 +49,7 @@ async function sync() {
   catch (e) { lastSync = { ok: false, error: e.message }; console.error(`[sync] ${e.message}`); }
   finally { syncing = false; }
 }
-function json(res, data, status = 200) { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(data)); }
+function json(res, data, status = 200) { return sendPublicResponse(res.req, res, JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } }); }
 export const server = http.createServer(async (req, res) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
@@ -49,16 +57,48 @@ export const server = http.createServer(async (req, res) => {
     const host = req.headers.host || '';
     if (!process.env.VERCEL && !/^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(host)) return json(res, { error: 'This workspace only accepts local connections.' }, 403);
     const url = new URL(req.url, 'http://localhost');
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://static.www.nfl.com https://a.espncdn.com https://img.mlbstatic.com data:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+    if (process.env.VERCEL) res.setHeader('Strict-Transport-Security', 'max-age=31536000');
+    const accounts = await accountRuntime();
+    const accountApi = /^\/api\/(?:auth(?:\/|$)|account(?:\/|$)|admin(?:\/|$)|content$|billing\/webhook$|cron\/accounts$)/.test(url.pathname);
+    if (accountApi) {
+      if (!accounts && req.method === 'GET' && url.pathname === '/api/auth/get-session') return accountJson(res, null);
+      if (!accounts) return accountJson(res, { error: 'Account services are not configured yet. Please try again later.', code: 'ACCOUNTS_UNAVAILABLE' }, 503);
+      if (await accounts.handle(req, res, url)) return;
+      return accountJson(res, { error: 'Account route not found.' }, 404);
+    }
+    if (!['/api/cron/predictions', '/api/cron/mlb-predictions'].includes(url.pathname) && await enforceAccountAccess(req, res, url, accounts?.system)) return;
+    if (url.pathname === '/admin/login') { res.writeHead(302, { Location: '/login?next=%2Fadmin', 'Cache-Control': 'no-store' }); return res.end(); }
     const trackerRedirect = legacyBetTrackerUrl(url);
     if (trackerRedirect) { res.writeHead(308, { Location: trackerRedirect, 'Cache-Control': 'no-cache' }); return res.end(); }
-    if (url.pathname.startsWith('/api/ev/')) return await handleEvApi(req, res, url);
+    if (url.pathname.startsWith('/api/ev/')) return await handleEvApi(req, res, url, { loadControls: () => readMarketControls(accounts.system.db) });
     if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, { error: 'Method not allowed.' }, 405);
+    const helpRequest = resolveHelpCenterRequest(url, { host });
+    if (helpRequest) {
+      const help = renderHelpCenterPage(helpRequest.url, { basePath: helpRequest.basePath, appOrigin: helpRequest.appOrigin });
+      if (!help) return json(res, { error: 'Help page not found.' }, 404);
+      return sendPublicResponse(req, res, help, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' } });
+    }
     if (url.pathname === '/ev-api-requirements.md') {
       const contents = await fs.readFile(new URL('./docs/ev-api-requirements.md', import.meta.url), 'utf8');
-      res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-cache', 'Content-Disposition': 'attachment; filename="sportslab-ev-api-requirements.md"' });
+      res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-cache', 'Content-Disposition': 'attachment; filename="visualodds-ev-api-requirements.md"' });
       return res.end(req.method === 'HEAD' ? undefined : contents);
     }
   res.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self' ${req.url.split('?')[0] === '/vendor/ocr/worker.min.js' ? "'wasm-unsafe-eval'" : ''}; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://static.www.nfl.com https://a.espncdn.com https://img.mlbstatic.com data:; connect-src 'self'; font-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`);
+    if (url.pathname === '/admin-sandbox' || url.pathname.startsWith('/admin-sandbox/')) {
+      res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+      const admin = renderAdminPage(url);
+      if (!admin) return json(res, { error: 'Not found.' }, 404);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      return res.end(req.method === 'HEAD' ? undefined : admin);
+    }
+    if (url.pathname === '/admin' || url.pathname.startsWith('/admin/') || ['/admin.html', '/admin-accounts.html'].includes(url.pathname)) {
+      res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+      const admin = renderConnectedAdminPage(url);
+      if (!admin) return json(res, { error: 'Not found.' }, 404);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      return res.end(req.method === 'HEAD' ? undefined : admin);
+    }
     if (url.pathname === '/betting-api' || url.pathname === '/betting-api/') {
       res.writeHead(308, { Location: '/odds-api' + url.search, 'Cache-Control': 'public, max-age=86400' });
       return res.end();
@@ -68,12 +108,12 @@ export const server = http.createServer(async (req, res) => {
       return res.end();
     }
     if (url.pathname === '/odds-api') {
-      const origin = (process.env.PUBLIC_SITE_URL || 'https://nfl-lab-xi.vercel.app').replace(/\/+$/, '');
+      const origin = (process.env.PUBLIC_SITE_URL || 'https://visualodds.com').replace(/\/+$/, '');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=3600, s-maxage=86400' });
       return res.end(req.method === 'HEAD' ? undefined : renderOddsApiPage(origin));
     }
     if (/^\/betting-(?:calculators|tools)(?:\/|$)/.test(url.pathname) || url.pathname === '/betting-education/positive-ev') {
-      const origin = (process.env.PUBLIC_SITE_URL || 'https://nfl-lab-xi.vercel.app').replace(/\/+$/, '');
+      const origin = (process.env.PUBLIC_SITE_URL || 'https://visualodds.com').replace(/\/+$/, '');
       const html = renderBettingPage(url, origin);
       if (!html) return json(res, { error: 'Not found.' }, 404);
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
@@ -85,7 +125,7 @@ export const server = http.createServer(async (req, res) => {
     }
     if (url.pathname === '/sitemap.xml') {
       res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=3600' });
-      const publicOrigin = (process.env.PUBLIC_SITE_URL || 'https://nfl-lab-xi.vercel.app').replace(/\/+$/, '');
+      const publicOrigin = (process.env.PUBLIC_SITE_URL || 'https://visualodds.com').replace(/\/+$/, '');
       const sitemap = renderEducationSitemap(req).replace('</urlset>', `${renderMarketGuideSitemapEntries(req)}${renderSportsbookGuideSitemapEntries(req)}${renderBettingSitemapEntries(publicOrigin)}<url><loc>${publicOrigin}/odds-api</loc></url></urlset>`);
       return res.end(req.method === 'HEAD' ? undefined : sitemap);
     }
@@ -97,7 +137,7 @@ export const server = http.createServer(async (req, res) => {
       const body = renderSportsbookGuidePage(url.pathname, req);
       if (!body) {
         res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex', 'Cache-Control': 'no-store' });
-        return res.end(req.method === 'HEAD' ? undefined : '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="robots" content="noindex"><title>Sportsbook guide not found | Sportslab</title><body><main><h1>Sportsbook guide not found</h1><p><a href="/online-sportsbooks">Browse sportsbook and app guides</a></p></main></body></html>');
+        return res.end(req.method === 'HEAD' ? undefined : '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="robots" content="noindex"><title>Sportsbook guide not found | VisualOdds</title><body><main><h1>Sportsbook guide not found</h1><p><a href="/online-sportsbooks">Browse sportsbook and app guides</a></p></main></body></html>');
       }
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=3600, s-maxage=86400' });
       return res.end(req.method === 'HEAD' ? undefined : body);
@@ -110,7 +150,7 @@ export const server = http.createServer(async (req, res) => {
       const body = renderMarketGuidePage(url.pathname, req);
       if (!body) {
         res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex', 'Cache-Control': 'no-store' });
-        return res.end(req.method === 'HEAD' ? undefined : '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="robots" content="noindex"><title>Market guide not found | Sportslab</title><body><main><h1>Market guide not found</h1><p><a href="/online-sports-betting">Browse sports betting guides</a></p></main></body></html>');
+        return res.end(req.method === 'HEAD' ? undefined : '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="robots" content="noindex"><title>Market guide not found | VisualOdds</title><body><main><h1>Market guide not found</h1><p><a href="/online-sports-betting">Browse sports betting guides</a></p></main></body></html>');
       }
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=3600, s-maxage=86400' });
       return res.end(req.method === 'HEAD' ? undefined : body);
@@ -123,7 +163,7 @@ export const server = http.createServer(async (req, res) => {
       const body = renderEducationPage(url.pathname, req);
       if (!body) {
         res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex', 'Cache-Control': 'no-store' });
-        return res.end(req.method === 'HEAD' ? undefined : '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="robots" content="noindex"><title>Guide not found | Sportslab</title><body><main><h1>Guide not found</h1><p><a href="/betting-education">Browse the education library</a></p></main></body></html>');
+        return res.end(req.method === 'HEAD' ? undefined : '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="robots" content="noindex"><title>Guide not found | VisualOdds</title><body><main><h1>Guide not found</h1><p><a href="/betting-education">Browse the education library</a></p></main></body></html>');
       }
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=3600, s-maxage=86400' });
       return res.end(req.method === 'HEAD' ? undefined : body);
@@ -159,16 +199,23 @@ export const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/board') return json(res, compactNflBoard(await store.board(Object.fromEntries(url.searchParams), url.searchParams.get('refresh') === '1')));
     const names = { '/docs':'docs.html', '/docs.html':'docs.html', '/docs.css':'docs.css', '/docs.js':'docs.js', '/bets':'bets.html', '/bets/':'bets.html', '/bets.js':'bets.js', '/bet-legs.js':'bet-legs.js', '/bet-editor.js':'bet-editor.js', '/bet-utils.js':'bet-utils.js', '/presentation.js':'presentation.js', '/bets.css':'bets.css', '/wnba':'sports.html','/wnba/':'sports.html','/nba':'sports.html','/nhl':'sports.html','/soccer':'sports.html','/sports.js':'sports.js','/sports-view.js':'sports-view.js','/sports.css':'sports.css', '/nfl/live':'live.html', '/nfl/live/':'live.html', '/live.js':'live.js', '/live-game.js':'live-game.js', '/live.css':'live.css', '/live-utils.js':'live-utils.js', '/paper':'paper.html','/paper.js':'paper.js','/context-ui.js':'context-ui.js','/context.css':'context.css', '/performance':'performance.html', '/performance.js':'performance.js', '/forecast.css':'forecast.css', '/': 'index.html', '/nfl': 'index.html', '/mlb': 'mlb.html', '/mlb/': 'mlb.html', '/mlb.js': 'mlb.js', '/mlb-model.js':'mlb-model.js', '/mlb.css': 'mlb.css', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/manifest.webmanifest': 'manifest.webmanifest' };
     const pagePath = url.pathname.replace(/\/$/, '') || '/';
-    for (const file of ['ev.js', 'ev-core.js', 'ev-demo.js', 'ev-feed.js', 'ev-feed.css', 'dfs-workspace.js', 'dfs-workspace.css', 'odds-screen.js', 'odds-screen.css', 'odds-demo.js', 'ev.css', 'ev.html']) names['/' + file] = file;
+    for (const file of ['admin.js', 'admin.css', 'admin-catalog.js', 'admin-store.js', 'admin-values.js']) names['/' + file] = file;
+    for (const file of ['admin-shell.js', 'admin-unified.css', 'admin-overview.js', 'admin-overview.css']) names['/' + file] = file;
+    for (const file of ['help.css', 'help.js', 'help-search.js']) names['/' + file] = file;
+    for (const file of ['ev.js', 'ev-core.js', 'ev-demo.js', 'ev-preview.js', 'ev-feed.js', 'ev-feed.css', 'ev-bet-card.js', 'ev-bet-cards.css', 'dfs-workspace.js', 'dfs-workspace.css', 'odds-screen.js', 'odds-screen.css', 'odds-demo.js', 'ev.css', 'ev.html']) names['/' + file] = file;
+    for (const file of ['ev-suite.js', 'ev-suite.css', 'ev-suite-storage.js', 'ev-advanced-math.js', 'ev-operations.js', 'ev-operations.css', 'ev-market-views.js', 'ev-market-views.css', 'ev-ledger.js', 'ev-ledger.css', 'ev-fantasy-lab.js', 'ev-fantasy-lab.css', 'ev.webmanifest', 'ev-sw.js', 'ev-app-icon.svg']) names['/' + file] = file;
     for (const file of ['platform-catalog.js', 'arbitrage-demo.js', 'ev-tool-catalog.js', 'ev-more-menu.js', 'ev-secondary-views.js', 'ev-more-tools.css']) names['/' + file] = file;
-    for (const file of ['tool-dropdowns.css', 'arb-calculator.js', 'arb-calculator.css', 'bet-comparison.js', 'bet-comparison.css', 'bet-dashboard-v2.js', 'bet-dashboard-v3.js', 'bet-history.js', 'bet-inline.js', 'bet-inline.css', 'bet-sample-data.js', 'bet-tracker-design.css', 'bet-tracker-finish.css', 'bet-tracker-reference.css', 'ev-arb-reference.css', 'ev-book-picker.css', 'ev-filter-polish.css', 'landing-direction.css', 'sites-redesign.css', 'smart-money.css']) names['/' + file] = file;
+    for (const file of ['research-filters.css', 'research-details.css', 'tool-dropdowns.css', 'arb-calculator.js', 'arb-calculator.css', 'bet-comparison.js', 'bet-comparison.css', 'bet-dashboard-v2.js', 'bet-dashboard-v3.js', 'bet-history.js', 'bet-inline.js', 'bet-inline.css', 'bet-sample-data.js', 'bet-tracker-design.css', 'bet-tracker-finish.css', 'bet-tracker-reference.css', 'ev-arb-reference.css', 'ev-book-picker.css', 'ev-filter-polish.css', 'landing-direction.css', 'sites-redesign.css', 'smart-money.css']) names['/' + file] = file;
     if (/^\/ev-icons\/(date|leagues|markets|odds|sports)\.svg$/.test(pagePath)) names[pagePath] = pagePath.slice(1);
-    if (['/product-switcher.js','/product-switcher.css','/product-dashboards.css','/product-dashboards.js'].includes(pagePath)) names[pagePath] = pagePath.slice(1);
+    if (['/product-switcher.js','/product-switcher.css'].includes(pagePath)) names[pagePath] = pagePath.slice(1);
     if (['/sportsbook-availability.js','/sportsbook-state.js','/sportsbook-state.css'].includes(pagePath)) names[pagePath] = pagePath.slice(1);
     if (pagePath === '/ev') names[pagePath] = 'ev.html';
     if (pagePath === '/ev/tracker') names[pagePath] = 'bets.html';
     if (pagePath === '/bet-tracker-migration.js') names[pagePath] = 'bet-tracker-migration.js';
-    for (const file of ['login.html', 'register.html', 'auth.css', 'auth.js']) names['/' + file] = file;
+    for (const file of ['login.html', 'register.html', 'auth.css', 'auth.js', 'account-2026.css']) names['/' + file] = file;
+    for (const file of ['account-client.js', 'account-system.css', 'account-mobile.css', 'account-sync.js', 'account.js', 'recovery.js', 'admin-accounts.js', 'admin-connected.css', 'admin-confirmation.js', 'admin-operations.js', 'support.js', 'ev-mobile.css', 'ev-mobile.js', 'mobile-workspace.css', 'mobile-workspace.js', 'ev-bet-card.js', 'ev-bet-cards.css', 'ev-board.js', 'ev-board.css', 'ev-controls.css', 'line-history.js', 'line-history.css', 'trends-board.css', 'models-board.css', 'hub-pages.css', 'account-refresh.css', 'home-dashboard.css', 'player-detail.css', 'live-sim.css', 'tracker-2026.css', 'ev-suite-2026.css', 'boards-polish.css']) names['/' + file] = file;
+    const accountPages = { '/account': 'account.html', '/account.html': 'account.html', '/admin': 'admin-accounts.html', '/admin/accounts': 'admin-accounts.html', '/admin/operations': 'admin-operations.html', '/support': 'support.html', '/admin-accounts.html': 'admin-accounts.html', '/forgot-password': 'recovery.html', '/reset-password': 'recovery.html', '/verify-email': 'recovery.html', '/two-factor': 'recovery.html', '/terms': 'account-terms.html', '/privacy': 'account-privacy.html' };
+    if (accountPages[pagePath]) names[pagePath] = accountPages[pagePath];
     if (pagePath === '/login') names[pagePath] = 'login.html';
     if (pagePath === '/register') names[pagePath] = 'register.html';
     if (['bet-dashboard.js','bet-analytics.js','bet-slip-import.js','bet-slip-parser.js'].some(file => pagePath === '/' + file)) names[pagePath]=pagePath.slice(1);
@@ -185,10 +232,13 @@ export const server = http.createServer(async (req, res) => {
     if (pagePath==='/ui-theme.css') names[pagePath]='ui-theme.css';
     if (pagePath==='/reference-design.css') names[pagePath]='reference-design.css';
     if (pagePath==='/workspace-palette.css') names[pagePath]='workspace-palette.css';
-    if (['/dashboard-unified.css','/player-order.js'].includes(pagePath)) names[pagePath]=pagePath.slice(1);
+    if (pagePath==='/performance-mobile.css') names[pagePath]='performance-mobile.css';
+    if (['/dashboard-unified.css','/dashboard-navigation.css','/dashboard-navigation.js','/player-order.js'].includes(pagePath)) names[pagePath]=pagePath.slice(1);
     if (pagePath==='/oddsjam-design.css') names[pagePath]='oddsjam-design.css';
+    if (pagePath==='/sportslab-2026.css') names[pagePath]='sportslab-2026.css';
+    if (pagePath==='/content-2026.css') names[pagePath]='content-2026.css';
     if (pagePath==='/landing-refined.css') names[pagePath]='landing-refined.css';
-    for (const file of ['landing-home.css','landing-header.css','landing-footer.css','landing-atmosphere.css','landing-pricing.css','landing-product.css','landing-nav.css','landing-header.js','landing-demo-bets.js','landing-reviews.js','landing-pricing.js','landing-nav.js']) names['/' + file] = file;
+    for (const file of ['landing-2026.css','landing-widgets.css','landing-motion.js','landing-home.css','landing-header.css','landing-footer.css','landing-atmosphere.css','landing-pricing.css','landing-product.css','landing-nav.css','landing-header.js','landing-demo-bets.js','landing-reviews.js','landing-pricing.js','landing-nav.js']) names['/' + file] = file;
     if (pagePath==='/landing-research-snapshot.json') names[pagePath]='landing-research-snapshot.json';
     for (const file of ['calculator-design.css', 'article-interactives.css', 'article-interactives.js', 'longform-articles.css', 'longform-articles.js', 'sportsbook-guide-directory.js', 'assets/longform-editorial-sprite.png']) names['/' + file] = file;
     if (pagePath==='/betting-education.css') names[pagePath]='betting-education.css';
@@ -200,17 +250,24 @@ export const server = http.createServer(async (req, res) => {
     for (const file of ['simulation.js', 'simulation-props.js', 'simulation.css']) names['/' + file] = file;
     if (pagePath === '/simulation' || /^\/(nfl|nba|wnba|mlb|nhl|soccer)\/simulation$/.test(pagePath)) names[pagePath] = 'simulation.html';
     if (['/navigation.js','/dashboard.css','/landing.css','/landing.js','/landing-live.js','/landing-demo.js','/landing-demo.css','/demo-data.js','/home.js','/product-ui.js','/player-research.js','/chart-line.js','/research-notes.js','/research-data.js','/site-preferences.js','/player-research.css','/workspace.css','/trends.css','/trends.js','/trends-data.js','/app-design.css','/workspace-ui.js','/ui-icons.js','/betting-pages.js','/betting-pages.css'].includes(pagePath)) names[pagePath]=pagePath.slice(1);
+    for (const file of ['bet-expanded.js','bet-expanded.css','bet-reference-history.js']) names['/' + file] = file;
+    const preferredGroup = /(?:^|;\s*)sl-group=(trends|models|ev)(?:;|$)/.exec(req.headers.cookie || '')?.[1] || null;
+    if (pagePath === '/research') {
+      // The combined Dashboard became one dashboard per workspace; open the viewer's current one.
+      const { sport } = siteContext(url), player = url.searchParams.get('researchPlayer');
+      const location = player ? `/${sport}?` + new URLSearchParams({ ...(url.searchParams.get('prop') ? { market: url.searchParams.get('prop') } : {}), researchPlayer: player }) : productDashboardUrl(sidebarGroup('home', req.sportslabFeatures || null, preferredGroup) || 'models', sport);
+      res.writeHead(302, { Location: location, 'Cache-Control': 'no-store' }); return res.end();
+    }
     const dashboard = renderProductDashboard(url);
-    if (dashboard) { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' }); return res.end(renderSitePage(dashboard, url)); }
+    if (dashboard) { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' }); return res.end(renderSitePage(dashboard, url, { features: req.sportslabFeatures || null, group: preferredGroup })); }
     const context = siteContext(url);
     const name = context.section === 'landing' ? 'landing.html' : context.section === 'home' ? 'home.html' : context.section === 'trends' ? 'trends.html' : /^\/(nba|wnba|mlb)\/live$/.test(pagePath) ? 'live-sports.html' : pagePath === '/live' ? 'live-hub.html' : pagePath === '/site-layout.css' ? 'site-layout.css' : pagePath === '/live-sports.js' ? 'live-sports.js' : names[pagePath];
     if (!name) return json(res, { error: 'Not found.' }, 404);
     const bytes = await fs.readFile(path.join(publicDir, name));
     const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.gz': 'application/gzip', '.webmanifest': 'application/manifest+json' };
-    const body = ['docs.html', 'login.html', 'register.html'].includes(name) ? bytes : name.endsWith('.html') ? renderSitePage(bytes.toString('utf8'), url) : bytes;
-    res.writeHead(200, { 'Content-Type': (types[path.extname(name)] || 'text/plain') + '; charset=utf-8', 'Cache-Control': 'no-cache' });
-    res.end(req.method === 'HEAD' ? undefined : body);
-  } catch (e) { console.error(`[request] ${e.message}`); json(res, { error: e.message }, e.status || 500); }
+    const body = ['docs.html', 'login.html', 'register.html', ...Object.values(accountPages)].includes(name) ? bytes : name.endsWith('.html') ? renderSitePage(bytes.toString('utf8'), url, { features: req.sportslabFeatures || null, group: preferredGroup }) : bytes;
+    await sendPublicResponse(req, res, body, { headers: { 'Content-Type': (types[path.extname(name)] || 'text/plain') + '; charset=utf-8', 'Cache-Control': 'no-cache' } });
+  } catch (e) { console.error('[request] Request failed.'); json(res, { error: 'This request could not be completed. Please try again.' }, e.status || 500); }
 });
 const port = Number(process.env.PORT || 3100);
 // Vercel owns the listener and invocation lifetime. Dataset refreshes there run

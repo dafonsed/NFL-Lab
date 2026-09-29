@@ -1,3 +1,5 @@
+import { accountStorage as localStorage, accountReady } from './account-sync.js';
+await accountReady;
 import { BET_STORAGE_KEY, betReturns, readBets, summarizeBets } from './bet-utils.js';
 import { demoRecord } from './landing-demo-bets.js?v=2';
 
@@ -48,7 +50,7 @@ export function mountHeroTracker() {
       const intensity = profit > 0 ? (item.cents >= strongestDay * .8 ? ' gain-high' : item.cents >= strongestDay * .55 ? ' gain-mid' : '') : '';
       const value = item ? (item.settled ? dailyAmount(profit) : 'Open') : '';
       const label = item ? `${date}: ${item.count} ${demo ? 'demo ' : ''}${item.count === 1 ? 'pick' : 'picks'}, ${item.settled} settled, ${dollars(profit)} net` : `${date}: no ${demo ? 'demo ' : 'saved '}picks`;
-      cells.push(`<span class="hero-tracker-day ${item ? 'has-picks ' : ''}${status}${intensity}" aria-label="${label}" title="${label}">${item ? '' : `<small>${day}</small>`}<strong>${value}</strong></span>`);
+      cells.push(`<span class="hero-tracker-day ${item ? 'has-picks ' : ''}${status}${intensity}" style="--i:${day}" aria-label="${label}" title="${label}">${item ? '' : `<small>${day}</small>`}<strong>${value}</strong></span>`);
     }
     const totalTone = total.profit > 0 ? 'positive' : total.profit < 0 ? 'negative' : '';
     const totalLabel = total.profit > 0 ? '+' + dollars(total.profit) : dollars(total.profit);
@@ -57,7 +59,7 @@ export function mountHeroTracker() {
       ? (total.profit > 0 ? '+' : '') + new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(total.profit)
       : `${wholeProfit}${centsProfit && centsProfit !== '00' ? `<span class="hero-tracker-cents">.${centsProfit}</span>` : ''}`;
     const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(month);
-    root.innerHTML = `<div class="hero-tracker-head"><span class="hero-tracker-avatar"><img src="/favicon.svg" alt=""></span><strong>SportsLab</strong></div>
+    root.innerHTML = `<div class="hero-tracker-head"><span class="hero-tracker-avatar"><img src="/favicon.svg" alt=""></span><strong>VisualOdds</strong></div>
       <div class="hero-tracker-profit ${totalTone}" aria-label="${demo ? 'Demo net profit' : 'Net profit'}: ${totalLabel}"><small>${demo ? 'Demo net profit' : 'Net profit'}</small><strong>${profitDisplay}</strong></div>
       <div class="hero-tracker-body"><div class="hero-tracker-weekdays" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div><div class="hero-tracker-grid" role="group" aria-label="${monthLabel} ${demo ? 'demo' : 'saved picks'} calendar">${cells.join('')}</div></div>`;
   }

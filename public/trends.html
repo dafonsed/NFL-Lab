@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#08080a"><meta name="description" content="Explore player trends, game logs, hit rates and sportsbook lines in Sports Lab.">
-  <title>Trends &amp; Lines · Sports Lab</title><link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <meta name="theme-color" content="#08080a"><meta name="description" content="Explore player trends, game logs, hit rates and sportsbook lines in VisualOdds.">
+  <title>Trends &amp; Lines · VisualOdds</title><link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/trends.css"><script type="module" src="/trends.js"></script>
 </head>
 <body class="trends-workspace">
@@ -26,7 +26,7 @@
       <button id="td-posted" aria-pressed="false">Posted lines only</button><button id="td-saved" aria-pressed="false">☆ Watchlist</button>
       <div class="td-side" aria-label="Comparison side"><button data-side="over" aria-pressed="true">Over</button><button data-side="under" aria-pressed="false">Under</button></div>
     </section>
-    <nav id="td-detail-nav" class="td-detail-nav" aria-label="Player navigation" hidden><button class="button" data-back-board>← Back to Trends</button><div class="td-player-pager"><span id="td-current-player"></span><button class="button" data-step-player="-1" aria-label="Previous player">←</button><button class="button" data-step-player="1" aria-label="Next player">→</button></div></nav>
+    <nav id="td-detail-nav" class="td-detail-nav" aria-label="Player navigation" hidden><div class="td-detail-breadcrumb"><button class="button" data-back-board>← Back to Trends</button><span id="td-detail-context"></span></div><div class="td-player-pager"><span id="td-current-player"></span><button class="button" data-step-player="-1" aria-label="Previous player">←</button><button class="button" data-step-player="1" aria-label="Next player">→</button></div></nav>
     <div class="td-workbench" id="td-workbench" aria-busy="true">
       <section class="td-players" id="td-players" aria-label="Players"><div class="td-panel-heading"><h2>Player trends</h2><span id="td-count">Loading</span></div><div id="td-player-list"><div class="td-empty"><div class="loader"></div><h3>Building your board</h3><p>Loading game history and available lines.</p></div></div></section>
       <section class="td-detail" id="td-detail" aria-label="Selected player analysis" hidden></section>

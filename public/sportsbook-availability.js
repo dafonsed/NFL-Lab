@@ -45,12 +45,12 @@ export function normalizeState(value) {
   return Object.hasOwn(US_STATES, code) ? code : '';
 }
 export function readSportsbookState(storage) {
-  try { return normalizeState((storage ?? globalThis.localStorage)?.getItem(STATE_STORAGE_KEY)); } catch { return ''; }
+  try { return normalizeState((storage ?? accountStorage)?.getItem(STATE_STORAGE_KEY)); } catch { return ''; }
 }
 export function saveSportsbookState(value, storage) {
   const code = normalizeState(value);
   try {
-    storage ??= globalThis.localStorage;
+    storage ??= accountStorage;
     if (code) storage.setItem(STATE_STORAGE_KEY, code);
     else storage.removeItem(STATE_STORAGE_KEY);
     return true;
@@ -70,3 +70,5 @@ export function sportsbookAvailable(book, state) {
 export function availableSportsbookQuotes(quotes, state) {
   return quotes.filter(quote => sportsbookAvailable(quote.book, state));
 }
+import { accountStorage, accountReady } from './account-sync.js';
+await accountReady;

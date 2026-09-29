@@ -9,16 +9,17 @@ import {evToolUrl} from '../public/ev-tool-catalog.js';
 import * as views from '../public/ev-secondary-views.js';
 import * as core from '../public/ev-core.js';
 
-test('every secondary destination is reachable from each EV header with sport context', () => {
+test('every secondary destination is reachable from the sidebar with sport context', () => {
   for (const path of ['/ev?sport=nfl','/ev/tracker?sport=mlb','/ev/dashboard?sport=all']) {
     const url=new URL(path,'http://localhost'), $=load(siteHeader(url));
-    assert.equal($('[data-ev-more]').length,1,path);
-    assert.equal($('.ev-more-groups [data-more-tool]').length,12);
+    assert.equal($('[data-ev-more]').length,0,'the sidebar uses a persistent disclosure rather than the former hover menu');
+    assert.equal($('.dashboard-more-tools').length,1,path);
+    assert.equal($('.dashboard-tool-groups [data-more-tool]').length,12);
     for(const tool of MORE_TOOLS) {
       const link=$(`[data-more-tool="${tool.key}"]`);
       assert.equal(link.length,1);
       assert.equal(link.attr('href'),`/ev?sport=${url.searchParams.get('sport')}#${tool.key}`);
-      assert.equal(link.find('strong').text(),tool.label);
+      assert.ok(link.text().includes(tool.label));
     }
     assert.equal($('.ev-primary-nav [data-more-tool]').length,0,'popup stays outside the scrolling primary nav');
   }
@@ -39,11 +40,18 @@ test('secondary workspaces keep navigation, controls and escaped search accessib
   assert.equal(views.secondaryShell('ev-live','Existing live screen'),'Existing live screen');
 });
 
-test('EV pages load the shared navigation behavior and final override stylesheet', async () => {
+test('EV pages load shared sidebar behavior after the tool styles', async () => {
   const template=await fs.readFile(new URL('../public/ev.html',import.meta.url),'utf8');
   const $=load(renderSitePage(template,new URL('http://localhost/ev')));
-  assert.equal($('script[src^="/ev-more-menu.js"]').attr('type'),'module');
-  assert.equal($('link[rel=stylesheet]').last().attr('href'),'/ev-more-tools.css?v=1');
+  assert.equal($('script[src^="/dashboard-navigation.js"]').attr('type'),'module');
+  assert.equal($('script[src^="/dashboard-navigation.js"]').length,1);
+  assert.equal($('link[rel=stylesheet][href="/ev-more-tools.css?v=2"]').length,1);
+  const styles=$('link[rel=stylesheet]').map((_,el)=>$(el).attr('href')).get();
+  const palette=styles.findIndex(href=>href.startsWith('/workspace-palette.css'));
+  const cards=styles.findIndex(href=>href.startsWith('/ev-bet-cards.css'));
+  assert.ok(cards>styles.indexOf('/ev-more-tools.css?v=1')&&palette>cards,'shared cards follow tool styles and precede the palette');
+  assert.ok(styles.every((href,index)=>index<=palette||href.startsWith('/mobile-workspace.css')||href.startsWith('/ev-mobile.css')||href.startsWith('/sportslab-2026.css')||/^\/(trends-board|models-board|hub-pages|home-dashboard|player-detail|live-sim|tracker-2026|ev-suite-2026|boards-polish)\.css/.test(href)),'only the shared and EV responsive sheets may follow the palette');
+  assert.ok(styles.slice(styles.findIndex(href=>href.startsWith('/sportslab-2026.css'))+1).every(href=>/^\/(trends-board|models-board|hub-pages|home-dashboard|player-detail|live-sim|tracker-2026|ev-suite-2026|boards-polish)\.css/.test(href)),'only the 2026 area sheets follow the 2026 design system');
 });
 
 test('promo view balances outcomes and never applies a disabled cash boost to a bonus', async () => {

@@ -1,3 +1,5 @@
+import { accountStorage as localStorage, accountReady } from './account-sync.js';
+await accountReady;
 import { icon } from './ui-icons.js';
 const key = 'sports-lab-dev-mode';
 let enabled = false;
@@ -16,6 +18,11 @@ document.addEventListener('click', event => {
   render();
   document.dispatchEvent(new CustomEvent('devmodechange', { detail: enabled }));
 });
-window.addEventListener('storage', event => { if (event.key === key) { enabled = event.newValue === '1'; render(); } });
+window.addEventListener('storage', event => {
+  if (event.key !== key && event.key !== null) return;
+  enabled = event.newValue === '1';
+  render();
+  document.dispatchEvent(new CustomEvent('devmodechange', { detail: enabled }));
+});
 document.addEventListener('researchopened', render);
 render();

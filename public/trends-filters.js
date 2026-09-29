@@ -1,6 +1,6 @@
 import {icon} from './ui-icons.js';
 import {escape as esc} from './research-data.js';
-import {defaultTrendFilters,trendFilterCount} from './trends-data.js';
+import {defaultTrendFilters,defaultTrendOptions,trendFilterCount} from './trends-data.js';
 import {teamMark} from './sports-identity.js';
 import {enhanceTrendControls} from './trends-controls.js';
 
@@ -11,14 +11,14 @@ export function setupTrendFilters({getState,apply,preview,sport}) {
   document.querySelector('#td-posted').hidden=true;
   const summary=document.createElement('div');summary.className='advanced-filter-summary';summary.hidden=true;
   (document.querySelector('.desk-toolbar')||bar).after(summary);
-  const count=()=>{const s=getState();return trendFilterCount(s.filters)+(s.posted?1:0)+(s.savedOnly?1:0)+(s.sort!=='rate'?1:0);};
+  const count=()=>{const s=getState();return trendFilterCount(s.filters)+Number(s.posted)+Number(s.savedOnly)+Number(s.sort!=='rate')+Number(s.side!=='over');};
   const update=()=>{
     const n=count(),badge=trigger.querySelector('b');badge.hidden=!n;badge.textContent=n;trigger.classList.toggle('has-filters',n>0);summary.hidden=!n;
     const f=getState().filters;
-    const labels=[f.minRate>0?`${f.minRate}%+ hit rate`:null,f.minGames>0?`${f.minGames}+ games`:null,f.sample!=='10'?({all:'All games',h2h:'Head to head'}[f.sample]||`Last ${f.sample}`):null,f.venue!=='all'?`${f.venue==='home'?'Home':'Away'} games`:null,...f.teams,...f.positions,f.book||null,f.minLine!==''||f.maxLine!==''?'Line range':null,f.minOdds!==''||f.maxOdds!==''?'Odds range':null,f.hideUnavailable?'Hide unavailable':null,f.startersOnly?'Confirmed starters':null,getState().posted?'Current lines':null,getState().savedOnly?'Saved players':null,getState().sort!=='rate'?'Custom sort':null].filter(Boolean);
+    const labels=[f.minRate>0?`${f.minRate}%+ hit rate`:null,f.minGames>0?`${f.minGames}+ games`:null,f.sample!=='10'?({all:'All games',h2h:'Head to head'}[f.sample]||`Last ${f.sample}`):null,f.venue!=='all'?`${f.venue==='home'?'Home':'Away'} games`:null,...f.teams,...f.positions,f.book||null,f.minLine!==''||f.maxLine!==''?'Line range':null,f.minOdds!==''||f.maxOdds!==''?'Odds range':null,f.hideUnavailable?'Hide unavailable':null,f.startersOnly?'Confirmed starters':null,getState().posted?'Current lines':null,getState().savedOnly?'Saved players':null,getState().sort!=='rate'?'Custom sort':null,getState().side==='under'?'Under the line':null].filter(Boolean);
     summary.innerHTML=labels.map(label=>`<span>${esc(label)}</span>`).join('')+'<button type="button" data-reset-advanced>Clear all '+icon('close')+'</button>';
   };
-  summary.addEventListener('click',e=>{if(e.target.closest('button'))apply({filters:defaultTrendFilters(),posted:false,savedOnly:false,sort:'rate'});});
+  summary.addEventListener('click',e=>{if(e.target.closest('button')){apply(defaultTrendOptions());trigger.focus();}});
   trigger.addEventListener('click',()=>{
     const state=getState(),draft={filters:structuredClone(state.filters),posted:state.posted,savedOnly:state.savedOnly,sort:state.sort,side:state.side};
     const profiles=state.profiles,teams=[...new Set(profiles.map(p=>p.team).filter(Boolean))].sort(),positions=[...new Set(profiles.map(p=>p.position).filter(Boolean))].sort();
@@ -70,7 +70,7 @@ export function setupTrendFilters({getState,apply,preview,sport}) {
       const invalid=[['minLine','maxLine'],['minOdds','maxOdds']].some(([a,b])=>f[a]!==''&&f[b]!==''&&Number(f[a])>Number(f[b]))||Number(f.minGames)<0||!Number.isInteger(Number(f.minGames));
       const error=dialog.querySelector('.filter-error');error.hidden=!invalid;error.textContent='Check your ranges. Minimums must not exceed maximums, and games must be a whole number.';
       dialog.querySelector('[data-apply]').disabled=invalid;dialog.querySelector('[data-results]').textContent=preview(draft).length;
-      const defaults=defaultTrendFilters(),counts={performance:['sample','venue','minRate','minGames'].filter(k=>f[k]!==defaults[k]).length+(draft.sort!=='rate'?1:0),players:f.teams.length+f.positions.length+Number(f.hideUnavailable)+Number(f.startersOnly)+Number(draft.savedOnly),lines:['book','minLine','maxLine','minOdds','maxOdds'].filter(k=>f[k]!==defaults[k]).length+Number(draft.posted)};
+      const defaults=defaultTrendFilters(),counts={performance:['sample','venue','minRate','minGames'].filter(k=>f[k]!==defaults[k]).length+Number(draft.sort!=='rate')+Number(draft.side!=='over'),players:f.teams.length+f.positions.length+Number(f.hideUnavailable)+Number(f.startersOnly)+Number(draft.savedOnly),lines:['book','minLine','maxLine','minOdds','maxOdds'].filter(k=>f[k]!==defaults[k]).length+Number(draft.posted)};
       for(const badge of dialog.querySelectorAll('[data-category-count]'))badge.textContent=counts[badge.dataset.categoryCount]||'';
     };
     dialog.addEventListener('click',e=>{
@@ -78,7 +78,7 @@ export function setupTrendFilters({getState,apply,preview,sport}) {
         if(b.hasAttribute('data-close'))dialog.close();
         if(b.dataset.filterCategory)selectCategory(b.dataset.filterCategory);
         if(b.hasAttribute('data-apply')){apply(draft);dialog.close();return;}
-        if(b.hasAttribute('data-reset-filter'))Object.assign(draft,{filters:defaultTrendFilters(),posted:false,savedOnly:false,sort:'rate',side:'over'});
+        if(b.hasAttribute('data-reset-filter'))Object.assign(draft,defaultTrendOptions());
         if(b.dataset.quickFilter==='rate')draft.filters.minRate=80;
         if(b.dataset.quickFilter==='sample'){draft.filters.sample='10';draft.filters.minGames=10;}
         if(b.dataset.filterKey){const key=b.dataset.filterKey;if(key==='side')draft.side=b.dataset.filterValue;else draft.filters[key]=b.dataset.filterValue;}

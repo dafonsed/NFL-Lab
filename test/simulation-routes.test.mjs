@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { load } from 'cheerio';
 import { siteHeader, siteContext, renderSitePage } from '../lib/site-layout.mjs';
+import { authenticatedAccountFixture } from './helpers/account-fixture.mjs';
 
 test('Simulation remains in workspace navigation and follows sport changes', async () => {
   const template = await fs.readFile(new URL('../public/simulation.html', import.meta.url), 'utf8');
@@ -22,11 +23,14 @@ test('Simulation remains in workspace navigation and follows sport changes', asy
 
 test('simulation HTTP routes and assets work; invalid parameters fail before source access', async () => {
   // Vercel mode exposes the server without starting a listener or automatic sync.
-  const old = process.env.VERCEL; process.env.VERCEL = '1';
+  const old = process.env.VERCEL, previousNodeEnv = process.env.NODE_ENV; process.env.VERCEL = '1'; process.env.NODE_ENV = 'test';
   const { server } = await import('../server.mjs');
+  let fixture;
   try {
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     const base = `http://127.0.0.1:${server.address().port}`;
+    fixture = await authenticatedAccountFixture(base);
+    const fetch = fixture.fetch;
     for (const route of ['/simulation', '/nfl/simulation/', '/mlb/simulation', '/nba/simulation', '/wnba/simulation', '/nhl/simulation', '/soccer/simulation', '/simulation.js', '/simulation-props.js', '/simulation.css']) assert.equal((await fetch(base + route)).status, 200, route);
     for (const query of ['sport=bad', 'date=2026-02-31', 'simulations=999', 'simulations=50001', 'game=../private']) assert.equal((await fetch(base + '/api/simulation/run?' + query)).status, 400, query);
     assert.equal((await fetch(base + '/api/simulation/run')).status, 400);
@@ -34,6 +38,8 @@ test('simulation HTTP routes and assets work; invalid parameters fail before sou
     for (const query of ['sport=nhl', 'date=2026-02-31', 'game=401234567&market=invalid', '']) assert.equal((await fetch(base + '/api/simulation/props?' + query)).status, 400);
   } finally {
     server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
+    await fixture?.close();
     if (old === undefined) delete process.env.VERCEL; else process.env.VERCEL = old;
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previousNodeEnv;
   }
 });

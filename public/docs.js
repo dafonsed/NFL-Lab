@@ -200,3 +200,5 @@ document.querySelectorAll('[data-feedback]').forEach(button => button.addEventLi
   document.getElementById('feedback-message').hidden = false;
   document.querySelectorAll('[data-feedback]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
 }));
+import { accountStorage as localStorage, accountReady } from './account-sync.js';
+await accountReady;

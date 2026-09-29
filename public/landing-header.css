@@ -1,4 +1,4 @@
-/* A centered opening statement with SportsLab's own mark and product routes. */
+/* A centered opening statement with VisualOdds's own mark and product routes. */
 .home-header{border-bottom:1px solid #141819;background:#050607}
 .home-header-inner{display:grid;grid-template-columns:minmax(165px,1fr) auto minmax(165px,1fr);align-items:center;gap:28px;width:min(1320px,calc(100% - 64px));min-height:76px;margin-inline:auto}
 .home-brand{font-size:24px;letter-spacing:-.055em}
@@ -6,18 +6,18 @@
 .home-nav{justify-content:center;gap:clamp(18px,1.8vw,34px);margin:0}
 .home-nav a{color:#aeb4b8;font-size:14px;font-weight:650}
 .home-nav a:hover{color:#f5f7f7}
-.home-header-action{justify-self:end;margin:0;min-height:43px;padding:10px 19px;border:1px solid #3bc7bd;border-radius:13px;background:transparent;color:#f2f7f7;font-size:13px}
-.home-header-action:hover{border-color:#71e1d5;background:#102322;color:#fff}
+.home-header-action{justify-self:end;margin:0;min-height:43px;padding:10px 19px;border:1px solid #76cbd2;border-radius:13px;background:transparent;color:#f2f7f7;font-size:13px}
+.home-header-action:hover{border-color:#b4e0e6;background:#17232b;color:#fff}
 .home-hero{isolation:isolate;display:grid;place-items:center;min-height:clamp(680px,calc(100svh - 120px),840px);padding:92px 24px 100px;overflow:hidden}
 .home-hero-content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:min(1100px,100%);margin:auto;text-align:center}
 .home-hero-mark{display:grid;place-items:center;width:76px;height:76px;margin-bottom:40px}
 .home-hero-mark img{width:72px;height:72px}
 .home-hero .home-copy{width:100%;max-width:none}
-.home-hero .home-copy h1{max-width:1100px;margin:0 auto 40px;background:linear-gradient(100deg,#a6e2db 8%,#bfd0ed 51%,#c8b5e9 100%);background-clip:text;color:transparent;font-size:clamp(62px,6.3vw,94px);font-weight:760;letter-spacing:-.065em;line-height:.99;text-wrap:initial}
+.home-hero .home-copy h1{max-width:1100px;margin:0 auto 40px;background:linear-gradient(100deg,#b4e0e6 8%,#bfd0ed 51%,#c8b5e9 100%);background-clip:text;color:transparent;font-size:clamp(62px,6.3vw,94px);font-weight:760;letter-spacing:-.065em;line-height:.99;text-wrap:initial}
 .home-hero .home-lede{max-width:930px;margin:0 auto 36px;color:#b9bdc2;font-size:clamp(19px,1.65vw,25px);line-height:1.42}
 .home-hero .home-actions{justify-content:center}
-.home-hero .home-button{min-height:53px;padding:14px 26px;border:0;border-radius:13px;background:linear-gradient(105deg,#65cbc7,#8faad3 52%,#b394d2);color:#081418;font-size:15px;font-weight:760;box-shadow:0 8px 28px #0005}
-.home-hero .home-button:hover{background:linear-gradient(105deg,#82ded8,#a5bde4 52%,#c6a7e1);color:#071518}
+.home-hero .home-button{min-height:53px;padding:14px 26px;border:0;border-radius:13px;background:linear-gradient(105deg,#76cbd2,#8faad3 52%,#b394d2);color:#081418;font-size:15px;font-weight:760;box-shadow:0 8px 28px #0005}
+.home-hero .home-button:hover{background:linear-gradient(105deg,#b4e0e6,#a5bde4 52%,#c6a7e1);color:#071518}
 .hero-tracker{position:relative;width:min(100%,490px);justify-self:center;overflow:hidden;border:1px solid #29353c;border-radius:13px;background:#090c0d;box-shadow:0 28px 68px #0008}
 .hero-tracker-head{display:flex;align-items:center;gap:10px;min-height:64px;padding:12px 18px;border-bottom:1px solid #29343a;background:#15191d}
 .hero-tracker-avatar{display:grid;place-items:center;flex:none;width:32px;height:32px;border:1px solid #35454d;border-radius:50%;background:#1d2d35}
@@ -27,16 +27,16 @@
 .hero-tracker-profit small{display:block;color:#a9b8ba;font-size:12px;font-weight:590;line-height:1.2}
 .hero-tracker-profit strong{display:block;color:#edf4f5;font-size:30px;font-weight:720;letter-spacing:-.055em;line-height:1;white-space:nowrap}
 .hero-tracker-cents{font-size:.58em;font-weight:700;letter-spacing:-.04em;vertical-align:baseline}
-.hero-tracker-profit.positive strong{color:#8bca59}.hero-tracker-profit.negative strong{color:#e17a6a}
+.hero-tracker-profit.positive strong{color:#76cbd2}.hero-tracker-profit.negative strong{color:#e17a6a}
 .hero-tracker-body{padding:12px 19px 16px;background:#090c0d}
 .hero-tracker-weekdays,.hero-tracker-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
 .hero-tracker-weekdays{margin-bottom:8px;color:#87939d;text-align:center;font-size:10px;font-weight:650}
-.hero-tracker-day{display:flex;flex-direction:column;justify-content:space-between;min-width:0;aspect-ratio:1;padding:5px 6px;border:1px solid #222d25;border-radius:5px;background:#101512;font-variant-numeric:tabular-nums}
+.hero-tracker-day{display:flex;flex-direction:column;justify-content:space-between;min-width:0;aspect-ratio:1;padding:5px 6px;border:1px solid #18232b;border-radius:5px;background:#141416;font-variant-numeric:tabular-nums}
 .hero-tracker-day.has-picks{align-items:center;justify-content:center}
 .hero-tracker-day.empty{border-color:transparent;background:transparent}
-.hero-tracker-day small{color:#6f8078;font-size:9px}
+.hero-tracker-day small{color:#94949e;font-size:9px}
 .hero-tracker-day strong{overflow:hidden;color:#b2c1c7;font-size:12px;font-weight:680;letter-spacing:-.025em;text-overflow:ellipsis;white-space:nowrap}
-.hero-tracker-day.positive{border-color:#344b25;background:#182516}.hero-tracker-day.positive.gain-mid{border-color:#3a5429;background:#1d2c19}.hero-tracker-day.positive.gain-high{border-color:#43602c;background:#23351d}.hero-tracker-day.positive strong{color:#87b755}
+.hero-tracker-day.positive{border-color:#324d59;background:#15262e}.hero-tracker-day.positive.gain-mid{border-color:#3d5368;background:#1c2937}.hero-tracker-day.positive.gain-high{border-color:#5c536f;background:#292438}.hero-tracker-day.positive strong{color:#76cbd2}
 .hero-tracker-day.negative{border-color:#694039;background:#2a1c19}.hero-tracker-day.negative strong{color:#df8b76}
 .hero-tracker-day.open{border-color:#31546a;background:#15242b}.hero-tracker-day.open strong{color:#7ecce9}
 .hero-tracker-error{padding:70px 25px;color:#bdcbd0;text-align:center}
@@ -62,5 +62,5 @@
 @media(prefers-reduced-motion:reduce){.hero-brand-track{animation:none}.hero-brands{overflow-x:auto;mask-image:none}.hero-brand-set[aria-hidden="true"]{display:none}}
 
 /* Keep the full public homepage on one uninterrupted dark canvas. */
-body.landing-page{background:#080d0e}
-body.landing-page :is(.home-header,main,.home-hero,.hero-brands,.home-live,.home-simulation,.home-tools,.home-tracker-section,.home-sports,.home-close,.home-footer){background:#080d0e}
+body.landing-page{background:#000000}
+body.landing-page :is(.home-header,main,.home-hero,.hero-brands,.home-live,.home-simulation,.home-tools,.home-tracker-section,.home-sports,.home-close,.home-footer){background:#000000}
