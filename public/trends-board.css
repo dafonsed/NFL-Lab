@@ -1,0 +1,258 @@
+/* trends-board: Player trends, Watchlist and the player detail in the +EV board language
+   (ev-board.css / ev-controls.css). Loaded after sportslab-2026.css; the doubled
+   body/id scope outranks its :not(#sl-root) rules and ui-theme's button paint. */
+html:root body.trends-workspace[data-site-page="trends"]:not(#tb-root) #main{
+  --tb-panel:#0e1215;
+  --tb-inset:#0a0d10;
+  --tb-raised:#13181c;
+  --tb-line:#1b2328;
+  --tb-edge:#262f36;
+  --tb-chip:#2a3036;
+  --tb-text:#edf2ee;
+  --tb-sub:#b9c3be;
+  --tb-value:#d3d9dd;
+  --tb-muted:#7e8a86;
+  --tb-faint:#56615d;
+  --tb-lime:#a3f06b;
+  --tb-lime-pale:#c4f79c;
+  --tb-lime-soft:rgba(163,240,107,.11);
+  --tb-lime-line:rgba(163,240,107,.34);
+  --tb-amber:#f7c25a;
+  --tb-red:#ff6f6f;
+  font-variant-numeric:tabular-nums;
+
+  /* ------------------------------------------------------------ page header */
+  & .page-heading.trends-heading{row-gap:18px!important;margin:0 0 20px!important;padding:0!important;border:0!important}
+  & .page-heading.trends-heading h1{margin:0!important;color:var(--tb-text)!important;font-size:40px!important;font-weight:700!important;line-height:1.1!important;letter-spacing:-.035em!important}
+  & .page-heading.trends-heading h1 .accent{display:none}
+  & .page-heading.trends-heading .site-sports{gap:8px!important;margin:0!important;padding:0!important;border:0!important}
+  & .page-heading.trends-heading #trend-refresh{width:36px!important;height:36px!important;min-height:0!important;padding:0!important;border:1px solid var(--tb-chip)!important;border-radius:50%!important;background:transparent!important;color:var(--tb-sub)!important;box-shadow:none!important}
+  & .page-heading.trends-heading #trend-refresh:hover{border-color:var(--tb-edge)!important;background:var(--tb-raised)!important;color:var(--tb-text)!important}
+
+  /* ------------------------------------------------------------ filter panel */
+  & .desk-toolbar{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:8px!important;box-sizing:border-box;width:100%;min-width:0;height:auto!important;margin:0 0 14px!important;padding:14px 16px!important;border:1px solid var(--tb-line)!important;border-radius:16px!important;background:var(--tb-panel)!important;box-shadow:none!important;overflow:visible!important}
+  & .desk-toolbar>:is(.td-toolbar,.td-filters){display:contents!important}
+  & .desk-toolbar .td-game-label{order:1}
+  & .desk-toolbar :is(#td-week-label,#td-date-label){order:2}
+  & .desk-toolbar #td-league-label{order:3}
+  & .desk-toolbar .desk-market-menu{order:4}
+  & .desk-toolbar .td-filters>.td-choice{order:5}
+  & .desk-toolbar .td-side{order:6}
+  & .desk-toolbar #td-saved{order:7}
+  & .desk-toolbar .filter-open{order:8}
+  /* Search comes last so it fills the rest of the row, or a row of its own when the chips need the room. */
+  & .desk-toolbar .td-search{order:9}
+  & .desk-toolbar :is(#td-status,.td-filters>label.sr-only){position:absolute!important}
+  & .desk-toolbar .td-board-summary{order:20}
+  & .desk-toolbar :is(.td-game-label,#td-week-label,#td-date-label,#td-league-label,.desk-market-menu,.td-filters>.td-choice){flex:0 0 auto!important;width:auto!important;min-width:0!important;max-width:none!important;height:42px!important;margin:0!important;padding:0!important;border:0!important;background:none!important}
+  & .desk-toolbar :is(#td-week-label,#td-date-label,#td-league-label)[hidden]{display:none!important}
+  & .desk-toolbar .ui-choice{display:block!important;width:auto!important;height:42px!important;min-width:0!important}
+
+  /* Chips: icon, label, value (hidden while empty), chevron */
+  & .desk-toolbar :is(.td-choice-trigger,.calendar-trigger,.desk-market-menu>summary){box-sizing:border-box;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:8px!important;width:auto!important;min-width:0!important;max-width:none!important;height:42px!important;min-height:42px!important;margin:0!important;padding:0 13px!important;border:1px solid var(--tb-chip)!important;border-radius:9px!important;background:transparent!important;color:var(--tb-text)!important;box-shadow:none!important;font-size:14px!important;font-weight:500!important;line-height:20px!important;white-space:nowrap;cursor:pointer;list-style:none}
+  & .desk-toolbar .desk-market-menu>summary::-webkit-details-marker{display:none}
+  & .desk-toolbar :is(.td-choice-trigger,.calendar-trigger,.desk-market-menu>summary):is(:hover,[aria-expanded="true"]){border-color:var(--tb-edge)!important;background:rgba(255,255,255,.02)!important;box-shadow:none!important}
+  & .desk-toolbar :is(.td-choice-trigger,.calendar-trigger,.desk-market-menu>summary)::before{content:"";flex:none;width:17px;height:17px;background:var(--tb-text);-webkit-mask:var(--tb-icon,url(/ev-icons/odds.svg)) center/contain no-repeat;mask:var(--tb-icon,url(/ev-icons/odds.svg)) center/contain no-repeat}
+  & .desk-toolbar .td-game-label{--tb-icon:url(/ev-icons/sports.svg)}
+  & .desk-toolbar :is(#td-week-label,#td-date-label){--tb-icon:url(/ev-icons/date.svg)}
+  & .desk-toolbar #td-league-label{--tb-icon:url(/ev-icons/leagues.svg)}
+  & .desk-toolbar .desk-market-menu{--tb-icon:url(/ev-icons/markets.svg)}
+  & .desk-toolbar .td-filters>.td-choice{--tb-icon:url(/ev-icons/odds.svg)}
+  & .desk-toolbar :is(.td-choice-trigger,.calendar-trigger)>svg:first-child:not(:last-child){display:none!important}
+  & .desk-toolbar :is(.td-choice-trigger,.calendar-trigger,.desk-market-menu>summary)>svg:last-child{display:block!important;flex:none;width:13px!important;height:13px!important;margin:0!important;color:var(--tb-text)!important;opacity:1!important}
+  & .desk-toolbar .td-choice-trigger .choice-trigger-copy{display:flex!important;flex:0 1 auto!important;flex-direction:row!important;align-items:baseline!important;gap:10px!important;width:auto!important;min-width:0;overflow:hidden}
+  & .desk-toolbar :is(.td-choice-trigger .choice-trigger-label,.desk-market-menu>summary>span,.calendar-trigger>span){position:static!important;display:inline!important;flex:none;width:auto!important;height:auto!important;margin:0!important;clip:auto!important;overflow:visible!important;color:var(--tb-text)!important;font-size:14px!important;font-weight:500!important;line-height:20px!important;letter-spacing:0!important;text-transform:none!important;white-space:nowrap}
+  & .desk-toolbar :is(.td-choice-trigger .choice-trigger-copy>strong,.desk-market-menu>summary>strong){display:inline!important;overflow:hidden;color:var(--tb-value)!important;font-size:14px!important;font-weight:400!important;line-height:20px!important;text-overflow:ellipsis;white-space:nowrap}
+  & .desk-toolbar .td-choice-trigger[data-empty="true"] .choice-trigger-copy>strong{display:none!important}
+  /* Sort shows only its value; the icon says what it is. */
+  & .desk-toolbar .td-filters>.td-choice .choice-trigger-label,& .desk-toolbar .desk-market-menu.desk-market-menu>summary>span{display:none!important}
+  & .desk-toolbar .desk-market-menu>summary>strong{color:var(--tb-text)!important;font-weight:500!important}
+  & .desk-toolbar .td-filters>.td-choice .choice-trigger-copy>strong{max-width:220px;color:var(--tb-text)!important;font-weight:500!important}
+
+  /* Search */
+  & .desk-toolbar .td-search{box-sizing:border-box;display:flex!important;flex:1 1 140px!important;align-items:center;gap:9px;width:auto!important;min-width:140px!important;max-width:none!important;height:42px!important;margin:0!important;padding:0 13px!important;border:1px solid var(--tb-chip)!important;border-radius:9px!important;background:var(--tb-inset)!important;box-shadow:none!important;color:var(--tb-muted)}
+  & .desk-toolbar .td-search:focus-within{border-color:var(--tb-edge)!important;box-shadow:0 0 0 3px rgba(163,240,107,.1)!important}
+  & .desk-toolbar .td-search svg{flex:none;width:16px;height:16px;color:var(--tb-muted)}
+  & .desk-toolbar .td-search input{flex:1;width:100%!important;min-width:0;height:40px!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:var(--tb-text)!important;font:400 14px/40px inherit!important;box-shadow:none!important;outline:none!important}
+  & .desk-toolbar .td-search input::placeholder{color:var(--tb-muted)!important}
+
+  /* Over / Under: dark track, white active pill */
+  & .desk-toolbar .td-side{box-sizing:border-box;display:inline-flex!important;flex:none;align-items:center;gap:2px!important;height:42px!important;margin:0!important;padding:3px!important;border:1px solid var(--tb-chip)!important;border-radius:10px!important;background:var(--tb-inset)!important;box-shadow:none!important}
+  & .desk-toolbar .td-side>button{height:34px!important;min-height:0!important;margin:0!important;padding:0 14px!important;border:0!important;border-radius:7px!important;background:transparent!important;color:var(--tb-muted)!important;box-shadow:none!important;font-size:13px!important;font-weight:600!important}
+  & .desk-toolbar .td-side>button:hover{color:var(--tb-text)!important}
+  & .desk-toolbar .td-side>button[aria-pressed="true"]{background:var(--tb-text)!important;color:#0b0d10!important}
+
+  /* Watchlist and Filters buttons */
+  & .desk-toolbar :is(#td-saved,.filter-open){box-sizing:border-box;display:inline-flex!important;flex:none;align-items:center;justify-content:center;gap:8px!important;height:42px!important;min-height:42px!important;margin:0!important;padding:0 14px!important;border:1px solid var(--tb-chip)!important;border-radius:9px!important;background:transparent!important;color:var(--tb-text)!important;box-shadow:none!important;font-size:14px!important;font-weight:500!important}
+  & .desk-toolbar :is(#td-saved,.filter-open) svg{width:16px!important;height:16px!important;color:currentColor!important}
+  & .desk-toolbar :is(#td-saved,.filter-open):hover{border-color:var(--tb-edge)!important;background:rgba(255,255,255,.02)!important}
+  & .desk-toolbar #td-saved[aria-pressed="true"]{border-color:var(--tb-lime-line)!important;background:var(--tb-lime-soft)!important;color:var(--tb-lime)!important}
+  & .desk-toolbar .filter-open.has-filters{border-color:var(--tb-lime-line)!important}
+  & .desk-toolbar .filter-open .filter-count{display:inline-grid;place-items:center;min-width:20px;height:20px;margin:0!important;padding:0 6px;border-radius:999px;background:var(--tb-lime)!important;color:#0b1206!important;font-size:11px;font-weight:700;line-height:1}
+  & .desk-toolbar .filter-open .filter-count[hidden]{display:none!important}
+  & .desk-toolbar :is(button,summary,input):focus-visible{outline:2px solid var(--tb-lime)!important;outline-offset:2px}
+
+  /* Panel footer: result count */
+  & .desk-toolbar .td-board-summary{flex:1 0 100%!important;margin:4px 0 0!important;padding:12px 2px 0!important;border-top:1px solid var(--tb-line);color:var(--tb-muted);font-size:13px;line-height:18px}
+
+  /* Active filter chips below the panel */
+  & .advanced-filter-summary:not([hidden]){display:flex!important;flex-wrap:wrap;align-items:center;gap:8px!important;margin:-2px 0 14px!important;padding:0!important;border:0!important;background:none!important}
+  & .advanced-filter-summary>span{display:inline-flex;align-items:center;height:30px;padding:0 12px!important;border:1px solid var(--tb-line)!important;border-radius:999px!important;background:var(--tb-panel)!important;color:var(--tb-sub)!important;font-size:12px!important;font-weight:500}
+  & .advanced-filter-summary>button{display:inline-flex!important;align-items:center;gap:6px;height:30px!important;min-height:0!important;padding:0 12px!important;border:1px solid var(--tb-chip)!important;border-radius:999px!important;background:transparent!important;color:var(--tb-value)!important;box-shadow:none!important;font-size:12px!important;font-weight:500!important}
+  & .advanced-filter-summary>button:hover{border-color:var(--tb-edge)!important;color:var(--tb-text)!important}
+  & .advanced-filter-summary>button svg{width:12px;height:12px}
+
+  /* ------------------------------------------------------------ trends table */
+  & .td-players{margin:0!important;padding:0!important;border:0!important;background:none!important;box-shadow:none!important}
+  & .trend-table-scroll{overflow-x:auto;border:1px solid var(--tb-line)!important;border-radius:20px!important;background:var(--tb-panel)!important;box-shadow:none!important;scrollbar-width:thin;scrollbar-color:var(--tb-edge) transparent}
+  & .trend-table{width:100%;min-width:900px;margin:0;border-collapse:separate!important;border-spacing:0!important;background:transparent!important;color:var(--tb-text);font-size:14px}
+  & .trend-table>thead th{position:sticky;top:0;z-index:1;height:auto!important;padding:14px 12px!important;border:0!important;border-bottom:1px solid var(--tb-line)!important;background:var(--tb-panel)!important;color:var(--tb-muted)!important;font-size:11px!important;font-weight:600!important;letter-spacing:.06em!important;line-height:16px!important;text-align:center!important;text-transform:uppercase!important;white-space:nowrap;box-shadow:none!important}
+  & .trend-table>thead th:nth-child(-n+4){text-align:left!important}
+  & .trend-table>thead th:first-child{padding-left:20px!important;border-top-left-radius:20px}
+  & .trend-table>:is(thead,tbody)>tr>:first-child{box-sizing:border-box!important;width:56px!important;min-width:56px!important;max-width:none!important;padding-left:20px!important;padding-right:4px!important}
+  & .trend-table>thead th:last-child{border-top-right-radius:20px}
+  & .trend-table>thead th small{display:block;margin-top:2px;color:var(--tb-faint)!important;font-size:10px!important;font-weight:500!important;letter-spacing:.02em;text-transform:none}
+  & .trend-table>thead th.trend-ranked{color:var(--tb-lime)!important;background:var(--tb-panel)!important}
+  & .trend-table>thead th.trend-ranked::after{content:" \2193";color:var(--tb-lime)}
+  & .trend-table>thead th.trend-ranked>*:not(small){color:inherit!important}
+
+  & .trend-table>tbody>tr{background:transparent!important;transition:background-color .12s}
+  & .trend-table>tbody>tr>:is(td,th){height:68px;padding:12px!important;border:0!important;border-bottom:1px solid var(--tb-line)!important;background:transparent!important;box-shadow:none!important;vertical-align:middle!important;text-align:center}
+  & .trend-table>tbody>tr>:is(td,th):nth-child(-n+4){text-align:left}
+  & .trend-table>tbody>tr>td:first-child{padding-left:20px!important;padding-right:4px!important}
+  & .trend-table>tbody>tr:last-child>:is(td,th){border-bottom:0!important}
+  & .trend-table>tbody>tr:hover>:is(td,th){background:rgba(255,255,255,.018)!important}
+  & .trend-table>tbody>tr>td.trend-ranked{background:transparent!important}
+
+  /* Watchlist toggle: 32px round ghost icon */
+  & .trend-table .trend-save{display:inline-grid!important;place-items:center;width:32px!important;height:32px!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;border:1px solid transparent!important;border-radius:50%!important;background:transparent!important;color:var(--tb-muted)!important;box-shadow:none!important;cursor:pointer}
+  & .trend-table .trend-save svg{width:16px!important;height:16px!important}
+  & .trend-table .trend-save:hover{border-color:var(--tb-edge)!important;background:var(--tb-raised)!important;color:var(--tb-text)!important}
+  & .trend-table .trend-save[aria-pressed="true"]{border-color:var(--tb-lime-line)!important;background:var(--tb-lime-soft)!important;color:var(--tb-lime)!important}
+
+  /* Player cell: headshot, bold name, muted matchup + prop */
+  & .trend-table .trend-player-link{display:flex!important;align-items:center!important;gap:14px!important;width:100%;min-width:260px;height:auto!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;background:none!important;color:inherit!important;box-shadow:none!important;text-align:left;cursor:pointer}
+  & .trend-table .trend-player-link .player-portrait{flex:none;width:40px!important;height:40px!important;border-radius:50%!important;background:var(--tb-raised)!important;box-shadow:inset 0 0 0 1px var(--tb-edge)!important}
+  & .trend-table .trend-player-link .player-portrait .portrait-face{border-radius:50%!important;overflow:hidden}
+  & .trend-table .trend-player-link>span:last-child{display:grid!important;grid-template-columns:auto minmax(0,1fr);align-items:baseline;column-gap:0;row-gap:3px;min-width:0}
+  & .trend-table .trend-player-topline{display:contents!important}
+  & .trend-table .trend-player-topline>strong{grid-column:1/-1;overflow:hidden;color:var(--tb-text)!important;font-size:15px!important;font-weight:600!important;line-height:1.3;letter-spacing:-.01em;text-overflow:ellipsis;white-space:nowrap}
+  & .trend-table .trend-player-topline>small{grid-row:2;margin:0!important;color:var(--tb-muted)!important;font-size:12px!important;font-weight:400!important;line-height:1.4;white-space:nowrap}
+  & .trend-table .trend-player-link>span:last-child>b{grid-row:2;overflow:hidden;color:var(--tb-sub)!important;font-size:12px!important;font-weight:400!important;line-height:1.4;text-overflow:ellipsis;white-space:nowrap}
+  & .trend-table .trend-player-link>span:last-child>b::before{content:"\00b7";margin:0 6px;color:var(--tb-faint)}
+  & .trend-table .trend-player-link:hover .trend-player-topline>strong{color:var(--tb-lime)!important}
+  & .trend-table .trend-player-link:focus-visible{outline:2px solid var(--tb-lime)!important;outline-offset:4px;border-radius:12px}
+
+  /* Line and odds */
+  & .trend-table .trend-line>strong{color:var(--tb-text)!important;font-size:15px!important;font-weight:600!important}
+  & .trend-table td.trend-odds{white-space:nowrap}
+  & .trend-table .trend-odds .td-sportsbook-logo{display:inline-block!important;vertical-align:middle;margin:0 8px 0 0!important;border-radius:6px!important}
+  & .trend-table .trend-odds>strong{display:inline-flex!important;align-items:center;justify-content:center;vertical-align:middle;min-width:58px;height:32px;box-sizing:border-box;padding:0 10px;border:1px solid var(--tb-edge);border-radius:10px;background:var(--tb-raised);color:var(--tb-text)!important;font-size:14px!important;font-weight:650!important}
+
+  /* Hit-rate chips */
+  & .trend-table td.trend-rate{background:transparent!important;background-image:none!important}
+  & .trend-table td.trend-rate>strong{display:inline-flex!important;align-items:center;justify-content:center;box-sizing:border-box;min-width:60px;height:30px;padding:0 10px;border:1px solid transparent;border-radius:999px;background:rgba(255,255,255,.03);color:var(--tb-muted)!important;font-size:13px!important;font-weight:650!important;letter-spacing:0}
+  & .trend-table td.trend-rate>small{display:block!important;margin-top:5px;color:var(--tb-faint)!important;font-size:11px!important;font-weight:500;line-height:1}
+  & .trend-table td.trend-rate[data-heat="hot"]>strong{border-color:rgba(163,240,107,.42);background:rgba(163,240,107,.2);color:var(--tb-lime)!important}
+  & .trend-table td.trend-rate[data-heat="warm"]>strong{border-color:rgba(196,247,156,.16);background:rgba(196,247,156,.04);color:var(--tb-lime-pale)!important}
+  & .trend-table td.trend-rate[data-heat="cool"]>strong{border-color:rgba(247,194,90,.24);background:rgba(247,194,90,.09);color:var(--tb-amber)!important}
+  & .trend-table td.trend-rate[data-heat="cold"]>strong{border-color:rgba(255,111,111,.24);background:rgba(255,111,111,.09);color:var(--tb-red)!important}
+  & .trend-table td.trend-rate[data-heat="none"]>strong{background:transparent;color:var(--tb-faint)!important}
+  & .trend-table td.trend-average>strong{display:block;color:var(--tb-text)!important;font-size:15px!important;font-weight:600!important}
+  & .trend-table td.trend-average>small{display:block;margin-top:4px;color:var(--tb-muted)!important;font-size:11px!important}
+
+  /* Pagination */
+  & .board-pagination{display:flex!important;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 0!important;padding:0 4px!important;border:0!important;background:none!important}
+  & .board-page-summary{margin:0!important;color:var(--tb-muted)!important;font-size:13px!important}
+  & .board-page-summary strong{color:var(--tb-text)!important;font-weight:600}
+  & .board-page-controls{display:flex!important;align-items:center;gap:6px!important}
+  & .board-page-controls button{display:inline-grid!important;place-items:center;min-width:36px!important;height:36px!important;min-height:0!important;margin:0!important;padding:0 10px!important;border:1px solid var(--tb-chip)!important;border-radius:999px!important;background:transparent!important;color:var(--tb-sub)!important;box-shadow:none!important;font-size:13px!important;font-weight:600!important}
+  & .board-page-controls button:hover:not(:disabled){border-color:var(--tb-edge)!important;background:var(--tb-raised)!important;color:var(--tb-text)!important}
+  & .board-page-controls button[aria-current="page"],& .board-page-controls button[aria-current="true"]{border-color:var(--tb-text)!important;background:var(--tb-text)!important;color:#0b0d10!important}
+  & .board-page-controls button:disabled{opacity:.4}
+  & .board-page-controls svg{width:14px;height:14px}
+
+  /* ------------------------------------------------------------ empty state */
+  & #td-player-list>.product-empty{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:16px;box-sizing:border-box;min-height:320px;margin:0!important;padding:48px 24px!important;border:1px solid var(--tb-line)!important;border-radius:20px!important;background:var(--tb-panel)!important;box-shadow:none!important;text-align:center}
+  & #td-player-list>.product-empty .empty-symbol{display:grid!important;place-items:center;width:56px!important;height:56px!important;margin:0!important;border:1px solid var(--tb-lime-line)!important;border-radius:50%!important;background:var(--tb-lime-soft)!important;color:var(--tb-lime)!important}
+  & #td-player-list>.product-empty .empty-symbol svg{width:24px!important;height:24px!important}
+  & #td-player-list>.product-empty>div{display:flex;flex-direction:column;align-items:center;gap:8px;max-width:420px}
+  & #td-player-list>.product-empty h2{margin:0!important;color:var(--tb-text)!important;font-size:20px!important;font-weight:650!important;letter-spacing:-.01em}
+  & #td-player-list>.product-empty p{margin:0!important;color:var(--tb-muted)!important;font-size:14px!important;line-height:1.5}
+  & #td-player-list>.product-empty .empty-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:10px}
+  & #td-player-list>.product-empty .empty-actions button{height:40px!important;min-height:0!important;padding:0 18px!important;border:1px solid var(--tb-lime)!important;border-radius:10px!important;background:var(--tb-lime)!important;color:#0b1206!important;box-shadow:none!important;font-size:14px!important;font-weight:650!important}
+  & #td-player-list>.product-empty .empty-actions button:hover{background:#b8f58b!important;border-color:#b8f58b!important}
+  & #td-player-list>.product-empty .empty-actions button~button{border-color:var(--tb-chip)!important;background:transparent!important;color:var(--tb-text)!important}
+}
+/* Watchlist empty state uses a bookmark instead of the calendar. */
+html:root body.trends-workspace[data-site-page="trends"]:not(#tb-root):has(#td-saved[aria-pressed="true"]) #main #td-player-list>.product-empty .empty-symbol svg{display:none!important}
+html:root body.trends-workspace[data-site-page="trends"]:not(#tb-root):has(#td-saved[aria-pressed="true"]) #main #td-player-list>.product-empty .empty-symbol::before{content:"";width:22px;height:22px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M6 3h12v18l-6-4-6 4V3Z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M6 3h12v18l-6-4-6 4V3Z'/%3E%3C/svg%3E") center/contain no-repeat}
+
+/* ------------------------------------------------------------ player detail
+   Mirrors the EV expanded panel (.evd-*): one bordered panel, borderless
+   sections split by hairlines, 36px round tools, lime for hits and actions. */
+html:root body.trends-workspace[data-site-page="trends"]:not(#tb-root) #main{
+  /* Back / pager bar */
+  & #td-detail-nav:not([hidden]){display:flex!important;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px!important;padding:0!important;border:0!important;background:none!important}
+  & #td-detail-nav .td-detail-breadcrumb{display:flex;align-items:center;gap:12px;color:var(--tb-muted);font-size:13px}
+  & #td-detail-nav [data-back-board]{display:inline-flex!important;align-items:center;gap:8px;height:36px!important;min-height:0!important;margin:0!important;padding:0 16px 0 12px!important;border:1px solid #2a2f33!important;border-radius:999px!important;background:#1b1f22!important;color:#d6dbde!important;box-shadow:none!important;font-size:13px!important;font-weight:600!important}
+  & #td-detail-nav [data-back-board]:hover{border-color:#3a4146!important;background:#242a2e!important;color:var(--tb-text)!important}
+  & #td-detail-nav .td-player-pager{display:flex;align-items:center;gap:8px;color:var(--tb-muted);font-size:13px}
+  & #td-detail-nav :is([data-step-player],[data-back-board]) svg{width:15px!important;height:15px!important}
+  & #td-detail-nav [data-step-player]{display:grid!important;place-items:center;width:36px!important;height:36px!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;border:1px solid #2a2f33!important;border-radius:50%!important;background:#1b1f22!important;color:#d6dbde!important;box-shadow:none!important}
+  & #td-detail-nav [data-step-player]:hover:not(:disabled){border-color:#3a4146!important;background:#242a2e!important;color:var(--tb-text)!important}
+  & #td-detail-nav [data-step-player]:disabled{opacity:.35}
+
+  /* Player detail (#td-detail) styles live in player-detail.css. */
+}
+
+
+/* ------------------------------------------------------------ phones and narrow panes
+   Rows collapse to cards, like the Positive EV board on mobile. */
+@media (max-width:860px){
+  html:root body.trends-workspace[data-site-page="trends"]:not(#tb-root) #main{
+    & .page-heading.trends-heading{row-gap:14px!important;margin-bottom:16px!important}
+    & .page-heading.trends-heading h1{font-size:32px!important}
+    & .desk-toolbar{gap:8px!important;padding:12px!important;border-radius:14px!important}
+    & .desk-toolbar .td-search{order:0;flex:1 0 100%!important}
+    & .desk-toolbar :is(.td-game-label,#td-week-label,#td-date-label,#td-league-label,.desk-market-menu){flex:1 1 calc(50% - 4px)!important}
+    & .desk-toolbar .td-filters>.td-choice:not(#tb-x){flex:1 0 100%!important}
+    & .desk-toolbar .ui-choice{width:100%!important}
+    & .desk-toolbar :is(.td-choice-trigger,.calendar-trigger,.desk-market-menu>summary){width:100%!important}
+    & .desk-toolbar :is(.td-choice-trigger,.calendar-trigger,.desk-market-menu>summary)>svg:last-child{margin-left:auto!important}
+    & .desk-toolbar .td-filters>.td-choice .choice-trigger-copy>strong{max-width:none}
+    & .desk-toolbar .td-side{flex:1 1 auto}
+    & .desk-toolbar .td-side>button{flex:1}
+    & .desk-toolbar :is(#td-saved,.filter-open){flex:1 1 auto}
+    & .desk-toolbar .td-board-summary{padding-top:10px!important}
+
+    & .trend-table-scroll{overflow:visible!important;border:0!important;border-radius:0!important;background:none!important}
+    & .trend-table{display:block!important;min-width:0!important;width:100%!important}
+    & .trend-table>thead{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip-path:inset(50%)!important}
+    & .trend-table>tbody{display:flex!important;flex-direction:column;gap:10px}
+    & .trend-table>tbody>tr{position:relative!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 8px;min-height:0!important;height:auto!important;padding:14px!important;border:1px solid var(--tb-line)!important;border-radius:16px!important;background:var(--tb-panel)!important;overflow:visible!important}
+    & .trend-table>tbody>tr:hover{background:var(--tb-raised)!important}
+    & .trend-table>tbody>tr>:is(td,th),& .trend-table>tbody>tr>:is(td,th):first-child{position:static!important;display:block;box-sizing:border-box;width:auto!important;min-width:0!important;height:auto!important;padding:0!important;border:0!important;background:none!important;text-align:left}
+    & .trend-table>tbody>tr:hover>:is(td,th){background:none!important}
+    & .trend-table>tbody>tr>th{grid-row:1;grid-column:1/4;align-self:center}
+    & .trend-table>tbody>tr>td:first-child{grid-row:1;grid-column:4;justify-self:end;align-self:center}
+    & .trend-table .trend-player-link{min-width:0!important;gap:12px!important}
+    & .trend-table .trend-player-link>span:last-child{grid-template-columns:minmax(0,1fr)!important}
+    & .trend-table .trend-player-topline>strong{max-width:none!important;font-size:15px!important}
+    & .trend-table .trend-player-topline>small{display:block!important;grid-row:2}
+    & .trend-table .trend-player-link>span:last-child>b{grid-row:3;font-size:12px!important}
+    & .trend-table .trend-player-link>span:last-child>b::before{content:none}
+    & .trend-table td.trend-line{display:none!important}
+    & .trend-table td.trend-rate{grid-row:2;display:flex!important;flex-direction:column;align-items:center;gap:6px;padding:10px 0 0!important;border-top:1px solid var(--tb-line)!important;text-align:center}
+    & .trend-table td.trend-rate::before{content:attr(data-window-label);color:var(--tb-muted);font-size:11px;font-weight:600;letter-spacing:.06em;line-height:1}
+    & .trend-table td.trend-rate>strong{width:100%;min-width:0;max-width:72px;height:28px;font-size:12px!important}
+    & .trend-table td.trend-average{grid-row:3;grid-column:1/3;display:flex!important;align-items:baseline;gap:6px;align-self:center}
+    & .trend-table td.trend-average::before{content:"Avg";color:var(--tb-muted);font-size:12px}
+    & .trend-table td.trend-average>small{margin:0}
+    & .trend-table td.trend-odds{grid-row:3;grid-column:3/5;display:flex!important;align-items:center;justify-content:flex-end;align-self:center}
+    & .board-pagination{flex-wrap:wrap}
+
+    & #td-player-list>.product-empty{min-height:260px;padding:36px 20px!important;border-radius:16px!important}
+    & #td-detail-nav .td-detail-breadcrumb #td-detail-context{display:none}
+  }
+}

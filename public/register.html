@@ -5,17 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#080e13">
   <meta name="robots" content="noindex,follow">
-  <meta name="description" content="SportsLab account registration preview.">
-  <title>Create account · SportsLab</title>
+  <meta name="description" content="Create your VisualOdds analytics account.">
+  <meta name="referrer" content="no-referrer">
+  <title>Create account · VisualOdds</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="/assets/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/auth.css">
+  <link rel="stylesheet" href="/account-system.css"><link rel="stylesheet" href="/account-mobile.css"><link rel="stylesheet" href="/account-2026.css?v=1">
   <script type="module" src="/auth.js"></script>
 </head>
 <body class="account-page" data-account-mode="register">
   <a class="account-skip" href="#main">Skip to registration</a>
   <header class="account-header">
-    <a class="account-brand" href="/" aria-label="SportsLab home"><img src="/favicon.svg" width="34" height="34" alt=""><span>sports<span>lab</span></span></a>
+    <a class="account-brand" href="/" aria-label="VisualOdds home"><img src="/favicon.svg" width="34" height="34" alt=""><span>Visual<span>Odds</span></span></a>
     <a class="account-header-link" href="/research">Explore workspace <span aria-hidden="true">↗</span></a>
   </header>
   <main id="main" class="account-layout">
@@ -25,10 +27,10 @@
         <p class="account-story-label">Sports research, in context</p>
         <h1 id="account-story-title">Know what sits behind the line.</h1>
         <p class="account-story-copy">Game history, market prices, and source details belong in the same view.</p>
-        <div class="account-story-list" aria-label="SportsLab tools">
+        <div class="account-story-list" aria-label="VisualOdds tools">
           <div><span class="account-story-mark" aria-hidden="true"></span><strong>Research the matchup</strong><span>See the sample behind a player trend.</span></div>
           <div><span class="account-story-mark" aria-hidden="true"></span><strong>Compare the market</strong><span>View entered prices and their capture times.</span></div>
-          <div><span class="account-story-mark" aria-hidden="true"></span><strong>Keep your record</strong><span>Track picks in your browser workspace.</span></div>
+          <div><span class="account-story-mark" aria-hidden="true"></span><strong>Keep your record</strong><span>Bring your research and settings with you.</span></div>
         </div>
       </div>
     </section>
@@ -36,17 +38,19 @@
       <div class="account-access-inner">
         <nav class="account-tabs" aria-label="Account pages"><a href="/login">Sign in</a><a href="/register" aria-current="page">Create account</a></nav>
         <h2 id="account-title">Create your account.</h2>
-        <p class="account-subtitle">Set up a place for your SportsLab work.</p>
-        <p class="account-preview"><span aria-hidden="true">i</span> Registration is coming soon. This form is a preview; details are not sent or saved.</p>
-        <form id="account-form" novalidate>
+        <p class="account-subtitle">Set up a place for your VisualOdds work.</p>
+        <form method="post" id="account-form" novalidate>
+          <div class="account-field"><label for="account-name">Display name</label><input id="account-name" name="name" type="text" autocomplete="nickname" maxlength="80" placeholder="How you appear in VisualOdds" required></div>
           <div class="account-field"><label for="account-email">Email address</label><input id="account-email" name="email" type="email" placeholder="you@example.com" autocomplete="email" required></div>
-          <div class="account-field"><label for="account-password">Password</label><div class="account-password-field"><input id="account-password" name="password" type="password" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required><button type="button" data-toggle-password="account-password" aria-pressed="false">Show</button></div></div>
+          <div class="account-field"><label for="account-password">Password</label><div class="account-password-field"><input id="account-password" name="password" type="password" placeholder="At least 15 characters" autocomplete="new-password" minlength="15" maxlength="128" aria-describedby="password-help" required><button type="button" data-toggle-password="account-password" aria-pressed="false">Show</button></div><p class="account-help" id="password-help">Use 15–128 characters. A long, unique passphrase works well. Password managers and pasting are welcome.</p></div>
           <div class="account-field"><label for="account-confirm">Confirm password</label><div class="account-password-field"><input id="account-confirm" name="confirm" type="password" placeholder="Enter password again" autocomplete="new-password" required><button type="button" data-toggle-password="account-confirm" aria-pressed="false">Show</button></div></div>
+          <label class="account-check"><input name="termsAccepted" type="checkbox" required><span>I accept the <a href="/terms" target="_blank" rel="noopener">Terms</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>
+          <label class="account-check"><input name="marketingConsent" type="checkbox"><span>Send me product news and offers by email. Optional; you can change this any time.</span></label>
           <button class="account-submit" type="submit">Create account</button>
           <p id="account-status" class="account-status" role="status" aria-live="polite" hidden></p>
         </form>
         <p class="account-switch">Already have an account? <a href="/login">Sign in</a></p>
-        <p class="account-explore">No account needed to explore. <a href="/research">Open the workspace</a></p>
+        <p class="account-explore">VisualOdds is an analytics product. You do not place wagers or deposit betting funds here.</p>
       </div>
     </section>
   </main>

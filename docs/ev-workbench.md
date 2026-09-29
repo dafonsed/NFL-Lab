@@ -1,5 +1,11 @@
 # EV workbench data contract
 
+## Persistent design demo
+
+The EV+ area currently has `EV_DEMO_MODE = true` in `public/ev-preview.js`, as requested. Every tool uses a populated demo workspace across NFL, MLB, NBA, WNBA, NHL and Soccer. Live sample observations renew, builders start with sample selections, and alerts, history, fantasy props, prediction positions and results are seeded. The tracker includes open/settled singles and parlays, pushes, voids and cash-outs.
+
+The demo stays enabled across reloads until this flag is deliberately changed. Demo edits use `sportslab-ev-permanent-demo-v1` and `sportslab-ev-permanent-demo-bets-v1`; production workspace and personal-bet storage are separate. Quote sync and automatic tracker result refresh are disabled in this mode. The API instructions below describe the retained live-mode integration.
+
 The `/ev` dashboard is usable without a feed. It starts with explicitly labeled hypothetical records. Users can add and edit records, calculate outcomes, manage local alerts, and export or import a version 1 JSON workspace. Records are saved in the browser under `sportslab-ev-workbench-v1`.
 
 ## Supported sites

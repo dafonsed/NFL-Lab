@@ -1,9 +1,12 @@
 import { escape as esc, safeUrl, finite, number as num, average, selectGames, summarize, recentChange, supportingStats, forecastSummary, recordQuote, statNames } from './research-data.js';
 import { availabilityLabel, availabilityNote } from './presentation.js';
 import { icon } from './ui-icons.js';
-import {playerPortrait,opponentIdentity,teamMark} from './sports-identity.js';
+import {playerPortrait,opponentIdentity,teamMark,sportsbookBadge} from './sports-identity.js';
 import { bindComparisonLines, comparisonLineHandle, COMPARISON_LINE_GUTTER } from './chart-line.js';
 import {chartFilterControl} from './chart-controls.js';
+import {enhanceTrendControls} from './trends-controls.js';
+import {readResearchNote,writeResearchNote} from './research-notes.js';
+import {paginateRows,paginationControls} from './product-ui.js';
 
 const shortDate = (date, compact = false) => new Date(date.includes('T') ? date : date.slice(0, 10) + 'T12:00Z').toLocaleDateString('en-US', { month: compact ? 'numeric' : 'short', day: 'numeric', timeZone: date.includes('T') ? 'America/Phoenix' : 'UTC' });
 const stamp = date => Number.isFinite(Date.parse(date)) ? new Date(date).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Time unavailable';
@@ -44,9 +47,10 @@ export function gameChart(rows, line, side = 'over', compact = false, availableW
     const x = left + i * slot + (slot - barWidth) / 2, hit = finite(line) === null ? 'neutral' : r.value === line ? 'push' : (side === 'under' ? r.value < line : r.value > line) ? 'hit' : 'miss';
     const opponent = opponentIdentity(r,sport),center=x+barWidth/2;
     const venue=r.home===false?'@':r.home===true?'vs':'';
-    const axis = `<g class="pr-game-opponent" aria-label="${esc(`${shortDate(r.date)} ${venue} ${opponent.name||'Opponent unavailable'}`)}"><text x="${center}" y="${height-(narrow?43:31)}" text-anchor="middle" class="pr-axis pr-game-date">${esc(shortDate(r.date,true))}</text>${opponent.logo?`<image href="${esc(opponent.logo)}" x="${center-(narrow?7:24)}" y="${height-(narrow?33:22)}" width="14" height="14" preserveAspectRatio="xMidYMid meet" class="pr-opponent-logo"/>`:''}<text x="${center+(narrow?0:7)}" y="${height-(narrow?7:11)}" text-anchor="middle" class="pr-axis pr-opponent-code">${esc(`${venue} ${opponent.code||(!opponent.logo?opponent.name:'')}`.trim()||'—')}</text></g>`;
+    const axis = `<g class="pr-game-opponent" aria-label="${esc(`${shortDate(r.date)} ${venue} ${opponent.name||'Opponent unavailable'}`)}"><text x="${center}" y="${height-(narrow?43:31)}" text-anchor="middle" class="pr-axis pr-game-date">${esc(shortDate(r.date,true))}</text>${opponent.logo?`<image href="${esc(opponent.logo)}" x="${center-(narrow?7:24)}" y="${height-(narrow?33:22)}" width="14" height="14" preserveAspectRatio="xMidYMid meet" class="pr-opponent-logo"/>`:''}<text x="${center+(narrow?0:7)}" y="${height-(narrow?7:11)}" text-anchor="middle" class="pr-axis pr-opponent-code">${esc(`${slot < 52 ? (venue === '@' ? '@' : '') : venue + ' '}${opponent.code||(!opponent.logo?opponent.name:'')}`.trim()||'—')}</text></g>`;
     const tooltip = `${shortDate(r.date)}${r.opponent ? ` ${r.home === false ? '@' : 'vs'} ${r.opponent}` : ''}: ${num(r.value)}${r.parts.length ? ' · ' + r.parts.map(p => p.label + ' ' + num(p.value)).join(', ') : ''}`;
-    let rectangles = `<rect x="${x}" y="${Math.min(y(0), y(r.value))}" width="${barWidth}" height="${Math.max(2, Math.abs(y(r.value) - y(0)))}" rx="3" class="pr-bar ${hit}"/>`;
+    const barHeight = Math.max(compact ? 2 : 5, Math.abs(y(r.value) - y(0)));
+    let rectangles = `<rect x="${x}" y="${Math.min(y(0), y(r.value)) - (barHeight > Math.abs(y(r.value) - y(0)) && r.value >= 0 ? barHeight - Math.abs(y(r.value) - y(0)) : 0)}" width="${barWidth}" height="${barHeight}" rx="${compact ? 2 : Math.min(7, barWidth / 5)}" class="pr-bar ${hit}"/>`;
     if (!compact && r.parts.length > 1 && r.parts.every(p => p.value >= 0)) {
       let cumulative = 0;
       rectangles = r.parts.map((p, index) => { const start = cumulative; cumulative += p.value; const h = Math.abs(y(cumulative) - y(start)); return `<rect x="${x}" y="${y(cumulative)}" width="${barWidth}" height="${Math.max(0, h)}" class="pr-bar ${hit}" opacity="${1 - index * 0.2}"/>${h > 25 && barWidth > 27 ? `<text x="${x + barWidth / 2}" y="${y(cumulative) + h / 2 + 4}" text-anchor="middle" class="pr-stack-label">${num(p.value, 0)}</text>` : ''}`; }).join('');
@@ -54,7 +58,7 @@ export function gameChart(rows, line, side = 'over', compact = false, availableW
     return `<g data-result="${r.value}"><title>${esc(tooltip)}</title>${rectangles}${compact ? '' : `<text x="${center}" y="${r.value >= 0 ? y(r.value) - 8 : y(r.value) + 16}" text-anchor="middle" class="pr-bar-label">${num(r.value)}</text>${axis}`}</g>`;
   }).join('');
   const threshold = finite(line) === null ? '' : compact ? `<line x1="${left}" x2="${width-right}" y1="${y(line)}" y2="${y(line)}" class="pr-threshold"/>` : `<g data-comparison-line class="pr-line-control" role="slider" tabindex="0" aria-label="Comparison line" aria-orientation="vertical" aria-valuemin="${Math.max(-100,low)}" aria-valuemax="${Math.min(1000,high)}" aria-valuenow="${line}" aria-valuetext="${line}, comparison line" aria-description="Drag up or down. Arrow keys adjust by half a point; hold Shift for five points. This changes your comparison, not the sportsbook line." transform="translate(0 ${y(line)})"><title>Drag to compare · arrow keys adjust by 0.5</title><line x1="${left}" x2="${width-right}" y1="0" y2="0" class="pr-threshold"/><line x1="0" x2="${width-right}" y1="0" y2="0" class="pr-line-target"/>${comparisonLineHandle(line)}</g>`;
-  return `<div class="pr-chart-scroll" tabindex="0" aria-label="Game chart; scroll horizontally for more games"><svg class="${availableWidth < 600 ? 'pr-chart-small' : ''}" data-low="${low}" data-high="${high}" data-top="${top}" data-height="${plotH}" data-side="${side}" viewBox="0 0 ${width} ${height}" style="--chart-min-width:${compact ? 0 : width}px;min-width:var(--chart-min-width)" role="${compact ? 'img' : 'group'}" aria-label="${esc(`${rows.length} game results, oldest to newest${finite(line) === null ? '' : '; comparison line at ' + line}`)}">${ticks}${bars}${threshold}</svg></div>${!compact && finite(line)!==null ? '<p class="pr-drag-hint">Drag the line or use arrow keys to compare</p>' : ''}`;
+  return `<div class="pr-chart-scroll" tabindex="0" aria-label="Game chart; scroll horizontally for more games"><svg class="${availableWidth < 600 ? 'pr-chart-small' : ''}" data-low="${low}" data-high="${high}" data-top="${top}" data-height="${plotH}" data-side="${side}" viewBox="0 0 ${width} ${height}" style="--chart-min-width:${compact ? 0 : width}px;min-width:var(--chart-min-width)" role="${compact ? 'img' : 'group'}" aria-label="${esc(`${rows.length} game results, oldest to newest${finite(line) === null ? '' : '; comparison line at ' + line}`)}">${compact ? '' : '<defs><linearGradient id="pr-hit-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c8f9a2"/><stop offset="1" stop-color="#86dc50"/></linearGradient><linearGradient id="pr-miss-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff8f8f" stop-opacity=".78"/><stop offset="1" stop-color="#e0676b" stop-opacity=".38"/></linearGradient></defs>'}${ticks}${bars}${threshold}</svg></div>${!compact && finite(line)!==null ? '<p class="pr-drag-hint">Drag the line or use arrow keys to compare</p>' : ''}`;
 
 }
 
@@ -70,7 +74,8 @@ export function matchupComparison(p) {
   if(o?.available) {
     const position=o.unit?.match(/^(\w+) production per opponent game/)?.[1];
     const unit=position?p.label+' / game · vs '+position:o.unit||p.label;
-    return `<div class="pr-context-comparison"><p class="pr-context-unit">${esc(unit)}</p><dl><div><dt>${esc(p.opponent||'Opponent')} allowance</dt><dd>${num(o.rate,2)}</dd></div><div><dt>League comparison</dt><dd>${num(o.leagueRate,2)}</dd></div></dl><p class="pr-context-sample">${finite(o.sampleCount)===null?"Sample size unavailable":num(o.sampleCount,0)+" prior games"}${position?' · Adjusted toward league average':''}</p></div><details class="pr-context-note"><summary>How to read this matchup</summary><p>${esc((o.description||'').replace(/[.\s]+$/,''))}${o.description?'. ':''}Higher values mean more production allowed in this statistic.</p></details>${link(o.sourceUrl,'Opponent stats')}`;
+    const comparison=p.sport==='nfl' ? `<table class="pr-matchup-comparison-table"><thead><tr><th scope="col">Stat</th><th scope="col" title="${esc(p.opponent||'Opponent')} allowance">Opponent</th><th scope="col">League</th></tr></thead><tbody><tr><th scope="row">${esc(p.label)}</th><td>${num(o.rate,2)}</td><td>${num(o.leagueRate,2)}</td></tr></tbody></table>` : `<dl><div><dt>${esc(p.opponent||'Opponent')} allowance</dt><dd>${num(o.rate,2)}</dd></div><div><dt>League comparison</dt><dd>${num(o.leagueRate,2)}</dd></div></dl>`;
+    return `<div class="pr-context-comparison"><p class="pr-context-unit">${esc(unit)}</p>${comparison}<p class="pr-context-sample">${finite(o.sampleCount)===null?"Sample size unavailable":num(o.sampleCount,0)+" prior games"}${position?' · Adjusted toward league average':''}</p></div><details class="pr-context-note"><summary>How to read this matchup</summary><p>${esc((o.description||'').replace(/[.\s]+$/,''))}${o.description?'. ':''}Higher values mean more production allowed in this statistic.</p></details>${link(o.sourceUrl,'Opponent stats')}`;
   }
   if(effect?.games && finite(effect.rate)!==null) return `<div class="pr-context-comparison"><p class="pr-context-unit">${p.markets[p.market]?.goalie?'Shots faced':esc(p.label)+' allowed'} / game</p><dl><div><dt>${esc(p.opponent||'Opponent')} team</dt><dd>${num(effect.rate)}</dd></div><div><dt>Comparison sample</dt><dd>${num(effect.comparison)}</dd></div></dl><p class="pr-context-sample">${effect.games} prior games · Whole-team totals</p></div><details class="pr-context-note"><summary>How to read this matchup</summary><p>Team totals allowed, weighted toward the broader sample average. These are not an individual player or position ranking.</p></details>`;
   return '<p class="pr-muted">Opponent comparison is unavailable for this market.</p>';
@@ -123,7 +128,8 @@ export function projectionPanel(p, { probability = null, side = 'over', manual =
   const calibrated=td&&['historical-score-calibration','reference-score-curve'].includes(p.raw?.tdProbMethod)&&finite(p.raw.tdProb)!==null;
   const workload=td?(finite(p.forecast.probability?.over)??point):null;
   const unpriced = manual ? 'Custom line not priced' : p.prop?.stale ? 'Saved quote · odds withheld' : !p.prop ? 'No sportsbook line' : 'Estimate not supplied';
-  return `<section class="pr-panel pr-model-panel"><div class="pr-section-heading"><h3>${td?'Model strength':'Model projection'}</h3><span class="pr-model-status">Experimental</span></div><table class="reference-model-table"><thead><tr><th>Statistic</th><th>Value</th></tr></thead><tbody><tr data-model-stat="projection"><th>${td?'Model strength':'Projection'}</th><td title="${td?'0–100 relative ranking score':esc(p.label)}">${value}</td></tr>${td&&calibrated?`<tr data-model-stat="td-chance"><th>${p.raw?.tdProbMethod==='reference-score-curve'?'Estimated TD chance':'Fitted TD chance'}</th><td title="Rushing or receiving TD · conditional on playing">${Math.round(p.raw.tdProb*100)}%</td></tr>`:''}${td&&workload!==null?`<tr data-model-stat="workload"><th>Workload TD estimate</th><td title="Rushing, receiving or special-teams TD · separate forecast">${Math.round(workload*100)}%</td></tr>`:''}<tr data-model-stat="line"><th>Sportsbook line</th><td>${num(line)}</td></tr>${td?'':`<tr data-model-stat="probability"><th>Model ${side==='over'?'over':'under'}</th><td title="${esc(probability===null?unpriced:`Estimated chance ${side==='over'?'above':'below'} ${num(line)}`)}">${probability===null?'—':Math.round(probability*100)+'%'}</td></tr>`}${!td&&p.forecast.interval?.length===2?`<tr data-model-stat="range"><th>Model range</th><td>${p.forecast.interval.map(v=>num(v)).join('–')}</td></tr>`:''}</tbody></table><details class="pr-explainer"><summary>About this estimate</summary><p>${manual?'Model odds are hidden for your custom line; the model has not priced it.':'Model estimates are separate from historical hit rates.'}</p><p>${esc(f.text)}</p></details></section>`;
+  const priceNote = { 'Custom line not priced':'Probability unavailable for a custom line.', 'Saved quote · odds withheld':'Probability unavailable for this saved quote.', 'No sportsbook line':'No sportsbook line is available for this estimate.', 'Estimate not supplied':'A probability estimate is not available.' }[unpriced];
+  return `<section class="pr-panel pr-model-panel"><div class="pr-section-heading"><h3>${td?'Model strength':'Model projection'}</h3><span class="pr-model-status">Experimental</span></div><table class="reference-model-table"><thead><tr><th>Statistic</th><th>Value</th></tr></thead><tbody><tr data-model-stat="projection"><th>${td?'Model strength':'Projection'}</th><td title="${td?'0–100 relative ranking score':esc(p.label)}">${value}</td></tr>${td&&calibrated?`<tr data-model-stat="td-chance"><th>${p.raw?.tdProbMethod==='reference-score-curve'?'Estimated TD chance':'Fitted TD chance'}</th><td title="Rushing or receiving TD · conditional on playing">${Math.round(p.raw.tdProb*100)}%</td></tr>`:''}${td&&workload!==null?`<tr data-model-stat="workload"><th>Workload TD estimate</th><td title="Rushing, receiving or special-teams TD · separate forecast">${Math.round(workload*100)}%</td></tr>`:''}<tr data-model-stat="line"><th>Sportsbook line</th><td>${num(line)}</td></tr>${td?'':`<tr data-model-stat="probability"><th>Model ${side==='over'?'over':'under'}</th><td title="${esc(probability===null?unpriced:`Estimated chance ${side==='over'?'above':'below'} ${num(line)}`)}">${probability===null?'—':Math.round(probability*100)+'%'}</td></tr>`}${!td&&p.forecast.interval?.length===2?`<tr data-model-stat="range"><th>Model range</th><td>${p.forecast.interval.map(v=>num(v)).join('–')}</td></tr>`:''}</tbody></table>${!td&&probability===null?`<p class="pr-model-price-note">${priceNote}</p>`:''}<details class="pr-explainer"><summary>About this estimate</summary><p>${manual?'Model odds are hidden for your custom line; the model has not priced it.':'Model estimates are separate from historical hit rates.'}</p><p>${esc(f.text)}</p></details></section>`;
 }
 
 function gameContext(p) {
@@ -156,12 +162,15 @@ export function refreshPlayerResearch(profiles) {
   const next = profiles.find(p => p.key === active?.key);
   if (next) active.update(next);
 }
-export function openPlayerResearch({ profile, loadMarket, loadDetails, note = '', saveNote, onSave, saved = false, onCompare, container } = {}) {
+export function openPlayerResearch({ profile, loadMarket, loadDetails, note, saveNote, onSave, saved = false, onCompare, container } = {}) {
   if (!container && active) active.close();
   if (container) inlineViews.get(container)?.close();
   observeLines([profile]);
+  note??=readResearchNote(profile);
+  saveNote??=value=>writeResearchNote(profile,value);
   const dialog = document.createElement(container ? 'section' : 'dialog'), scope = 'research-' + (++researchViewId) + '-'; dialog.className = 'player-research-dialog pr-redesign' + (container ? ' player-research-inline' : ''); dialog.setAttribute('aria-label', profile.name + ' player research'); if(container) { dialog.setAttribute('role','region'); container.replaceChildren(dialog); } else document.body.append(dialog);
-  const returnFocus = document.activeElement, state = { profile, panel: 'analysis', mode: document.body.dataset.section === 'trends' ? 'trends' : 'model', window: '10', venue: 'all', side: 'over', line: defaultLine(profile), manual: false, method: 'average', tab: 'matchup', defense: 'all', showLog: false, note, saved, busy: false, error: '' };
+  const returnFocus = document.activeElement, state = { profile, panel: 'analysis', mode: document.body.dataset.section === 'trends' ? 'trends' : 'model', window: '10', venue: 'all', side: 'over', line: defaultLine(profile), manual: false, method: 'average', tab: 'matchup', defense: 'all', showLog: false, note, noteSaved:true, saved, busy: false, error: '' };
+  const returnRowKey=returnFocus?.closest('[data-research-row]')?.dataset.researchRow;
   let sequence = 0, controller, closed = false, resize, beforeDrag;
   const unbindLine = bindComparisonLines(dialog, {
     onStart() { beforeDrag={line:state.line,manual:state.manual}; },
@@ -171,7 +180,13 @@ export function openPlayerResearch({ profile, loadMarket, loadDetails, note = ''
   });
   if(container && inlineMemory.has(profile.key)) Object.assign(state,inlineMemory.get(profile.key));
   const alive = () => !closed && dialog.isConnected && (container || dialog.open);
-  const cleanup = () => { closed=true; sequence++; controller?.abort(); resize?.disconnect(); unbindLine(); dialog.remove(); if(active?.close===close)active=null; if(!container&&returnFocus?.isConnected)returnFocus.focus({preventScroll:true}); };
+  const cleanup = () => {
+    closed=true;sequence++;controller?.abort();resize?.disconnect();unbindLine();dialog.remove();if(active?.close===close)active=null;
+    if(!container){
+      const replacement=returnRowKey?[...document.querySelectorAll('[data-research-row]')].find(row=>row.dataset.researchRow===returnRowKey)?.querySelector('.research-player'):null;
+      (returnFocus?.isConnected?returnFocus:replacement)?.focus({preventScroll:true});
+    }
+  };
   const close = () => container ? cleanup() : dialog.close();
   const handle = {close,key:profile.key,update(next) { if(state.profile.full&&!next.full)return; state.profile=next; if(!state.manual)state.line=defaultLine(next); observeLines([next]); render(); }};
   if(container)inlineViews.set(container,handle);else active=handle;
@@ -206,20 +221,22 @@ export function openPlayerResearch({ profile, loadMarket, loadDetails, note = ''
     const value = finite(new FormData(event.target).get('line'));
     if (value !== null && value >= -100 && value <= 1000) { state.line = value; state.manual = true; render(); }
   });
-  dialog.addEventListener('input', event => { if (event.target.matches('[data-pr-note]')) { state.note = event.target.value; const okay = saveNote?.(state.note); const status = dialog.querySelector('[data-pr-note-status]'); if (status) status.textContent = okay === false ? 'Could not save in this browser. Copy your note before closing.' : 'Saved in this browser'; } });
+  dialog.addEventListener('input', event => { if (event.target.matches('[data-pr-note]')) { state.note = event.target.value; state.noteSaved=saveNote(state.note)!==false; const status = dialog.querySelector('[data-pr-note-status]'); if (status) status.textContent = state.noteSaved ? 'Saved in this browser' : 'Could not save in this browser. Copy your note before closing.'; } });
   function previewLine() {
     const p=state.profile, rows=selectGames(p,state), total=state.line, s=summarize(rows,total,state.side), side=state.side==='over'?'Over':'Under';
-    dialog.querySelector('.pr-chart-heading h3').textContent=Math.round(s.rate*100)+'%';
+    dialog.querySelector('.pr-chart-heading h3').textContent=s.rate===null?'—':Math.round(s.rate*100)+'%';
     dialog.querySelector('.pr-chart-heading h3').title=(state.side==='over'?'Above':'Below')+' '+num(total);
     dialog.querySelector('.pr-chart-heading > div:first-child p').textContent=s.hits+' of '+s.n+' games'+(s.pushes?' · '+s.pushes+' tied the line':'');
     dialog.querySelectorAll('.pr-sample-splits b').forEach((el,i)=>{const sample=summarize(selectGames(p,{window:['5','10','20','h2h'][i],venue:state.venue}),total,state.side);el.textContent=sample.rate===null?'—':Math.round(sample.rate*100)+'%';});
     dialog.querySelector('[data-pr-line-form] input').value=total;
     dialog.querySelector('.pr-reference').textContent='Your comparison line'+(p.prop?' · Sportsbook '+num(p.prop.line)+' at '+p.prop.bookmaker:'');
-    dialog.querySelector('.pr-identity p').textContent=p.label+' · '+side+' '+num(total);
-        dialog.querySelector('.pr-header-quote').textContent='Custom comparison';
+    dialog.querySelector('.player-detail-market').textContent=p.label+' · '+side+' '+num(total);
+    dialog.querySelector('.pr-header-quote').textContent='Custom comparison';
+    const sideControl=dialog.querySelector('.model-side-control');
     dialog.querySelector('.pr-model-panel').outerHTML=projectionPanel(p,{manual:true,side:state.side});
+    if(sideControl)dialog.querySelector('.pr-model-panel .pr-section-heading').append(sideControl);
     dialog.querySelector('.pr-model-panel').hidden=state.panel!=='analysis'||state.mode!=='model';
-    dialog.querySelectorAll('.pr-primary > section:first-child .pr-table-scroll tbody tr').forEach((tr,i)=>{if(rows[i])tr.cells[3].textContent=rows[i].value===total?'Tied':rows[i].value>total?'Above':'Below';});
+    dialog.querySelectorAll('.pr-records .pr-table-scroll tbody tr').forEach((tr,i)=>{if(rows[i])tr.cells[3].textContent=rows[i].value===total?'Tied':rows[i].value>total?'Above':'Below';});
   }
   function render() {
     if(closed || !dialog.isConnected)return;
@@ -228,6 +245,9 @@ export function openPlayerResearch({ profile, loadMarket, loadDetails, note = ''
     const chartScroll=dialog.querySelector(".pr-chart-scroll")?.scrollLeft || 0;
     const chartWidth = Math.max(280, dialog.querySelector('.pr-chart-scroll')?.clientWidth || (dialog.querySelector('.pr-primary')?.clientWidth || dialog.clientWidth * (innerWidth > 700 ? .68 : 1)) - 52);
     const focus = dialog.contains(document.activeElement) ? document.activeElement : null, focusAction = focus?.dataset.prAction, focusValue = focus?.dataset.value;
+    const focusRegion=focus?.closest('.model-side-control')?'.model-side-control':focus?.closest('.pr-comparison')?'.pr-comparison':null;
+    const venueFocused=focus?.closest('.td-choice')?.querySelector('[data-pr-venue]');
+    const noteSelection=focus?.matches('[data-pr-note]')?[focus.selectionStart,focus.selectionEnd]:null;
     const focusControl = ['[data-pr-venue]', '[data-pr-note]', '[data-pr-line-form] input', '[data-pr-line-form] button', '[data-dev-toggle]', '[data-comparison-line]'].find(selector => focus?.matches(selector));
     const p = state.profile, rows = selectGames(p, state), s = summarize(rows, state.line, state.side), years = [...new Set(p.rows.map(r => r.date.slice(0, 4)))].slice(0, 3);
     const windows = [['5', 'L5'], ['10', 'L10'], ['20', 'L20'], ['h2h', 'H2H'], ['all', 'All'], ...years.map(y => ['year:' + y, y])];
@@ -235,8 +255,9 @@ export function openPlayerResearch({ profile, loadMarket, loadDetails, note = ''
     const probability = !state.manual && p.prop && !p.prop.stale ? finite(p.forecast.probability?.[state.side]) : null;
     const rawOdds = !state.manual && !p.prop?.stale ? finite(p.prop?.prices?.[state.side]?.american) : null;
     dialog.setAttribute('aria-busy', String(state.busy));
-    const bookmaker = rawOdds !== null && /fanduel/i.test(p.prop?.bookmaker || p.prop?.bookKey || '') ? '<span class="td-sportsbook-logo" title="FanDuel"><img src="/assets/sportsbooks/fanduel.png" alt="FanDuel" width="1920" height="1080"></span>' : '';
-    dialog.innerHTML = `<header class="pr-hero"><div class="pr-identity">${playerPortrait(p,{size:'hero',eager:true})}<div class="pr-identity-copy"><div class="pr-player-meta">${esc(p.team)} <span>vs</span> ${esc(p.opponent || 'TBD')}${p.target ? ` · ${esc(shortDate(p.displayDate || p.target))}` : ''}</div><h2>${esc(p.name)} <small>${esc(p.position || '')}</small></h2><p>${esc(p.label)}${total === null ? '' : ` · ${state.side === 'over' ? 'Over' : 'Under'} ${num(total)}`}</p></div><div class="pr-hero-actions">${onSave ? `<button class="pr-button pr-save" data-pr-action="save" aria-pressed="${state.saved}">${icon(state.saved ? 'check' : 'bookmark')}<span>${state.saved ? 'Saved' : 'Save player'}</span></button>` : ''}${onCompare ? `<button class="pr-button pr-compare" data-pr-action="compare" aria-label="Compare player">${icon('plus')}</button>` : ''}${container ? '' : `<button class="pr-close" data-pr-action="close" aria-label="Close player research">${icon('close')}</button>`}</div></div><div class="pr-header-quote">${state.manual ? '<span>Custom comparison</span>' : rawOdds !== null ? `<span class="pr-priced-quote">${bookmaker}<b>${price(rawOdds)}</b>${bookLink(p.prop?.sourceUrl)}</span>` : ''}</div></header>
+    const bookmaker = sportsbookBadge(p.prop);
+    const detailTopbar = `<div class="pr-detail-topbar">${container ? '' : `<button type="button" class="pr-back" data-pr-action="close">${icon('arrow')}<span>Back to ${document.body.dataset.section === 'trends' ? 'trends' : 'projections'}</span></button>`}</div>`;
+    dialog.innerHTML = `<header class="pr-hero">${detailTopbar}<div class="pr-identity">${playerPortrait(p,{size:'hero',eager:true})}<div class="pr-identity-copy"><div class="pr-player-meta"><span class="pr-matchup-label">${esc(p.team)} <span>vs</span> ${esc(p.opponent || 'TBD')}</span>${p.target ? `<span class="pr-event-date">${esc(shortDate(p.displayDate || p.target))}</span>` : ''}</div><h2><span class="player-detail-name">${esc(p.name)}</span>${p.position ? ` <small class="player-detail-position">${esc(p.position)}</small>` : ''} <span class="player-detail-market">${esc(p.label)}${total === null ? '' : ` · ${state.side === 'over' ? 'Over' : 'Under'} ${num(total)}`}</span></h2></div><div class="pr-hero-actions">${onSave ? `<button class="pr-button pr-save" data-pr-action="save" aria-pressed="${state.saved}">${icon(state.saved ? 'check' : 'bookmark')}<span>${state.saved ? 'Saved' : 'Save player'}</span></button>` : ''}${onCompare ? `<button class="pr-button pr-compare" data-pr-action="compare" aria-label="Compare player">${icon('plus')}</button>` : ''}${container ? '' : `<button class="pr-close" data-pr-action="close" aria-label="Close player research">${icon('close')}</button>`}</div></div><div class="pr-header-quote">${state.manual ? '<span>Custom comparison</span>' : p.prop ? `<span class="pr-priced-quote">${bookmaker}<span class="quote-model-price"><small>${state.side==='over'?'Over':'Under'}${finite(p.prop.line)===null?'':' '+num(p.prop.line)}</small><b title="${p.prop.stale?'Saved quote · current odds withheld':rawOdds===null?'No price supplied for this side':'American odds'}">${price(rawOdds)}</b></span>${bookLink(p.prop.sourceUrl)}</span>` : ''}</div></header>
     <nav class="pr-markets" aria-label="Player markets">${Object.entries(p.markets).map(([key, m]) => `<button data-pr-action="market" data-value="${esc(key)}" aria-label="${esc(m.label)}" title="${esc(m.label)}" aria-pressed="${key === p.market}" ${state.busy ? 'disabled' : ''}>${esc(marketTabLabel(p.sport,key,m.label))}</button>`).join('')}</nav>
     <nav class="pr-jump" aria-label="Player sections"><button data-pr-action="jump" data-value="pr-results">Recent games</button><button data-pr-action="jump" data-value="pr-matchup">Matchup</button><button data-pr-action="jump" data-value="pr-movement">Line movement</button><button data-pr-action="jump" data-value="pr-notes">Notes</button></nav>
     ${state.busy || state.error ? `<div class="pr-feedback" role="status">${esc(state.busy ? 'Loading this player’s ' + p.label.toLowerCase() + ' data…' : state.error)}</div>` : ''}
@@ -253,18 +274,21 @@ export function openPlayerResearch({ profile, loadMarket, loadDetails, note = ''
     ${state.showLog ? `<div class="pr-table-scroll"><table><thead><tr><th>Date</th><th>Opponent</th><th>${esc(p.label)}</th><th>vs line</th><th>Box score</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(shortDate(r.date))}</td><td>${esc(r.opponent ? `${r.home === false ? '@' : 'vs'} ${r.opponent}` : 'Not supplied')}</td><td>${num(r.value)}</td><td>${total === null ? '—' : r.value === total ? 'Tied' : r.value > total ? 'Above' : 'Below'}</td><td>${link(r.url, 'Source') || 'Unavailable'}</td></tr>`).join('')}</tbody></table></div>` : ''}</section>
     ${supportingStatsPanel(p, rows, state.method, true)}
     ${projectionPanel(p, {probability, side:state.side, manual:state.manual})}
-    <section class="pr-panel" id="pr-notes"><h3>Your notes</h3><label class="sr-only" for="pr-note">Research note for ${esc(p.name)}</label><textarea id="pr-note" data-pr-note maxlength="5000" placeholder="What matters for this matchup?">${esc(state.note)}</textarea><small data-pr-note-status>Saved in this browser</small></section>
+    <section class="pr-panel" id="pr-notes"><h3>Your notes</h3><label class="sr-only" for="pr-note">Research note for ${esc(p.name)}</label><textarea id="pr-note" data-pr-note maxlength="5000" placeholder="What matters for this matchup?">${esc(state.note)}</textarea><small data-pr-note-status role="status">${state.noteSaved?'Saved in this browser':'Could not save in this browser. Copy your note before closing.'}</small></section>
     <section class="pr-panel pr-developer" data-dev-only><span class="pr-kicker">DEV MODE</span><h3>Model inputs & source data</h3><p>Version ${esc(p.forecast.version || 'not supplied')}. These technical details are hidden when Dev mode is off.</p>${p.technical}<details><summary>Raw player and source context</summary><pre>${esc(JSON.stringify({ player: p.raw, context: p.boardMeta }, null, 2))}</pre></details></section></div>
-    <aside class="pr-sidebar"><section class="pr-panel" id="pr-matchup"><div class="pr-segmented pr-aside-tabs">${[['matchup', 'Matchup'], ['availability', 'Availability'], ['insights', 'Insights']].map(([v, name]) => `<button data-pr-action="tab" data-value="${v}" aria-pressed="${state.tab === v}">${name}</button>`).join('')}</div><h3>${state.tab === 'matchup' ? (p.opponent || 'Opponent') + ' · ' + p.label + ' defense' : state.tab === 'availability' ? 'Who is playing?' : 'What stands out'}</h3>${state.tab === 'matchup' ? matchup(p, state.defense) : state.tab === 'availability' ? availability(p) : insights(p, rows)}</section>
+    <aside class="pr-sidebar"><section class="pr-panel" id="pr-matchup"><div class="pr-segmented pr-aside-tabs">${[['matchup', 'Matchup'], ['availability', 'Availability'], ['insights', 'Insights']].map(([v, name]) => `<button data-pr-action="tab" data-value="${v}" aria-pressed="${state.tab === v}">${name}</button>`).join('')}</div><div class="pr-context-panel"><h3>${state.tab === 'matchup' ? (p.opponent || 'Opponent') + ' · ' + p.label + ' defense' : state.tab === 'availability' ? 'Who is playing?' : 'What stands out'}</h3>${state.tab === 'matchup' ? matchup(p, state.defense) : state.tab === 'availability' ? availability(p) : insights(p, rows)}</div></section>
     <section class="pr-panel" id="pr-movement"><h3>Line movement</h3>${movement(p)}</section>
     ${gameContext(p)}</aside></div>
     `;
     const modeTabs=document.createElement('nav'); modeTabs.className='pr-mode-tabs'; modeTabs.setAttribute('aria-label','Player view');
     modeTabs.innerHTML=[['model','Model','Projections & probabilities'],['trends','Trends','Game history & hit rates']].map(([key,label,description])=>'<button data-pr-action="workspace" data-value="'+key+'" aria-pressed="'+(state.panel==='analysis'&&state.mode===key)+'" title="'+description+'"><strong>'+label+'</strong></button>').join('')+[['matchup','Matchup'],['movement','Lines'],['notes','Notes']].map(([key,label])=>'<button data-pr-action="detail-section" data-value="'+key+'" aria-pressed="'+(state.panel===key)+'"><strong>'+label+'</strong></button>').join('');
-    dialog.append(modeTabs);
+    dialog.querySelector('.pr-detail-topbar').append(modeTabs);
     dialog.querySelector('.pr-hero').append(dialog.querySelector('.pr-header-quote'));
+    const feedback=dialog.querySelector('.pr-feedback');
+    if(feedback)dialog.querySelector('.pr-hero').append(feedback);
     dialog.querySelector('.pr-sidebar').prepend(dialog.querySelector('#pr-movement'));
     dialog.querySelector('.pr-hero').append(dialog.querySelector('.pr-hero-actions'));
+    if (!container) dialog.querySelector('.pr-detail-topbar').append(dialog.querySelector('.pr-close'));
     dialog.querySelector('.pr-primary').prepend(dialog.querySelector('.pr-filters'));
     const records=document.createElement('section');records.className='pr-panel pr-records';
     records.append(dialog.querySelector('.pr-sample-note'),dialog.querySelector('[data-pr-action=log]'));
@@ -284,7 +308,7 @@ export function openPlayerResearch({ profile, loadMarket, loadDetails, note = ''
     dialog.querySelector('.pr-game-context').hidden=!['analysis','matchup'].includes(state.panel);
     dialog.querySelector('#pr-movement').hidden=!['analysis','movement'].includes(state.panel);
     const modelPanel=dialog.querySelector('.pr-model-panel');
-    if(modelPanel)dialog.querySelector('.pr-sidebar').append(modelPanel);
+    if(modelPanel)dialog.querySelector('.pr-filters').after(modelPanel);
     dialog.querySelector('.pr-filters').hidden=state.panel!=='analysis';
     if(modelPanel && state.mode==='model') {
       const sideControl=document.createElement('div'); sideControl.className='pr-segmented model-side-control'; sideControl.setAttribute('aria-label','Model probability side');
@@ -294,13 +318,19 @@ export function openPlayerResearch({ profile, loadMarket, loadDetails, note = ''
     dialog.querySelector('.pr-jump').hidden=true;
     dialog.querySelector('.pr-markets').hidden=!loadMarket;
     const chart=dialog.querySelector('.pr-chart-scroll');if(chart){chart.dataset.scroll=String(chart.scrollWidth>chart.clientWidth+2);chart.scrollLeft=chartScroll;}
-    dialog.querySelector('.pr-chart-legend').after(dialog.querySelector('.pr-chart-summary'));
+    dialog.querySelector('.pr-chart-heading').before(dialog.querySelector('.pr-chart-heading .pr-kicker'));
     dialog.querySelector('.pr-comparison').prepend(dialog.querySelector('.pr-venue-label'));
     dialog.querySelector('.pr-filters').append(chartFilterControl([dialog.querySelector('.pr-comparison')],{open:filtersOpen,count:Number(state.venue!=='all')+Number(state.manual)+Number(state.side==='under')}));
     if(container){for(const element of dialog.querySelectorAll('[id]'))element.id=scope+element.id;for(const label of dialog.querySelectorAll('label[for]'))label.htmlFor=scope+label.htmlFor;for(const button of dialog.querySelectorAll('[data-pr-action=jump]'))button.dataset.value=scope+button.dataset.value;}
+    enhanceTrendControls(dialog,'select');
     document.dispatchEvent(new Event('researchopened'));
-    if (focusAction) [...dialog.querySelectorAll('[data-pr-action]')].find(b => b.dataset.prAction === focusAction && b.dataset.value === focusValue)?.focus({ preventScroll: true });
-    else if (focusControl) dialog.querySelector(focusControl)?.focus({ preventScroll: true });
+    if (focusAction) {
+      const region=focusRegion?dialog.querySelector(focusRegion):dialog;
+      const button=[...region?.querySelectorAll('[data-pr-action]')||[]].find(b=>b.dataset.prAction===focusAction&&b.dataset.value===focusValue);
+      (button||(focusAction==='reset-line'?dialog.querySelector('[data-pr-line-form] input'):null))?.focus({preventScroll:true});
+    }
+    else if(venueFocused||focusControl==='[data-pr-venue]')dialog.querySelector('[data-pr-venue]')?.closest('.td-choice')?.querySelector('.td-choice-trigger')?.focus({preventScroll:true});
+    else if (focusControl) {const control=dialog.querySelector(focusControl);control?.focus({ preventScroll: true });if(noteSelection)control?.setSelectionRange(...noteSelection);}
   }
   render(); if(!container){dialog.showModal(); dialog.querySelector('.pr-close').focus();}
   let lastWidth=0;
@@ -315,14 +345,38 @@ export function openPlayerResearch({ profile, loadMarket, loadDetails, note = ''
 const trendStates = new WeakMap();
 export function renderTrends(container, profiles, { open } = {}) {
   observeLines(profiles);
-  const previous = trendStates.get(container), state = previous?.state || { window: '10', side: 'over', sort: 'change', posted: false, count: 30 };
-  previous?.controller.abort(); const controller = new AbortController(); trendStates.set(container, { state, controller });
+  const previous = trendStates.get(container), state = previous?.state || { window: '10', side: 'over', sort: 'change', posted: false, page: 1 };
+  const selection = profiles.map(p => p.key).join('|');
+  if (previous?.selection !== selection) state.page = 1;
+  previous?.controller.abort(); const controller = new AbortController(); trendStates.set(container, { state, controller, selection });
+  let cachedRows;
   const paint = () => {
-    const rows = profiles.map(p => { const games = selectGames(p, state), line = defaultLine(p); return { p, games, line, stats: summarize(games, line, state.side), change: recentChange(p.rows) }; }).filter(r => r.stats.n && (!state.posted || r.p.prop && !r.p.prop.stale));
-    rows.sort(state.sort === 'rate' ? (a, b) => (b.stats.rate ?? -1) - (a.stats.rate ?? -1) || b.stats.n - a.stats.n : state.sort === 'average' ? (a, b) => b.stats.average - a.stats.average : (a, b) => (b.change.change === null ? -Infinity : Math.abs(b.change.change)) - (a.change.change === null ? -Infinity : Math.abs(a.change.change)) || a.p.name.localeCompare(b.p.name));
-    container.innerHTML = `<section class="trends-intro"><div><span class="pr-kicker">PLAYER TRENDS</span><h2>Recent form, game by game.</h2><p>Compare the latest results, playing time and posted lines. Choose a player to see the full chart and matchup.</p></div><div><strong>${rows.length}</strong><span>players with recorded history</span></div></section><div class="trends-controls"><div class="pr-segmented" aria-label="Trend window">${['5', '10', '20'].map(v => `<button data-trend-window="${v}" aria-pressed="${state.window === v}">Last ${v}</button>`).join('')}</div><label>Compare<select data-trend-side><option value="over" ${state.side === 'over' ? 'selected' : ''}>Above the line</option><option value="under" ${state.side === 'under' ? 'selected' : ''}>Below the line</option></select></label><label>Sort by<select data-trend-sort><option value="change" ${state.sort === 'change' ? 'selected' : ''}>Largest recent change</option><option value="rate" ${state.sort === 'rate' ? 'selected' : ''}>Past-game frequency</option><option value="average" ${state.sort === 'average' ? 'selected' : ''}>Highest average</option></select></label><label class="trends-check"><input type="checkbox" data-trend-posted ${state.posted ? 'checked' : ''}> Fresh posted lines only</label></div><p class="pr-footnote">Recent change compares the last five games with the five before them. Frequencies compare past results with one current or labeled archived line; they are not a predicted win rate.</p><div class="trends-grid">${rows.slice(0, state.count).map(({ p, games, line, stats: s, change: c }) => `<article class="trend-card"><header>${playerPortrait(p)}<div><h3><button data-trend-player="${esc(p.key)}">${esc(p.name)}</button></h3><p>${esc(p.team)} vs ${esc(p.opponent)} · ${esc(p.label)}</p></div></header><div class="trend-metrics"><div><span>${s.n} games · average</span><strong>${num(s.average)}</strong></div><div><span>${line === null ? 'Comparison line' : (state.side === 'over' ? 'Above ' : 'Below ') + num(line)}</span><strong>${s.rate === null ? 'Not posted' : `${s.hits}/${s.n}`}</strong></div><div><span>Last 5 vs prior 5</span><strong class="${c.change > 0 ? 'pr-up' : c.change < 0 ? 'pr-down' : ''}">${c.change === null ? 'Need 10 games' : (c.change > 0 ? '+' : '') + num(c.change)}</strong></div></div>${gameChart(games, line, state.side, true)}<div class="trend-bottom"><span>${esc(bookLabel(p))}${s.pushes ? ' · ' + s.pushes + ' tied' : ''}</span><button class="pr-button" data-trend-player="${esc(p.key)}">Explore trends ↗</button></div></article>`).join('')}</div>${!rows.length ? '<div class="pr-empty"><h3>No history matches this view</h3><p>Try another date, market or player filter.</p></div>' : rows.length > state.count ? `<button class="pr-button trends-more" data-trend-more>Show 30 more players</button>` : ''}`;
+    if (!cachedRows) {
+      cachedRows = profiles.map(p => { const games = selectGames(p, state), line = defaultLine(p); return { p, games, line, stats: summarize(games, line, state.side), change: recentChange(p.rows) }; }).filter(r => r.stats.n && (!state.posted || r.p.prop && !r.p.prop.stale));
+      cachedRows.sort(state.sort === 'rate' ? (a, b) => (b.stats.rate ?? -1) - (a.stats.rate ?? -1) || b.stats.n - a.stats.n : state.sort === 'average' ? (a, b) => b.stats.average - a.stats.average : (a, b) => (b.change.change === null ? -Infinity : Math.abs(b.change.change)) - (a.change.change === null ? -Infinity : Math.abs(a.change.change)) || a.p.name.localeCompare(b.p.name));
+    }
+    const rows = cachedRows, page = paginateRows(rows, state.page);
+    state.page = page.page;
+    container.innerHTML = `<section class="trends-intro"><div><span class="pr-kicker">PLAYER TRENDS</span><h2>Recent form, game by game.</h2><p>Compare the latest results, playing time and posted lines. Choose a player to see the full chart and matchup.</p></div><div><strong>${rows.length}</strong><span>players with recorded history</span></div></section><div class="trends-controls"><div class="pr-segmented" aria-label="Trend window">${['5', '10', '20'].map(v => `<button data-trend-window="${v}" aria-pressed="${state.window === v}">Last ${v}</button>`).join('')}</div><label>Compare<select data-trend-side><option value="over" ${state.side === 'over' ? 'selected' : ''}>Above the line</option><option value="under" ${state.side === 'under' ? 'selected' : ''}>Below the line</option></select></label><label>Sort by<select data-trend-sort><option value="change" ${state.sort === 'change' ? 'selected' : ''}>Largest recent change</option><option value="rate" ${state.sort === 'rate' ? 'selected' : ''}>Past-game frequency</option><option value="average" ${state.sort === 'average' ? 'selected' : ''}>Highest average</option></select></label><label class="trends-check"><input type="checkbox" data-trend-posted ${state.posted ? 'checked' : ''}> Fresh posted lines only</label></div><p class="pr-footnote">Recent change compares the last five games with the five before them. Frequencies compare past results with one current or labeled archived line; they are not a predicted win rate.</p><div class="trends-grid">${page.rows.map(({ p, games, line, stats: s, change: c }) => `<article class="trend-card"><header>${playerPortrait(p)}<div><h3><button data-trend-player="${esc(p.key)}">${esc(p.name)}</button></h3><p>${esc(p.team)} vs ${esc(p.opponent)} · ${esc(p.label)}</p></div></header><div class="trend-metrics"><div><span>${s.n} games · average</span><strong>${num(s.average)}</strong></div><div><span>${line === null ? 'Comparison line' : (state.side === 'over' ? 'Above ' : 'Below ') + num(line)}</span><strong>${s.rate === null ? 'Not posted' : `${s.hits}/${s.n}`}</strong></div><div><span>Last 5 vs prior 5</span><strong class="${c.change > 0 ? 'pr-up' : c.change < 0 ? 'pr-down' : ''}">${c.change === null ? 'Need 10 games' : (c.change > 0 ? '+' : '') + num(c.change)}</strong></div></div>${gameChart(games, line, state.side, true)}<div class="trend-bottom"><span>${esc(bookLabel(p))}${s.pushes ? ' · ' + s.pushes + ' tied' : ''}</span><button class="pr-button" data-trend-player="${esc(p.key)}">Explore trends ↗</button></div></article>`).join('')}</div>${!rows.length ? '<div class="pr-empty"><h3>No history matches this view</h3><p>Try another date, market or player filter.</p></div>' : paginationControls(page)}`;
   };
-  container.addEventListener('click', event => { const button = event.target.closest('button'); if (!button) return; if (button.dataset.trendWindow) { state.window = button.dataset.trendWindow; paint(); } if (button.hasAttribute('data-trend-more')) { state.count += 30; paint(); } if (button.dataset.trendPlayer) { const p = profiles.find(p => p.key === button.dataset.trendPlayer); if (p) open?.(p); } }, { signal: controller.signal });
-  container.addEventListener('change', event => { if (event.target.hasAttribute('data-trend-side')) state.side = event.target.value; if (event.target.hasAttribute('data-trend-sort')) state.sort = event.target.value; if (event.target.hasAttribute('data-trend-posted')) state.posted = event.target.checked; paint(); }, { signal: controller.signal });
+  container.addEventListener('click', event => {
+    const button = event.target.closest('button'); if (!button || button.disabled) return;
+    if (button.hasAttribute('data-board-page') && container.querySelector('.trends-grid')) {
+      state.page = Number(button.dataset.boardPage); paint();
+      container.scrollIntoView({ block: 'start', behavior: 'instant' });
+      container.querySelector('[data-trend-player]')?.focus({ preventScroll: true });
+    }
+    if (button.dataset.trendWindow) { state.window = button.dataset.trendWindow; state.page = 1; cachedRows = null; paint(); }
+    if (button.dataset.trendPlayer) { const p = profiles.find(p => p.key === button.dataset.trendPlayer); if (p) open?.(p); }
+  }, { signal: controller.signal });
+  container.addEventListener('change', event => {
+    if (event.target.hasAttribute('data-trend-side')) state.side = event.target.value;
+    else if (event.target.hasAttribute('data-trend-sort')) state.sort = event.target.value;
+    else if (event.target.hasAttribute('data-trend-posted')) state.posted = event.target.checked;
+    else return;
+    state.page = 1; cachedRows = null; paint();
+  }, { signal: controller.signal });
   paint();
 }
+import { accountStorage as localStorage, accountReady } from './account-sync.js';
+await accountReady;

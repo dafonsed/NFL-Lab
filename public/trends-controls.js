@@ -2,15 +2,21 @@ import {icon} from './ui-icons.js';
 
 // Keep the existing selects and their data handlers as the source of truth.
 const enhanced=new WeakSet();
+const controlSync=new WeakMap();
 const selectors='#td-week,#td-league,#td-game,#td-sort,#td-venue';
 const labels={'td-week':'NFL week','td-league':'League','td-game':'Matchup','td-sort':'Sort players','td-venue':'Game venue'};
 const symbols={'td-week':'calendar','td-league':'soccer','td-game':'calendar','td-sort':'settings','td-venue':'filter'};
-const captions={'ev-reference-date':'Date range','ev-reference-max-odds':'Max odds'};
+const captions={'ev-reference-date':'Date Range','ev-reference-max-odds':'Max Odds'};
 let active;
 let sequence=0;
-document.body.classList.add('tool-dropdowns');
-if(!document.querySelector('link[data-tool-dropdowns]')) {
-  const style=document.createElement('link');style.rel='stylesheet';style.href='/tool-dropdowns.css?v=1';style.dataset.toolDropdowns='true';document.head.append(style);
+
+// Programmatic value changes do not emit change or a DOM mutation.
+export function syncTrendControl(select) { controlSync.get(select)?.(); }
+if(typeof document!=='undefined') {
+  document.body.classList.add('tool-dropdowns');
+  if(!document.querySelector('link[data-tool-dropdowns]')) {
+    const style=document.createElement('link');style.rel='stylesheet';style.href='/tool-dropdowns.css?v=1';style.dataset.toolDropdowns='true';document.head.append(style);
+  }
 }
 
 export function enhanceTrendControls(root=document,selector=selectors) {
@@ -30,14 +36,18 @@ export function enhanceTrendControls(root=document,selector=selectors) {
     menu.popover='manual';trigger.setAttribute('aria-controls',menu.id);
     const sync=()=>{
       wrap.hidden=select.hidden;
+      if(active?.wrap===wrap&&(select.disabled||select.hidden))active.close();
       const value=select.selectedOptions[0]?.textContent||'Select';
       trigger.innerHTML=(symbols[select.id]?icon(symbols[select.id]):'')+`<span class="choice-trigger-copy"><span class="choice-trigger-label"></span><strong></strong></span>`+icon('chevron');
       trigger.querySelector('.choice-trigger-label').textContent=captions[select.id]||label.replace(/^Filter by /,'');
       trigger.querySelector('strong').textContent=value;
+      // Compact filter chips show only the label while a select is on an "all" default.
+      trigger.dataset.empty=String(['','all','0'].includes(select.value));
       trigger.setAttribute('aria-label',label+': '+value);trigger.disabled=select.disabled;
     };
-    const close=(focus=false)=>{if(menu.matches(':popover-open'))menu.hidePopover();menu.hidden=true;trigger.setAttribute('aria-expanded','false');if(active?.wrap===wrap)active=null;if(focus)trigger.focus();};
+    const close=(focus=false)=>{if(menu.matches(':popover-open'))menu.hidePopover();menu.hidden=true;trigger.setAttribute('aria-expanded','false');if(active?.wrap===wrap)active=null;if(focus&&trigger.isConnected)trigger.focus();};
     const open=()=>{
+      if(select.disabled||select.hidden)return;
       active?.close();menu.replaceChildren();
       const heading=document.createElement('div');heading.className='choice-heading';heading.textContent=label;menu.append(heading);
       let search;
@@ -47,6 +57,7 @@ export function enhanceTrendControls(root=document,selector=selectors) {
       }
       const list=document.createElement('div');list.className='choice-options';list.setAttribute('role','listbox');list.setAttribute('aria-label',label);menu.append(list);
       for(const option of select.options){
+        if(option.hidden||option.parentElement.hidden)continue;
         const item=document.createElement('button');item.type='button';item.className='td-choice-option';item.tabIndex=-1;
         item.setAttribute('role','option');item.setAttribute('aria-selected',String(option.selected));item.disabled=option.disabled||option.parentElement.matches('optgroup:disabled');
         const text=document.createElement('span');text.className='choice-option-copy';text.textContent=option.textContent;item.append(text);item.insertAdjacentHTML('beforeend',icon('check'));
@@ -75,25 +86,29 @@ export function enhanceTrendControls(root=document,selector=selectors) {
       if(e.target.matches('input')&&!['ArrowDown','ArrowUp'].includes(e.key))return;
       const items=[...menu.querySelectorAll('button:not(:disabled):not([hidden])')],index=items.indexOf(document.activeElement);
       let next=e.key==='ArrowDown'?(index+1)%items.length:e.key==='ArrowUp'?(index<0?items.length-1:(index-1+items.length)%items.length):e.key==='Home'?0:e.key==='End'?items.length-1:-1;
-      if(next<0&&e.key.length===1)next=items.findIndex((item,i)=>i>index&&item.textContent.trim().toLowerCase().startsWith(e.key.toLowerCase()));
+      if(next<0&&e.key.length===1){const ordered=[...items.slice(index+1),...items.slice(0,index+1)];next=items.indexOf(ordered.find(item=>item.textContent.trim().toLowerCase().startsWith(e.key.toLowerCase())));}
       if(next>=0){e.preventDefault();items[next]?.focus();}
     });
-    wrap.append(trigger,menu);select.addEventListener('change',sync);
+    wrap.append(trigger,menu);controlSync.set(select,sync);select.addEventListener('change',sync);
+    select.addEventListener('input',sync);
     select.addEventListener('invalid',e=>{e.preventDefault();trigger.focus();open();});
     select.form?.addEventListener('reset',()=>queueMicrotask(sync));
     new MutationObserver(sync).observe(select,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled','selected','hidden']});sync();
   }
 }
 
-document.addEventListener('click',e=>{if(active&&!active.wrap.contains(e.target))active.close();});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&active){e.preventDefault();active.close(true);}});
-window.addEventListener('resize',()=>active?.close());
-document.addEventListener('scroll',e=>{if(active&&!active.wrap.contains(e.target))active.close();},true);
+if(typeof document!=='undefined') {
+  document.addEventListener('click',e=>{if(active&&!active.wrap.contains(e.target))active.close();});
+  document.addEventListener('focusin',e=>{if(active&&!active.wrap.contains(e.target))active.close();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&active){e.preventDefault();active.close(true);}});
+  window.addEventListener('resize',()=>active?.close());
+  document.addEventListener('scroll',e=>{if(active&&!active.wrap.contains(e.target))active.close();},true);
 
-// Include selectors in every tool and any controls added by filters or dialogs.
-const enhanceAll=root=>enhanceTrendControls(root,'select:not([multiple])');
-queueMicrotask(()=>enhanceAll(document));
-new MutationObserver(records=>{
-  if(active&&!active.wrap.isConnected)active.close();
-  for(const record of records)for(const node of record.addedNodes)if(node instanceof Element)enhanceAll(node);
-}).observe(document.body,{childList:true,subtree:true});
+  // Include selectors in every tool and any controls added by filters or dialogs.
+  const enhanceAll=root=>enhanceTrendControls(root,'select:not([multiple])');
+  queueMicrotask(()=>enhanceAll(document));
+  new MutationObserver(records=>{
+    if(active&&!active.wrap.isConnected)active.close();
+    for(const record of records)for(const node of record.addedNodes)if(node instanceof Element)enhanceAll(node);
+  }).observe(document.body,{childList:true,subtree:true});
+}

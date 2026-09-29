@@ -1,0 +1,61 @@
+/* Phone adjustments shared by sign-in, recovery and account settings. */
+.account-page :is(input,select,textarea){scroll-margin-block:24px}
+.account-page :is(select,textarea,summary):focus-visible{outline:2px solid #b4e0e6;outline-offset:3px}
+.account-page .account-status{overflow-wrap:anywhere}
+.account-page .account-status[data-tone="error"]{border-color:#c17f7f;color:#ffe2e2;background:#361e22}
+@media(max-width:900px){
+ .account-page .account-layout{display:flex;flex-direction:column}
+ .account-page .account-access{order:-1;padding:30px 0 32px;justify-content:center}
+ .account-page .account-story{padding:26px 0 34px;border-top:1px solid var(--account-line);border-bottom:0}
+ .account-page .account-story h1{font-size:30px;max-width:26ch;line-height:1.16}
+ .account-page .account-story-copy{margin-top:12px;font-size:14px}
+ .account-page .account-story-label{margin-bottom:10px}
+ .account-page .account-access h2{font-size:32px}.account-page .account-tabs{margin-bottom:24px}
+ .account-page .account-tabs a{min-height:44px}
+ .account-page .account-subtitle{margin-bottom:24px}
+ .account-page .account-field :is(input,select,textarea){font-size:16px;min-height:48px}
+ .account-page .account-password-field button{min-height:44px;min-width:56px}
+ .account-page .account-form-options{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px}
+ .account-page .account-form-options>a,.account-page .account-explore a,.account-page .account-header-link,.account-page .account-switch a{display:inline-flex;align-items:center;min-height:44px}
+ .account-page .account-check{display:flex;align-items:flex-start;gap:10px;min-height:44px;font-size:13px;line-height:1.6}
+ .account-page .account-check input{width:20px;height:20px;min-height:20px;flex:none;margin:2px 0;accent-color:var(--account-blue)}
+ .account-page .account-submit{margin-top:18px;min-height:48px}
+ .account-page .account-explore{margin-top:18px;padding-top:12px}
+ .account-page .account-switch{margin-top:12px}
+ .account-page .account-header,.account-page .account-layout{width:calc(100% - 32px)}
+ .account-page .account-header{height:auto;min-height:64px;gap:12px;padding-top:env(safe-area-inset-top)}
+ .account-page .account-header-link{font-size:12px;line-height:1.4}
+ .account-page .account-access{padding-bottom:max(26px,env(safe-area-inset-bottom))}
+ .account-page .account-dialog{max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain;scroll-padding:24px}
+ .account-page .settings-header-actions,.account-page .account-header-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;min-width:0}
+ .account-page .settings-grid,.account-page .plan-options{grid-template-columns:minmax(0,1fr)}
+ .account-page .settings-row,.account-page .subscription-summary{flex-wrap:wrap}
+ .account-page .settings-row>div,.account-page .settings-list li>div{min-width:0;overflow-wrap:anywhere}
+ .account-page .settings-actions{flex-wrap:wrap}
+ .account-page .settings-button{min-height:44px;white-space:normal}
+ .account-page .settings-sidebar nav{overflow-x:auto;overscroll-behavior-inline:contain}
+ .account-page .settings-section{scroll-margin-top:16px;min-width:0}
+ .account-page .settings-list li{flex-wrap:wrap;gap:12px}
+ .account-page .recovery-layout{display:flex;flex-direction:column;width:calc(100% - 32px);margin:28px auto;padding-bottom:max(24px,env(safe-area-inset-bottom));gap:26px}
+ .account-page .recovery-panel{order:-1;min-width:0;width:100%;padding:0}
+ .account-page .recovery-panel h1{font-size:30px;line-height:1.2;letter-spacing:-.03em}
+ .account-page .recovery-context{padding-top:22px;border-top:1px solid var(--account-line)}
+ .account-page .recovery-links{display:flex;flex-wrap:wrap;gap:18px;margin-top:18px}
+ .account-page .recovery-links a{display:inline-flex;align-items:center;min-height:44px;text-decoration:underline;text-underline-offset:4px}
+}
+@media(max-width:360px){.account-page .account-brand{font-size:19px}.account-page .account-tabs{gap:20px}.account-page .account-header{gap:8px}.account-page .account-header-link{max-width:115px}}
+@media(prefers-reduced-motion:reduce){.account-page *{scroll-behavior:auto!important}}
+@media(max-width:760px){
+ .account-page .account-brand,.account-page .account-skip{display:inline-flex;align-items:center;min-height:44px}
+ .account-page .admin-search,.account-page .admin-account-row>header{flex-wrap:wrap;gap:12px}
+ .account-page .admin-account-row{min-width:0;overflow-wrap:anywhere}
+ .account-page .admin-account-row>header>div{min-width:0}
+ .account-page .settings-sidebar nav a{display:flex;align-items:center;min-height:44px}
+ .account-page .connected-details details>summary{min-height:44px;padding:12px 0;line-height:1.5}
+ .account-page .connected-table-scroll{isolation:isolate;overscroll-behavior-inline:contain;scrollbar-width:thin}
+ .account-page .connected-table-scroll::before{content:"Scroll sideways for all audit details";display:block;position:sticky;left:0;width:fit-content;max-width:100%;padding:8px 0;color:#a4b3bd;font-size:12px;line-height:1.5}
+ .account-page .connected-table-scroll :is(th,td){font-size:13px;line-height:1.6}
+ .account-page .connected-table-scroll :is(th,td):first-child{position:sticky;left:0;z-index:1;background:#14171b;min-width:125px;max-width:145px;box-shadow:1px 0 #303642}
+ .account-page .connected-details{padding:20px 16px max(20px,env(safe-area-inset-bottom))}
+ .account-page .connected-details .settings-actions{padding-bottom:env(safe-area-inset-bottom)}
+}

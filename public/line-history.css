@@ -1,0 +1,123 @@
+/* Line History modal (public/line-history.js). Selectors are prefixed with
+   html body #line-history-dialog so the theme's !important button skins lose. */
+html body #line-history-dialog{
+  --lh-bg:#121212;--lh-panel:#1a1a1a;--lh-line:#2a2a2a;--lh-text:#f2efe9;--lh-muted:#8d8a85;--lh-amber:#e8a95a;
+  position:fixed;inset:0;margin:auto;padding:0;box-sizing:border-box;
+  width:min(1060px,90vw);max-width:none;height:min(760px,90vh);max-height:none;
+  border:1px solid #2c2c2c;border-radius:16px;background:var(--lh-bg);color:var(--lh-text);
+  box-shadow:0 40px 120px #000d;color-scheme:dark;overflow:hidden;font-family:var(--font,inherit)
+}
+html body #line-history-dialog:not([open]){display:none}
+html body #line-history-dialog::backdrop{background:#000b;backdrop-filter:blur(4px)}
+html body #line-history-dialog .lh-shell{display:flex;flex-direction:column;height:100%;padding:18px 24px 16px;box-sizing:border-box;gap:14px}
+html body #line-history-dialog .lh-sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+/* Header */
+html body #line-history-dialog .lh-header{position:relative;display:block;margin:0;padding:2px 48px 0;border:0;background:none;text-align:center}
+html body #line-history-dialog .lh-header h2{margin:0;font-size:18px;font-weight:600;line-height:1.3;letter-spacing:0;color:var(--lh-text)}
+html body #line-history-dialog .lh-subtitle{margin:4px 0 0;font-size:12.5px;line-height:1.4;color:var(--lh-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body #line-history-dialog .lh-subtitle:empty{display:none}
+html body #line-history-dialog .lh-close{
+  position:absolute;top:-4px;right:-8px;display:grid;place-items:center;width:34px;height:34px;min-width:0;min-height:0;padding:0;
+  border:1px solid #333!important;border-radius:50%!important;background:#1d1d1d!important;color:#cfcac2!important;box-shadow:none!important;cursor:pointer
+}
+html body #line-history-dialog .lh-close:hover{background:#2a2a2a!important;color:#fff!important;border-color:#444!important}
+
+/* Toolbar */
+html body #line-history-dialog .lh-toolbar{display:flex;align-items:center;gap:14px;min-width:0}
+html body #line-history-dialog .lh-range{position:relative;flex:0 0 auto}
+html body #line-history-dialog .lh-range-btn{
+  display:inline-flex;align-items:center;gap:10px;height:36px;min-height:0;padding:0 13px 0 16px;margin:0;
+  border:1px solid #343434!important;border-radius:999px!important;background:#1c1c1c!important;color:var(--lh-text)!important;
+  font:600 12.5px/1 var(--font,inherit);white-space:nowrap;box-shadow:none!important;cursor:pointer
+}
+html body #line-history-dialog .lh-range-btn:hover,html body #line-history-dialog .lh-range-btn[aria-expanded=true]{border-color:#4d4d4d!important;background:#222!important}
+html body #line-history-dialog .lh-range-btn svg{color:var(--lh-muted);transition:transform .15s}
+html body #line-history-dialog .lh-range-btn[aria-expanded=true] svg{transform:rotate(180deg)}
+html body #line-history-dialog .lh-range-menu{
+  position:absolute;left:0;top:calc(100% + 6px);z-index:5;display:grid;min-width:150px;padding:5px;box-sizing:border-box;
+  border:1px solid #343434;border-radius:12px;background:#1b1b1b;box-shadow:0 18px 40px #000b
+}
+html body #line-history-dialog .lh-range-menu[hidden]{display:none}
+html body #line-history-dialog .lh-range-menu button{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:34px;height:34px;padding:0 11px;margin:0;
+  border:0!important;border-radius:8px!important;background:transparent!important;color:#cfcac2!important;box-shadow:none!important;
+  font:550 12.5px/1 var(--font,inherit);text-align:left;cursor:pointer
+}
+html body #line-history-dialog .lh-range-menu button:is(:hover,:focus-visible){background:#282828!important;color:#fff!important;outline:none}
+html body #line-history-dialog .lh-range-menu button[aria-selected=true]{color:var(--lh-amber)!important}
+html body #line-history-dialog .lh-range-menu button[aria-selected=true]::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--lh-amber)}
+html body #line-history-dialog .lh-books{display:flex;align-items:center;gap:8px;min-width:0;overflow-x:auto;padding:4px 2px;scrollbar-width:thin;scrollbar-color:#333 transparent;overscroll-behavior-x:contain}
+html body #line-history-dialog .lh-book{
+  flex:0 0 36px;display:grid;place-items:center;width:36px;height:36px;min-width:0;min-height:0;padding:0;overflow:hidden;
+  border:1.5px solid #2e2e2e!important;border-radius:50%!important;background:#1b1b1b!important;color:var(--lh-muted)!important;
+  box-shadow:none!important;opacity:.45;filter:grayscale(.55);cursor:pointer;transition:opacity .15s,filter .15s,box-shadow .15s
+}
+html body #line-history-dialog .lh-book:hover{opacity:.8;filter:none}
+html body #line-history-dialog .lh-book.is-on{opacity:1;filter:none;border-color:var(--lh-amber)!important;box-shadow:0 0 0 2px #e8a95a33!important}
+html body #line-history-dialog .lh-book img{width:28px;height:28px;border-radius:50%;object-fit:cover;display:block}
+html body #line-history-dialog .lh-book .evb-book-initials,html body #line-history-dialog .lh-pill .evb-book-initials,html body #line-history-dialog .lh-tip-logo .evb-book-initials{font-size:10px;font-weight:700;color:var(--lh-text)}
+html body #line-history-dialog#line-history-dialog :is(button,[tabindex]):focus-visible{outline:2px solid var(--lh-amber)!important;outline-offset:2px}
+
+/* Chart */
+html body #line-history-dialog .lh-chart{position:relative;flex:1 1 auto;min-height:200px;border-radius:12px;outline:none;touch-action:pan-y;user-select:none}
+html body #line-history-dialog#line-history-dialog .lh-chart:focus-visible{outline:1px solid #e8a95a66!important;outline-offset:4px}
+html body #line-history-dialog#line-history-dialog .lh-range-menu button:focus-visible{outline:0!important}
+html body #line-history-dialog .lh-svg{position:absolute;inset:0;display:block;overflow:visible}
+html body #line-history-dialog .lh-plot{fill:transparent}
+html body #line-history-dialog .lh-grid{stroke:#ffffff0f;stroke-width:1;shape-rendering:crispEdges}
+html body #line-history-dialog .lh-grid-x{stroke:#ffffff08}
+html body #line-history-dialog .lh-baseline{stroke:#ffffff24;stroke-width:1;shape-rendering:crispEdges}
+html body #line-history-dialog .lh-axis{fill:#8a8680;font-size:11px;font-variant-numeric:tabular-nums;font-family:var(--font,inherit)}
+html body #line-history-dialog .lh-line{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+html body #line-history-dialog .lh-avg{fill:none;stroke-width:1.6;stroke-dasharray:6 5;opacity:.9}
+html body #line-history-dialog .lh-end{stroke:#121212;stroke-width:2}
+html body #line-history-dialog .lh-cross{stroke:#ffffff5c;stroke-width:1;stroke-dasharray:3 3;shape-rendering:crispEdges}
+html body #line-history-dialog .lh-dot{stroke:#121212;stroke-width:2.5}
+html body #line-history-dialog .lh-pills{position:absolute;inset:0;pointer-events:none}
+html body #line-history-dialog .lh-pill{
+  position:absolute;transform:translateY(-50%);display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px 0 4px;box-sizing:border-box;
+  border:1px solid color-mix(in srgb,var(--lh-color) 55%,transparent);border-radius:999px;
+  background:color-mix(in srgb,var(--lh-color) 18%,#141414);white-space:nowrap
+}
+html body #line-history-dialog .lh-pill img,html body #line-history-dialog .lh-pill .evb-book-initials{border-radius:50%;display:block}
+html body #line-history-dialog .lh-pill b{font-size:12px;font-weight:650;color:var(--lh-text);font-variant-numeric:tabular-nums}
+html body #line-history-dialog .lh-empty{position:absolute;inset:0;display:grid;place-items:center;margin:0;padding:24px;text-align:center;font-size:13px;color:var(--lh-muted);pointer-events:none}
+html body #line-history-dialog .lh-empty:not([hidden]) ~ .lh-tooltip{display:none}
+html body #line-history-dialog .lh-svg:has(path) ~ .lh-empty{place-items:start center;padding-top:28px}
+html body #line-history-dialog .lh-empty[hidden]{display:none}
+html body #line-history-dialog .lh-tooltip{
+  position:absolute;left:0;top:0;z-index:2;display:grid;gap:6px;min-width:150px;padding:9px 12px 10px;box-sizing:border-box;
+  border:1px solid #363636;border-radius:10px;background:#1c1c1ce8;backdrop-filter:blur(6px);box-shadow:0 12px 30px #0009;pointer-events:none
+}
+html body #line-history-dialog .lh-tooltip[hidden]{display:none}
+html body #line-history-dialog .lh-tooltip time{font-size:11px;color:var(--lh-muted);white-space:nowrap}
+html body #line-history-dialog .lh-tip-row{display:flex;align-items:center;gap:8px;white-space:nowrap}
+html body #line-history-dialog .lh-tip-logo{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;overflow:hidden;background:#262626}
+html body #line-history-dialog .lh-tip-logo img{border-radius:50%;display:block}
+html body #line-history-dialog .lh-tip-book{font-size:12.5px;color:var(--lh-text)}
+html body #line-history-dialog .lh-tip-row strong{margin-left:auto;padding-left:10px;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+html body #line-history-dialog .lh-tooltip small{font-size:11px;color:var(--lh-muted)}
+
+/* Footer */
+html body #line-history-dialog .lh-footer{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px;min-height:16px;margin:0;padding:0 4px;border:0;background:none;font-size:11px;color:var(--lh-muted)}
+html body #line-history-dialog .lh-avg-key{flex:0 0 auto;width:auto;display:inline-flex;align-items:center;gap:7px;font-weight:650;letter-spacing:.04em;color:#cfc6ae}
+html body #line-history-dialog .lh-avg-key[hidden]{display:none}
+html body #line-history-dialog .lh-avg-key i{width:18px;border-top:2px dashed #fbeab8}
+html body #line-history-dialog .lh-caption{margin-left:auto;text-align:right}
+
+@media (max-width:640px){
+  html body #line-history-dialog{width:calc(100vw - 12px);height:min(760px,calc(100dvh - 24px));border-radius:14px}
+  html body #line-history-dialog .lh-shell{padding:14px 12px 12px;gap:12px}
+  html body #line-history-dialog .lh-header{padding:0 40px}
+  html body #line-history-dialog .lh-header h2{font-size:17px}
+  html body #line-history-dialog .lh-subtitle{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  html body #line-history-dialog .lh-close{right:-4px;top:-2px}
+  html body #line-history-dialog .lh-toolbar{flex-direction:column;align-items:stretch;gap:10px}
+  html body #line-history-dialog .lh-range{align-self:flex-start}
+  html body #line-history-dialog .lh-pill{height:22px;gap:4px;padding:0 7px 0 3px}
+  html body #line-history-dialog .lh-pill b{font-size:11px}
+  html body #line-history-dialog .lh-axis{font-size:10px}
+}
+@media (prefers-reduced-motion:reduce){html body #line-history-dialog .lh-book{transition:none}}
+@media (forced-colors:active){html body #line-history-dialog .lh-line,html body #line-history-dialog .lh-avg{stroke:CanvasText}}

@@ -55,10 +55,10 @@ test('dashboard and EV navigation share one tracker route and retain sport conte
     const ev=load(siteHeader(new URL('https://sportslab.local/ev?sport='+sport)));
     assert.equal(dashboard('.site-product-menu [data-product=ev]').attr('href'),'/ev/dashboard?sport='+sport);
     const overview=load(siteHeader(new URL('https://sportslab.local/ev/dashboard?sport='+sport)));
-    assert.equal(overview('[data-ev-nav="Bet Tracker"]').attr('href'),destination);
-    assert.equal(ev('[data-ev-nav="Bet Tracker"]').attr('href'),destination);
+    assert.equal(overview(`.dashboard-primary-link[href="${destination}"]`).length,1);
+    assert.equal(ev(`.dashboard-primary-link[href="${destination}"]`).length,1);
     const tracker=load(renderSitePage(template,new URL(destination,'https://sportslab.local')));
-    assert.equal(tracker('.ev-primary-nav [aria-current="page"]').text(),'Bet Tracker');
+    assert.equal(tracker('.dashboard-primary-nav [aria-current="page"]').text().trim(),'Bet Tracker');
     assert.equal(tracker('body.bets-app.ev-page').length,1);
     assert.equal(tracker('#bet-overview').length,1);
     assert.equal(tracker('#ev-view').length,0);

@@ -8,12 +8,14 @@ test('Vercel can import the default server without starting a listener or backgr
     import path from 'node:path';
     import os from 'node:os';
     import { load } from 'cheerio';
+    import { authenticatedAccountFixture } from './test/helpers/account-fixture.mjs';
     import server from './server.mjs';
     import { DATA_DIR } from './lib/providers.mjs';
     assert.equal(server.listening, false);
     assert.equal(DATA_DIR, path.join(os.tmpdir(), 'nfl-lab-data'));
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     const base = 'http://127.0.0.1:' + server.address().port;
+    const fixture = await authenticatedAccountFixture(base), fetch = fixture.fetch;
     try {
       const health = await fetch(base + '/api/health', {headers:{host:'nfl-lab-xi.vercel.app'}});
       assert.equal(health.status,200);const status=await health.json();assert.equal(status.syncing,false);assert.equal(status.lastSync,null);
@@ -38,7 +40,7 @@ test('Vercel can import the default server without starting a listener or backgr
         assert.ok((await logo.text()).includes('<svg'));
       }
       assert.equal((await fetch(base+'/style.css')).status,200);
-      for(const asset of ['/navigation.js','/dashboard.css','/app-design.css','/workspace-ui.js','/ui-icons.js','/home.js','/product-ui.js','/chart-line.js','/research-notes.js'])assert.equal((await fetch(base+asset)).status,200);
+      for(const asset of ['/navigation.js','/dashboard.css','/dashboard-unified.css','/research-filters.css','/research-details.css','/app-design.css','/workspace-ui.js','/ui-icons.js','/home.js','/product-ui.js','/chart-line.js','/research-notes.js'])assert.equal((await fetch(base+asset)).status,200);
       for(const route of ['/wnba','/wnba/','/nba','/nhl','/soccer','/sports.js','/sports-view.js','/sports.css','/player-research.js','/research-data.js','/site-preferences.js','/player-research.css'])assert.equal((await fetch(base+route)).status,200);
       assert.equal((await fetch(base+'/api/sports/board?sport=invalid')).status,400);
       assert.equal((await fetch(base+'/performance')).status,200);
@@ -89,9 +91,9 @@ test('Vercel can import the default server without starting a listener or backgr
       assert.equal((await fetch(base+'/api/nfl/research?market=invalid')).status,400);
       assert.equal((await fetch(base+'/.env')).status,404);
       assert.equal((await fetch(base+'/api/health',{method:'POST'})).status,405);
-    } finally { server.closeAllConnections();await new Promise(resolve=>server.close(resolve)); }
+    } finally { server.closeAllConnections();await new Promise(resolve=>server.close(resolve));await fixture.close(); }
   `;
-  const env={...process.env,VERCEL:'1'};delete env.DATA_DIR;
+  const env={...process.env,VERCEL:'1',NODE_ENV:'test'};delete env.DATA_DIR;
   const child=spawn(process.execPath,['--input-type=module','-e',script],{cwd:new URL('../',import.meta.url),env,windowsHide:true});
   let output='';child.stdout.on('data',d=>output+=d);child.stderr.on('data',d=>output+=d);
   const code=await new Promise((resolve,reject)=>{child.on('error',reject);child.on('exit',resolve);});

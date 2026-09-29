@@ -7,3 +7,14 @@ export function compareLiveLine({ projection, quote, snapshot, fetchedAt, stale,
   const gap = projection.projection - quote.line;
   return { kind: 'current', gap, text: `${Math.abs(gap).toFixed(1)} ${gap >= 0 ? 'above' : 'below'} your line · projection gap, not a betting edge.` };
 }
+
+// Keep established reading order across price/game updates. New players append;
+// a changed game or market starts a fresh ranking through the caller's key.
+export function stableLiveOrder(rows, previousIds = []) {
+  const ranks = new Map(previousIds.map((id, index) => [String(id), index]));
+  return [...rows].sort((a, b) => (ranks.get(String(a.id)) ?? Infinity) - (ranks.get(String(b.id)) ?? Infinity));
+}
+export function liveDisplayRevision(data) {
+  if (!data) return '';
+  return JSON.stringify(data, (key,value) => ['fetchedAt','sourceAgeMs','checkedAt','sources','historySources'].includes(key) ? undefined : value);
+}

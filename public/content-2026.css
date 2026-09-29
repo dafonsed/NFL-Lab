@@ -1,0 +1,131 @@
+/* VisualOdds 2026 design system for public content: education, calculators,
+   sportsbook and state guides, help center and the odds API page.
+   Loaded last on each of those pages; remaps their tokens and shared parts. */
+@font-face{font-family:'SL Inter';src:url('/assets/fonts/InterVariable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'CalcOutfit';src:url('/assets/fonts/InterVariable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'SL Display';src:url('/assets/fonts/InterVariable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+
+html:root {
+  --sl-bg:#07090b;--sl-sunken:#0a0d10;--sl-panel:#0e1215;--sl-panel-2:#13181c;--sl-panel-3:#192025;
+  --sl-line:#1b2328;--sl-line-2:#262f36;--sl-line-3:#34404a;
+  --sl-text:#edf2ee;--sl-text-2:#b9c3be;--sl-muted:#7e8a86;--sl-faint:#56615d;
+  --sl-lime:#a3f06b;--sl-lime-3:#c4f79c;--sl-lime-ink:#0a200f;--sl-lime-wash:rgb(163 240 107/.09);--sl-lime-line:rgb(163 240 107/.28);
+  --sl-cyan:#43c3ff;--sl-red:#ff6f6f;--sl-amber:#f7c25a;
+  --sl-font:'SL Inter',Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  --sl-display:'SL Display','SL Inter',Inter,ui-sans-serif,system-ui,sans-serif;
+
+  --edu-bg:var(--sl-bg);--edu-surface:var(--sl-panel);--edu-surface-2:var(--sl-panel-2);--edu-line:var(--sl-line-2);
+  --edu-text:var(--sl-text);--edu-muted:var(--sl-text-2);--edu-dim:var(--sl-muted);--edu-accent:var(--sl-lime);--edu-accent-strong:var(--sl-lime-3);--edu-font:var(--sl-font);
+  --bet-bg:var(--sl-bg);--bet-panel:var(--sl-panel);--bet-panel-soft:var(--sl-panel-2);--bet-control:var(--sl-sunken);--bet-line:var(--sl-line-2);--bet-line-strong:var(--sl-line-3);
+  --bet-text:var(--sl-text);--bet-copy:var(--sl-text-2);--bet-muted:var(--sl-muted);--bet-blue:var(--sl-lime);--bet-green:var(--sl-lime);--bet-red:var(--sl-red);--bet-font:var(--sl-font);
+  --api-bg:var(--sl-bg);--api-panel:var(--sl-panel);--api-panel-2:var(--sl-panel-2);--api-line:var(--sl-line-2);--api-text:var(--sl-text);--api-muted:var(--sl-text-2);
+  --api-faint:var(--sl-muted);--api-blue:var(--sl-cyan);--api-green:var(--sl-lime);--api-font:var(--sl-font);
+  --help-canvas:var(--sl-bg);--help-surface:var(--sl-panel);--help-line:var(--sl-line-2);--help-text:var(--sl-text);--help-muted:var(--sl-text-2);--help-sky:var(--sl-lime);
+  --longform-ink:var(--sl-bg);--longform-panel:var(--sl-panel);--longform-line:var(--sl-line-2);--longform-copy:var(--sl-text-2);--longform-muted:var(--sl-muted);
+  --longform-cyan:var(--sl-lime-3);--longform-cyan-deep:var(--sl-lime);
+  --market-leaf:var(--sl-lime);
+}
+html:root body:is(.betting-pages,.help-page,.market-guide-site,:not([class])) {
+  background:radial-gradient(1000px 480px at 50% -120px,rgb(163 240 107/.09),transparent 70%),var(--sl-bg)!important;
+  color:var(--sl-text);font-family:var(--sl-font)!important;-webkit-font-smoothing:antialiased;font-feature-settings:'cv11','ss01';
+}
+html:root body ::selection {background:rgb(163 240 107/.3);color:#fff}
+html:root body :is(a,button,input,select,textarea,summary):focus-visible {outline:2px solid var(--sl-cyan)!important;outline-offset:3px}
+html:root body :is(h1,h2) {font-family:var(--sl-display)!important;font-weight:600!important;letter-spacing:-.03em!important}
+html:root body h3 {font-family:var(--sl-display);letter-spacing:-.01em}
+html:root body :is(.skip-link,.bet-skip,.help-skip,.api-skip) {background:var(--sl-lime)!important;color:var(--sl-lime-ink)!important}
+
+/* Headers */
+html:root body :is(.edu-header,.bet-header,.help-header,.api-header) {
+  position:sticky;top:0;z-index:50;background:rgb(7 9 11/.8)!important;backdrop-filter:blur(18px) saturate(1.4);border-bottom:1px solid var(--sl-line)!important;
+}
+html:root body :is(.edu-brand,.bet-brand,.help-brand,.api-brand) {font-family:var(--sl-display)!important;font-weight:650!important;letter-spacing:0!important}
+html:root body :is(.edu-brand,.bet-brand,.help-brand,.api-brand) img {filter:drop-shadow(0 6px 16px rgb(163 240 107/.3))}
+html:root body :is(.edu-brand,.bet-brand,.help-brand,.api-brand) :is(strong,b) {color:var(--sl-text)}
+html:root body :is(.edu-brand,.bet-brand,.help-brand,.api-brand) :is(strong span,b span,span span) {color:var(--sl-lime)}
+html:root body :is(.edu-header,.bet-header,.api-nav) a:not(.edu-brand):not(.bet-brand):not(.api-brand):not(.edu-workspace-link):not(.api-nav-cta) {color:var(--sl-text-2)}
+html:root body :is(.edu-header,.bet-header,.api-nav) a:not(.edu-brand):not(.bet-brand):not(.api-brand):not(.edu-workspace-link):not(.api-nav-cta):hover {color:var(--sl-text)}
+html:root body :is(.edu-workspace-link,.help-app-link,.api-nav-cta,.bet-header-back) {
+  border:1px solid var(--sl-lime)!important;border-radius:999px!important;background:var(--sl-lime)!important;color:var(--sl-lime-ink)!important;font-weight:650!important;
+  box-shadow:0 8px 24px -10px rgb(163 240 107/.6)!important;
+}
+html:root body :is(.edu-workspace-link,.help-app-link,.api-nav-cta,.bet-header-back):hover {background:var(--sl-lime-3)!important}
+html:root body :is(.edu-workspace-link,.help-app-link,.api-nav-cta,.bet-header-back) :is(svg,.ui-icon) {color:currentColor!important;stroke:currentColor}
+
+/* Kickers, eyebrows, breadcrumbs */
+html:root body :is(.eyebrow,.learn-heading-label,.api-overline,.bet-card-category,.learn-card-kicker,.sg-guide-category) {color:var(--sl-lime)!important;letter-spacing:.08em}
+html:root body :is(.learn-heading-label) {border-color:var(--sl-line-2)!important;background:var(--sl-panel)!important;color:var(--sl-text-2)!important;border-radius:999px!important}
+html:root body :is(.breadcrumbs,.bet-breadcrumbs) {color:var(--sl-muted)!important}
+html:root body :is(.breadcrumbs,.bet-breadcrumbs) a:hover {color:var(--sl-lime)!important}
+
+/* Tabs and filters */
+html:root body :is(.learn-topic-tabs,.sg-category-tabs,.market-category-tabs) :is(a,button) {
+  border:1px solid var(--sl-line-2)!important;border-radius:999px!important;background:var(--sl-panel)!important;color:var(--sl-text-2)!important;
+  transition:border-color .15s,background-color .15s,color .15s;
+}
+html:root body :is(.learn-topic-tabs,.sg-category-tabs,.market-category-tabs) :is(a,button):hover {border-color:var(--sl-line-3)!important;color:var(--sl-text)!important}
+html:root body :is(.learn-topic-tabs,.sg-category-tabs,.market-category-tabs) :is(a,button):is(.is-active,[aria-current],[aria-pressed=true],[aria-selected=true]) {
+  background:var(--sl-text)!important;border-color:var(--sl-text)!important;color:#07090b!important;
+}
+html:root body :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea,.learn-search,.market-search,.sg-directory-search input,.help-search input,.bet-input,.bet-control) {
+  background-color:var(--sl-sunken)!important;border-color:var(--sl-line-2)!important;color:var(--sl-text)!important;
+}
+html:root body :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea):focus {border-color:var(--sl-cyan)!important;box-shadow:0 0 0 3px rgb(67 195 255/.16)!important;outline:none}
+html:root body ::placeholder {color:var(--sl-faint)!important}
+html:root body :is(input[type=checkbox],input[type=radio],input[type=range]) {accent-color:var(--sl-lime)}
+html:root body :is(.catalog-count,.sg-directory-count,.market-result-count) {background:var(--sl-panel-2)!important;border-color:var(--sl-line-2)!important;color:var(--sl-text-2)!important}
+
+/* Cards */
+html:root body :is(.learn-card,.bet-link-card,.sg-guide-card,.help-collection,.market-guide-card,.api-endpoint-row,.bet-tool,.bet-result,.api-console,.bet-faq details,.faq details) {
+  background:linear-gradient(180deg,var(--sl-panel),rgb(14 18 21/.65))!important;border-color:var(--sl-line)!important;
+  transition:border-color .2s,transform .2s,background-color .2s;
+}
+html:root body :is(.learn-card,.bet-link-card,.sg-guide-card,.help-collection,.market-guide-card) {border-radius:18px!important;overflow:hidden}
+html:root body :is(.learn-card,.bet-link-card,.sg-guide-card,.help-collection,.market-guide-card):hover {border-color:var(--sl-line-3)!important;transform:translateY(-2px)}
+html:root body :is(.learn-card-cta,.bet-card-link,.help-card-arrow,.market-card-link) {color:var(--sl-lime)!important}
+html:root body :is(.learn-card-description,.learn-card-reading,.learn-card-footer,.sg-guide-meta,.help-card-meta) {color:var(--sl-muted)!important}
+html:root body :is(.learn-card-topic,.learn-card-status) {border-color:var(--sl-line-2)!important;background:var(--sl-panel-2)!important;color:var(--sl-text-2)!important;border-radius:999px!important}
+html:root body .help-collection:nth-child(odd) .help-collection-icon {--help-icon:var(--sl-lime)}
+html:root body .help-collection:nth-child(even) .help-collection-icon {--help-icon:var(--sl-cyan)}
+html:root body .help-collection-icon {background:rgb(255 255 255/.03);border-radius:12px;box-shadow:inset 0 0 0 1px var(--sl-line-2)}
+
+/* Buttons */
+html:root body :is(.help-button,.api-button,.help-search-submit) {border-radius:999px!important;background:var(--sl-lime)!important;border-color:var(--sl-lime)!important;color:var(--sl-lime-ink)!important;font-weight:650!important}
+html:root body :is(.bet-reset,.api-secondary-link,.help-contact-actions a:not(.help-button)) {border-radius:999px!important;border-color:var(--sl-line-3)!important;color:var(--sl-text)!important}
+html:root body :is(.learn-pagination,.learn-page-numbers) :is(a,button) {border-radius:10px!important;border-color:var(--sl-line-2)!important;background:var(--sl-panel)!important;color:var(--sl-text-2)!important}
+html:root body :is(.learn-pagination,.learn-page-numbers) :is(a,button):is([aria-current],.is-active) {background:var(--sl-lime)!important;border-color:var(--sl-lime)!important;color:var(--sl-lime-ink)!important}
+
+/* Calculators */
+html:root body .bet-result :is(strong,output) {color:var(--sl-text)}
+html:root body :is(.calc-metrics,.calc-summary) :is(strong,output,b) {font-family:var(--sl-display);letter-spacing:-.02em}
+html:root body .calc-metrics .is-positive, html:root body .calc-summary .is-positive {color:var(--sl-lime)!important}
+
+/* Footers */
+html:root body :is(.edu-footer,.bet-footer,.help-footer,.api-footer) {border-top:1px solid var(--sl-line)!important;background:linear-gradient(180deg,transparent,rgb(0 0 0/.35))!important;color:var(--sl-muted)!important}
+html:root body :is(.edu-footer,.bet-footer,.help-footer,.api-footer) a:hover {color:var(--sl-lime)!important}
+html:root body .help-app-link {background:rgb(255 255 255/.03)!important;border-color:var(--sl-line-3)!important;color:var(--sl-text)!important;box-shadow:none!important}
+html:root body .help-app-link:hover {background:rgb(255 255 255/.07)!important}
+
+/* ---- Help center: glow hero, pill search, calmer dividers ---- */
+html:root body.help-page:not(#hc-a):not(#hc-b) {
+  & .help-header {position:relative;isolation:isolate;border-bottom:1px solid var(--sl-line)!important;background:radial-gradient(760px 320px at 18% -10%,rgb(163 240 107/.11),transparent 65%),radial-gradient(560px 280px at 100% 0%,rgb(67 195 255/.05),transparent 70%),transparent!important}
+  & .help-header::after {content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,rgb(163 240 107/.45) 30%,rgb(67 195 255/.25) 70%,transparent);pointer-events:none}
+  & .help-app-link {padding:0 18px!important;min-height:40px!important;border:1px solid var(--sl-line-3)!important;background:rgb(255 255 255/.03)!important;color:var(--sl-text)!important;font-size:13px!important}
+  & .help-button {padding:0 18px!important;min-height:40px!important}
+  & .help-hero h1 {text-shadow:0 0 40px rgb(163 240 107/.14)}
+  & form.help-search {gap:12px!important;min-height:58px!important;padding:0 8px 0 20px!important;border:1px solid var(--sl-line-2)!important;border-radius:999px!important;background:linear-gradient(180deg,rgb(255 255 255/.03),transparent),#0b0e11!important;box-shadow:inset 0 1px 0 rgb(255 255 255/.03),0 20px 50px -30px rgb(163 240 107/.3)!important}
+  & form.help-search:focus-within {border-color:rgb(163 240 107/.5)!important;box-shadow:0 0 0 4px rgb(163 240 107/.08),0 20px 50px -30px rgb(163 240 107/.4)!important}
+  & form.help-search > svg {width:19px!important;height:19px!important;padding:0!important;border:0!important;background:none!important;color:var(--sl-lime)!important}
+  & form.help-search input {min-height:54px!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;font-size:15.5px!important}
+  & form.help-search .help-search-submit {min-height:42px!important;padding:0 22px!important}
+  & .help-search-hint {color:var(--sl-muted)!important;padding-left:20px}
+  & .help-main {padding-top:34px}
+  & .help-section-heading h2 {display:flex;align-items:center;gap:9px}
+  & .help-section-heading h2::before {content:"";width:6px;height:6px;border-radius:50%;background:var(--sl-lime);box-shadow:0 0 10px rgb(163 240 107/.7)}
+  & .help-collection {position:relative;background:linear-gradient(180deg,rgb(255 255 255/.025),transparent 140px),var(--sl-panel)!important;transition:border-color .18s,transform .18s,box-shadow .18s!important}
+  & .help-collection:hover {border-color:rgb(163 240 107/.3)!important;box-shadow:0 18px 44px -28px rgb(163 240 107/.4)!important}
+  & .help-collection .help-collection-icon {--help-icon:var(--sl-lime)!important;background:rgb(163 240 107/.07)!important;box-shadow:inset 0 0 0 1px rgb(163 240 107/.18)!important}
+  & .help-collection:hover .help-collection-icon {box-shadow:inset 0 0 0 1px rgb(163 240 107/.4),0 0 18px -4px rgb(163 240 107/.5)!important}
+  & .help-contact {border:1px solid rgb(163 240 107/.16)!important;border-radius:22px!important;background:radial-gradient(520px 200px at 0% 0%,rgb(163 240 107/.09),transparent 65%),#0e1215!important}
+}
+html:root body :is(.edu-brand,.bet-brand,.help-brand,.api-brand) :is(strong,b) span {display:inline!important;margin:0!important;font:inherit!important}

@@ -65,14 +65,14 @@
 .home-pricing-switch:focus-visible,
 .home-plan-action:focus-visible,
 .home-pricing-dialog-close:focus-visible,
-.home-pricing-dialog .home-button:focus-visible { outline: 2px solid #87d9d0; outline-offset: 3px; }
+.home-pricing-dialog .home-button:focus-visible { outline: 2px solid #b4e0e6; outline-offset: 3px; }
 .home-pricing-cycle em {
   display: inline-block;
   margin-left: 3px;
   padding: 4px 8px;
-  border: 1px solid #26c9ae;
+  border: 1px solid #76cbd2;
   border-radius: 50%;
-  color: #68e6ce;
+  color: #b4e0e6;
   font-size: 12px;
   font-weight: 600;
   transform: rotate(-13deg);
@@ -99,8 +99,16 @@
 }
 .home-plan-name { display: flex; align-items: center; gap: 9px; }
 .home-plan-name h3 { margin: 0; font-size: 18px; font-weight: 750; letter-spacing: -.025em; }
+.home-pricing-grid .home-plan-name { min-height: 78px; }
+.home-plan-variants { display: flex; flex: none; gap: 2px; margin-left: auto; padding: 3px; border: 1px solid #3a4b52; border-radius: 8px; background: #10171c; }
+.home-plan-variants label { position: relative; display: block; cursor: pointer; }
+.home-plan-variants input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.home-plan-variants span { display: block; padding: 6px 8px; border-radius: 5px; color: #9eafb4; font-size: 11px; font-weight: 550; line-height: 1.4; white-space: nowrap; }
+.home-plan-variants input:checked + span { background: #35484e; color: #e9f4f6; }
+.home-plan-variants input:focus-visible + span { outline: 2px solid #76cbd2; outline-offset: 2px; }
+.home-plan-variants label:hover span { color: #f4f7f8; }
 .home-plan-glyph { font-size: 18px; line-height: 1; }
-.home-plan-glyph.is-mint { color: #42e3b8; }
+.home-plan-glyph.is-mint { color: #76cbd2; }
 .home-plan-glyph.is-cyan { color: #51cfff; }
 .home-plan-glyph.is-violet { color: #8c8cfc; }
 .home-plan-price { display: flex; align-items: baseline; margin-top: 21px; white-space: nowrap; }
@@ -111,7 +119,7 @@
 .home-plan h4 { margin: 20px 0 13px; font-size: 13px; font-weight: 740; }
 .home-plan-features { display: grid; align-content: start; gap: 8px; flex: 1; margin: 0; padding: 0; list-style: none; }
 .home-plan-features li { display: flex; gap: 8px; align-items: baseline; color: #f0f2f3; font-size: 13px; font-weight: 570; line-height: 1.35; }
-.home-plan-features li span { display: grid; place-items: center; flex: none; width: 13px; height: 13px; border-radius: 50%; background: #17342f; color: #4bd6bb; font-size: 10px; font-weight: 700; }
+.home-plan-features li span { display: grid; place-items: center; flex: none; width: 13px; height: 13px; border-radius: 50%; background: #465765; color: #76cbd2; font-size: 10px; font-weight: 700; }
 .home-plan-features li.is-excluded { color: #64696d; text-decoration: line-through; }
 .home-plan-features li.is-excluded span { opacity: .38; }
 .home-plan-action {
@@ -129,7 +137,7 @@
   cursor: pointer;
 }
 .home-plan-action:hover { filter: brightness(1.08); }
-.home-plan.is-featured .home-plan-action { background: linear-gradient(105deg, #4bdfca, #8c9af7); }
+.home-plan.is-featured .home-plan-action { background: linear-gradient(105deg, #76cbd2, #8c9af7); }
 .home-pricing-disclaimer { margin: 23px 0 0; color: #898d96; font-size: 13px; line-height: 1.5; text-align: center; }
 .home-pricing-dialog {
   position: fixed;
@@ -161,6 +169,10 @@
   .home-pricing-grid { margin-top: 35px; }
   .home-plan { padding: 24px 21px 21px; }
   .home-plan-features li { font-size: 13px; }
+}
+@media (min-width: 901px) and (max-width: 1050px) {
+  .home-plan.is-featured .home-plan-name { padding-inline: 16px; gap: 6px; }
+  .home-plan.is-featured .home-plan-name h3 { font-size: 17px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .home-pricing-switch span { transition: none; }

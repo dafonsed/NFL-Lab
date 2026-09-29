@@ -1,102 +1,177 @@
-/* The bet inspector deliberately uses the reference's neutral charcoal palette. */
-body :is(#ev-detail.bet-comparison-dialog,#bet-comparison-dialog){position:fixed;inset:0;width:min(calc(100vw - 24px),1800px)!important;max-width:none;height:fit-content;max-height:calc(100dvh - 24px);margin:auto!important;padding:0!important;border:0!important;border-radius:24px!important;background:#20211f!important;color:#e4e5e2;overflow:auto;box-shadow:0 25px 100px #000b;font-family:'Reference Sans',Arial,sans-serif}
+/* The inspector inherits the shared workspace surfaces and accents. */
+body :is(#ev-detail.bet-comparison-dialog,#bet-comparison-dialog){position:fixed;inset:0;width:min(calc(100vw - 24px),1800px)!important;max-width:none;height:fit-content;max-height:calc(100dvh - 24px);margin:auto!important;padding:0!important;border:1px solid var(--border-strong)!important;border-radius:20px!important;background:var(--panel)!important;color:var(--text);overflow:auto;box-shadow:0 25px 100px #000b;font-family:'Reference Sans',Arial,sans-serif}
 body :is(#ev-detail.bet-comparison-dialog,#bet-comparison-dialog)::backdrop{background:#000b;backdrop-filter:blur(3px)}
 body #ev-detail.bet-comparison-dialog :is(.ev-detail-inner,#ev-detail-body){position:relative;padding:0}
 body #ev-detail.bet-comparison-dialog .ev-detail-inner>header{position:absolute;right:8px;top:7px;z-index:2;padding:0;border:0;background:transparent}
 body #ev-detail.bet-comparison-dialog .ev-detail-inner>header>div{position:absolute;clip:rect(0,0,0,0);width:1px;height:1px;overflow:hidden}
-body :is(#ev-detail.bet-comparison-dialog #ev-detail-close,#bet-comparison-dialog>[data-close-comparison]){display:grid!important;place-items:center;width:26px!important;height:26px!important;min-height:0!important;padding:0!important;border:0!important;border-radius:50%!important;background:#2d302c!important;color:#b1b5ae!important;font-size:18px;line-height:1;cursor:pointer;box-shadow:none!important}
+body :is(#ev-detail.bet-comparison-dialog #ev-detail-close,#bet-comparison-dialog>[data-close-comparison]){display:grid!important;place-items:center;width:26px!important;height:26px!important;min-height:0!important;padding:0!important;border:0!important;border-radius:50%!important;background:var(--panel)!important;color:var(--muted)!important;font-size:18px;line-height:1;cursor:pointer;box-shadow:none!important}
 body #bet-comparison-dialog>[data-close-comparison]{position:absolute;right:8px;top:7px;z-index:2}
-body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-card{padding:22px 26px 17px;border:1px solid #393c36;border-radius:24px;background:#20211f;color:#c9cdc6;font-family:'Reference Sans',Arial,sans-serif;font-size:14px;line-height:1.4}
-body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-summary{display:grid;grid-template-columns:32px 1.8fr 1.7fr .8fr .65fr;gap:24px;align-items:center;min-height:86px;padding:2px 13px 23px 0;border-bottom:1px solid #363932}
+body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-card{padding:22px 26px 17px;border:0;border-radius:20px;background:var(--panel);color:var(--secondary);font-family:'Reference Sans',Arial,sans-serif;font-size:14px;line-height:1.4}
+body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-summary{display:grid;grid-template-columns:32px 1.8fr 1.7fr .8fr .65fr;gap:24px;align-items:center;min-height:86px;padding:2px 13px 23px 0;border-bottom:1px solid var(--border-strong)}
 body :is(#ev-detail,#bet-comparison-dialog) .has-offer .bet-comparison-summary{grid-template-columns:32px minmax(190px,2.1fr) minmax(150px,1.9fr) minmax(90px,.9fr) minmax(85px,.9fr) minmax(65px,.65fr) minmax(60px,.55fr)}
-.bet-comparison-ring{width:23px;height:23px;border:1.5px solid #667947;border-radius:50%}
-body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-summary h3{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:0 0 10px;color:#e4e6e0;font-size:16px;font-weight:600;letter-spacing:-.025em;line-height:1.25}
-.bet-comparison-summary h3 small{color:#93998c;font-size:11px;font-weight:400}
-body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-summary p{margin:0;color:#8f948a;font-size:12px;line-height:1.5}
+.bet-comparison-ring{width:23px;height:23px;border:1.5px solid var(--line);border-radius:50%}
+body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-summary h3{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:0 0 10px;color:var(--text);font-size:16px;font-weight:600;letter-spacing:-.025em;line-height:1.25}
+.bet-comparison-summary h3 small{color:var(--muted);font-size:11px;font-weight:400}
+body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-summary p{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
 .bet-comparison-summary p span{margin-left:7px}
 .bet-comparison-summary>div:not(.bet-comparison-market){display:flex;flex-direction:column;gap:7px;min-width:0}
-body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-summary strong{font-weight:500;font-size:15px;color:#d1d4cc;line-height:1.3}
+body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-summary strong{font-weight:500;font-size:15px;color:var(--secondary);line-height:1.3}
 body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-selection strong{font-size:16px}
-.bet-comparison-summary>div>span{color:#93998c;font-size:12px}
+.bet-comparison-summary>div>span{color:var(--muted);font-size:12px}
 .bet-comparison-summary :is(.bet-comparison-offer,.bet-comparison-value)>strong{display:flex;align-items:center;gap:5px}
 .bet-comparison-summary :is(.bet-comparison-offer,.bet-comparison-value) img{width:23px;height:23px;object-fit:contain}
 .bet-comparison-summary b{font-weight:600}
-.bet-comparison-price-arrow{color:#638977;font-size:14px}
-.bet-comparison-value strong>span{font-size:12px;color:#8e9687;white-space:nowrap}
+.bet-comparison-price-arrow{color:var(--positive);font-size:14px}
+.bet-comparison-value strong>span{font-size:12px;color:var(--muted);white-space:nowrap}
 .bet-comparison-summary .bet-comparison-prob{align-items:flex-end;padding-right:4px}
-body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-prob>strong{padding:3px 9px;border-radius:14px;background:#304224;color:#a3db8f;font-size:13px;font-weight:650;white-space:nowrap}
+body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-prob>strong{padding:3px 9px;border:1px solid var(--border-strong);border-radius:14px;background:var(--panel2);color:var(--positive);font-size:13px;font-weight:650;white-space:nowrap}
 .bet-comparison-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:62px;padding:8px 0}
 .bet-comparison-tools{display:flex;align-items:center;gap:7px;flex-shrink:0}
-body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-action{display:grid!important;place-items:center;width:32px!important;height:32px!important;min-width:32px!important;min-height:0!important;padding:7px!important;border:0!important;border-radius:50%!important;background:#30332e!important;color:#9ba394!important;box-shadow:none!important;cursor:pointer}
-body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-action:hover{background:#40463a!important;color:#e0e8d7!important}
-body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-action[aria-pressed=true]{color:#c7e4b6!important;background:#182114!important}
+body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-action{display:grid!important;place-items:center;width:32px!important;height:32px!important;min-width:32px!important;min-height:0!important;padding:7px!important;border:0!important;border-radius:50%!important;background:var(--control)!important;color:var(--muted)!important;box-shadow:none!important;cursor:pointer}
+body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-action:hover{background:var(--surface-hover)!important;color:var(--text)!important}
+body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-action[aria-pressed=true]{color:var(--text)!important;background:var(--ui-selected)!important}
 body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-action:disabled{opacity:.3;cursor:not-allowed}
 .bet-comparison-action svg{width:18px;height:18px}
-.bet-comparison-view-switch{display:flex;align-items:center;padding:2px;border-radius:22px;background:#30332e}
+.bet-comparison-view-switch{display:flex;align-items:center;padding:2px;border-radius:22px;background:var(--control)}
 body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-view-switch .bet-comparison-action{width:28px!important;height:28px!important;min-width:28px!important;padding:5px!important}
-.bet-comparison-boost{display:flex;align-items:center;gap:9px;color:#8d9586;font-size:11px}
+.bet-comparison-boost{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:11px}
 .bet-comparison-boost img{width:22px;height:22px;object-fit:contain}
-body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-boost input{width:112px;height:30px;min-height:0;padding:5px 10px;border:1px solid #373c32!important;border-radius:14px!important;background:#1c1e1a!important;color:#b3bbaa!important;box-shadow:none!important;font-size:11px}
-.bet-comparison-scroll{max-width:100%;overflow:auto;padding-bottom:12px;scrollbar-width:thin;scrollbar-color:#55594f #242720}
-.bet-comparison-scroll::-webkit-scrollbar{height:7px}.bet-comparison-scroll::-webkit-scrollbar-thumb{border-radius:10px;background:#55594f}
+body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-boost input{width:112px;height:30px;min-height:0;padding:5px 10px;border:1px solid var(--border-strong)!important;border-radius:14px!important;background:var(--control)!important;color:var(--secondary)!important;box-shadow:none!important;font-size:11px}
+.bet-comparison-scroll{max-width:100%;overflow:auto;padding-bottom:12px;scrollbar-width:thin;scrollbar-color:var(--border-strong) var(--panel)}
+.bet-comparison-scroll::-webkit-scrollbar{height:7px}.bet-comparison-scroll::-webkit-scrollbar-thumb{border-radius:10px;background:var(--border-strong)}
 body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table{width:100%;min-width:max(720px,calc(var(--comparison-summary-width,145px) + var(--comparison-columns,1) * 96px));table-layout:fixed;border-collapse:separate;border-spacing:0;background:transparent!important;border:0!important;box-shadow:none!important;font-size:13px}
 body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table :is(thead,tbody,tr,th,td){background:transparent!important;border:0!important;box-shadow:none!important}
-body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table th:first-child{width:145px;min-width:145px;position:sticky;left:0;z-index:1;background:#20211f!important;text-align:left}
-body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table thead th{height:43px;padding:5px 9px;color:#8f9788;font-size:10px;font-weight:500;text-transform:uppercase;text-align:center}
+body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table th:first-child{width:145px;min-width:145px;position:sticky;left:0;z-index:1;background:var(--panel)!important;text-align:left}
+body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table thead th{height:43px;padding:5px 9px;border-bottom:1px solid var(--border-strong)!important;color:var(--muted);font-size:10px;font-weight:500;text-transform:uppercase;text-align:center}
 body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table thead th:nth-child(2){width:80px}
 body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table thead th:nth-child(3){width:90px}
 body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table :is(th,td):nth-child(n+4){min-width:90px;width:100px}
-body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table tbody :is(th,td){height:52px;padding:8px 9px;text-align:center;color:#c7cdc0;font-size:13px;font-weight:400;vertical-align:middle}
+body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table tbody :is(th,td){height:52px;padding:8px 9px;text-align:center;color:var(--secondary);font-size:13px;font-weight:400;vertical-align:middle}
 body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table tbody th:first-child{text-align:left}
+body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table tbody tr+tr :is(th,td){border-top:1px solid var(--line)!important}
 body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table tbody td strong{font-weight:450}
-body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table tbody td small{display:block;margin-top:5px;color:#8a9380;font-size:11px}
-body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table .is-exchange{background:#292c25!important}
-body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table :is(.is-best,.bet-comparison-best){color:#a8d486!important}
+body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table tbody td small{display:block;margin-top:5px;color:var(--muted);font-size:11px}
+body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table .is-exchange{background:var(--panel2)!important}
+body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-table :is(.is-best,.bet-comparison-best){color:var(--positive)!important}
 .bet-comparison-best img{display:inline-block;width:22px;height:22px;vertical-align:middle;object-fit:contain;margin-right:5px}
 .bet-comparison-book{position:relative;display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap}
 .bet-comparison-book>img,.bet-comparison-book>.ev-brand-mark{width:26px;height:26px;border-radius:50%;object-fit:contain}
-.bet-comparison-fallback,.bet-comparison-book>.ev-brand-fallback{display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:#12160f;color:#b4cda4;font-size:9px}
-body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-book button{display:grid;place-items:center;width:15px!important;height:22px!important;min-height:0!important;padding:0!important;border:0!important;background:transparent!important;color:#8e9784!important;box-shadow:none!important;cursor:pointer}
+.bet-comparison-fallback,.bet-comparison-book>.ev-brand-fallback{display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:var(--panel);color:var(--secondary);font-size:9px}
+body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-book button{display:grid;place-items:center;width:15px!important;height:22px!important;min-height:0!important;padding:0!important;border:0!important;background:transparent!important;color:var(--muted)!important;box-shadow:none!important;cursor:pointer}
 .bet-comparison-book button svg{width:13px;height:16px}
-.bet-comparison-table em{margin-left:5px;font-style:normal;color:#9dcb82;font-size:12px}
-.bet-comparison-footer{display:flex;align-items:center;gap:15px;flex-wrap:wrap;min-height:18px;color:#798271;font-size:10px}
-.bet-comparison-footer details{margin-left:auto}.bet-comparison-footer summary{cursor:pointer}.bet-comparison-footer p{max-width:850px;color:#a1ac95;font-size:12px}
-.bet-comparison-calculator{display:flex;gap:26px;align-items:center;padding:16px 20px;margin-bottom:15px;border:1px solid #3b4632;border-radius:12px;background:#252b20}
-.bet-comparison-calculator :is(label,div){display:grid;gap:7px;color:#a1ab97;font-size:12px}.bet-comparison-calculator strong{font-size:18px;color:#c8dda9}.bet-comparison-calculator small{max-width:200px;color:#919c86}
-.bet-comparison-calculator input{width:125px;padding:7px;border:1px solid #414d36!important;border-radius:7px;background:#1b2117!important;color:#dce7d1!important}
-.bet-comparison-feedback{margin:0 0 12px;color:#abc28f;font-size:12px}
+.bet-comparison-table em{margin-left:5px;font-style:normal;color:var(--positive);font-size:12px}
+.bet-comparison-footer{display:flex;align-items:center;gap:15px;flex-wrap:wrap;min-height:18px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:10px}
+.bet-comparison-footer details{margin-left:auto}.bet-comparison-footer summary{cursor:pointer}.bet-comparison-footer p{max-width:850px;color:var(--muted);font-size:12px}
+.bet-comparison-calculator{display:flex;gap:26px;align-items:center;padding:16px 20px;margin-bottom:15px;border:1px solid var(--line);border-radius:12px;background:var(--surface-sunken)}
+.bet-comparison-calculator :is(label,div){display:grid;gap:7px;color:var(--muted);font-size:12px}.bet-comparison-calculator strong{font-size:18px;color:var(--secondary)}.bet-comparison-calculator small{max-width:200px;color:var(--muted)}
+.bet-comparison-calculator input{width:125px;padding:7px;border:1px solid var(--border-strong)!important;border-radius:7px;background:var(--control)!important;color:var(--text)!important}
+.bet-comparison-feedback{margin:0 0 12px;color:var(--secondary);font-size:12px}
 body :is(#ev-detail,#bet-comparison-dialog) [hidden]{display:none!important}
 body #bet-comparison-dialog .bet-comparison-ticket-extra{padding:0 26px 20px}body #bet-comparison-dialog .bet-comparison-ticket-extra .bet-ticket-detail{padding:15px 0;background:transparent}
-body :is(#ev-detail,#bet-comparison-dialog,.bet-line-history-dialog) :is(button,input,select,summary,[tabindex]):focus-visible{outline:2px solid #a9c97e!important;outline-offset:3px}
-body dialog.bet-line-history-dialog{position:fixed;inset:0;width:min(calc(100vw - 28px),1240px);max-width:none;max-height:calc(100dvh - 24px);height:fit-content;margin:auto;padding:22px 24px;border:1px solid #3d4335!important;border-radius:20px!important;background:#11130f!important;color:#b9c2af!important;font-family:'Reference Sans',Arial,sans-serif;overflow:auto;box-shadow:0 30px 100px #000b}
+body :is(#ev-detail,#bet-comparison-dialog) :is(button,input,select,summary,[tabindex]):focus-visible{outline:2px solid var(--ui-focus,var(--text))!important;outline-offset:3px}
+/* History shares the EV workspace surfaces and accents, including its chart. */
+body dialog.bet-line-history-dialog{--history-bg:var(--bg);--history-panel:var(--panel);--history-control:var(--control);--history-line:var(--line);--history-ink:var(--text);--history-muted:var(--muted);--history-accent:var(--positive);--history-average:var(--violet);position:fixed;inset:0;width:min(calc(100vw - 28px),1240px);max-width:none;max-height:calc(100dvh - 24px);height:fit-content;margin:auto;padding:22px 24px;border:1px solid var(--history-line)!important;border-radius:20px!important;background:var(--history-bg)!important;color:var(--history-ink)!important;font-family:inherit;overflow:auto;box-shadow:0 30px 100px #000b}
+body dialog.bet-line-history-dialog :is(button,input,select,summary,[tabindex]):focus-visible{outline:2px solid var(--history-accent)!important;outline-offset:3px}
 .bet-line-history-dialog::backdrop{background:#000b;backdrop-filter:blur(4px)}
-body .bet-line-history-dialog .bet-history-close{position:absolute;top:9px;right:10px;display:grid;place-items:center;width:28px;height:28px;min-height:0;padding:5px;border:0!important;border-radius:50%!important;background:#292e23!important;color:#a6b497!important;cursor:pointer}
+body .bet-line-history-dialog .bet-history-close{position:absolute;top:9px;right:10px;display:grid;place-items:center;width:28px;height:28px;min-height:0;padding:5px;border:0!important;border-radius:50%!important;background:var(--history-control)!important;color:var(--history-muted)!important;cursor:pointer}
 .bet-history-close svg{width:18px;height:18px}
-body .bet-line-history-dialog h3{margin:0 30px 30px;text-align:center;font-size:16px;font-weight:550;color:#d0d6c6;line-height:1.3}
+body .bet-line-history-dialog h3{margin:0 30px 30px;text-align:center;font-size:16px;font-weight:550;color:var(--history-ink);line-height:1.3}
 .bet-history-toolbar{display:flex;gap:14px;align-items:center;margin-bottom:16px}
-body .bet-line-history-dialog .bet-history-range select{width:85px;min-height:30px;padding:5px 7px;border:1px solid #343c2b;border-radius:18px;background:#171c12;color:#aebaa0;font-size:11px}
-body .bet-line-history-dialog .bet-history-range .td-choice-trigger{width:85px!important;height:30px!important;min-height:30px!important;padding:5px 9px!important;border:1px solid #343c2b!important;border-radius:18px!important;background:#171c12!important;color:#aebaa0!important;font-size:11px!important;font-weight:400!important;box-shadow:none!important}
+body .bet-line-history-dialog .bet-history-range select{width:85px;min-height:30px;padding:5px 7px;border:1px solid var(--history-line);border-radius:18px;background:var(--history-control);color:var(--history-ink);font-size:11px}
+html body.site-layout.ui-theme.reference-design dialog.bet-line-history-dialog .bet-history-range .ui-choice>.td-choice-trigger{width:112px!important;height:36px!important;min-height:36px!important;padding:7px 12px!important;border:1px solid var(--history-line)!important;border-radius:9px!important;background:var(--history-control)!important;color:var(--history-ink)!important;font-size:12px!important;font-weight:400!important;box-shadow:none!important}
+body.site-layout.ui-theme.reference-design .bet-line-history-dialog .bet-history-range .choice-trigger-label{display:none}
+.bet-line-history-dialog .bet-history-range .choice-trigger-copy strong{white-space:nowrap}
 body .bet-line-history-dialog .bet-history-range .td-choice-trigger svg{width:12px;height:12px}
-.bet-history-books{display:flex;align-items:center;gap:9px;overflow:auto;flex:1;scrollbar-width:thin;padding:4px 2px;scrollbar-color:#414b36 transparent}
-body .bet-line-history-dialog .bet-history-books button{display:grid;place-items:center;flex-shrink:0;width:32px;height:32px;min-height:0;padding:3px;border:1px solid transparent!important;border-radius:50%!important;background:#1c2316!important;color:#a2b38d!important;opacity:.35;cursor:pointer;box-shadow:none!important}
+.bet-history-books{display:flex;align-items:center;gap:9px;overflow:auto;flex:1;scrollbar-width:thin;padding:4px 2px;scrollbar-color:var(--history-line) transparent}
+body .bet-line-history-dialog .bet-history-books button{display:grid;place-items:center;flex-shrink:0;width:32px;height:32px;min-height:0;padding:3px;border:1px solid transparent!important;border-radius:50%!important;background:var(--history-control)!important;color:var(--history-muted)!important;opacity:.35;cursor:pointer;box-shadow:none!important}
 body .bet-line-history-dialog .bet-history-books button[aria-pressed=true]{border-color:var(--series-color)!important;opacity:1}
 .bet-history-books img{width:24px;height:24px;object-fit:contain;border-radius:50%}
-body .bet-line-history-dialog .bet-history-all{min-height:28px;flex-shrink:0;padding:5px 8px;border:1px solid #39432e;border-radius:8px;background:#1b2215;color:#b0c197;font-size:11px;cursor:pointer}
-.bet-history-plot{position:relative;overflow-x:auto;scrollbar-width:thin}
+body dialog.bet-line-history-dialog .bet-history-all{min-height:28px;flex-shrink:0;padding:5px 8px;border:1px solid var(--history-line)!important;border-radius:8px!important;background:var(--history-control)!important;color:var(--history-ink)!important;font-size:11px;cursor:pointer}
+body dialog.bet-line-history-dialog :is(.bet-history-close,.bet-history-all,.bet-history-empty button):hover{background:var(--history-panel)!important;color:var(--history-accent)!important;border-color:var(--history-accent)!important}
+.bet-history-plot{position:relative;overflow-x:auto;scrollbar-width:thin;scrollbar-color:var(--history-line) transparent}
 .bet-history-plot>svg{display:block;width:100%;min-width:650px;height:auto;overflow:visible}
-.bet-history-grid line{stroke:#262c20;stroke-width:.7}.bet-history-grid text{fill:#7d8970;font-size:11px;font-family:inherit}
+.bet-history-grid line{stroke:var(--history-line);stroke-width:.7}.bet-history-grid text{fill:var(--history-muted);font-size:11px;font-family:inherit}
 .bet-history-trace path{fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
 .bet-history-trace circle,.bet-history-trace rect{fill:currentColor;stroke:none}.bet-history-trace circle.bet-history-hit{fill:transparent;cursor:crosshair}
-.bet-history-trace .bet-history-end{fill:#17210e;font-size:11px;font-weight:600}
-.bet-history-tooltip{position:absolute;pointer-events:none;z-index:3;display:grid;gap:5px;min-width:170px;padding:12px;border:1px solid #424d35;border-radius:9px;background:#242d1df5;box-shadow:0 10px 25px #0006;color:#c0cdb0;font-size:12px}
-.bet-history-tooltip[hidden]{display:none}.bet-history-tooltip small,.bet-history-tooltip>span{color:#8d9b7b;font-size:10px}.bet-history-tooltip strong{display:flex;justify-content:space-between;gap:20px}.bet-history-tooltip b{color:#dab57d}
-.bet-history-caption{display:flex;justify-content:space-between;gap:20px;color:#859576;font-size:11px;margin:14px 0}
-.bet-history-empty{display:grid;place-content:center;min-height:350px;text-align:center;color:#8b997c}.bet-history-empty strong{font-size:18px;color:#c0cfac}.bet-history-empty p{max-width:440px;font-size:13px;line-height:1.6}
-body .bet-line-history-dialog .bet-history-empty button{justify-self:center;padding:8px 15px;border:1px solid #4d5e3a;border-radius:8px;background:#26321d;color:#bed79f;cursor:pointer}
-.bet-history-records{color:#849675;font-size:11px}.bet-history-records summary{cursor:pointer}.bet-history-records>div{overflow:auto;max-height:220px;margin-top:10px}.bet-history-records table{width:100%;border-collapse:collapse;font-size:11px}.bet-history-records :is(th,td){padding:7px;text-align:left;border-bottom:1px solid #28351e;background:#151d10!important;color:#98ad85}
+.bet-history-trace .bet-history-end{fill:var(--history-bg);font-size:11px;font-weight:600}
+.bet-history-tooltip{position:absolute;pointer-events:none;z-index:3;display:grid;gap:5px;min-width:170px;padding:12px;border:1px solid var(--history-line);border-radius:9px;background:var(--history-control);box-shadow:0 10px 25px #0006;color:var(--history-ink);font-size:12px}
+.bet-history-tooltip[hidden]{display:none}.bet-history-tooltip small,.bet-history-tooltip>span{color:var(--history-muted);font-size:10px}.bet-history-tooltip strong{display:flex;justify-content:space-between;gap:20px}.bet-history-tooltip b{color:var(--history-accent)}
+.bet-history-caption{display:flex;justify-content:space-between;gap:20px;color:var(--history-muted);font-size:11px;margin:14px 0}
+.bet-history-empty{display:grid;place-content:center;min-height:350px;text-align:center;color:var(--history-muted)}.bet-history-empty strong{font-size:18px;color:var(--history-ink)}.bet-history-empty p{max-width:440px;font-size:13px;line-height:1.6}
+body .bet-line-history-dialog .bet-history-empty button{justify-self:center;padding:8px 15px;border:1px solid var(--history-line);border-radius:8px;background:var(--history-control);color:var(--history-accent);cursor:pointer}
+.bet-history-records{color:var(--history-muted);font-size:11px}.bet-history-records summary{cursor:pointer}.bet-history-records>div{overflow:auto;max-height:220px;margin-top:10px}.bet-history-records table{width:100%;border-collapse:collapse;font-size:11px}.bet-history-records :is(th,td){padding:7px;text-align:left;border-bottom:1px solid var(--history-line);background:var(--history-panel)!important;color:var(--history-muted)}.bet-history-records th{color:var(--history-ink)}
 @media(max-width:1000px){body :is(#ev-detail,#bet-comparison-dialog) .has-offer .bet-comparison-summary{grid-template-columns:26px 2fr 1.4fr 1fr;gap:16px}.bet-comparison-offer{grid-column:4}.bet-comparison-value{grid-column:2}.bet-comparison-stake{grid-column:3}.bet-comparison-prob{grid-column:4}.bet-comparison-tools{gap:5px}.bet-comparison-summary h3 small{display:none}}
 @media(max-width:620px){body :is(#ev-detail.bet-comparison-dialog,#bet-comparison-dialog){width:calc(100vw - 12px)!important;max-height:calc(100dvh - 12px);border-radius:17px!important}body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-card{padding:22px 14px 14px;border-radius:17px}body :is(#ev-detail,#bet-comparison-dialog) :is(.bet-comparison-summary,.has-offer .bet-comparison-summary){grid-template-columns:20px 1fr 1fr;gap:15px 12px;padding-right:12px}.bet-comparison-ring{width:18px;height:18px}.bet-comparison-market{grid-column:2/4}.bet-comparison-selection{grid-column:2}.bet-comparison-offer{grid-column:3}.bet-comparison-value{grid-column:2}.bet-comparison-stake{grid-column:3}.bet-comparison-prob{grid-column:3}body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-summary h3{font-size:15px}body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-summary strong{font-size:14px}.bet-comparison-toolbar{flex-wrap:wrap;gap:9px;padding:12px 0}.bet-comparison-tools{gap:4px;max-width:100%;overflow:auto;padding-bottom:4px}.bet-comparison-action{flex-shrink:0}.bet-comparison-footer details{margin-left:0}.bet-comparison-calculator{flex-wrap:wrap;gap:18px}.bet-history-toolbar{gap:8px}.bet-history-caption{flex-direction:column;gap:7px}body dialog.bet-line-history-dialog{width:calc(100vw - 12px);padding:20px 12px;border-radius:15px}.bet-history-plot>svg{min-width:650px}.bet-history-books{gap:6px}.bet-history-records{margin-top:16px}}
-.bet-history-average path{fill:none;stroke:#b4b581;stroke-width:2;stroke-dasharray:5 5}.bet-history-average-key{display:inline-block;width:20px;border-top:2px dashed #b4b581;margin-right:5px;vertical-align:middle}
-body dialog.bet-line-history-dialog .bet-history-all{background:#1b2215!important;border:1px solid #39432e!important;color:#b0c197!important;border-radius:8px!important}
+.bet-history-average path{fill:none;stroke:var(--history-average);stroke-width:2;stroke-dasharray:5 5}.bet-history-average-key{display:inline-block;width:20px;border-top:2px dashed var(--history-average);margin-right:5px;vertical-align:middle}
 
 body :is(#ev-detail,#bet-comparison-dialog) .bet-comparison-prob.is-negative>strong{background:#472b28;color:#f0b3a9}
+
+body dialog.bet-line-history-dialog.is-fullscreen{inset:0;width:100%;max-width:100%;height:100dvh;max-height:100dvh;margin:0;border-radius:0!important;padding:max(16px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+body .bet-line-history-dialog .bet-history-fullscreen{position:relative;min-height:44px;padding:8px 12px;margin-bottom:12px;border:1px solid var(--history-line);border-radius:8px;background:var(--history-control);color:var(--history-ink);font-size:13px}
+body .bet-line-history-dialog .bet-history-close{width:44px;height:44px;top:12px;right:12px}
+body .bet-line-history-dialog h3{margin:0 0 18px;text-align:left}
+body .bet-line-history-dialog .bet-history-plot>svg{width:100%;min-width:0}
+body .bet-line-history-dialog .bet-history-caption{flex-wrap:wrap}
+@media(max-width:620px){
+  body .bet-line-history-dialog .bet-history-toolbar{flex-wrap:wrap;gap:8px}
+  body .bet-line-history-dialog .bet-history-books{order:3;flex-basis:100%;padding-bottom:8px}
+  body .bet-line-history-dialog .bet-history-books button{width:44px;height:44px}
+  body .bet-line-history-dialog .bet-history-all{min-height:44px;font-size:13px}
+  body .bet-line-history-dialog .bet-history-grid text{font-size:11px}
+  body .bet-line-history-dialog .bet-history-tooltip{max-width:calc(100% - 16px);min-width:150px;overflow-wrap:anywhere}
+}
+
+/* Inline history shares the comparison card, with readable book names and recorded values. */
+body :is(.bet-comparison-history,.bet-line-history-dialog) .bet-history-view{
+  --history-bg:var(--panel);--history-panel:var(--panel);--history-control:var(--control);
+  --history-line:var(--line);--history-ink:var(--text);--history-muted:var(--muted);
+  --history-accent:var(--accent);--history-average:var(--violet);min-width:0
+}
+body .bet-comparison-history[hidden]{display:none!important}
+body .bet-comparison-history{min-width:0;padding:10px 0 4px}
+body :is(.bet-comparison-history,.bet-line-history-dialog) .bet-history-view>h3{margin:0 0 12px!important;text-align:left;font-size:14px!important;font-weight:600!important;color:var(--text)!important}
+body :is(.bet-comparison-history,.bet-line-history-dialog) .bet-history-toolbar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:start;gap:12px;margin-bottom:16px}
+body :is(.bet-comparison-history,.bet-line-history-dialog) .bet-history-range select{width:100px;min-height:38px;padding:7px 10px;border:1px solid var(--border-strong);border-radius:8px;background:var(--control);color:var(--text);font-size:12px}
+body :is(.bet-comparison-history,.bet-line-history-dialog) .bet-history-books{display:flex;flex-wrap:wrap;gap:6px;min-width:0;padding:0;overflow:visible}
+body :is(.bet-comparison-history,.bet-line-history-dialog) .bet-history-books button{display:inline-grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:7px;width:auto;min-width:130px;max-width:210px;min-height:38px;height:auto;padding:6px 9px;border:1px solid var(--border-strong)!important;border-radius:8px!important;background:var(--control)!important;color:var(--text)!important;font-size:11px;opacity:.5;cursor:pointer;box-shadow:none!important}
+body :is(.bet-comparison-history,.bet-line-history-dialog) .bet-history-books button[aria-pressed=true]{border-color:var(--series-color)!important;opacity:1}
+.bet-history-book-mark{display:grid;place-items:center;width:24px;height:24px;overflow:hidden}
+.bet-history-book-mark :is(img,.ev-brand-mark,.ev-brand-fallback){width:24px;height:24px;max-width:24px;max-height:24px;object-fit:contain}
+.bet-history-book-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+.bet-history-book-latest{color:var(--series-color);font-size:12px;font-variant-numeric:tabular-nums}
+body :is(.bet-comparison-history,.bet-line-history-dialog) .bet-history-all{min-height:38px;padding:7px 10px;border:1px solid var(--border-strong)!important;border-radius:8px!important;background:var(--control)!important;color:var(--text)!important;font-size:11px;cursor:pointer}
+body .bet-comparison-history .bet-history-plot{border:1px solid var(--line);border-radius:10px;background:var(--surface-sunken);padding:8px 4px 0}
+body .bet-comparison-history .bet-history-plot>svg{min-width:0;max-height:340px}
+body .bet-comparison-history .bet-history-empty{min-height:180px;padding:16px}
+body .bet-comparison-history .bet-history-empty strong{font-size:15px}
+body .bet-comparison-history .bet-history-empty p{font-size:12px}
+body .bet-comparison-history .bet-history-empty button{justify-self:center;padding:8px 12px;border:1px solid var(--border-strong);border-radius:8px;background:var(--control);color:var(--accent)}
+body :is(.bet-comparison-history,.bet-line-history-dialog) .bet-history-fallback{margin:0 0 12px;color:var(--muted);font-size:12px;line-height:1.4}
+body .bet-comparison-history .bet-history-caption{align-items:start;gap:12px;font-size:11px;line-height:1.4}
+body .bet-comparison-history :is(button,select,[tabindex]):focus-visible{outline:2px solid var(--ui-focus)!important;outline-offset:3px}
+html body.ev-page.site-layout.ui-theme.reference-design .bet-comparison-history .bet-history-grid text{fill:var(--muted)!important;font-family:inherit;font-size:11px}
+html body.ev-page.site-layout.ui-theme.reference-design .bet-comparison-history .bet-history-grid line{stroke:var(--line)!important;stroke-width:.8}
+html body.ev-page.site-layout.ui-theme.reference-design .bet-comparison-history .bet-history-books button{display:inline-grid!important;grid-template-columns:24px minmax(0,1fr) auto!important;gap:8px!important;padding:6px 10px!important;border-radius:9px!important;font-size:11px!important;line-height:1.3!important}
+html body.ev-page.site-layout.ui-theme.reference-design .bet-comparison-history .bet-history-book-latest{margin-left:3px;color:var(--series-color)!important;font-size:12px!important}
+@media(max-width:620px){
+  body :is(.bet-comparison-history,.bet-line-history-dialog) .bet-history-toolbar{grid-template-columns:minmax(0,1fr) auto;gap:10px}
+  body :is(.bet-comparison-history,.bet-line-history-dialog) .bet-history-books{grid-column:1/-1;grid-row:2}
+  body :is(.bet-comparison-history,.bet-line-history-dialog) .bet-history-books button{flex:1 1 140px;max-width:none}
+  body .bet-comparison-history .bet-history-caption{flex-direction:column;gap:6px}
+}
+
+.bet-history-inline-expand{display:block;margin:8px 0 12px auto;min-height:44px;padding:8px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--text)}
+
+@media(max-width:800px) {
+  body .bet-comparison-history .bet-history-plot>svg {width:100%;min-width:0;max-height:none}
+  body :is(.bet-comparison-history,.bet-line-history-dialog) :is(.bet-history-books button,.bet-history-all,.bet-history-range select) {min-height:44px}
+  body :is(.bet-comparison-history,.bet-line-history-dialog) .bet-history-range select {font-size:16px}
+  body :is(.bet-comparison-history,.bet-line-history-dialog) .bet-history-records summary {display:flex;align-items:center;min-height:44px}
+}
+
+@media(max-height:500px) and (orientation:landscape) {
+  body .bet-line-history-dialog .bet-history-books {flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;padding-bottom:4px}
+  body .bet-line-history-dialog .bet-history-books button {min-width:130px;flex-shrink:0}
+  body .bet-line-history-dialog .bet-history-toolbar {display:grid;grid-template-columns:auto minmax(0,1fr) auto}
+  body .bet-line-history-dialog .bet-history-books {grid-column:auto;grid-row:auto}
+}

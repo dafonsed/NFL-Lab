@@ -1,0 +1,160 @@
+/* Bet opportunities share a selection-first card; detailed comparisons stay inside. */
+html body.has-dashboard-sidebar.ev-page.reference-design {
+  & .wager-grid {display:grid;grid-template-columns:minmax(0,1fr);gap:16px;min-width:0;align-items:start}
+  & .wager-grid>.bet-inline-mount {grid-column:1/-1;min-width:0}
+  & .wager-card {container-type:inline-size;display:flex;flex-direction:column;gap:20px;min-width:0;position:relative;margin:0;padding:26px;border:1px solid var(--line);border-radius:26px;background:var(--panel);color:var(--text);box-shadow:none;font-family:var(--font);font-variant-numeric:tabular-nums;text-align:left}
+  & .wager-card:has(.wager-more[open]) {z-index:4}
+  & .wager-card-head {display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;min-width:0;padding:0;margin:0;border:0;background:none}
+  & .wager-heading {display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;min-width:0;flex:1}
+  & .wager-metric {display:flex;flex-direction:column;gap:2px;flex:none}
+  & .wager-metric strong {color:var(--accent);font-size:25px;font-weight:600;line-height:1.12;letter-spacing:-.045em;white-space:nowrap}
+  & .wager-card.is-negative .wager-metric strong {color:var(--red)}
+  & .wager-metric small {font-size:10px;color:var(--muted);line-height:1.2;font-weight:450}
+  & .wager-market {font-size:16px;line-height:1.3;font-weight:550;color:var(--secondary);overflow-wrap:anywhere}
+  & .wager-quote {display:inline-flex;align-items:center;justify-content:flex-end;gap:9px;flex:none;min-width:0;max-width:100%;height:auto!important;min-height:40px!important;padding:0!important;margin:0;border:0!important;border-radius:10px!important;background:transparent!important;box-shadow:none!important;color:var(--text)!important;font:inherit;letter-spacing:0}
+  & button.wager-quote {cursor:pointer}
+  & .wager-quote strong {font-size:24px;font-weight:550;line-height:1.2;white-space:nowrap;letter-spacing:-.035em}
+  & .wager-quote>svg {width:17px;height:17px;fill:none;stroke:var(--accent);stroke-width:1.8;flex:none}
+  & .wager-book-mark {display:inline-grid;place-items:center;flex:0 0 38px;width:38px;height:38px;overflow:hidden;border-radius:50%;background:var(--surface-sunken);color:var(--secondary);font-size:11px}
+  & .wager-book-mark img {display:block;width:29px;height:29px;max-width:29px;max-height:29px;object-fit:contain;border:0;border-radius:0;margin:0}
+  & .wager-selection {display:block;width:100%;height:auto!important;min-height:0!important;padding:0!important;margin:0;border:0!important;border-radius:4px!important;background:transparent!important;box-shadow:none!important;color:var(--text)!important;font-family:inherit;font-size:21px;font-weight:550;letter-spacing:-.025em;line-height:1.35;text-align:left;white-space:normal;overflow-wrap:anywhere}
+  & button.wager-selection {cursor:pointer}
+  & button:is(.wager-quote,.wager-selection):hover {color:var(--bright)!important}
+  & .wager-facts {display:flex;align-items:center;flex-wrap:wrap;gap:8px 22px;margin:0;padding:0}
+  & .wager-facts>div {display:flex;align-items:baseline;gap:7px}
+  & .wager-facts dt {font-size:11px;color:var(--muted);font-weight:400}
+  & .wager-facts dd {font-size:13px;font-weight:550;color:var(--secondary);margin:0}
+  & .wager-card-foot {display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-top:auto;padding:0;border:0;background:none}
+  & .wager-context {min-width:0;flex:1 1 160px;display:grid;gap:7px}
+  & .wager-event {display:flex;align-items:center;flex-wrap:wrap;gap:6px;color:var(--secondary);font-size:13px;font-weight:550;line-height:1.4;overflow-wrap:anywhere}
+  & .wager-event .team-mark {width:22px;height:22px;min-width:22px;flex:0 0 22px;background:none}
+  & .wager-event .team-mark img {width:22px;height:22px;max-width:22px;max-height:22px;object-fit:contain}
+  & .wager-event .team-mark>span {font-size:7px}
+  & .wager-meta {display:flex;align-items:center;flex-wrap:wrap;gap:5px 8px;color:var(--muted);font-size:11px;line-height:1.4}
+  & .wager-meta>.league-mark {display:grid;place-items:center;width:16px;height:16px;flex:0 0 16px;margin:0;background:none}
+  & .wager-meta>.league-mark :is(img,svg) {width:16px;height:16px;max-width:16px;max-height:16px;object-fit:contain}
+  & .wager-meta>span:last-child:not(:first-child)::before {content:'·';margin-right:8px;color:var(--muted)}
+  & .wager-card-actions {display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+  & .wager-reference {display:inline-flex;align-items:center;gap:7px;min-height:38px;max-width:100%;padding:4px 11px 4px 7px;border:1px solid var(--border-strong);border-radius:999px;white-space:nowrap;background:transparent;color:var(--secondary)}
+  & .wager-reference .wager-book-mark {width:26px;height:26px;flex-basis:26px}
+  & .wager-reference .wager-book-mark img {width:22px;height:22px;max-width:22px;max-height:22px}
+  & .wager-reference small {font-size:10px;color:var(--muted);max-width:150px;overflow:hidden;text-overflow:ellipsis}
+  & .wager-reference strong {font-size:17px;font-weight:500;letter-spacing:-.03em}
+  & :is(.wager-icon-action,.wager-more>summary) {display:inline-flex;align-items:center;justify-content:center;width:40px;min-width:40px;height:40px;min-height:40px;padding:0!important;border:1px solid var(--line)!important;border-radius:50%!important;background:var(--panel2)!important;color:var(--secondary)!important;box-shadow:none!important;font:500 20px/1 var(--font);cursor:pointer;list-style:none}
+  & .wager-icon-action svg {width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6}
+  & .wager-more>summary::-webkit-details-marker {display:none}
+  & .wager-more {position:relative}
+  & .wager-more>div {display:grid;gap:3px;position:absolute;right:0;bottom:calc(100% + 8px);width:185px;z-index:12;border:1px solid var(--border-strong);border-radius:12px;padding:6px;background:var(--panel2);box-shadow:0 12px 28px #0006}
+  & .wager-more:not([open])>div {display:none}
+  & .wager-more>div>button {width:100%;min-height:38px!important;padding:8px 10px!important;border:0!important;border-radius:7px!important;background:transparent!important;color:var(--text)!important;text-align:left;justify-content:flex-start;box-shadow:none!important;font-size:12px}
+  & .wager-more>div>button:hover {background:var(--surface-hover)!important}
+  & .wager-action {display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px!important;height:auto!important;padding:8px 13px!important;border:1px solid var(--border-strong)!important;border-radius:999px!important;background:var(--panel2)!important;color:var(--secondary)!important;font:500 12px/1.3 var(--font);box-shadow:none!important;white-space:normal;cursor:pointer}
+  & .wager-card-actions>button:not(.wager-icon-action) {min-height:36px!important;height:auto!important;padding:8px 13px!important;border:1px solid var(--border-strong)!important;border-radius:999px!important;background:var(--panel2)!important;color:var(--secondary)!important;font-size:12px;box-shadow:none!important}
+  & :is(.wager-action,.wager-icon-action,.wager-more>summary):hover {background:var(--surface-hover)!important;color:var(--text)!important}
+  & .wager-card :is(button,summary):focus-visible {outline:2px solid var(--ui-focus)!important;outline-offset:4px}
+  & .wager-body {min-width:0}
+  & .wager-pair-leg {display:flex;align-items:center;justify-content:space-between;gap:14px;padding-top:16px;border-top:1px solid var(--line)}
+  & .wager-pair-copy {display:grid;gap:5px;min-width:0}
+  & button.wager-pair-copy {height:auto!important;min-height:0!important;padding:0!important;border:0!important;border-radius:4px!important;box-shadow:none!important;background:transparent!important;color:var(--text)!important;text-align:left;cursor:pointer}
+  & .wager-pair-copy strong {font-size:16px;line-height:1.4;font-weight:550;overflow-wrap:anywhere}
+  & .wager-pair-copy small {font-size:11px;color:var(--muted)}
+  & .wager-pair-stake {font-size:13px;font-weight:550;white-space:nowrap;color:var(--secondary)}
+  & .wager-pair-stake :is(small,strong) {display:block;text-align:right}
+  & .wager-pair-stake small {font-size:10px;color:var(--muted);font-weight:400;margin-bottom:5px}
+  & .tool-two-column>.wager-grid {grid-template-columns:minmax(0,1fr)}
+  & .wager-results-bar {display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 0 16px;color:var(--muted);font-size:12px}
+  & .wager-results-bar strong {color:var(--secondary);font-weight:500}
+  & .wager-sort {display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+  & .wager-sort button {min-height:32px!important;padding:5px 10px!important;border:1px solid transparent!important;border-radius:7px!important;background:transparent!important;color:var(--muted)!important;font-size:11px;box-shadow:none!important}
+  & .wager-sort button[aria-current=true] {background:var(--panel2)!important;color:var(--text)!important;border-color:var(--line)!important}
+  & .wager-grid .bet-inline-mount {scroll-margin-top:20px}
+}
+@container (max-width:380px) {
+  .wager-card .wager-card-head {gap:10px;flex-wrap:wrap}
+  .wager-card .wager-heading {flex-basis:160px}
+  .wager-card .wager-market {font-size:14px}
+  .wager-card .wager-metric strong {font-size:22px}
+  .wager-card .wager-quote strong {font-size:22px}
+}
+@media(max-width:1000px) {
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-grid {grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:540px) {
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-card {padding:20px;gap:18px;border-radius:22px}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-selection {font-size:20px}
+}
+
+/* Helper-rendered cards use a research row; hand-built DFS cards retain their layout. */
+html body.has-dashboard-sidebar.ev-page.reference-design {
+  & .wager-card.wager-research-card {container-name:wager-research;gap:16px;padding:21px 23px;border-radius:20px}
+  & .wager-research-card>.wager-card-head {display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1.25fr) auto auto;align-items:center;gap:18px 26px}
+  & .wager-research-card>.wager-card-head:not(:has(>.wager-quote)),
+  & .wager-research-card>.wager-card-head:not(:has(>.wager-metric)) {grid-template-columns:minmax(0,1.05fr) minmax(0,1.25fr) auto}
+  & .wager-research-card>.wager-card-head:not(:has(>.wager-quote,>.wager-metric)) {grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)}
+  & .wager-research-card .wager-heading {display:grid;align-content:start;gap:8px}
+  & .wager-research-card .wager-market-line {display:flex;align-items:center;flex-wrap:wrap;gap:7px 10px;min-width:0}
+  & .wager-research-card .wager-market {color:var(--text);font-size:15px;font-weight:550;line-height:1.35}
+  & .wager-research-card .wager-league {display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-size:10px;font-weight:450;line-height:1.3}
+  & .wager-research-card .wager-league>.league-mark {display:grid;place-items:center;width:16px;height:16px;flex:none;background:none}
+  & .wager-research-card .wager-league>.league-mark :is(img,svg) {width:16px;height:16px;max-width:16px;max-height:16px;object-fit:contain}
+  & .wager-research-card .wager-context {display:grid;gap:4px;min-width:0;align-content:start}
+  & .wager-research-card .wager-context:empty {display:none}
+  & .wager-research-card .wager-event {font-size:12px;font-weight:450;gap:5px;line-height:1.4}
+  & .wager-research-card .wager-event .team-mark {width:17px;height:17px;min-width:17px;flex-basis:17px}
+  & .wager-research-card .wager-event .team-mark img {width:17px;height:17px;max-width:17px;max-height:17px}
+  & .wager-research-card .wager-meta {font-size:10px;line-height:1.4}
+  & .wager-research-card .wager-selection-group {display:grid;gap:6px;min-width:0;align-content:center}
+  & .wager-research-card :is(.wager-field-label,.wager-quote-label,.wager-metric small) {font-size:10px;font-weight:450;line-height:1.35;color:var(--muted);letter-spacing:0}
+  & .wager-research-card .wager-selection {display:block;min-height:0!important;font-size:18px;font-weight:550;line-height:1.4;letter-spacing:-.025em}
+  & .wager-research-card>.wager-card-head>.wager-quote {display:grid;grid-template-columns:auto auto auto;align-content:center;justify-content:start;align-items:center;gap:5px 7px;max-width:160px;min-height:0!important;text-align:left}
+  & .wager-research-card>.wager-card-head>.wager-quote::after {content:none}
+  & .wager-research-card>.wager-card-head>.wager-quote>.wager-quote-label {grid-column:1/-1;max-width:160px;text-align:left;white-space:normal;overflow-wrap:anywhere}
+  & .wager-research-card>.wager-card-head>.wager-quote>.wager-book-mark {width:27px;height:27px;flex-basis:27px}
+  & .wager-research-card>.wager-card-head>.wager-quote>.wager-book-mark img {width:23px;height:23px;max-width:23px;max-height:23px}
+  & .wager-research-card>.wager-card-head>.wager-quote strong {font-size:21px;font-weight:550}
+  & .wager-research-card>.wager-card-head>.wager-quote>svg {width:14px;height:14px}
+  & .wager-research-card>.wager-card-head>.wager-metric {display:grid;justify-items:end;align-content:center;gap:6px;max-width:150px;text-align:right}
+  & .wager-research-card>.wager-card-head>.wager-metric small {order:-1}
+  & .wager-research-card>.wager-card-head>.wager-metric strong {display:block;max-width:100%;padding:6px 10px;border:1px solid color-mix(in srgb,var(--accent) 22%,var(--line));border-radius:8px;background:var(--accent-wash);font-size:17px;font-weight:550;line-height:1.3;letter-spacing:-.025em;white-space:normal;overflow-wrap:anywhere}
+  & .wager-research-card.is-negative>.wager-card-head>.wager-metric strong {background:color-mix(in srgb,var(--red) 8%,transparent);border-color:color-mix(in srgb,var(--red) 22%,var(--line))}
+  & .wager-research-card>.wager-card-foot {align-items:center;gap:10px 22px;padding-top:13px;margin:0;border-top:1px solid var(--line)}
+  & .wager-research-card>.wager-card-foot>.wager-facts {flex:1 1 auto;gap:6px 20px}
+  & .wager-research-card>.wager-card-foot>.wager-card-actions {width:auto;margin-left:auto;justify-content:flex-end;gap:8px}
+  & .wager-research-card .wager-facts dt {font-size:10px}
+  & .wager-research-card .wager-facts dd {font-size:12px}
+  & .wager-research-card .wager-reference {min-height:32px;padding:3px 9px 3px 5px;border-color:var(--line);border-radius:8px}
+  & .wager-research-card .wager-reference strong {font-size:15px}
+}
+@container wager-research (max-width:640px) {
+  html body.has-dashboard-sidebar.ev-page.reference-design {
+    & .wager-research-card>.wager-card-head,
+    & .wager-research-card>.wager-card-head:not(:has(>.wager-quote)),
+    & .wager-research-card>.wager-card-head:not(:has(>.wager-metric)),
+    & .wager-research-card>.wager-card-head:not(:has(>.wager-quote,>.wager-metric)) {grid-template-columns:minmax(0,1fr) auto;gap:17px 18px}
+    & .wager-research-card>.wager-card-head>.wager-heading {grid-column:1;grid-row:1}
+    & .wager-research-card>.wager-card-head>.wager-metric {grid-column:2;grid-row:1;max-width:120px}
+    & .wager-research-card>.wager-card-head>.wager-selection-group {grid-column:1;grid-row:2}
+    & .wager-research-card>.wager-card-head>.wager-quote {grid-column:2;grid-row:2;justify-self:end;max-width:125px}
+    & .wager-research-card>.wager-card-head:not(:has(>.wager-metric))>.wager-heading {grid-column:1/-1}
+    & .wager-research-card>.wager-card-head:not(:has(>.wager-quote))>.wager-selection-group {grid-column:1/-1}
+    & .wager-research-card .wager-selection {font-size:17px}
+    & .wager-research-card>.wager-card-foot {align-items:flex-start}
+    & .wager-research-card>.wager-card-foot>.wager-facts {flex-basis:100%;gap:6px 16px}
+  }
+}
+@container wager-research (max-width:340px) {
+  html body.has-dashboard-sidebar.ev-page.reference-design {
+    & .wager-research-card>.wager-card-head {column-gap:12px}
+    & .wager-research-card .wager-market {font-size:13px}
+    & .wager-research-card .wager-selection {font-size:16px}
+    & .wager-research-card>.wager-card-head>.wager-metric {max-width:98px}
+    & .wager-research-card>.wager-card-head>.wager-metric strong {font-size:16px;padding:5px 8px}
+    & .wager-research-card>.wager-card-head>.wager-quote {max-width:110px;column-gap:5px}
+    & .wager-research-card>.wager-card-head>.wager-quote strong {font-size:19px}
+  }
+}
+@media(max-width:800px) {
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-card.wager-research-card {padding:17px;gap:14px;border-radius:18px}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-research-card>.wager-card-head>.wager-quote,
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-research-card button.wager-selection {min-height:44px!important}
+}

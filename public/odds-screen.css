@@ -1,136 +1,258 @@
-/* Compact sportsbook matrix: event bands, paired outcomes, quiet book columns. */
-@font-face{font-family:Odds Outfit;src:url('/assets/fonts/OutfitVariable.ttf') format('truetype');font-weight:100 900;font-display:swap}
-body.ev-page[data-ev-screen="odds"]{--os-panel:#141c20;--os-canvas:#0d1316;--os-line:#293439;--os-muted:#96a3aa;--os-ink:#e6edef;--os-best:#38d39c}
+/* Odds screen: a dense sportsbook odds grid. One table, one tbody per game, one row per selection,
+   one column per visible sportsbook. The time and selection columns and the header stay sticky
+   inside the grid's own scroller. Filter chips are styled centrally in ev-controls.css. */
+body.ev-page[data-ev-screen="odds"]{--os-panel:var(--panel);--os-canvas:var(--bg);--os-control:var(--control);--os-inset:var(--surface-sunken);--os-line:var(--line);--os-rule:var(--line);--os-muted:var(--muted);--os-ink:var(--text);--os-best:var(--accent)}
 body.ev-page[data-ev-screen="odds"] :is(.ev-bookbar,.ev-control-grid,#ev-odds-tabs,.ev-header){display:none!important}
 body.ev-page[data-ev-screen="odds"] .ev-shell{display:block;margin:0}
 body.ev-page[data-ev-screen="odds"] .ev-main{min-width:0}
 body.ev-page[data-ev-screen="odds"] #ev-view{padding:0;border:0;background:transparent}
-body.ev-page[data-ev-screen="odds"] .os-screen{font-family:Odds Outfit,var(--font),sans-serif;color:var(--os-ink);padding-top:38px;font-size:14px}
-body.ev-page[data-ev-screen="odds"] .os-screen button{font-family:inherit;cursor:pointer;box-shadow:none;letter-spacing:0;text-transform:none}
-body.ev-page[data-ev-screen="odds"] .os-screen svg{flex:none;width:18px;height:18px}
-body.ev-page[data-ev-screen="odds"] .os-screen :is(button,input,[tabindex]):focus-visible{outline:2px solid #58c9d7!important;outline-offset:3px}
-body.ev-page[data-ev-screen="odds"] .os-toolbar{display:flex;align-items:center;justify-content:center;gap:16px;margin:0 auto 24px;max-width:1100px}
-body.ev-page[data-ev-screen="odds"] .os-round{display:grid;place-items:center;flex:none;width:42px;height:42px;min-height:0;padding:0;border:1px solid var(--os-line);border-radius:50%;background:#1b252a;color:#cdd7dc}
-body.ev-page[data-ev-screen="odds"] .os-round:hover{background:#253138;color:#fff}
-body.ev-page[data-ev-screen="odds"] .os-filterbar{display:grid;grid-template-columns:.7fr 1.25fr 1fr 1.3fr 42px;align-items:center;flex:1;min-width:0;padding:8px;border:1px solid var(--os-line);border-radius:50px;background:var(--os-panel)}
-body.ev-page[data-ev-screen="odds"] .os-field{display:flex;flex-direction:column;justify-content:center;gap:3px;min-width:0;padding:0 22px;border-right:1px solid #303b40;color:var(--os-ink);font-size:14px;font-weight:400}
-body.ev-page[data-ev-screen="odds"] :is(.os-field-label,.os-search>span){color:var(--os-muted);font-size:12px;line-height:1.3;font-weight:400}
-body.ev-page[data-ev-screen="odds"] .os-field:has(.ui-choice)>.os-field-label{display:none}
-body.ev-page[data-ev-screen="odds"] .os-field select{min-width:0;width:100%;padding:0;border:0;background:transparent;color:var(--os-ink);font:inherit}
-body.ev-page[data-ev-screen="odds"] .os-field .ui-choice{display:block;width:100%;min-width:0}
-body.ev-page[data-ev-screen="odds"] .os-field .td-choice-trigger{display:flex;justify-content:space-between;width:100%;height:42px;min-height:42px;padding:0!important;border:0!important;border-radius:0;background:transparent!important;box-shadow:none!important;color:var(--os-ink)!important;font:400 14px/1.25 Odds Outfit,sans-serif!important}
-body.ev-page[data-ev-screen="odds"] .os-field .choice-trigger-copy{display:flex;flex-direction:column;gap:3px;min-width:0;text-align:left}
-body.ev-page[data-ev-screen="odds"] .os-field .choice-trigger-label{display:block;color:var(--os-muted);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
-body.ev-page[data-ev-screen="odds"] .os-field .choice-trigger-copy strong{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--os-ink);font:inherit;font-weight:400}
-body.ev-page[data-ev-screen="odds"] .os-field .td-choice-trigger>svg{width:12px;height:12px;color:#7e919a;transform:rotate(90deg)}
-body.ev-page[data-ev-screen="odds"] .os-search{border:0;padding-right:8px}
-body.ev-page[data-ev-screen="odds"] #os-search{display:block;width:100%;min-width:0;height:20px;min-height:0;padding:0;border:0!important;border-radius:0;background:transparent!important;box-shadow:none!important;color:var(--os-ink);font:400 14px/20px Odds Outfit,sans-serif}
-body.ev-page[data-ev-screen="odds"] #os-search::placeholder{color:#84939b;opacity:1}
-body.ev-page[data-ev-screen="odds"] .os-search-button{display:grid;place-items:center;width:42px;height:42px;min-height:0;padding:0;border:0;border-radius:50%;background:#dce8eb;color:#14232a}
-body.ev-page[data-ev-screen="odds"] .os-board-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 2px 12px;font-size:12px;color:var(--os-muted)}
-body.ev-page[data-ev-screen="odds"] .os-board-meta>span{display:flex;align-items:center;gap:8px}
-body.ev-page[data-ev-screen="odds"] .os-status-dot{width:5px;height:5px;border-radius:50%;background:#69c3cf}
-body.ev-page[data-ev-screen="odds"] .os-meta-separator{margin:0 3px;color:#4a5d65}
-body.ev-page[data-ev-screen="odds"] .os-reset{height:auto;min-height:0;padding:3px 0;border:0;border-radius:0;background:transparent;color:#a4b4bb;font-size:12px}
-body.ev-page[data-ev-screen="odds"] .os-reset:hover{color:#f1f6f8}
-body.ev-page[data-ev-screen="odds"] .os-table-wrap{overflow:auto;max-height:calc(100vh - 270px);min-height:260px;border:1px solid var(--os-line);border-radius:17px;background:var(--os-panel);scrollbar-width:thin;scrollbar-color:#3b4b53 transparent}
-body.ev-page[data-ev-screen="odds"] .os-table{width:100%;min-width:970px;margin:0;border:0;border-spacing:0;border-collapse:separate;table-layout:fixed;font-family:inherit;font-size:13px;font-variant-numeric:tabular-nums}
-body.ev-page[data-ev-screen="odds"] .os-label-col{width:210px}
-body.ev-page[data-ev-screen="odds"] .os-best-col{width:120px}
-body.ev-page[data-ev-screen="odds"] .os-average-col{width:85px}
-body.ev-page[data-ev-screen="odds"] .os-book-col{width:100px}
-body.ev-page[data-ev-screen="odds"] .os-table :is(th,td){height:auto;padding:0 10px;border:0;background:var(--os-panel);text-align:left;color:var(--os-ink);font-size:13px;font-weight:400;line-height:1.35;letter-spacing:0;vertical-align:middle}
-body.ev-page[data-ev-screen="odds"] .os-table thead th{position:sticky;top:0;z-index:4;height:51px;border-bottom:1px solid var(--os-line);background:#172025;color:var(--os-muted);font-size:12px;text-transform:none}
-body.ev-page[data-ev-screen="odds"] .os-table thead th:first-child{padding-left:20px}
-body.ev-page[data-ev-screen="odds"] .os-table thead th:nth-child(4),body.ev-page[data-ev-screen="odds"] .os-side td:nth-child(4){border-left:1px solid var(--os-line)}
-body.ev-page[data-ev-screen="odds"] .os-rows{display:flex;align-items:center;gap:5px;min-height:32px;padding:0;border:0;border-radius:0;background:transparent;color:var(--os-muted);font-size:12px}
-body.ev-page[data-ev-screen="odds"] .os-book-heading{display:flex;align-items:center;justify-content:center}
-body.ev-page[data-ev-screen="odds"] .os-book-heading .ev-brand-mark{width:25px;height:25px;object-fit:contain;border-radius:5px;background:#0f161a}
-body.ev-page[data-ev-screen="odds"] .os-book-heading .ev-brand-fallback{display:grid;place-items:center;width:25px;height:25px;font-size:9px;background:#263740;border-radius:5px}
-body.ev-page[data-ev-screen="odds"] .os-table .os-event th{height:43px;padding:0 17px;background:#10181c;border-bottom:1px solid var(--os-line)}
-body.ev-page[data-ev-screen="odds"] .os-table .os-market th{height:42px;padding:0 34px;background:var(--os-canvas);border-bottom:1px solid var(--os-line)}
-body.ev-page[data-ev-screen="odds"] .os-disclosure{position:sticky;left:14px;display:flex;align-items:center;gap:11px;max-width:calc(100vw - 130px);min-height:40px;padding:0;border:0;border-radius:0;background:transparent;color:#ced9de;font-size:13px;font-weight:400;white-space:nowrap}
-body.ev-page[data-ev-screen="odds"] .os-disclosure>svg{width:15px;height:15px;color:#8a9ca5}
-body.ev-page[data-ev-screen="odds"] .os-disclosure[aria-expanded="false"]>svg:first-child{transform:rotate(-90deg)}
-body.ev-page[data-ev-screen="odds"] .os-disclosure small{margin:0;color:#8798a0;font-size:12px;font-weight:400}
-body.ev-page[data-ev-screen="odds"] .os-event .os-disclosure>span:first-of-type{min-width:0;max-width:min(52vw,580px);overflow:hidden;text-overflow:ellipsis}
-body.ev-page[data-ev-screen="odds"] .os-market-count{padding-left:8px;border-left:1px solid var(--os-line)}
-body.ev-page[data-ev-screen="odds"] .os-market-toggle>svg:not(:first-child){margin:0 3px;width:14px;height:14px;color:#71838d}
-body.ev-page[data-ev-screen="odds"] .os-alt{color:#a5b4bc;font-size:11px}
-body.ev-page[data-ev-screen="odds"] .os-live{margin-left:4px;color:#68c6da;font-size:10px}
-body.ev-page[data-ev-screen="odds"] .os-table .os-side th{height:34px;padding-left:20px}
-body.ev-page[data-ev-screen="odds"] .os-table .os-side:first-of-type :is(th,td){padding-top:3px}
-body.ev-page[data-ev-screen="odds"] .os-table .os-side-last :is(th,td){height:39px;padding-bottom:5px;border-bottom:1px solid var(--os-line)}
-body.ev-page[data-ev-screen="odds"] .os-table .os-side-name{position:sticky;left:0;z-index:2;background:var(--os-panel);color:#bac7ce;font-size:14px}
-body.ev-page[data-ev-screen="odds"] .os-table .os-average{color:#c5d0d5}
-body.ev-page[data-ev-screen="odds"] .os-price{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;min-height:28px;padding:2px 0;border:1px solid transparent;border-radius:5px;background:transparent;color:#d6e0e4;font-size:14px;font-weight:400;white-space:nowrap}
-body.ev-page[data-ev-screen="odds"] .os-price small{display:inline;margin:0;color:#86959d;font-size:11px;font-weight:400}
-body.ev-page[data-ev-screen="odds"] .os-best .os-price{justify-content:flex-start}
-body.ev-page[data-ev-screen="odds"] .os-price .ev-brand-mark{width:17px;height:17px;margin:0 2px 0 0;object-fit:contain;border-radius:50%;background:#0a1114}
-body.ev-page[data-ev-screen="odds"] .os-price .ev-brand-fallback{width:17px;height:17px;font-size:8px}
-body.ev-page[data-ev-screen="odds"] .os-price.is-best{color:var(--os-best);background:transparent;border-color:transparent;font-weight:500}
-body.ev-page[data-ev-screen="odds"] .os-price:hover{border-color:#3d535c;background:#1a2d34;color:#fff}
-body.ev-page[data-ev-screen="odds"] .os-price.is-stale{opacity:.4}
-body.ev-page[data-ev-screen="odds"] .os-dash{display:block;color:#63767f;text-align:center}
-body.ev-page[data-ev-screen="odds"] .os-footnote{margin:14px 2px 0;max-width:1100px;color:#83959f;font-size:11px;line-height:1.6}
-body.ev-page[data-ev-screen="odds"] .os-settings{position:relative;flex:none}
-body.ev-page[data-ev-screen="odds"] .os-settings-panel{position:absolute;top:53px;left:0;z-index:12;width:255px;padding:19px;border:1px solid #35464e;border-radius:14px;background:#162127;box-shadow:0 16px 50px #0007}
-body.ev-page[data-ev-screen="odds"] .os-settings-panel[hidden]{display:none}
-body.ev-page[data-ev-screen="odds"] .os-settings-panel>strong{display:block;margin-bottom:15px;font-size:15px;font-weight:500}
-body.ev-page[data-ev-screen="odds"] .os-settings-panel .os-field{padding:7px 10px;border:1px solid #34464d;border-radius:8px;background:#10191e}
-body.ev-page[data-ev-screen="odds"] #ev-view .os-settings-panel .os-all-books{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:38px;margin-top:16px;padding:8px 10px!important;border:1px solid #3a5963!important;border-radius:8px!important;background:#1c3038!important;color:#dceef1!important;font-size:13px;font-weight:500}
-body.ev-page[data-ev-screen="odds"] .os-all-books span{color:#78c6d0;font-size:11px;font-weight:400}
-body.ev-page[data-ev-screen="odds"] .os-book-scope{margin:9px 0 0;color:var(--os-muted);font-size:12px;line-height:1.5}
-body.ev-page[data-ev-screen="odds"] .os-settings-panel fieldset{display:grid;gap:8px;max-height:300px;overflow-y:auto;margin:19px 0 0;padding:0;border:0}
-body.ev-page[data-ev-screen="odds"] .os-settings-panel legend{padding:0 0 12px;font-size:12px;color:#8e9fa8}
-body.ev-page[data-ev-screen="odds"] .os-settings-panel fieldset label{display:flex;align-items:center;gap:9px;min-height:24px;font-size:13px;font-weight:400}
-body.ev-page[data-ev-screen="odds"] .os-settings-panel input[type="checkbox"]{width:14px;height:14px;margin:0;accent-color:#38c4ca}
-body.ev-page[data-ev-screen="odds"] .os-settings-panel .ev-brand-mark{width:19px;height:19px;object-fit:contain}
-body.ev-page[data-ev-screen="odds"] .os-empty{display:grid;justify-items:center;align-content:center;min-height:340px;padding:40px 24px;border:1px solid var(--os-line);border-radius:17px;background:var(--os-panel);text-align:center}
-body.ev-page[data-ev-screen="odds"] .os-empty>div{display:grid;place-items:center;width:46px;height:46px;border:1px solid #344951;border-radius:14px;background:#1c2c33;color:#71beca}
-body.ev-page[data-ev-screen="odds"] .os-empty h2{margin:17px 0 8px;color:#e1e9ed;font-size:21px;font-weight:500;letter-spacing:-.025em}
-body.ev-page[data-ev-screen="odds"] .os-empty p{max-width:390px;margin:0;color:#8f9fa8;font-size:14px;line-height:1.6}
-body.ev-page[data-ev-screen="odds"] .os-empty button{margin-top:23px;min-height:37px;padding:8px 17px;border:1px solid #3a737e;border-radius:8px;background:#193640;color:#c5edf0;font-size:13px}
-body.ev-page[data-ev-screen="odds"] .os-wide{position:fixed;inset:12px;z-index:45;padding:25px;background:var(--os-canvas);border:1px solid var(--os-line);border-radius:18px;overflow:auto}
-body.ev-page[data-ev-screen="odds"] .os-wide .os-table-wrap{max-height:calc(100vh - 200px)}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-screen{--os-time-w:136px;--os-sel-w:262px;--os-best-w:108px;--os-avg-w:84px;--os-book-w:82px;--os-row-h:44px;--os-row-bg:var(--evb-surface);--os-row-hover:#12181c;--os-game-rule:#2a343b;--os-pair-rule:rgba(255,255,255,.04);padding-top:6px;color:var(--evb-text);font-family:inherit;font-size:14px}
+body.ev-page[data-ev-screen="odds"] .os-screen button{font-family:inherit;cursor:pointer;letter-spacing:0;text-transform:none}
+body.ev-page[data-ev-screen="odds"] .os-screen :is(.os-toolbar,.os-empty) svg{flex:none;width:18px;height:18px}
+body.ev-page[data-ev-screen="odds"] .os-screen :is(button,input,[tabindex]):focus-visible{outline:2px solid var(--evb-lime)!important;outline-offset:2px}
 .os-sr{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
-/* Keep shared button enhancements from turning price text into boxed controls. */
-body.ev-page[data-ev-screen="odds"] #ev-view .os-screen :is(.os-price,.os-disclosure,.os-rows,.os-reset){--button-fill:transparent;--button-border:transparent;--button-radius:0;--button-ink:#c5d1d8;background:transparent!important;border-color:transparent!important;border-radius:0!important;box-shadow:none!important;font-weight:400}
-body.ev-page[data-ev-screen="odds"] #ev-view .os-screen .os-price{padding:2px 0!important;border-radius:5px!important;color:#d6e0e4!important}
-body.ev-page[data-ev-screen="odds"] #ev-view .os-screen .os-price.is-best{color:var(--os-best)!important}
-body.ev-page[data-ev-screen="odds"] #ev-view .os-screen .os-price:hover{background:#213139!important;border-color:#34505c!important}
-body.ev-page[data-ev-screen="odds"] #ev-view .os-screen .os-disclosure{padding:0!important;color:#ced9de!important}
-body.ev-page[data-ev-screen="odds"] #ev-view .os-screen .os-round{border:1px solid var(--os-line)!important;border-radius:50%!important;background:#1b252a!important;color:#cdd7dc!important}
-body.ev-page[data-ev-screen="odds"] #ev-view .os-screen .os-search-button{padding:0!important;border:0!important;border-radius:50%!important;background:#dce8eb!important;color:#14232a!important}
-body.ev-page[data-ev-screen="odds"] #ev-view .os-field .td-choice-trigger{height:42px!important;min-height:42px!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;font:400 14px/1.25 Odds Outfit,sans-serif!important}
-body.ev-page[data-ev-screen="odds"] #ev-view .os-field .choice-trigger-copy strong{font:400 14px/1.3 Odds Outfit,sans-serif!important}
-body.ev-page[data-ev-screen="odds"] #ev-view .os-field .choice-trigger-label{font:400 12px/1.3 Odds Outfit,sans-serif!important;color:var(--os-muted)!important}
-@media(max-width:1000px){
-  body.ev-page[data-ev-screen="odds"] .os-toolbar{gap:9px}
-  body.ev-page[data-ev-screen="odds"] .os-field{padding:0 13px}
-  body.ev-page[data-ev-screen="odds"] .os-filterbar{grid-template-columns:.65fr 1fr 1fr 1.15fr 36px}
-  body.ev-page[data-ev-screen="odds"] .os-search-button{width:36px;height:36px}
+
+/* Filter panel: one bordered panel holding the filters (chips sized to their content,
+   search fills the rest, settings and wide view on the right), a slim market-tab strip
+   and the status line. Chip visuals come from ev-controls.css. */
+body.ev-page[data-ev-screen="odds"] #ev-view .os-panel{display:flex;flex-direction:column;min-width:0;margin:0;border:1px solid var(--evb-line);border-radius:16px;background:var(--evb-surface)}
+body.ev-page[data-ev-screen="odds"] .os-toolbar{display:flex;align-items:center;gap:10px;margin:0;padding:14px 16px}
+body.ev-page[data-ev-screen="odds"] .os-filterbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;flex:1;min-width:0;margin:0;padding:0;border:0;background:none}
+html body.ev-page[data-ev-screen="odds"] #main .os-filterbar>.os-field.choice-field{position:relative;flex:0 0 auto;width:auto;height:40px;min-width:0;margin:0;padding:0;border:0;border-radius:0;background:none}
+body.ev-page[data-ev-screen="odds"] .os-field-label{display:none}
+body.ev-page[data-ev-screen="odds"] .os-field select{width:100%;min-width:0;padding:0;border:0;background:transparent;color:var(--evb-text);font:inherit}
+html body.ev-page[data-ev-screen="odds"] #main .os-filterbar .ui-choice{display:block;width:auto;height:40px}
+html body.ev-page[data-ev-screen="odds"] #main .os-filterbar .ui-choice>.td-choice-trigger{width:auto!important;height:40px!important;min-height:40px!important;padding:0 12px!important;gap:8px!important}
+html body.ev-page[data-ev-screen="odds"] #main .os-filterbar .ui-choice>.td-choice-trigger>svg:last-child{transform:rotate(90deg)}
+html body.ev-page[data-ev-screen="odds"] #main .os-filterbar .os-search{position:relative;display:flex;flex-direction:row;align-items:center;gap:8px;flex:1 1 220px;box-sizing:border-box;height:40px;min-width:180px;margin:0;padding:0 12px;border:1px solid var(--evc-chip-line,#2a3036);border-radius:9px;background:var(--evc-input,#0b0e11);cursor:text}
+html body.ev-page[data-ev-screen="odds"] #main .os-filterbar .os-search:focus-within{border-color:var(--evb-edge)}
+html body.ev-page[data-ev-screen="odds"] #main .os-filterbar .os-search>svg{flex:none;width:16px;height:16px;color:var(--evb-muted)}
+html body.ev-page[data-ev-screen="odds"] #main .os-filterbar .os-search>span{display:none}
+body.ev-page[data-ev-screen="odds"] #ev-view #os-search,body.ev-page[data-ev-screen="odds"] #ev-view #os-search:is(:hover,:focus){display:block;flex:1;width:100%;min-width:0;height:38px;min-height:0;padding:0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:var(--evb-text)!important;font:500 14px/38px var(--font),sans-serif;outline:0}
+body.ev-page[data-ev-screen="odds"] #ev-view #os-search::placeholder{color:var(--evb-muted)!important;font-weight:400;opacity:1}
+body.ev-page[data-ev-screen="odds"] .os-toolbar-actions{display:flex;align-items:center;gap:8px;flex:none}
+body.ev-page[data-ev-screen="odds"] .os-toolbar-actions .os-settings-panel{right:0;left:auto}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-screen .os-round{display:grid;place-items:center;flex:none;width:40px;height:40px;min-height:0;padding:0!important;border:1px solid var(--evc-chip-line,#2a3036)!important;border-radius:9px!important;background:transparent!important;color:var(--evb-sub)!important;box-shadow:none!important}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-screen .os-round svg{width:17px;height:17px}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-screen .os-round:hover,body.ev-page[data-ev-screen="odds"] #ev-view .os-screen .os-round:is([aria-expanded="true"],[aria-pressed="true"]){border-color:var(--evb-edge)!important;background:var(--evb-raised)!important;color:var(--evb-text)!important}
+
+/* Market tabs: slim strip inside the panel; hidden scrollbar, faded edge, arrow buttons. */
+body.ev-page[data-ev-screen="odds"] .os-tabs-wrap{display:flex;align-items:center;gap:4px;min-width:0;padding:0 8px;border-top:1px solid var(--evb-line)}
+body.ev-page[data-ev-screen="odds"] .os-tabs{display:flex;align-items:center;gap:2px;flex:1;min-width:0;margin:0;padding:8px 4px;overflow-x:auto;scrollbar-width:none;scroll-behavior:smooth;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 28px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 28px),transparent 100%)}
+body.ev-page[data-ev-screen="odds"] .os-tabs::-webkit-scrollbar{display:none}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-tab{flex:none;display:inline-flex;align-items:center;height:32px;min-height:32px;margin:0;padding:0 12px!important;border:0!important;border-radius:8px!important;background:transparent!important;box-shadow:none!important;color:var(--evb-sub)!important;font:500 13px/1 var(--font),sans-serif!important;white-space:nowrap}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-tab:hover{background:rgba(255,255,255,.05)!important;color:var(--evb-text)!important}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-tab[aria-pressed="true"]{background:#f2f5f3!important;color:#0a0d0f!important;font-weight:600!important}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-tabs-scroll{display:grid;place-items:center;flex:none;width:28px;height:28px;min-height:0;margin:0;padding:0!important;border:1px solid var(--evc-chip-line,#2a3036)!important;border-radius:50%!important;background:transparent!important;color:var(--evb-sub)!important;box-shadow:none!important}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-tabs-scroll:hover{border-color:var(--evb-edge)!important;color:var(--evb-text)!important}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-tabs-scroll svg{width:13px;height:13px}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-tabs-scroll[data-os-scroll="-1"] svg{transform:rotate(90deg)}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-tabs-scroll[data-os-scroll="1"] svg{transform:rotate(-90deg)}
+
+/* Status line: panel footer */
+body.ev-page[data-ev-screen="odds"] .os-board-meta{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 24px;margin:0;padding:10px 16px;border-top:1px solid var(--evb-line)}
+body.ev-page[data-ev-screen="odds"] .os-board-meta>p{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:0;color:var(--evb-muted);font-size:13px}
+body.ev-page[data-ev-screen="odds"] .os-board-meta>p strong{color:var(--evb-text);font-weight:600}
+body.ev-page[data-ev-screen="odds"] .os-board-actions{display:flex;align-items:center;gap:6px}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen :is(.os-rows,.os-reset){display:inline-flex;align-items:center;gap:6px;height:30px!important;min-height:30px!important;padding:0 12px!important;border:1px solid var(--evc-chip-line,#2a3036)!important;border-radius:8px!important;background:transparent!important;color:var(--evb-sub)!important;font:550 12px/1 var(--font),sans-serif!important;box-shadow:none!important}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen :is(.os-rows,.os-reset):hover{border-color:var(--evb-edge)!important;color:var(--evb-text)!important}
+body.ev-page[data-ev-screen="odds"] .os-status-dot{width:6px;height:6px;margin-right:2px;border-radius:50%;background:var(--evb-lime)}
+body.ev-page[data-ev-screen="odds"] .os-meta-separator{color:var(--evb-edge)}
+body.ev-page[data-ev-screen="odds"] .os-board-actions{display:flex;align-items:center;gap:8px;flex:none}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-screen :is(.os-rows,.os-reset){display:inline-flex;align-items:center;gap:6px;height:32px;min-height:32px;padding:0 12px!important;border:1px solid var(--evb-line)!important;border-radius:999px!important;background:var(--evb-surface)!important;color:var(--evb-sub)!important;box-shadow:none!important;font-size:12px;font-weight:550}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-screen :is(.os-rows,.os-reset):hover{border-color:var(--evb-edge)!important;color:var(--evb-text)!important}
+body.ev-page[data-ev-screen="odds"] .os-rows svg{width:14px;height:14px}
+
+/* Grid shell: its own scroller so the header and the first two columns can stay pinned. */
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid-wrap{position:relative;max-height:max(420px,calc(100dvh - 236px));overflow:auto;border:1px solid var(--evb-line);border-radius:16px;background:var(--evb-surface);container-type:inline-size;overscroll-behavior-x:contain;scrollbar-color:var(--evb-edge) transparent;scrollbar-width:thin}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid{width:100%;min-width:calc(var(--os-time-w) + var(--os-sel-w) + var(--os-best-w) + var(--os-avg-w) + var(--os-books) * var(--os-book-w));margin:0;border-collapse:separate;border-spacing:0;table-layout:auto;background:transparent;color:var(--evb-text);font-size:13.5px;font-variant-numeric:tabular-nums}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid :is(th,td){box-sizing:border-box;height:var(--os-row-h);padding:0 4px;border:0;background:var(--os-row-bg);vertical-align:middle;text-align:center;white-space:nowrap;letter-spacing:0;text-transform:none}
+
+/* Header */
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid>thead th{position:sticky;top:0;z-index:3;height:46px;padding:0 6px;border-bottom:1px solid var(--evb-edge);background:var(--evb-inset);color:var(--evb-muted);font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid>thead th:is(.os-c-time,.os-selection){z-index:4;text-align:left}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid>thead th.os-c-time{padding-left:16px}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid>thead th.os-selection{padding-left:14px}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid .os-book-head{min-width:var(--os-book-w)}
+body.ev-page[data-ev-screen="odds"] .os-book-logo{display:inline-flex;vertical-align:middle}
+body.ev-page[data-ev-screen="odds"] .os-book-logo img{display:block;width:26px;height:26px;border-radius:7px;object-fit:cover}
+body.ev-page[data-ev-screen="odds"] .os-book-logo .evb-book-initials{width:26px;height:26px;border-radius:7px;font-size:10px}
+
+/* Pinned columns */
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid .os-c-time{position:sticky;left:0;z-index:2;width:var(--os-time-w);min-width:var(--os-time-w);max-width:var(--os-time-w);padding:0 8px 0 10px;text-align:left}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid .os-selection{position:sticky;left:var(--os-time-w);z-index:2;width:var(--os-sel-w);min-width:var(--os-sel-w);max-width:var(--os-sel-w);padding:0 8px 0 14px;border-right:1px solid var(--evb-line);text-align:left}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid .os-best-cell{width:var(--os-best-w);min-width:var(--os-best-w);padding-left:10px}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid .os-average{width:var(--os-avg-w);min-width:var(--os-avg-w);border-right:1px solid var(--evb-line)}
+
+/* Row rules: faint inside a market, a line between markets, a stronger rule between games. */
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid>tbody>tr>*{border-top:1px solid var(--os-pair-rule)}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid>tbody>tr.os-row>.os-c-time{border-top-color:transparent}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid>tbody>tr.is-market-start>*:not(.os-c-time){border-top-color:var(--evb-line)}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid>tbody>tr.is-game-start>*{border-top:1px solid var(--os-game-rule)}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid>tbody:first-of-type>tr.is-game-start>*{border-top-color:transparent}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid>tbody:not(:first-of-type)>tr.is-game-start>*{border-top-width:2px}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid>tbody>tr.os-row:hover>*{background:var(--os-row-hover)}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid>tbody>tr.os-row:has(.os-sel-name[aria-expanded="true"])>*{background:var(--evb-raised)}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid>tbody>tr.os-row:has(.os-sel-name[aria-expanded="true"])>.os-selection{box-shadow:inset 3px 0 0 var(--evb-lime)}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid [data-open-quote]{cursor:pointer}
+
+/* Time / status cell: first row of each game; the second row carries the market count. */
+body.ev-page[data-ev-screen="odds"] .os-event-heading{display:flex;align-items:center;gap:6px;min-width:0}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-toggle{display:grid;place-items:center;flex:none;width:24px;height:24px;min-width:0;min-height:0;margin:0;padding:0!important;border:0!important;border-radius:6px!important;background:transparent!important;box-shadow:none!important;color:var(--evb-muted)!important;transform:none}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-toggle:hover{background:var(--evb-raised)!important;color:var(--evb-text)!important}
+body.ev-page[data-ev-screen="odds"] .os-toggle svg{width:15px;height:15px;transition:transform .15s}
+body.ev-page[data-ev-screen="odds"] .os-toggle[aria-expanded="false"] svg{transform:rotate(-90deg)}
+body.ev-page[data-ev-screen="odds"] .os-when{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0}
+body.ev-page[data-ev-screen="odds"] .os-when strong{color:var(--evb-text);font-size:12.5px;font-weight:600;line-height:1.2}
+body.ev-page[data-ev-screen="odds"] .os-when small{display:flex;align-items:center;gap:5px;max-width:100%;overflow:hidden;color:var(--evb-muted);font-size:11px;font-weight:500;line-height:1.2;text-overflow:ellipsis}
+body.ev-page[data-ev-screen="odds"] .os-league{display:inline-flex;flex:none}
+body.ev-page[data-ev-screen="odds"] .os-league .league-mark{display:inline-flex;width:13px;height:13px}
+body.ev-page[data-ev-screen="odds"] .os-league :is(img,svg){width:13px;height:13px;object-fit:contain}
+body.ev-page[data-ev-screen="odds"] .os-live-pill{display:inline-flex;align-items:center;gap:5px;height:18px;padding:0 8px;border-radius:999px;background:var(--evb-lime);color:#0b1206;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+body.ev-page[data-ev-screen="odds"] .os-live-pill::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+body.ev-page[data-ev-screen="odds"] .os-event-extra{display:block;padding-left:30px;color:var(--evb-muted);font-size:11px}
+
+/* Team / selection cell */
+body.ev-page[data-ev-screen="odds"] .os-sel{display:flex;align-items:center;gap:10px;min-width:0}
+body.ev-page[data-ev-screen="odds"] .os-mark{display:grid;place-items:center;flex:none;box-sizing:border-box;width:26px;height:26px;border:1px solid var(--evb-line);border-radius:8px;background:var(--evb-raised);color:var(--evb-sub);font-size:9.5px;font-weight:700;letter-spacing:.02em}
+body.ev-page[data-ev-screen="odds"] .os-mark.is-side{color:var(--evb-muted);font-size:11px}
+body.ev-page[data-ev-screen="odds"] .os-mark.is-logo{border:0;background:transparent}
+body.ev-page[data-ev-screen="odds"] .os-mark img{width:24px;height:24px;object-fit:contain}
+body.ev-page[data-ev-screen="odds"] .os-sel-copy{display:flex;flex-direction:column;align-items:flex-start;gap:2px;flex:1;min-width:0}
+body.ev-page[data-ev-screen="odds"] .os-sel-copy>strong,body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-sel-name{display:block;max-width:100%;height:auto;min-height:0;margin:0;padding:0!important;overflow:hidden;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:var(--evb-text)!important;font:600 13.5px/1.25 var(--font),sans-serif!important;text-align:left;text-overflow:ellipsis;white-space:nowrap;transform:none}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-sel-name:hover{color:var(--evb-lime)!important}
+body.ev-page[data-ev-screen="odds"] .os-sel-copy small{max-width:100%;overflow:hidden;color:var(--evb-muted);font-size:11px;line-height:1.2;text-overflow:ellipsis}
+body.ev-page[data-ev-screen="odds"] .os-sel-copy small em{color:#ff8f7a;font-style:normal;font-weight:600}
+body.ev-page[data-ev-screen="odds"] .os-row.is-stale .os-sel-copy>strong{color:var(--evb-muted)}
+body.ev-page[data-ev-screen="odds"] .os-row-tools{display:flex;align-items:center;gap:2px;flex:none}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-icon{display:grid;place-items:center;width:28px;height:28px;min-width:0;min-height:0;margin:0;padding:0!important;border:1px solid transparent!important;border-radius:8px!important;background:transparent!important;box-shadow:none!important;color:var(--evb-muted)!important;transform:none}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-icon:hover{border-color:var(--evb-edge)!important;background:var(--evb-raised)!important;color:var(--evb-lime)!important}
+body.ev-page[data-ev-screen="odds"] .os-icon svg{width:15px;height:15px}
+
+/* Best and average */
+body.ev-page[data-ev-screen="odds"] .os-best{display:inline-flex;align-items:center;gap:7px}
+body.ev-page[data-ev-screen="odds"] .os-best strong{color:var(--evb-lime);font-size:14px;font-weight:650}
+body.ev-page[data-ev-screen="odds"] .os-best-logo{display:inline-flex}
+body.ev-page[data-ev-screen="odds"] .os-best-logo img{display:block;width:18px;height:18px;border-radius:5px;object-fit:cover}
+body.ev-page[data-ev-screen="odds"] .os-best-logo .evb-book-initials{width:18px;height:18px;border-radius:5px;font-size:8px}
+body.ev-page[data-ev-screen="odds"] .os-best-cell>strong{color:var(--evb-muted);font-weight:500}
+body.ev-page[data-ev-screen="odds"] .os-average strong{color:var(--evb-sub);font-size:13.5px;font-weight:500}
+
+/* Book prices: lime outline for the best, muted red for the worst, dashes for missing, lock for suspended. */
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid .os-book-cell{min-width:var(--os-book-w);padding:0 3px}
+body.ev-page[data-ev-screen="odds"] .os-px{display:flex;align-items:center;justify-content:center;gap:5px;box-sizing:border-box;height:32px;min-width:66px;margin:0 auto;padding:0 8px;border:1px solid transparent;border-radius:8px;color:var(--evb-text);font-size:13.5px;line-height:1;transition:border-color .12s,background-color .12s}
+body.ev-page[data-ev-screen="odds"] .os-px b{font-weight:500}
+body.ev-page[data-ev-screen="odds"] .os-px small{color:var(--evb-muted);font-size:11.5px;font-weight:500}
+body.ev-page[data-ev-screen="odds"] .os-px small::after{content:"/";margin-left:5px;color:var(--evb-edge)}
+body.ev-page[data-ev-screen="odds"] .os-book-cell[data-open-quote]:hover .os-px{border-color:var(--evb-edge);background:rgba(255,255,255,.03)}
+body.ev-page[data-ev-screen="odds"] .os-book-cell.is-best .os-px,body.ev-page[data-ev-screen="odds"] .os-book-cell.is-best[data-open-quote]:hover .os-px{border-color:rgba(163,240,107,.62);background:rgba(163,240,107,.11);color:var(--evb-lime)}
+body.ev-page[data-ev-screen="odds"] .os-book-cell.is-best .os-px b{font-weight:650}
+body.ev-page[data-ev-screen="odds"] .os-book-cell.is-worst .os-px,body.ev-page[data-ev-screen="odds"] .os-book-cell.is-worst[data-open-quote]:hover .os-px{border-color:#4a2427;background:#3a1a1c;color:#e07b7b}
+body.ev-page[data-ev-screen="odds"] .os-book-cell:is(.is-missing,.is-locked) .os-px{color:var(--evb-muted);opacity:.7}
+body.ev-page[data-ev-screen="odds"] .os-book-cell.is-locked svg{width:14px;height:14px}
+body.ev-page[data-ev-screen="odds"] .os-book-cell.is-stale .os-px{opacity:.42}
+
+/* Collapsed games: one slim row that keeps the time cell and a sticky summary. */
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid .os-collapsed-cell{padding:0;text-align:left}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-collapsed-summary{position:sticky;left:var(--os-time-w);display:inline-flex;align-items:center;gap:12px;height:var(--os-row-h);min-height:0;margin:0;padding:0 14px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:var(--evb-text)!important;font:500 13px/1 var(--font),sans-serif!important;transform:none}
+body.ev-page[data-ev-screen="odds"] .os-collapsed-summary strong{font-weight:600}
+body.ev-page[data-ev-screen="odds"] .os-collapsed-summary span{color:var(--evb-muted);font-size:12px}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-collapsed-summary:hover span{color:var(--evb-lime)}
+
+/* Inline comparison (ev.js) spans every column; pin it to the visible width of the grid. */
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid tr.bet-inline-mount>td{height:auto;padding:0!important;border-top:1px solid var(--evb-line)!important;background:var(--evb-inset)!important;text-align:left;white-space:normal!important}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-grid tr.bet-inline-mount>td>*{position:sticky;left:0;box-sizing:border-box;width:100cqw;max-width:100cqw;margin:0;padding:14px 16px}
+
+body.ev-page[data-ev-screen="odds"] .os-footnote{margin:0 2px;max-width:1100px;color:var(--evb-muted);font-size:11px;line-height:1.6}
+
+/* Display settings popover */
+body.ev-page[data-ev-screen="odds"] .os-settings{position:relative;flex:none}
+body.ev-page[data-ev-screen="odds"] .os-settings-panel{position:absolute;top:52px;left:0;z-index:12;width:260px;padding:18px;border:1px solid var(--evb-line);border-radius:16px;background:var(--evb-surface);box-shadow:0 16px 50px #0007}
+body.ev-page[data-ev-screen="odds"] .os-settings-panel[hidden]{display:none}
+body.ev-page[data-ev-screen="odds"] .os-settings-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+body.ev-page[data-ev-screen="odds"] .os-settings-heading strong{font-size:15px;font-weight:600}
+body.ev-page[data-ev-screen="odds"] .os-settings-heading button{min-height:44px;padding:8px;font-size:12px}
+body.ev-page[data-ev-screen="odds"] .os-settings-panel .os-field{background:var(--evb-inset)}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-settings-panel .os-all-books{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:40px;margin-top:14px;padding:8px 12px!important;border:1px solid var(--evb-line)!important;border-radius:12px!important;background:var(--evb-raised)!important;color:var(--evb-text)!important;font-size:13px;font-weight:550}
+body.ev-page[data-ev-screen="odds"] .os-all-books span{color:var(--evb-lime);font-size:11px;font-weight:500}
+body.ev-page[data-ev-screen="odds"] .os-book-scope{margin:9px 0 0;color:var(--evb-muted);font-size:12px;line-height:1.5}
+body.ev-page[data-ev-screen="odds"] .os-settings-panel fieldset{display:grid;gap:8px;max-height:300px;overflow-y:auto;margin:18px 0 0;padding:0;border:0}
+body.ev-page[data-ev-screen="odds"] .os-settings-panel legend{padding:0 0 12px;color:var(--evb-muted);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+body.ev-page[data-ev-screen="odds"] .os-settings-panel fieldset label{display:flex;align-items:center;gap:9px;min-height:24px;font-size:13px;font-weight:400}
+body.ev-page[data-ev-screen="odds"] .os-settings-panel input[type="checkbox"]{width:14px;height:14px;margin:0;accent-color:var(--evb-lime)}
+body.ev-page[data-ev-screen="odds"] .os-settings-panel .ev-brand-mark{width:19px;height:19px;border-radius:5px;object-fit:contain}
+body.ev-page[data-ev-screen="odds"] .os-book-option{display:grid;grid-template-columns:minmax(0,1fr) 40px 40px;align-items:center;gap:4px}
+body.ev-page[data-ev-screen="odds"] .os-book-option label{min-width:0;overflow-wrap:anywhere}
+body.ev-page[data-ev-screen="odds"] .os-book-option button{width:40px;min-height:44px;padding:0}
+body.ev-page[data-ev-screen="odds"] .os-book-option button:disabled{opacity:.35;cursor:default}
+
+/* Empty state */
+body.ev-page[data-ev-screen="odds"] .os-empty{display:grid;justify-items:center;align-content:center;min-height:340px;padding:40px 24px;border:1px solid var(--evb-line);border-radius:20px;background:var(--evb-surface);text-align:center}
+body.ev-page[data-ev-screen="odds"] .os-empty>div{display:grid;place-items:center;width:46px;height:46px;border:1px solid var(--evb-line);border-radius:14px;background:var(--evb-raised);color:var(--evb-lime)}
+body.ev-page[data-ev-screen="odds"] .os-empty h2{margin:17px 0 8px;color:var(--evb-text);font-size:21px;font-weight:600;letter-spacing:-.02em}
+body.ev-page[data-ev-screen="odds"] .os-empty p{max-width:390px;margin:0;color:var(--evb-muted);font-size:14px;line-height:1.6}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-empty button{margin-top:22px;min-height:40px;padding:8px 18px!important;border:1px solid var(--evb-lime-line)!important;border-radius:999px!important;background:var(--evb-lime-soft)!important;color:var(--evb-lime)!important;font-size:13px;font-weight:600}
+
+/* Expanded (full window) view: the grid fills the remaining height. */
+body.ev-page[data-ev-screen="odds"] #ev-view .os-wide{position:fixed;inset:12px;z-index:90;padding:22px;border:1px solid var(--evb-line);border-radius:18px;background:var(--os-canvas);overflow:auto}
+body.ev-page[data-ev-screen="odds"] #ev-view .os-wide .os-grid-wrap{flex:1 1 auto;min-height:240px;max-height:none}
+
+@media (max-width:1100px){
 }
-@media(max-width:720px){
-  body.ev-page[data-ev-screen="odds"] .os-screen{padding-top:20px}
-  body.ev-page[data-ev-screen="odds"] .os-toolbar{display:grid;grid-template-columns:1fr auto;gap:11px;margin-bottom:17px}
-  body.ev-page[data-ev-screen="odds"] .os-filterbar{grid-row:1;grid-column:1/-1;grid-template-columns:.8fr 1.2fr;gap:0;border-radius:18px;padding:8px}
-  body.ev-page[data-ev-screen="odds"] .os-field{height:48px;padding:0 12px}
-  body.ev-page[data-ev-screen="odds"] .os-field:nth-child(2){border-right:0}
-  body.ev-page[data-ev-screen="odds"] .os-field:nth-child(-n+2){margin-bottom:5px;padding-bottom:5px;border-bottom:1px solid var(--os-line)}
-  body.ev-page[data-ev-screen="odds"] .os-search-button{display:none}
-  body.ev-page[data-ev-screen="odds"] .os-round{width:34px;height:34px}
-  body.ev-page[data-ev-screen="odds"] .os-settings-panel{top:43px}
-  body.ev-page[data-ev-screen="odds"] .os-board-meta{font-size:11px}
-  body.ev-page[data-ev-screen="odds"] .os-table-wrap{max-height:65vh;border-radius:12px}
-  body.ev-page[data-ev-screen="odds"] .os-label-col{width:116px}
-  body.ev-page[data-ev-screen="odds"] .os-best-col{width:100px}
-  body.ev-page[data-ev-screen="odds"] .os-average-col{width:63px}
-  body.ev-page[data-ev-screen="odds"] .os-table{min-width:830px}
-  body.ev-page[data-ev-screen="odds"] .os-table .os-market th{padding-left:18px}
-  body.ev-page[data-ev-screen="odds"] .os-disclosure{gap:7px;max-width:calc(100vw - 65px);overflow:hidden;font-size:12px}
-  body.ev-page[data-ev-screen="odds"] .os-disclosure small{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11px}
-  body.ev-page[data-ev-screen="odds"] .os-market-toggle>svg:not(:first-child){display:none}
-  body.ev-page[data-ev-screen="odds"] .os-disclosure .os-market-count{display:none}
-  body.ev-page[data-ev-screen="odds"] .os-wide{inset:5px;padding:12px}
+@media (max-width:1000px){
+  body.ev-page[data-ev-screen="odds"] .os-field{padding:0 10px}
+}
+
+/* Phones and narrow panes: the grid keeps scrolling sideways; only the selection column stays pinned. */
+@media (max-width:860px){
+  body.ev-page[data-ev-screen="odds"] #ev-view .os-screen{--os-time-w:130px;--os-sel-w:168px;--os-best-w:88px;--os-avg-w:72px;--os-book-w:74px}
+  body.ev-page[data-ev-screen="odds"] #ev-view .os-grid-wrap{max-height:none;border-radius:14px}
+  body.ev-page[data-ev-screen="odds"] #ev-view .os-grid .os-c-time{position:static;padding:0 6px 0 8px}
+  body.ev-page[data-ev-screen="odds"] #ev-view .os-grid>thead th.os-c-time{position:sticky;left:auto;padding-left:10px}
+  body.ev-page[data-ev-screen="odds"] #ev-view .os-grid .os-selection{left:0;padding:0 4px 0 10px}
+  body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-collapsed-summary{left:0}
+  body.ev-page[data-ev-screen="odds"] .os-sel{gap:8px}
+  body.ev-page[data-ev-screen="odds"] .os-mark{width:22px;height:22px;border-radius:7px}
+  body.ev-page[data-ev-screen="odds"] .os-mark img{width:20px;height:20px}
+  body.ev-page[data-ev-screen="odds"] .os-sel-copy>strong,body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-sel-name{font-size:12.5px!important;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  body.ev-page[data-ev-screen="odds"] .os-sel-copy small{display:none}
+  body.ev-page[data-ev-screen="odds"] .os-row-tools [data-suite-action]{display:none}
+  body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-icon{width:26px;height:36px}
+  body.ev-page[data-ev-screen="odds"] .os-event-extra{padding-left:0}
+  body.ev-page[data-ev-screen="odds"] .os-px{min-width:60px;padding:0 6px;font-size:13px}
+}
+@media (max-width:720px){
+  body.ev-page[data-ev-screen="odds"] #ev-view .os-screen{padding-top:0}
+  body.ev-page[data-ev-screen="odds"] .os-toolbar{position:relative;flex-wrap:wrap;align-items:flex-start;padding:12px}
+  body.ev-page[data-ev-screen="odds"] .os-filterbar{order:2;flex-basis:100%}
+  body.ev-page[data-ev-screen="odds"] .os-toolbar-actions{order:1;margin-left:auto}
+  html body.ev-page[data-ev-screen="odds"] #main .os-filterbar>.os-field.choice-field{flex:1 1 calc(50% - 5px)}
+  html body.ev-page[data-ev-screen="odds"] #main .os-filterbar .ui-choice,html body.ev-page[data-ev-screen="odds"] #main .os-filterbar .ui-choice>.td-choice-trigger{width:100%!important}
+  html body.ev-page[data-ev-screen="odds"] #main .os-filterbar .os-search{flex-basis:100%}
+  body.ev-page[data-ev-screen="odds"] #ev-view #os-search{min-height:22px;font-size:16px}
+  body.ev-page[data-ev-screen="odds"] .os-settings{position:static}
+  body.ev-page[data-ev-screen="odds"] .os-settings-panel{top:100%;width:min(360px,100%);max-height:65dvh;overflow-y:auto;box-sizing:border-box;margin-top:8px;padding:14px}
+  body.ev-page[data-ev-screen="odds"] .os-settings-panel fieldset{max-height:none;overflow:visible;gap:4px}
+  body.ev-page[data-ev-screen="odds"] .os-settings-panel fieldset label{min-height:44px}
+  body.ev-page[data-ev-screen="odds"] .os-settings-panel input[type="checkbox"]{width:20px;height:20px;flex:none}
+  body.ev-page[data-ev-screen="odds"] .os-board-actions{width:100%}
+  body.ev-page[data-ev-screen="odds"] #ev-view .os-screen :is(.os-rows,.os-reset){height:40px;min-height:40px}
+  body.ev-page[data-ev-screen="odds"] #main #ev-view .os-screen .os-tab{height:40px;min-height:40px}
+  body.ev-page[data-ev-screen="odds"] #ev-view .os-wide{inset:0;padding:16px 12px max(16px,env(safe-area-inset-bottom));border-radius:0}
+}
+
+/* Time column: one shaded block per game with its time, matchup and market count at the top. */
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-grid>tbody>tr>.os-c-time{vertical-align:top;border-top-color:transparent;border-right:1px solid var(--evb-line);background:var(--evb-inset)!important}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-grid>tbody>tr.is-game-start>.os-c-time{border-top-color:var(--os-game-rule)}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-grid>tbody:first-of-type>tr.is-game-start>.os-c-time{border-top-color:transparent}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-grid .os-event-heading{display:flex;align-items:flex-start;gap:6px;padding:12px 0 10px}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-grid .os-event-heading .os-toggle{flex:none;margin-top:1px}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-grid .os-when{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-grid .os-when>strong{color:var(--evb-text);font-size:13px;font-weight:650;white-space:nowrap}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-grid .os-when>small{display:flex;align-items:center;gap:5px;max-width:100%;overflow:hidden;color:var(--evb-sub);font-size:12px;text-overflow:ellipsis;white-space:nowrap}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-grid .os-event-count{display:inline-flex;align-items:center;margin-top:6px;padding:2px 8px;border:1px solid var(--evb-line);border-radius:999px;color:var(--evb-muted);font-size:11px;font-weight:500;white-space:nowrap}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-grid>tbody>tr.is-game-start>.os-c-time{z-index:3;overflow:visible}
+body.ev-page[data-ev-screen="odds"] #main #ev-view .os-grid>tbody>tr.is-game-start:not(:only-child)>.os-c-time .os-event-heading{position:absolute;top:0;left:10px;right:8px}
+@media (max-width:860px){
+  body.ev-page[data-ev-screen="odds"] #main #ev-view .os-grid>tbody>tr>.os-c-time{position:relative}
 }

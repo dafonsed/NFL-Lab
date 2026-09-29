@@ -1,4 +1,5 @@
 // Pure market math. Quote adapters can replace manual/example records without changing the workbench.
+import {marketIdentity as preciseMarketIdentity,quoteAvailable} from './ev-advanced-math.js';
 export const decimal = odds => {
   const n = Number(odds);
   if (!Number.isFinite(n) || (n > -100 && n < 100)) return NaN;
@@ -20,12 +21,10 @@ export const probabilityToAmerican = probability => {
   if (!(p > 0 && p < 1)) return NaN;
   return Math.round(p >= .5 ? -100 * p / (1 - p) : 100 * (1 - p) / p);
 };
-const marketKind = q => q.type === 'alternate' ? (['over','under'].includes(String(q.side).toLowerCase()) ? 'total' : 'spread') : q.type || '';
-const marketIdentity = q => [q.sport || '', q.eventId || q.event, q.period || 'full', q.playerId || q.player || '', q.marketId || q.market, marketKind(q)];
-export const marketKey = q => JSON.stringify([...marketIdentity(q), q.type === 'spread' || q.type === 'alternate' && !['over','under'].includes(String(q.side).toLowerCase()) ? Math.abs(Number(q.line)) : q.line ?? '', q.live ? 'live' : 'pregame']);
-export const familyKey = q => JSON.stringify([...marketIdentity(q), q.live ? 'live' : 'pregame']);
+export const marketKey = q => preciseMarketIdentity(q,true);
+export const familyKey = q => preciseMarketIdentity(q,false);
 export const validQuote = q => q && q.event && q.market && q.side && q.book && Number.isFinite(decimal(q.odds));
-export const fresh = (q, now = Date.now()) => !q.live || (Number.isFinite(Date.parse(q.ts)) && now - Date.parse(q.ts) <= 90_000 && Date.parse(q.ts) <= now + 5_000);
+export const fresh = (q, now = Date.now()) => quoteAvailable(q,{},now);
 
 export function groups(quotes, mode = null) {
   const map = new Map();
@@ -86,20 +85,20 @@ export function arbitrage(best, bankroll) {
   return { margin: 1 / sum - 1, stakes, payout: bankroll / sum, profit: bankroll * (1 / sum - 1) };
 }
 
-export function arbitrageRows(quotes, mode) {
+export function arbitrageRows(quotes, mode, settings = {}) {
   return groups(quotes, mode).map(rows => {
     const sides = opposingSides(rows);
     if (!sides.length) return null;
-    const pairs = rows.filter(q => q.side === sides[0] && fresh(q)).flatMap(a => rows.filter(b => b.side === sides[1] && b.book !== a.book && fresh(b)).map(b => [a,b]));
+    const pairs = rows.filter(q => q.side === sides[0] && quoteAvailable(q,settings)).flatMap(a => rows.filter(b => b.side === sides[1] && b.book !== a.book && quoteAvailable(b,settings)).map(b => [a,b]));
     pairs.sort((a,b) => implied(a[0].odds) + implied(a[1].odds) - implied(b[0].odds) - implied(b[1].odds));
     const best = pairs[0];
     return best && implied(best[0].odds) + implied(best[1].odds) < 1 ? { rows, best } : null;
   }).filter(Boolean).sort((a,b) => implied(a.best[0].odds) + implied(a.best[1].odds) - implied(b.best[0].odds) - implied(b.best[1].odds));
 }
 
-export function middleRows(quotes, mode) {
+export function middleRows(quotes, mode, settings = {}) {
   const families = new Map();
-  for (const q of quotes.filter(validQuote).filter(q => ['total','spread','alternate'].includes(q.type) && Boolean(q.live) === mode && fresh(q))) {
+  for (const q of quotes.filter(validQuote).filter(q => ['total','spread','alternate'].includes(q.type) && Boolean(q.live) === mode && quoteAvailable(q,settings))) {
     const key = familyKey(q);
     if (!families.has(key)) families.set(key, []);
     families.get(key).push(q);

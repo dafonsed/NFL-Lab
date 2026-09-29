@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { load } from 'cheerio';
-import { comparisonLine, trendRows } from '../public/trends-data.js';
+import { comparisonLine, trendRows, defaultTrendOptions, trendSortLabel } from '../public/trends-data.js';
 import { renderSitePage, siteContext, siteHeader } from '../lib/site-layout.mjs';
 
 const player = (id, prop, values = [0, 1, 2, 3, 4]) => ({ key: id, playerId: id, gameId: id === 'b' ? '2' : '1', name: 'Player ' + id, team: 'NY', opponent: 'LA', sport: 'nba', market: 'points', prop, rows: values.map((value, i) => ({ value, home: i % 2 === 0, opponent: 'LA', date: '2026-09-' + (20 - i) })) });
@@ -11,7 +11,7 @@ test('research overview opens with six sports and accessible loading state', asy
   const url = new URL('http://localhost/research');
   assert.deepEqual(siteContext(url), { sport: 'mlb', section: 'home' });
   const $ = load(renderSitePage(await fs.readFile(new URL('../public/home.html', import.meta.url), 'utf8'), url));
-  assert.equal($('#home-board[aria-busy=true]').length,1);
+  assert.equal($('#home-dashboard[aria-busy=true]').length,1);
   assert.equal($('script[src="/home.js"]').length,1);
   assert.equal($('.site-sports a').length,6);
   assert.equal($('.workspace-choice').length,0);
@@ -72,4 +72,22 @@ test('advanced sample filters retain missing-data semantics and known zero lines
   assert.deepEqual(trendRows(profiles,{filters:{minLine:0,maxLine:0}}).map(r=>r.p.key),['zero']);
   assert.deepEqual(trendRows(profiles,{filters:{minRate:1}}).map(r=>r.p.key),['zero']);
   assert.equal(trendRows(profiles,{filters:{sample:'5',venue:'home',minGames:2}}).find(r=>r.p.key==='zero').stats.n,2);
+});
+
+test('resetting advanced filters restores the over side and highest-first board', () => {
+  const profiles=[player('low',{line:2},[1,0,1,0,1]),player('high',{line:2},[3,4,5,6,7])];
+  const state={side:'under',sort:'name',savedOnly:true,saved:new Set(['low']),posted:true,filters:{sample:'5',venue:'home',minRate:50}};
+  assert.deepEqual(trendRows(profiles,state).map(row=>row.p.key),['low']);
+  Object.assign(state,defaultTrendOptions());
+  assert.deepEqual(trendRows(profiles,state).map(row=>row.p.key),['high','low']);
+  assert.equal(state.side,'over');
+  state.filters.teams.push('NY');
+  assert.deepEqual(defaultTrendOptions().filters.teams,[]);
+});
+
+test('sort captions describe the selected sample and descending order', () => {
+  assert.equal(trendSortLabel('rate','5'),'L5 hit rate · high to low');
+  assert.equal(trendSortLabel('average','20'),'L20 average · high to low');
+  assert.equal(trendSortLabel('rate','h2h'),'H2H hit rate · high to low');
+  assert.equal(trendSortLabel('average','all'),'All games average · high to low');
 });

@@ -1,0 +1,140 @@
+.ev-mobile-controls {display:none}
+.ev-mobile-filter-dialog {padding:0;border:1px solid var(--line);background:var(--panel);color:var(--text)}
+.ev-mobile-filter-dialog::backdrop {background:#000b}
+.ev-parlay-summary {display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:12px 16px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.ev-parlay-summary>div {display:grid;gap:5px}
+.ev-parlay-summary span {font-size:12px;color:var(--muted)}
+#ev-parlay-ticket,#ev-parlay-browse {scroll-margin-top:150px}
+.ev-parlay-more {width:100%;min-height:44px!important;margin-top:16px}
+.ev-book-search {display:grid;gap:6px;padding:10px;font-size:12px;color:var(--muted)}
+.ev-book-search input {width:100%;min-height:44px;font-size:16px}
+.ev-book-option[hidden] {display:none!important}
+@media(max-width:800px) {
+  .ev-parlay-summary {position:sticky;top:68px;z-index:5}
+  html body.ev-page .ev-parlay-summary button {min-height:44px!important;white-space:normal;font-size:13px}
+  html body.ev-page.site-layout.reference-design .ev-mobile-controls:not([hidden]) {display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0}
+  .ev-mobile-controls>span {font-size:12px;color:var(--muted);text-align:right}
+  html body.ev-page.site-layout.reference-design .ev-mobile-controls button {min-height:44px;padding:9px 14px;border:1px solid var(--border-strong)!important;border-radius:10px!important;background:var(--panel2)!important;color:var(--text)!important;font-size:14px;white-space:normal}
+  html body.ev-page.site-layout.reference-design #main>.ev-control-grid {display:none!important}
+  html body.ev-page.site-layout.reference-design dialog.ev-mobile-filter-dialog {position:fixed;inset:auto 0 0;width:100%;max-width:100%;max-height:calc(100dvh - env(safe-area-inset-top,0px) - 12px);margin:0;border-radius:18px 18px 0 0!important;overflow:auto;overscroll-behavior:contain}
+  .ev-mobile-filter-dialog>header {display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:6;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .ev-mobile-filter-dialog h2 {font-size:18px;margin:0}
+  html body.ev-page .ev-mobile-filter-dialog [data-mobile-close] {width:44px;height:44px;min-height:44px;padding:0;font-size:25px;background:transparent!important;color:var(--text)!important;border:0!important}
+  html body.ev-page.site-layout.reference-design .ev-mobile-filter-dialog .ev-control-grid {display:grid!important;grid-template-columns:minmax(0,1fr);gap:12px;padding:12px;margin:0}
+  html body.ev-page.site-layout.reference-design .ev-mobile-filter-dialog :is(.ev-stake-panel,.ev-filter-panel) {min-height:0!important;height:auto!important;padding:12px!important}
+  html body.ev-page.site-layout.reference-design .ev-mobile-filter-dialog .ev-stake-panel {grid-template-columns:repeat(2,minmax(0,1fr));display:grid;gap:12px}
+  html body.ev-page.site-layout.reference-design .ev-mobile-filter-dialog .ev-stake-panel>label {display:block;min-width:0}
+  html body.ev-page.site-layout.reference-design .ev-mobile-filter-dialog .ev-input-wrap {width:100%;margin:8px 0 0}
+  html body.ev-page.site-layout.reference-design .ev-mobile-filter-dialog :is(input,select,.td-choice-trigger) {min-height:44px!important;font-size:16px!important}
+  html body.ev-page.site-layout.reference-design .ev-mobile-filter-dialog :is(.ev-reference-filters,#ev-design-filters) {display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;gap:8px}
+  html body.ev-page.site-layout.reference-design .ev-mobile-filter-dialog .ev-design-filter {min-width:0;width:auto}
+  html body.ev-page.site-layout.reference-design .ev-mobile-filter-dialog .ev-toolbar {display:block!important;margin:12px 0}
+  html body.ev-page.site-layout.reference-design .ev-mobile-filter-dialog .ev-search-label {display:grid!important;position:static!important;inset:auto!important;width:100%!important;padding:0;background:transparent;border:0;box-shadow:none}
+  html body.ev-page.site-layout.reference-design .ev-mobile-filter-dialog #ev-search {width:100%;min-width:0}
+  .ev-mobile-filter-dialog>footer {position:sticky;bottom:0;z-index:6;padding:10px 16px max(12px,env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid var(--line)}
+  .ev-mobile-filter-dialog footer p {margin:0 0 8px;font-size:12px;color:var(--muted)}
+  html body.ev-page .ev-mobile-filter-dialog [data-mobile-done] {width:100%;min-height:46px;border:1px solid var(--border-strong)!important;background:var(--ui-selected)!important;color:var(--text)!important;font-size:14px}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-card {padding:15px;gap:12px;border-radius:16px}
+  html body.ev-page .bet-inline-mount {scroll-margin-top:72px}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-card-head {flex-wrap:nowrap;gap:10px}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-heading {flex:1 1 0;gap:5px;align-items:flex-start;flex-direction:column}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-selection {font-size:17px;min-height:44px!important;display:flex;align-items:center}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-market {font-size:13px}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-metric strong {font-size:23px}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-quote strong {font-size:21px}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-quote {display:grid;grid-template-columns:auto auto auto;gap:2px 5px;min-height:44px!important}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-quote::after {content:attr(title);grid-column:1/-1;color:var(--muted);font-size:11px;text-align:right;line-height:1.3;max-width:130px;white-space:normal}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-reference {white-space:normal;border-radius:10px;flex-wrap:wrap}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-card-foot {flex-direction:row;align-items:center;gap:10px}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-context {flex:1 1 100%;gap:5px;align-content:start}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-event {min-height:0;height:auto;font-size:12px}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-card-actions {width:100%;justify-content:space-between}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-card :is(.wager-icon-action,.wager-more>summary,.wager-action) {min-width:44px;min-height:44px!important;height:auto}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-more>div>button {min-height:44px!important}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-pair-copy {min-height:44px;padding:0!important;background:transparent!important;border:0!important;color:var(--text)!important;text-align:left;white-space:normal}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-pair-copy strong {font-size:15px}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-pair-stake {display:grid;gap:4px;white-space:normal;min-width:64px}
+  html body.has-dashboard-sidebar.ev-page.reference-design .wager-pair-stake small {font-size:11px;color:var(--muted)}
+  html body.ev-page .wager-pair-outcome {display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-top:12px}
+  html body.ev-page :is(.tool-workspace,.ev-mobile-filter-dialog) input {font-size:16px!important}
+  html body.ev-page :is(.tool-workspace,.wager-card) :is(button,summary) {touch-action:manipulation}
+  html body.ev-page .tool-selected-item>button {min-height:44px!important}
+  html body.ev-page #ev-book-menu {max-width:calc(100vw - 24px);max-height:70dvh;overflow:auto;overscroll-behavior:contain}
+  html body.ev-page .ev-book-option {min-height:44px}
+  html body.ev-page :is(#ev-dialog,#ev-import-dialog) {max-height:calc(100dvh - 20px);max-width:calc(100vw - 20px);overflow:auto;overscroll-behavior:contain}
+  html body.ev-page #ev-form :is(input,select,textarea) {font-size:16px}
+  html body.ev-page #ev-form>footer {position:sticky;bottom:0;background:var(--panel);padding-bottom:max(12px,env(safe-area-inset-bottom))}
+  html body.ev-page #ev-form :is(button,input,select) {min-height:44px}
+  html body.ev-page .ev-feed {margin-bottom:12px}
+  html body.ev-page .ev-feed .ev-feed-detail {display:none}
+  html body.ev-page .ev-feed-refresh:has(select:disabled) {display:none}
+  html body.ev-page .ev-feed-summary {min-width:0;flex-basis:auto}
+  html body.ev-page .ev-feed-row {gap:8px 12px}
+  html body.ev-page .ev-feed a {padding:8px 0;min-height:32px}
+  html body.ev-page .ev-feed-refresh select {min-height:44px;font-size:16px}
+}
+
+.ev-mobile-comparison-toggle {display:none}
+@media(max-width:800px) {
+  html body.ev-page .ev-reference-card {padding:15px!important;scroll-margin-top:72px}
+  html body.ev-page .ev-reference-card .bet-inline-summary {grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px!important;padding-bottom:12px!important}
+  html body.ev-page .ev-reference-card .bet-inline-summary>[data-comparison-action=pin] {display:none!important}
+  html body.ev-page .ev-reference-card .bet-inline-market {grid-column:1/-1;grid-row:1}
+  html body.ev-page .ev-reference-card .bet-inline-selection {grid-column:1/-1;grid-row:2}
+  html body.ev-page .ev-reference-card .bet-inline-fair {grid-column:1;grid-row:3}
+  html body.ev-page .ev-reference-card .bet-inline-probability {grid-column:2;grid-row:3}
+  html body.ev-page .ev-reference-card .bet-inline-metrics {margin-bottom:12px}
+  html body.ev-page .ev-reference-card .ev-mobile-comparison-toggle {display:block;width:100%;min-height:44px;padding:10px 14px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:var(--text);font-size:14px;text-align:left}
+  html body.ev-page .ev-reference-card[data-mobile-details=collapsed] > :is(.bet-inline-toolbar,.bet-comparison-calculator,.bet-comparison-feedback,.bet-comparison-data,.bet-comparison-history,.bet-inline-footer) {display:none!important}
+  html body.ev-page .ev-reference-card .bet-inline-tools {justify-content:flex-start;margin:0}
+  html body.ev-page .ev-reference-card .bet-inline-pin-tool {display:inline-flex!important}
+  html body.ev-page .ev-reference-card :is(.bet-inline-icon,.bet-inline-view-switch .bet-inline-icon) {width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;flex-basis:44px}
+  html body.ev-page .ev-reference-card .bet-inline-book-name {position:static;width:auto;height:auto;overflow:visible;clip-path:none;white-space:normal;font-size:11px}
+  html body.ev-page .ev-reference-card .bet-inline-brand {min-height:44px!important}
+  html body.ev-page .ev-reference-card .bet-inline-price>button {min-height:44px!important}
+  html body.ev-page .ev-reference-card .bet-comparison-calculator input {font-size:16px;min-height:44px}
+  html body.ev-page .ev-reference-card .bet-inline-footer summary {min-height:44px!important;display:flex;align-items:center}
+}
+
+body .bet-reference-expand {display:block;min-height:44px;margin:0 0 12px auto;padding:8px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--text)}
+body dialog.bet-reference-dialog {inset:0;margin:0;width:100%;max-width:100%;height:100dvh;max-height:100dvh;border:0;border-radius:0;padding:0;background:var(--panel);color:var(--text);overflow:auto;overscroll-behavior:contain}
+.bet-reference-dialog::backdrop {background:#000b}
+body .bet-reference-dialog>header {position:sticky;top:0;z-index:9;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:max(8px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 8px max(14px,env(safe-area-inset-left));background:var(--panel);border-bottom:1px solid var(--line)}
+body .bet-reference-dialog h2 {font-size:16px;margin:0}
+body .bet-reference-dialog [data-reference-close] {min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--text)}
+body .bet-reference-dialog .bet-expanded-card {width:100%;max-width:100%;min-width:0;margin:0;padding:14px!important;border:0!important;border-radius:0!important}
+@media(max-width:800px) {
+  html body .ev-reference-card .bet-open-detail {min-height:44px!important}
+  html body .bet-expanded-card :is(.bet-expanded-icon,.bet-expanded-view-switch .bet-expanded-icon,.bet-expanded-collapse) {min-width:44px!important;min-height:44px!important;width:44px!important;height:44px!important;flex-shrink:0}
+  html body .bet-expanded-card .bet-expanded-tools {flex-wrap:wrap}
+  html body .bet-expanded-card .bet-expanded-toolbar {overflow:visible}
+  html body .bet-expanded-card .bet-expanded-table button {min-height:44px!important}
+  html body .bet-expanded-card .bet-expanded-brand::after {content:attr(title);display:block;font-size:11px;white-space:normal}
+  html body .bet-expanded-card .bet-reference-legend button {min-height:44px!important;font-size:14px!important}
+  html body .bet-expanded-card .bet-reference-range :is(summary,button) {min-height:44px!important}
+  html body .bet-expanded-card .bet-reference-plot>svg {width:100%;min-width:0}
+  html body .bet-expanded-card .bet-reference-grid text {font-size:11px}
+  html body .bet-reference-tooltip {max-width:calc(100% - 8px);min-width:0;font-size:13px}
+  html body .bet-expanded-card .bet-reference-selection-tag text {font-size:13px}
+}
+
+html body dialog.bet-reference-dialog {border-radius:0!important}
+html body .bet-reference-dialog>header {min-height:0!important;height:auto!important;padding-top:max(8px,env(safe-area-inset-top));padding-bottom:8px}
+html body .bet-reference-dialog>header h2 {font-size:16px!important}
+@media(max-height:500px) and (orientation:landscape) {
+  html body .bet-reference-dialog .bet-reference-chart-toolbar {flex-wrap:nowrap;margin-top:0;gap:12px}
+  html body .bet-reference-dialog .bet-reference-legend {flex:1 1 0;gap:18px}
+}
+
+@media(max-width:800px) {
+  html body.ev-page .ev-reference-card .bet-inline-summary {gap:8px 12px!important}
+  html body.ev-page .ev-reference-card .bet-inline-selection>small {display:none}
+  html body.ev-page .ev-reference-card .bet-inline-fair strong {font-size:18px}
+  html body.ev-page .ev-reference-card .bet-inline-metrics {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
+  html body.ev-page .ev-reference-card .bet-inline-metrics>div {display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 6px;min-width:0}
+  html body.ev-page .ev-reference-card .bet-inline-metrics dt {font-size:12px}
+  html body.ev-page .ev-reference-card .bet-inline-metrics dd {font-size:14px;color:var(--text)}
+  html body.ev-page .ev-reference-card .bet-inline-metrics>div:nth-child(-n+2) {display:grid;gap:4px}
+  html body.ev-page .ev-reference-card .bet-inline-metrics>div:nth-child(-n+2) dd {font-size:21px;line-height:1.2;font-weight:650}
+  html body.ev-page .ev-reference-card .bet-inline-metrics>div:nth-child(2) dd {color:var(--positive)}
+}

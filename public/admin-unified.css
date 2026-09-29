@@ -1,0 +1,180 @@
+/* Connected administration uses the original admin.css shell and its tokens.
+   These styles adapt the existing account controls without importing account UI. */
+.admin-connected-app [hidden] { display: none !important; }
+.admin-connected-app .ad-workspace { min-width: 0; }
+.admin-connected-app .ad-page-heading { margin-bottom: 26px; }
+.admin-connected-app .ad-heading-context span { margin: 0 6px; color: #b1bbc6; }
+.admin-connected-app .ad-nav-group a[aria-current="page"] { background: #20343e; color: #b2edf2; }
+.admin-connected-app .ad-nav-group a[aria-current="page"]::before { content: ""; position: absolute; left: -11px; height: 19px; width: 3px; border-radius: 0 3px 3px 0; background: #8bd8e2; }
+.admin-connected-app .ad-nav-group a[aria-current="page"] svg { color: #8bd8e2; }
+.admin-connected-app .ad-nav-group a { position: relative; display: grid; grid-template-columns: 16px minmax(0, 1fr); column-gap: 11px; row-gap: 1px; }
+.admin-connected-app .ad-nav-group a > svg { grid-column: 1; grid-row: 1; }
+.admin-connected-app .ad-nav-group a > span { grid-column: 2; grid-row: 1; }
+.admin-connected-app .ad-nav-state { grid-column: 2; color: #738395; font-size: 9px; line-height: 1.25; font-weight: 400; }
+.admin-connected-app .ad-nav-group a[data-admin-availability="limited"] .ad-nav-state { color: #8bacae; }
+.admin-connected-app .ad-sidebar-footer .ad-staff-profile { padding: 5px 0 0; color: #dce4ed; gap: 9px; }
+.admin-connected-app .ad-staff-profile > span:nth-child(2) { flex: 1; min-width: 0; }
+.admin-connected-app .ad-staff-profile strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-connected-app .ad-staff-profile > svg { transform: none; flex: none; }
+.admin-connected-app .ad-staff-profile .ad-avatar { flex: none; }
+.admin-connected-app .ad-breadcrumb { min-width: 0; }
+.admin-connected-app .ad-breadcrumb strong { overflow-wrap: anywhere; }
+.admin-connected-app .ad-environment { white-space: nowrap; }
+.admin-connected-app .ad-page-footer a:hover { color: var(--ad-teal); text-decoration: underline; }
+
+.admin-connected-app .settings-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.admin-connected-app .settings-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 35px; padding: 8px 13px; border: 1px solid #162b3c; border-radius: 5px; background: #162b3c; color: #fff; font-size: 11px; font-weight: 550; line-height: 1.45; text-align: center; cursor: pointer; }
+.admin-connected-app .settings-button:hover:not(:disabled) { background: #25445b; border-color: #25445b; }
+.admin-connected-app .settings-button.secondary { background: #fff; color: #314555; border-color: #d8e0e9; }
+.admin-connected-app .settings-button.secondary:hover:not(:disabled) { background: #f4f8fa; border-color: #b9ccd5; }
+.admin-connected-app .settings-button.danger { background: #fff4f3; border-color: #efd4d2; color: #a33f42; }
+.admin-connected-app .settings-button.danger:hover:not(:disabled) { background: #fbe6e4; border-color: #dfaead; }
+.admin-connected-app .settings-button:disabled { opacity: .45; cursor: not-allowed; }
+.admin-connected-app .settings-button svg { width: 14px; height: 14px; flex: none; }
+.admin-connected-app .account-field { min-width: 0; margin: 16px 0; }
+.admin-connected-app .account-field label { display: block; margin-bottom: 7px; color: #354858; font-size: 11px; font-weight: 550; line-height: 1.5; }
+.admin-connected-app .account-field :is(input, select, textarea) { width: 100%; min-width: 0; min-height: 39px; padding: 9px 11px; border: 1px solid #d8e0e9; border-radius: 5px; background: #fff; color: var(--ad-ink); font-size: 12px; line-height: 1.5; }
+.admin-connected-app .account-field input::placeholder, .admin-connected-app .account-field textarea::placeholder { color: #8896a5; }
+.admin-connected-app .account-field textarea { display: block; min-height: 104px; resize: vertical; }
+.admin-connected-app .account-field :is(input, select, textarea):focus { border-color: #5b9cac; }
+.admin-connected-app .account-field :is(input, select, textarea):disabled { background: #f3f6f8; color: #6c7b89; }
+.admin-connected-app .account-help { margin: 10px 0; color: var(--ad-muted); font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
+.admin-connected-app .account-help a { color: var(--ad-teal); text-decoration: underline; text-underline-offset: 3px; }
+.admin-connected-app .account-status { padding: 12px 15px; border: 1px solid #d7e7e5; border-radius: 6px; background: #eef7f4; color: #286756; font-size: 12px; line-height: 1.65; margin: 18px 0; overflow-wrap: anywhere; }
+.admin-connected-app .account-status[data-tone="error"] { border-color: #efd6d1; background: #fff4f0; color: #8c4436; }
+.admin-connected-app .connected-panel { min-width: 0; padding: 22px; border: 1px solid var(--ad-line); border-radius: 7px; background: var(--ad-panel); box-shadow: 0 1px 3px #22344903; margin: 20px 0; scroll-margin-top: 20px; }
+.admin-connected-app .connected-panel > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 19px; }
+.admin-connected-app .connected-panel h2 { font-size: 14px; line-height: 1.4; font-weight: 600; margin: 0; }
+.admin-connected-app .connected-panel h2 + .account-help { margin: 5px 0 0; }
+.admin-connected-app .connected-panel > form { margin-top: 20px; }
+.admin-connected-app .connected-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.admin-connected-app .connected-metrics article { padding: 17px 18px; border: 1px solid var(--ad-line); border-radius: 6px; background: #fff; }
+.admin-connected-app .connected-metrics span { display: block; color: var(--ad-muted); font-size: 11px; }
+.admin-connected-app .connected-metrics strong { display: block; color: var(--ad-ink); font-size: 27px; line-height: 1.25; font-weight: 550; letter-spacing: -.8px; margin-top: 8px; }
+.admin-connected-app .connected-service-status { display: flex; flex-wrap: wrap; gap: 22px; margin-top: 20px; }
+.admin-connected-app .connected-service-status strong { display: block; color: #425868; font-size: 11px; font-weight: 550; }
+.admin-connected-app .connected-service-status span { display: block; color: var(--ad-muted); font-size: 11px; margin-top: 3px; }
+.admin-connected-app .connected-unavailable { color: #886724; font-size: 12px; line-height: 1.75; background: #fffbf1; border: 1px solid #eee5ce; border-left: 3px solid #d4b873; border-radius: 5px; padding: 12px 15px; margin-top: 15px; }
+.admin-connected-app .ad-unavailable-body { padding: 2px 22px 24px; max-width: 90ch; }
+.admin-connected-app .ad-unavailable-body p { margin: 0 0 14px; color: #64788b; font-size: 12px; line-height: 1.8; }
+.admin-connected-app .ad-unavailable-body .ad-button { margin-top: 5px; }
+.admin-connected-app .admin-search { display: flex; align-items: flex-end; gap: 12px; margin: 0 0 20px; }
+.admin-connected-app .admin-search .account-field { flex: 1; margin: 0; }
+.admin-connected-app .admin-search > .settings-button { min-height: 39px; }
+.admin-connected-app #connected-directory { padding: 22px; border: 1px solid var(--ad-line); border-radius: 7px; background: #fff; margin: 20px 0; min-width: 0; }
+.admin-connected-app .connected-pagination { margin: 18px 0; }
+.admin-connected-app .connected-pagination span { color: #687e90; font-size: 11px; margin: 0 4px; }
+.admin-connected-app .admin-account-list { display: grid; gap: 12px; }
+.admin-connected-app .admin-account-row { padding: 17px 18px; border: 1px solid var(--ad-line); border-radius: 6px; background: #fff; min-width: 0; }
+.admin-connected-app .admin-account-row > header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.admin-connected-app .admin-account-row h3 { font-size: 13px; font-weight: 600; line-height: 1.5; margin: 0; overflow-wrap: anywhere; }
+.admin-connected-app .admin-account-row p { font-size: 12px; line-height: 1.7; margin: 6px 0 0; color: #64788b; overflow-wrap: anywhere; }
+.admin-connected-app .admin-account-row .account-help { font-size: 11px; }
+.admin-connected-app .admin-account-row .settings-actions, .admin-connected-app .admin-account-row > .settings-button { margin-top: 14px; }
+.admin-connected-app .admin-account-status { display: inline-flex; align-items: center; min-height: 23px; padding: 3px 7px; border: 1px solid #dbe7e9; border-radius: 4px; color: #446b73; background: #f1f7f7; font-size: 10px; line-height: 1.4; white-space: nowrap; text-transform: capitalize; }
+.admin-connected-app #market-list .admin-account-row { margin-top: 12px; }
+.admin-connected-app #admin-results[aria-busy="true"] { opacity: .65; pointer-events: none; }
+.admin-connected-app .connected-table-scroll { position: relative; isolation: isolate; overflow: auto; max-width: 100%; margin: 16px 0; border: 1px solid var(--ad-line); border-radius: 5px; overscroll-behavior-inline: contain; }
+.admin-connected-app .connected-table-scroll table { border-collapse: collapse; width: 100%; font-size: 12px; text-align: left; }
+.admin-connected-app .connected-table-scroll :is(th, td) { padding: 13px 14px; border-bottom: 1px solid var(--ad-line); vertical-align: top; min-width: 130px; max-width: 300px; overflow-wrap: anywhere; }
+.admin-connected-app .connected-table-scroll th { font-size: 10px; font-weight: 550; color: #6f8294; background: #f8fafc; white-space: nowrap; }
+.admin-connected-app .connected-table-scroll td { color: #425868; }
+.admin-connected-app .connected-table-scroll td strong { font-weight: 550; color: #233c4e; }
+.admin-connected-app .connected-table-scroll td small { display: block; margin-top: 4px; font-size: 10px; color: #7a8c9b; }
+.admin-connected-app .connected-table-scroll tbody tr:last-child td { border-bottom: 0; }
+.admin-connected-app .connected-table-scroll tbody tr:hover { background: #fcfdfe; }
+.admin-connected-app #connected-audit-records:empty { min-height: 30px; }
+
+.admin-connected-app .account-dialog { width: min(560px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(var(--admin-viewport, 100dvh) - 32px); padding: 26px; overflow: auto; overscroll-behavior: contain; border: 1px solid #d4dfe8; border-radius: 10px; background: #fff; color: var(--ad-ink); box-shadow: 0 30px 100px #142d4a33; }
+.admin-connected-app .account-dialog::backdrop { background: #0d1b2c80; backdrop-filter: blur(3px); }
+.admin-connected-app:has(dialog[open]) { overflow: hidden; }
+.admin-connected-app .account-dialog h2 { font-family: Outfit, Inter, sans-serif; font-size: 24px; line-height: 1.25; font-weight: 500; letter-spacing: -.3px; margin: 0 0 12px; }
+.admin-connected-app .account-dialog form > p, .admin-connected-app #operation-fields > p { color: #63798c; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.admin-connected-app .account-dialog .settings-actions { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--ad-line); }
+.admin-connected-app .account-dialog .dialog-close { margin-top: 24px; }
+.admin-connected-app .connected-details { width: min(820px, calc(100vw - 32px)); }
+.admin-connected-app .connected-detail-section { margin-top: 16px; padding: 16px 0 0; border-top: 1px solid var(--ad-line); }
+.admin-connected-app .connected-detail-section h3 { margin: 0 0 12px; font-size: 13px; font-weight: 600; }
+.admin-connected-app .connected-detail-section small { color: var(--ad-muted); }
+.admin-connected-app .connected-details details { margin-top: 16px; font-size: 12px; color: #63798c; }
+.admin-connected-app .connected-details summary { cursor: pointer; padding: 8px 0; color: #314f61; }
+.admin-connected-app #admin-details-actions { margin: 20px 0; }
+.admin-connected-app .connected-preserve-lines { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.admin-connected-app .command-dialog { width: min(640px, calc(100vw - 32px)); }
+.admin-connected-app .command-dialog .ad-dialog-body { padding-top: 18px; }
+.admin-connected-app .command-dialog .ad-search { max-width: none; }
+.admin-connected-app .ad-area-count { font-size: 11px; line-height: 1.6; margin: 14px 1px 9px; color: #748898; }
+.admin-connected-app .ad-area-list { list-style: none; padding: 0; margin: 0 -8px; }
+.admin-connected-app .ad-area-list a { display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 56px; border-radius: 5px; padding: 10px 12px; }
+.admin-connected-app .ad-area-list a:hover, .admin-connected-app .ad-area-list a:focus-visible { background: #eef6f8; }
+.admin-connected-app .ad-area-list a[aria-current="page"] { background: #f2f7f8; }
+.admin-connected-app .ad-area-list strong { display: block; font-size: 12px; font-weight: 550; color: #244354; }
+.admin-connected-app .ad-area-list small { display: block; margin-top: 2px; font-size: 10px; color: #8594a2; }
+.admin-connected-app .ad-area-availability { font-size: 10px; color: #487d70; white-space: nowrap; }
+.admin-connected-app [data-availability="limited"] .ad-area-availability { color: #8c743d; }
+.admin-connected-app [data-availability="unavailable"] .ad-area-availability { color: #8794a2; }
+.admin-connected-app .ad-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.admin-connected-app noscript > p { padding: 15px 22px; background: #fff4f0; color: #8c4436; }
+
+@media (max-width: 1000px) {
+  .admin-connected-app .connected-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-connected-app .ad-nav-group a { column-gap: 9px; }
+}
+@media (max-width: 760px) {
+  .admin-connected-app .ad-command { display: inline-flex; width: 44px; height: 44px; justify-content: center; }
+  .admin-connected-app .ad-command > span, .admin-connected-app .ad-command kbd { display: none; }
+  .admin-connected-app .ad-top-actions { gap: 1px; }
+  .admin-connected-app .ad-environment { font-size: 9px; min-height: 28px; }
+  .admin-connected-app .ad-nav-group a { min-height: 44px; font-size: 13px; }
+  .admin-connected-app .ad-nav-state { font-size: 10px; }
+  .admin-connected-app .ad-staff-profile strong { font-size: 12px; }
+  .admin-connected-app .ad-staff-profile small { font-size: 11px; }
+  .admin-connected-app .ad-page-heading { margin-bottom: 20px; }
+  .admin-connected-app .connected-panel, .admin-connected-app #connected-directory { padding: 16px; margin: 16px 0; }
+  .admin-connected-app .connected-panel > header { gap: 12px; flex-wrap: wrap; }
+  .admin-connected-app .connected-panel h2 { font-size: 15px; }
+  .admin-connected-app .settings-button { min-height: 44px; padding: 10px 12px; font-size: 12px; }
+  .admin-connected-app .account-field label { font-size: 12px; }
+  .admin-connected-app .account-field :is(input, select, textarea) { font-size: 16px; min-height: 44px; }
+  .admin-connected-app .account-help, .admin-connected-app .account-status, .admin-connected-app .connected-unavailable, .admin-connected-app .admin-account-row .account-help { font-size: 12px; }
+  .admin-connected-app .admin-search { flex-wrap: wrap; }
+  .admin-connected-app .admin-search .account-field { flex-basis: 100%; }
+  .admin-connected-app .connected-pagination { gap: 8px; }
+  .admin-connected-app .connected-pagination .settings-button { flex: 1 1 120px; }
+  .admin-connected-app .connected-pagination span { font-size: 12px; }
+  .admin-connected-app .connected-metrics { gap: 10px; }
+  .admin-connected-app .connected-metrics article { padding: 13px; }
+  .admin-connected-app .connected-metrics span { font-size: 12px; }
+  .admin-connected-app .connected-metrics strong { font-size: 25px; }
+  .admin-connected-app .connected-service-status { gap: 16px; }
+  .admin-connected-app .connected-service-status :is(strong, span) { font-size: 12px; }
+  .admin-connected-app .admin-account-row { padding: 14px; }
+  .admin-connected-app .admin-account-row > header { flex-wrap: wrap; gap: 8px; }
+  .admin-connected-app .admin-account-row h3, .admin-connected-app .admin-account-row p { font-size: 13px; }
+  .admin-connected-app .admin-account-status { font-size: 11px; }
+  .admin-connected-app .connected-table-scroll { margin: 14px 0; }
+  .admin-connected-app .connected-table-scroll table { font-size: 13px; }
+  .admin-connected-app .connected-table-scroll th { font-size: 11px; }
+  .admin-connected-app .connected-table-scroll td small { font-size: 11px; }
+  .admin-connected-app .connected-table-scroll:focus-visible { outline-offset: -3px; }
+  .admin-connected-app .connected-account-table :is(th, td):first-child { position: sticky; left: 0; z-index: 1; min-width: 170px; max-width: 190px; background: #fff; box-shadow: 2px 0 0 var(--ad-line); }
+  .admin-connected-app .connected-account-table th:first-child { background: #f8fafc; }
+  .admin-connected-app .account-dialog, .admin-connected-app .command-dialog { width: calc(100vw - 16px); max-width: calc(100vw - 16px); max-height: calc(var(--admin-viewport, 100dvh) - 16px); margin: auto; }
+  .admin-connected-app .account-dialog { padding: 18px; scroll-padding: 20px; }
+  .admin-connected-app .account-dialog h2 { font-size: 23px; }
+  .admin-connected-app .account-dialog .settings-actions { padding-bottom: env(safe-area-inset-bottom); }
+  .admin-connected-app .account-dialog .settings-actions > .settings-button { flex: 1; }
+  .admin-connected-app .account-dialog form > p, .admin-connected-app #operation-fields > p, .admin-connected-app .connected-details details { font-size: 13px; }
+  .admin-connected-app .connected-details summary { min-height: 44px; }
+  .admin-connected-app .ad-unavailable-body { padding: 0 16px 20px; }
+  .admin-connected-app .ad-unavailable-body p, .admin-connected-app .ad-area-count { font-size: 12px; }
+  .admin-connected-app .ad-area-list strong { font-size: 13px; }
+  .admin-connected-app .ad-area-list small, .admin-connected-app .ad-area-availability { font-size: 11px; }
+}
+@media (max-width: 380px) {
+  .admin-connected-app .ad-environment { max-width: 83px; white-space: normal; line-height: 1.35; }
+  .admin-connected-app .connected-metrics { grid-template-columns: 1fr; }
+  .admin-connected-app .ad-area-list a { gap: 10px; }
+  .admin-connected-app .ad-area-availability { white-space: normal; text-align: right; }
+}

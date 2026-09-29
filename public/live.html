@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#08080a"><meta name="description" content="NFL live player props with transparent workload projections, current box scores and visible model weights.">
-  <title>NFL Live · Sports Lab</title><link rel="icon" href="/favicon.svg">
+  <title>NFL Live · VisualOdds</title><link rel="icon" href="/favicon.svg">
   <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/live.css"><script type="module" src="/live.js"></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to live player props</a>
   <!--site-header-->
   <main id="main" class="live-main" tabindex="-1">
-    <div class="page-heading"><div><div class="eyebrow"> LIVE GAME & PLAYER MODELS</div><h1>Live odds & props<span class="accent">.</span></h1></div><div class="heading-actions"><a class="button subtle" href="#method" data-dev-only>Methodology ↓</a><button id="refresh" class="button primary">↻ Refresh live</button></div></div>
+    <div class="page-heading"><div><div class="eyebrow"> LIVE GAME & PLAYER MODELS</div><h1>Live odds &amp; <span class="ls-gradient">props<span class="accent">.</span></span></h1></div><div class="heading-actions"><a class="button subtle" href="#method" data-dev-only>Methodology ↓</a><button id="refresh" class="button primary">↻ Refresh live</button></div></div>
     <section class="live-toolbar" aria-label="Live game selection">
       <label>Game date · Eastern <input id="date" type="date" aria-label="Game date (Eastern time)"></label><button id="current-week" class="button subtle">Current NFL week</button>
       <label class="game-select-label">Game <select id="game"><option>Loading games…</option></select></label>
@@ -28,7 +28,7 @@
     <div class="live-disclosure"><strong>Independent model · experimental</strong><span>Player projections and a separate game simulation with estimated fair odds and EV. These estimates lack production validation, and public feeds can lag the game.</span></div>
     <section id="method" class="live-method" aria-label="Live model weighting" data-dev-only><div class="eyebrow">OPEN THE MODEL</div><h2>How the live model works</h2><div id="method-content">Loading the model specification…</div></section>
     <details class="live-sources"><summary>Data sources & snapshot receipts</summary><div id="sources"></div></details>
-    <footer><span>SPORTS LAB / Live player props</span><span>live-workload-v1 · Separate from the pregame model</span><a href="/nfl">Back to NFL research ↗</a></footer>
+    <footer><span>VISUALODDS / Live player props</span><span>live-workload-v1 · Separate from the pregame model</span><a href="/nfl">Back to NFL research ↗</a></footer>
   </main>
 </body>
 </html>

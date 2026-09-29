@@ -20,7 +20,7 @@ export function bindComparisonLines(root, { onStart, onPreview, onCommit, onCanc
   let drag = null;
   const listen = (type, fn) => root.addEventListener(type, fn, { signal: events.signal });
   const bounds = control => ({ min: Number(control.getAttribute('aria-valuemin')), max: Number(control.getAttribute('aria-valuemax')) });
-  const point = (svg, event) => new DOMPoint(event.clientX, event.clientY).matrixTransform(svg.getScreenCTM().inverse());
+  const point = (inverse, event) => new DOMPoint(event.clientX, event.clientY).matrixTransform(inverse);
   // SVG children do not consistently establish a touch-action region. Cancel
   // the native gesture only on the handle; the chart remains scrollable elsewhere.
   root.addEventListener('touchstart', event => {
@@ -52,13 +52,16 @@ export function bindComparisonLines(root, { onStart, onPreview, onCommit, onCanc
     const control = event.target.closest('[data-comparison-line]');
     if (!control || event.button !== 0 || !event.isPrimary || drag) return;
     event.preventDefault(); control.focus({ preventScroll: true });
-    const svg = control.ownerSVGElement, p = point(svg, event);
-    drag = { control, svg, id: event.pointerId, startY: p.y, start: Number(control.getAttribute('aria-valuenow')), value: Number(control.getAttribute('aria-valuenow')), changed: false };
+    const svg = control.ownerSVGElement, inverse = svg.getScreenCTM().inverse();
+    // A custom-line preview can resize content above the chart. Keep the
+    // gesture's coordinates and scale stable until the pointer is released.
+    const geometry = Object.fromEntries(['low','high','top','height'].map(k=>[k,Number(svg.dataset[k])])), p = point(inverse, event);
+    drag = { control, inverse, geometry, id: event.pointerId, startY: p.y, start: Number(control.getAttribute('aria-valuenow')), value: Number(control.getAttribute('aria-valuenow')), changed: false };
     onStart?.(); control.setPointerCapture(event.pointerId); control.classList.add('is-dragging');
   });
   listen('pointermove', event => {
     if (!drag || event.pointerId !== drag.id || !drag.control.isConnected) return;
-    const p = point(drag.svg, event), geometry = Object.fromEntries(['low','high','top','height'].map(k=>[k,Number(drag.svg.dataset[k])])), { min, max } = bounds(drag.control);
+    const p = point(drag.inverse, event), { geometry } = drag, { min, max } = bounds(drag.control);
     const value = snapComparisonLine(drag.start + valueAtChartY(p.y, geometry) - valueAtChartY(drag.startY, geometry), min, max);
     if (value === drag.value) return;
     drag.value = value; drag.changed = true; paint(drag.control, value); onPreview?.(value);

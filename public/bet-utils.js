@@ -20,9 +20,11 @@ export function validateBet(input) {
   const book = canonicalPlatform(input.book);
   const notes = String(input.notes ?? '').trim();
   const market = String(input.market ?? '').trim();
+  const event = String(input.event ?? '').trim();
   const tool = String(input.tool ?? '').trim();
   const tags = (Array.isArray(input.tags) ? input.tags : String(input.tags ?? '').split(',')).map(tag => String(tag).trim()).filter(Boolean);
   if (!selection || selection.length > 240) throw new Error('Enter a bet description of up to 240 characters.');
+  if (event.length > 120) throw new Error('Use up to 120 characters for the event.');
   if (book.length > 80 || market.length > 80 || tool.length > 80 || notes.length > 2000) throw new Error('Use up to 80 characters for book, market, and source, and 2,000 for notes.');
   if (tags.length > 8 || tags.some(tag => tag.length > 24)) throw new Error('Use up to 8 tags, each 24 characters or fewer.');
   if (!SPORTS.includes(input.sport)) throw new Error('Choose a sport.');
@@ -44,7 +46,7 @@ export function validateBet(input) {
   if(!['auto','manual'].includes(settlement)||settlement==='auto'&&!legs.length)throw new Error('Add legs before enabling automatic ticket results.');
   const status=settlement==='auto'?ticketSettlement(validatedLegs).status:input.status;
   return {
-    selection, book, market, tool, tags, notes, sport: input.sport, type: input.type, date: input.date,
+    selection, book, market, ...(event ? { event } : {}), tool, tags, notes, sport: input.sport, type: input.type, date: input.date,
     odds, closingOdds, oddsFormat: input.oddsFormat, stake: amount(input.stake, 'Stake'), status,
     cashout: status === 'cashed' ? amount(input.cashout, 'Cash-out return', true) : null,
     legs:validatedLegs,settlement,

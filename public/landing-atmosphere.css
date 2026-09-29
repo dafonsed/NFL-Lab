@@ -73,7 +73,7 @@ body.landing-page :is(.home-header, main, .home-hero, .hero-brands, .home-live, 
 }
 .home-review-viewport::-webkit-scrollbar { display: none; }
 .home-review-viewport:active { cursor: grabbing; }
-.home-review-viewport:focus-visible { outline: 2px solid #8edbd7; outline-offset: -2px; }
+.home-review-viewport:focus-visible { outline: 2px solid #b4e0e6; outline-offset: -2px; }
 .home-review-track { display: flex; align-items: stretch; width: max-content; gap: 20px; }
 .home-review-card {
   display: flex;

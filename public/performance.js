@@ -3,7 +3,7 @@ import {playerPortrait} from './sports-identity.js';
 const $=s=>document.querySelector(s),esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const names={any_td:'Anytime TD',pass_yds:'Passing yards',pass_tds:'Passing TDs',rush_yds:'Rushing yards',rush_attempts:'Rushing attempts',rec:'Receptions',rec_yds:'Receiving yards',pass_attempts:'Passing attempts',pass_completions:'Completions',pass_interceptions:'Interceptions',rush_rec_yds:'Rush + receiving yards'};
 const num=(v,d=2)=>Number.isFinite(v)?v.toFixed(d):'—',pct=v=>Number.isFinite(v)?(v*100).toFixed(1)+'%':'—',when=v=>v?new Date(v).toLocaleString():'—';
-const table=(heads,rows)=>`<div class="table-wrap" tabindex="0" role="region" aria-label="Data table, scroll to view all columns"><table class="data-table"><thead><tr>${heads.map(h=>`<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(v=>`<td>${v}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+const table=(heads,rows)=>`<p class="performance-scroll-hint">Scroll across to compare all columns. The first column stays visible.</p><div class="table-wrap" tabindex="0" role="region" aria-label="${esc(heads[0])} data table, scroll to view all columns"><table class="data-table"><thead><tr>${heads.map(h=>`<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(v=>`<td>${v}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 let data=null,requestId=0,pageOffset=0;
 $('#market').innerHTML+='<option disabled>──────────</option>'+Object.entries(names).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
 const query=new URLSearchParams(location.search);if(query.get('season')&&query.get('week'))$('#week').innerHTML+=`<option value="${esc(query.get('season'))}-${esc(query.get('week'))}" selected>Selected week</option>`;
@@ -33,7 +33,7 @@ $('#week').addEventListener('change',()=>load(0));$('#reload').addEventListener(
 $('#export').addEventListener('click',async()=>{
  if(!data)return;const snapshot=data,id=requestId,all=[];$('#export').disabled=true;
  try{for(let offset=0;offset<snapshot.pagination.total;offset+=100){
-  let page;if(offset===snapshot.pagination.offset)page=snapshot;else{const q=new URLSearchParams({season:String(snapshot.season),week:String(snapshot.week),offset:String(offset),archiveVersion:snapshot.archiveVersion});if(snapshot.pagination.market)q.set('market',snapshot.pagination.market);const r=await fetch('/api/performance?'+q);page=await r.json();if(!r.ok)throw Error(page.error||'Export failed');}
+  let page;if(offset===snapshot.pagination.offset)page=snapshot;else{const q=new URLSearchParams({season:String(snapshot.season),week:String(snapshot.week),offset:String(offset),archiveVersion:snapshot.archiveVersion});if(snapshot.pagination.market)q.set('market',snapshot.pagination.market);page=await requestData('/api/performance?'+q);}
   if(id!==requestId)throw Error('Week or market changed; export cancelled.');all.push(...page.rows);$('#status').textContent='Preparing export: '+all.length+' / '+snapshot.pagination.total+' records';
  }
  const url=URL.createObjectURL(new Blob([JSON.stringify({...snapshot,rows:all,pagination:null},null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='nfl-predictions-'+snapshot.season+'-'+snapshot.week+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);$('#status').textContent='Exported '+all.length+' saved records with source details.';

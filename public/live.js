@@ -1,16 +1,18 @@
 import {playerPortrait,teamMark} from './sports-identity.js';
 import {requestData,mountLiveWorkspace,renderLiveEmptyState} from './product-ui.js';
 import { preserveLiveFocus, withheldSummary } from './presentation.js';
-import { compareLiveLine } from './live-utils.js';
+import { compareLiveLine, stableLiveOrder, liveDisplayRevision } from './live-utils.js';
 import { gameScoreboardHtml, renderGameOdds, updateGameOdds, gameOddsFreshness, finalPlayerHtml } from './live-game.js';
 const $ = s => document.querySelector(s);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (x, digits = 1) => Number.isFinite(x) ? x.toFixed(digits) : '—';
+// Share of the projected total already recorded; drives the row's progress bar.
+const liveProgress = (f, paused) => !paused && Number.isFinite(f?.current) && Number.isFinite(f?.projection) && f.projection > 0 ? Math.min(100, Math.round(f.current / f.projection * 100)) + '%' : '0%';
 const pct = x => Number.isFinite(x) ? Math.round(x * 100) + '%' : '—';
 const time = t => t ? new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : 'unavailable';
 const params = new URLSearchParams(location.search);
 const state = { data: null, game: params.get('game') || '', date: params.get('date') || '', market: params.get('market') || 'rec_yds', search: '', loading: false, error: '', quotes: new Map(), drafts: new Map(), paused: new Set(), expanded: new Set() };
-let controller, requestId = 0;
+let controller, requestId = 0, orderKey = '', readingOrder = [], lastRevision = '';
 $('#date').value = state.date;
 const key = id => `${state.game}:${id}:${state.market}`;
 const playerKey = id => `${state.game}:${id}`;
@@ -19,15 +21,20 @@ function updateUrl() {
   if (state.game) q.set('game', state.game);
   if (state.date) q.set('date', state.date);
   q.set('panel',document.querySelector('[data-live-panel][aria-selected=true]')?.dataset.livePanel||'game');
-  history.replaceState(null, '', '/nfl/live?' + q);
+  history.replaceState(history.state, '', '/nfl/live?' + q);
 }
 function currentPlayers() {
   const q = state.search.trim().toLowerCase();
-  return (state.data?.players || []).filter(p => p.projections[state.market] && (!q || `${p.name} ${p.team}`.toLowerCase().includes(q))).sort((a, b) => (b.projections[state.market].projection ?? b.projections[state.market].current ?? -1) - (a.projections[state.market].projection ?? a.projections[state.market].current ?? -1));
+  const nextKey=state.game+':'+state.market;
+  if(nextKey!==orderKey){orderKey=nextKey;readingOrder=[];}
+  const rows=stableLiveOrder((state.data?.players || []).filter(p => p.projections[state.market]).sort((a, b) => (b.projections[state.market].projection ?? b.projections[state.market].current ?? -1) - (a.projections[state.market].projection ?? a.projections[state.market].current ?? -1)),readingOrder);
+  readingOrder=rows.map(p=>p.id);
+  return rows.filter(p=>!q||`${p.name} ${p.team}`.toLowerCase().includes(q));
 }
 async function load({ clear = false } = {}) {
   controller?.abort(); controller = new AbortController(); const id = ++requestId;
   if (clear) { state.data = null; render(); }
+  const hadError=Boolean(state.error);
   state.loading = true; state.error = ''; $('#refresh').disabled = true; $('#refresh').setAttribute('aria-label','Refreshing data');
   $('#players').setAttribute('aria-busy', 'true');
   const q = new URLSearchParams(); if (state.date) q.set('date', state.date); if (state.game) q.set('game', state.game);
@@ -35,7 +42,9 @@ async function load({ clear = false } = {}) {
     const data = await requestData('/api/nfl/live?' + q,{signal:controller.signal});
     if (id !== requestId) return;
     state.data = data; state.game = data.selected || ''; if (!data.markets[state.market]) state.market = 'rec_yds';
-    updateUrl(); render();
+    const revision=liveDisplayRevision(data);updateUrl();
+    if(clear||hadError||revision!==lastRevision)render();else updateFreshness();
+    lastRevision=revision;
   } catch (e) { if (e.name === 'AbortError' || id !== requestId) return; state.error = e.message; render(); }
   finally { if (id === requestId) { state.loading = false; $('#refresh').disabled = false; $('#refresh').setAttribute('aria-label','Refresh live'); $('#players').setAttribute('aria-busy', 'false'); renderLiveEmptyState(state.data,state); updateFreshness(); } }
 }
@@ -46,7 +55,7 @@ function render() {
   $('#game').innerHTML = d?.events.length ? d.events.map(g => `<option value="${esc(g.id)}" ${g.id === state.game ? 'selected' : ''}>${esc(g.teams.find(t => t.homeAway === 'away')?.abbreviation)} @ ${esc(g.teams.find(t => t.homeAway === 'home')?.abbreviation)} · ${esc(g.status)}</option>`).join('') : `<option value="">${(state.error||d?.stale)?'Schedule unavailable · refresh to retry':state.loading?'Loading games…':'No games on this date'}</option>`;
   $('#markets').innerHTML = Object.entries(d?.markets || {}).map(([k, m]) => `<button class="market-tab ${k === state.market ? 'active' : ''}" data-market="${esc(k)}" aria-pressed="${k === state.market}">${esc(m.label)}</button>`).join('');
   const g = d?.game;
-  $('#scoreboard').innerHTML = g ? gameScoreboardHtml(g,'nfl',g.state==='in'?`Q${g.period||'—'} · ${g.clock||''}`:g.status) : '';
+  $('#scoreboard').innerHTML = g ? gameScoreboardHtml(g,'nfl',g.state==='in'?`Q${g.period||'—'} · ${g.clock||''}`:g.status,d.gameModel) : '';
   renderGameOdds($('#odds'), d);
   renderLiveEmptyState(d,state);
   renderPlayers();
@@ -90,7 +99,7 @@ function renderPlayers() {
     const f = p.projections[state.market], paused = state.paused.has(playerKey(p.id)), draft = state.drafts.get(key(p.id)) ?? '';
     if(f.status==='final') return finalPlayerHtml({...p,sport:'nfl'},f,label,[p.team,p.prior?.position].filter(Boolean).join(' · '),p.prior?.sample,state.expanded.has(key(p.id)));
     const weights = f.parts ? f.parts.map(x => `<h4>${esc(d.markets[x.market].label)}</h4>${breakdownPart(x)}`).join('') : breakdownPart(f);
-    return `<article class="live-card" data-live-player="${esc(p.id)}"><div class="live-card-header"><div class="live-player-identity">${playerPortrait({...p,sport:'nfl'})}<div><h3>${esc(p.name)}</h3><p>${esc(p.team)} · ${esc(p.prior?.position || 'Offense')} · ${p.prior?.count || 0} prior role games</p></div></div><span class="live-tag ${f.status !== 'experimental' || paused ? 'withheld' : ''}">${paused ? 'PAUSED' : f.status === 'final' ? 'FINAL' : f.status === 'experimental' ? 'EXPERIMENTAL' : 'WITHHELD'}</span></div><div class="live-values"><div><small>RECORDED</small><strong>${num(f.current)}</strong></div><div><small>STILL TO COME</small><strong>${paused ? '—' : num(f.remaining)}</strong></div><div class="projected"><small>PROJECTED TOTAL</small><strong>${paused ? '—' : num(f.projection)}</strong></div></div>${!Number.isFinite(f.projection)&&f.reasons?.length?`<p class="live-withheld-reason">${esc(withheldSummary(f.reasons))}</p>`:""}<div class="live-inputs"><form data-quote="${esc(p.id)}"><label for="line-${esc(p.id)}">Your full-game ${esc(label.toLowerCase())} line<input id="line-${esc(p.id)}" data-line="${esc(p.id)}" type="number" min="0" max="1500" step="0.5" placeholder="Enter live total" value="${esc(draft)}" required ${f.projection === null || paused ? 'disabled' : ''}></label><button class="button subtle" type="submit" ${f.projection === null || paused ? 'disabled' : ''}>Confirm line</button></form><p class="live-comparison" data-comparison="${esc(p.id)}"></p><label class="pause-player"><input type="checkbox" data-pause="${esc(p.id)}" ${paused ? 'checked' : ''}> Pause player · injured, benched, or uncertain role</label></div><details class="live-breakdown" data-detail="${esc(p.id)}" ${state.expanded.has(key(p.id)) ? 'open' : ''}><summary>Projection inputs</summary>${f.reasons.length ? `<p>${f.reasons.map(esc).join(' ')}</p>` : weights}<p>Reported-out players and explicit ejections are automatically paused; stale injury feeds also pause projections. Unreported injuries and substitutions may be missed. Use Pause player when the role is uncertain.</p>${p.prior ? `<p>Role sample: ${p.prior.count} appearances. Efficiency sample: ${p.prior.efficiencyCount}. Team baseline: ${num(p.prior.teamPlays)} plays/game.</p><p>Earlier games: ${p.prior.sample.map(s => esc(s.date)).join(' · ')}.</p>` : ''}</details></article>`;
+    return `<article class="live-card" data-live-player="${esc(p.id)}"><div class="live-card-header"><div class="live-player-identity">${playerPortrait({...p,sport:'nfl'})}<div><h3>${esc(p.name)}</h3><p>${esc(p.team)} · ${esc(p.prior?.position || 'Offense')} · ${p.prior?.count || 0} prior role games</p></div></div><span class="live-tag ${f.status !== 'experimental' || paused ? 'withheld' : ''}">${paused ? 'PAUSED' : f.status === 'final' ? 'FINAL' : f.status === 'experimental' ? 'EXPERIMENTAL' : 'WITHHELD'}</span></div><div class="live-values" style="--live-progress:${liveProgress(f,paused)}"><div><small>RECORDED</small><strong>${num(f.current)}</strong></div><div><small>STILL TO COME</small><strong>${paused ? '—' : num(f.remaining)}</strong></div><div class="projected"><small>PROJECTED TOTAL</small><strong>${paused ? '—' : num(f.projection)}</strong></div></div>${!Number.isFinite(f.projection)&&f.reasons?.length?`<p class="live-withheld-reason">${esc(withheldSummary(f.reasons))}</p>`:""}<div class="live-inputs"><form data-quote="${esc(p.id)}"><label for="line-${esc(p.id)}">Your full-game ${esc(label.toLowerCase())} line<input id="line-${esc(p.id)}" data-line="${esc(p.id)}" type="number" min="0" max="1500" step="0.5" placeholder="Enter live total" value="${esc(draft)}" required ${f.projection === null || paused ? 'disabled' : ''}></label><button class="button subtle" type="submit" ${f.projection === null || paused ? 'disabled' : ''}>Confirm line</button></form><p class="live-comparison" data-comparison="${esc(p.id)}"></p><label class="pause-player"><input type="checkbox" data-pause="${esc(p.id)}" ${paused ? 'checked' : ''}> Pause player · injured, benched, or uncertain role</label></div><details class="live-breakdown" data-detail="${esc(p.id)}" ${state.expanded.has(key(p.id)) ? 'open' : ''}><summary>Projection inputs</summary>${f.reasons.length ? `<p>${f.reasons.map(esc).join(' ')}</p>` : weights}<p>Reported-out players and explicit ejections are automatically paused; stale injury feeds also pause projections. Unreported injuries and substitutions may be missed. Use Pause player when the role is uncertain.</p>${p.prior ? `<p>Role sample: ${p.prior.count} appearances. Efficiency sample: ${p.prior.efficiencyCount}. Team baseline: ${num(p.prior.teamPlays)} plays/game.</p><p>Earlier games: ${p.prior.sample.map(s => esc(s.date)).join(' · ')}.</p>` : ''}</details></article>`;
   }).join('');
   $('#players').querySelectorAll('[data-detail]').forEach(el => el.addEventListener('toggle', () => el.open ? state.expanded.add(key(el.dataset.detail)) : state.expanded.delete(key(el.dataset.detail))));
   if (focused) document.getElementById('line-' + focused)?.focus({ preventScroll: true });
@@ -133,8 +142,11 @@ $('#players').addEventListener('submit', e => {
   if (!state.data || state.data.stale || state.error || Date.now() - Date.parse(state.data.fetchedAt) > 45_000) return;
   state.quotes.set(key(id), { line, at: Date.now(), snapshot: state.data.snapshot }); updateFreshness();
 });
-setInterval(() => { if (!document.hidden && $('#auto').checked && !state.loading) load(); }, 15_000);
+setInterval(() => { if (!document.hidden && navigator.onLine !== false && $('#auto').checked && !state.loading) load(); }, 15_000);
 setInterval(() => { if (!document.hidden) updateFreshness(); }, 1000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { updateFreshness(); if ($('#auto').checked && !state.loading) load(); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { updateFreshness(); if (navigator.onLine !== false && $('#auto').checked && !state.loading) load(); } });
+try { $('#auto').checked = localStorage.getItem('sportslab-live-auto') !== 'false'; } catch {}
+$('#auto').addEventListener('change',()=>{try{localStorage.setItem('sportslab-live-auto',String($('#auto').checked));}catch{}});
+window.addEventListener('online',()=>{if(!document.hidden&&$('#auto').checked&&!state.loading)load();});
 mountLiveWorkspace();
 load();

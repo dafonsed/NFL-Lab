@@ -1,6 +1,6 @@
 @import url('/longform-articles.css?v=3');
 @font-face{font-family:LabInter;src:url('/assets/fonts/InterVariable.woff2') format('woff2');font-style:normal;font-weight:100 900;font-display:swap}
-:root{color-scheme:dark;--bet-bg:#080d12;--bet-panel:#101921;--bet-panel-soft:#14202a;--bet-control:#17242e;--bet-line:#273743;--bet-line-strong:#3b5669;--bet-text:#f6f9fb;--bet-copy:#b6c6d1;--bet-muted:#81929f;--bet-blue:#33b2ef;--bet-green:#62c68e;--bet-red:#f18382;--bet-font:LabInter,Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{color-scheme:dark;--bet-bg:#000000;--bet-panel:#141416;--bet-panel-soft:#19191c;--bet-control:#19191c;--bet-line:#273743;--bet-line-strong:#3b5669;--bet-text:#f6f9fb;--bet-copy:#b6c6d1;--bet-muted:#81929f;--bet-blue:#76cbd2;--bet-green:#76cbd2;--bet-red:#f18382;--bet-font:LabInter,Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:24px}
 body.betting-pages{margin:0;background:var(--bet-bg);color:var(--bet-text);font:15px/1.55 var(--bet-font);font-synthesis:none;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
@@ -48,7 +48,7 @@ body.betting-pages{margin:0;background:var(--bet-bg);color:var(--bet-text);font:
 .bet-check input{accent-color:var(--bet-blue)}
 .bet-form-actions{display:flex;align-items:center;gap:12px;margin-top:20px}
 .bet-submit{min-height:41px;padding:0 17px;border:1px solid var(--bet-blue);border-radius:6px;background:var(--bet-blue);color:#07151c;font:650 12px var(--bet-font);cursor:pointer}
-.bet-submit:hover{background:#65c5f2;border-color:#65c5f2}
+.bet-submit:hover{background:#b4e0e6;border-color:#b4e0e6}
 .bet-reset{min-height:40px;border:0;background:transparent;color:var(--bet-copy);font:550 12px var(--bet-font);cursor:pointer}
 .bet-result{min-width:0;padding:18px;background:var(--bet-panel-soft);border:1px solid var(--bet-line);border-radius:8px}
 .bet-result-top{display:flex;justify-content:space-between;gap:12px;color:var(--bet-muted);font-size:10px}

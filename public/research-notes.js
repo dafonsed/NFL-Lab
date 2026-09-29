@@ -1,6 +1,21 @@
+import { accountStorage as localStorage, accountReady } from './account-sync.js';
+await accountReady;
 import { icon } from './ui-icons.js';
 const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const time = value => Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit',timeZoneName:'short'}) : 'Unavailable';
+
+const noteKey=profile=>profile.sport==='nfl'?'nfl-notes':profile.sport==='mlb'?'mlb-lab-notes':'sports-lab-notes-'+profile.sport;
+export function readResearchNote(profile,storage) {
+  try { const notes=JSON.parse((storage??localStorage).getItem(noteKey(profile))||'{}');return typeof notes?.[profile.playerId]==='string'?notes[profile.playerId]:''; } catch { return ''; }
+}
+export function writeResearchNote(profile,note,storage) {
+  try {
+    const target=storage??localStorage;let value;
+    try {value=JSON.parse(target.getItem(noteKey(profile))||'{}');}catch{value={};}
+    const notes=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
+    notes[profile.playerId]=String(note);target.setItem(noteKey(profile),JSON.stringify(notes));return true;
+  } catch { return false; }
+}
 
 export function availabilityReceiptHtml(a) {
   const title=a.stale?'Injury report could not refresh':a.applied?'Injury report checked':'Availability not applied';

@@ -2,7 +2,15 @@
 
 An independent local NFL research app. It downloads public NFL datasets and calculates its own player profiles. **There are no requests to VENOM, Whop, or the reference app.** It does not reproduce anyone's private calibrated scores.
 
-The sport switch opens the daily [MLB section](https://nfl-lab-xi.vercel.app/mlb), backed by MLB's official Stats API. The NFL section remains available at `/nfl` and `/`.
+The sport switch opens the daily [MLB section](https://nfl-lab-xi.vercel.app/mlb), backed by MLB's official Stats API. NFL research is at `/nfl`; `/` is the public homepage.
+
+## Accounts and access
+
+The existing Node server now includes Better Auth registration, email verification, password recovery, authenticator MFA, account settings, owner-scoped saved data, and separate staff access. A verified Free account can use the bet tracker; Basic grants research tools and Premium grants the shared EV/odds workspace. Paid access is checked on the server. Pricing now shows Basic $14.99, Pro $24.99, and a Premium / Premium Max choice at $49.99 / $99.99 per month. Pro and Premium Max remain previews pending their offering setup. See the [current names and stable billing mapping](docs/pricing-plans.md).
+
+Start with [.env.example](.env.example) and the [account operations guide](docs/account-operations.md). Account routes fail closed until configured. Production needs durable PostgreSQL, a stable auth secret and HTTPS origin, verified transactional email delivery, approved policy documents, and Stripe configuration for paid checkout. Local SQLite is development-only. Run `npm run accounts:migrate` before starting the configured service; use `npm run accounts:mail` to drain the local email outbox. No external email/payment service or production account deployment was verified in this task.
+
+The [initial audit](docs/account-initial-audit.md) and [implementation and verification report](docs/account-system-report.md) document route ownership, migrations, tests, and exact activation requirements. Run `npm run test:accounts` for the account regression suite.
 
 ## Live odds and player props
 
@@ -66,7 +74,7 @@ Double-click **Start-App.cmd**, or run `npm start`, then open **http://127.0.0.1
 
 The repository supports the existing [hosted NFL Lab](https://nfl-lab-xi.vercel.app/). `server.mjs` exports its HTTP server for Vercel; Vercel owns its listener and invocation lifetime. `vercel.json` includes the frontend assets and allows up to 300 seconds for a cold data load. The initial board may take about 30 seconds while public datasets download.
 
-Hosted requests refresh datasets and lines according to their cache lifetimes; the browser still checks every five minutes. The local version additionally runs background sync. Vercel uses writable temporary storage for downloaded data instead of the deployment's read-only directory. This cache is instance-local and can reset after redeployment or scaling. Saved pregame history on Vercel is therefore best-effort; the public archived listing remains the fallback. Durable multi-instance line history would require shared storage. Notes and saved players still stay in each browser.
+Hosted requests refresh datasets and lines according to their cache lifetimes; the browser still checks every five minutes. The local version additionally runs background sync. Vercel uses writable temporary storage for downloaded data instead of the deployment's read-only directory. This cache is instance-local and can reset after redeployment or scaling. Saved pregame history on Vercel is therefore best-effort; the public archived listing remains the fallback. Durable multi-instance line history would require shared storage. Signed-in personal notes and saved players use the account database, separately from these public-data caches.
 
 ## Included
 
@@ -80,7 +88,7 @@ Automatic ticket settlement combines the leg results. Any miss loses the ticket;
 
 The all-time summary shows settled profit/loss, ROI, win/loss record, and open stake. ROI divides net profit by stakes on wins, losses, and cash-outs; refunded and open tickets are excluded. The win rate includes only wins and losses. Search and sport/result filters apply to the ticket list and CSV export; summary totals always include all saved bets.
 
-Bets are saved in this browser's local storage, like player notes. They persist across reloads but do not sync between devices, browsers, or site addresses. Clearing site data deletes them; export a CSV copy first. Storage failures are shown without reporting a successful save or overwriting unreadable records.
+Bets and player notes sync to the signed-in account using owner-scoped database records and version checks. Failed saves and conflicts preserve local drafts for review instead of silently overwriting another device's changes. Older anonymous browser records remain untouched; import them from Account only after confirming that they belong to you. Anonymous examples use temporary data. Export important records before clearing browser storage because unsaved drafts and legacy records still depend on that browser.
 
 ### Research features
 
@@ -141,7 +149,7 @@ See `reports/INDEPENDENT-AUDIT.md` and `reports/independent-audit.json`. At the 
 
 nflverse/nflfastR datasets: CC BY 4.0 unless a dataset specifies otherwise. Snap counts originate with Pro Football Reference. NGS metrics originate with NFL Next Gen Stats. Participation data: **FTN Data via nflverse, CC BY-SA 4.0**; derived charting tables retain that license. Provider trademarks belong to their respective owners. This app is unaffiliated with those providers.
 
-Only public data is downloaded. Notes and saved players stay in browser local storage. The server listens on `127.0.0.1` only. Logs are in `logs/server.log`. Legacy reference-site research and snapshots are archived under `.research/obsolete-reference`; the runtime does not read them.
+Only public sports data is downloaded. Signed-in notes and saved players use the account database; browser storage may retain per-account unsaved drafts and legacy records awaiting explicit import. The local server listens on `127.0.0.1` only. Logs are in `logs/server.log`. Legacy reference-site research and snapshots are archived under `.research/obsolete-reference`; the runtime does not read them.
 
 Environment options: `PORT` (3100), `REFRESH_MINUTES` (15), `DATA_DIR` (defaults to `data-independent`), `AUTO_SYNC=0` (disables background refresh). Network failure retains cached raw datasets and marks them stale. A first-time load without internet cannot invent missing data.
 
@@ -160,3 +168,14 @@ Role shifts toward observed usage (up to 70% live); efficiency retains at least 
 ## Development previews and deployment
 
 See [SITE-SYNC.md](SITE-SYNC.md) for the canonical frontend source, local previews, and the GitHub-to-Vercel release workflow.
+
+## Design system (2026)
+
+The frontend shares one visual language: an ink-black canvas, slate data surfaces, volt-lime (`#a3f06b`) for actions and positive values, sky-cyan (`#43c3ff`) for information and focus, Outfit for display type and Inter for UI and tabular numbers. Fonts are served locally because the CSP allows `font-src 'self'` only.
+
+- `public/sportslab-2026.css` — loaded last on every workspace page by `renderSitePage` in `lib/site-layout.mjs`. It remaps the legacy color tokens and restyles the sidebar, headings, controls, boards, dashboards and EV cards.
+- `public/landing.html`, `public/landing-2026.css`, `public/landing-motion.js` — the public homepage. The live preview widgets (`landing-live.js`, `landing-header.js`, `landing-pricing.js`, `landing-reviews.js`) keep their original hooks.
+- `public/account-2026.css` — sign-in, registration, recovery and account settings.
+- `public/content-2026.css` — education, calculators, sportsbook and state guides, the help center and the odds API page.
+
+To review gated pages locally without production accounts, run `node --env-file-if-exists=.env.local scripts/design-preview.mjs` (port 3102). It creates a local test account with a time-limited Premium grant in the gitignored `data/` folder. The sign-in details are in the script's header comment.

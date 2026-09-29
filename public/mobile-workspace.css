@@ -1,0 +1,73 @@
+/* Final phone refinements of the existing workspace palette and type system. */
+html {scroll-padding-top:76px}
+.mobile-chart-tools {display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0;color:var(--muted);font:12px/1.5 var(--font)}
+.mobile-chart-tools button,.mobile-chart-dialog button {min-height:44px;padding:9px 12px;border:1px solid var(--border-strong);border-radius:8px;background:var(--control);color:var(--text);font:inherit;cursor:pointer}
+.mobile-chart-reading {margin:8px 0;min-height:1.5em;color:var(--text);font:13px/1.5 var(--font);overflow-wrap:anywhere}
+.mobile-chart-dialog {width:calc(100vw - 24px);max-width:1100px;max-height:calc(var(--mobile-viewport-height,100dvh) - 24px);padding:16px;background:var(--panel);color:var(--text);border:1px solid var(--border-strong);border-radius:14px;overflow:auto;overscroll-behavior:contain}
+.mobile-chart-dialog::backdrop {background:#000b}
+.mobile-chart-dialog>header {display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:-16px;padding:12px 0;background:var(--panel);z-index:1}
+.mobile-chart-dialog h2 {font-size:18px;margin:0}
+.mobile-chart-note {color:var(--muted);font:13px/1.5 var(--font);margin:4px 0 12px}
+.mobile-chart-dialog [data-comparison-line] {pointer-events:none;cursor:default}
+.mobile-chart-dialog [data-comparison-line] :is(.pr-line-hitbox,.pr-line-pill,.pr-line-label) {display:none}
+.mobile-chart-dialog .pr-chart-scroll {width:100%;overflow-x:auto}
+.mobile-chart-dialog .pr-chart-scroll svg {height:min(60dvh,480px);max-height:none}
+.pr-chart-scroll [data-result][tabindex]:focus-visible {outline:2px solid var(--ui-focus);outline-offset:2px}
+.mobile-scroll-hint {display:none}
+/* Reserve the betting workspace while account data loads. Overview pages share
+   ev-page styles but have no loader or client-side screen initialization. */
+body.ev-page #ev-loading {display:none}
+body.ev-page:not([data-ev-screen]) #main:has(>#ev-loading)>:not(#ev-loading) {display:none!important}
+body.ev-page:not([data-ev-screen]) #ev-loading {display:flex;flex-direction:column;align-items:flex-start;gap:14px;min-height:calc(100dvh - 110px);padding-block:24px}
+#ev-loading h1,#ev-loading p {margin:0}
+#ev-loading p {color:var(--muted);max-width:48ch;line-height:1.6}
+#ev-loading button {min-height:44px;padding:10px 16px;border:1px solid var(--border-strong);background:var(--panel);color:var(--text);border-radius:8px;font:inherit}
+/* An unavailable feed must stay visible even in the compact reference layout. */
+body.site-layout.ui-theme.research-console.reference-design .live-main #feed-status.is-stale {display:block;color:var(--text);border:1px solid var(--border-strong);padding:10px 12px;border-radius:8px;line-height:1.5;overflow-wrap:anywhere}
+@media(max-width:800px) {
+ html body.has-dashboard-sidebar.site-layout.ui-theme.reference-design>main#main {padding-bottom:calc(24px + env(safe-area-inset-bottom))!important}
+ html body.has-dashboard-sidebar .dashboard-mobile-bar {min-height:60px;padding:8px max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left));padding-top:calc(8px + env(safe-area-inset-top));gap:10px}
+ html body.has-dashboard-sidebar :is([data-sidebar-toggle],[data-sidebar-close]),html body.has-dashboard-sidebar #dashboard-sidebar [data-more-close] {width:44px;height:44px;min-height:44px;padding:10px}
+ html body.has-dashboard-sidebar #dashboard-sidebar {padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);max-height:var(--mobile-viewport-height,100dvh)}
+ html body.has-dashboard-sidebar #dashboard-sidebar .dashboard-sidebar-footer {padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+ html body.has-dashboard-sidebar #dashboard-sidebar :is(.dashboard-primary-link,.site-nav-link,.dashboard-tool-link,.dashboard-sidebar-actions>button,.dashboard-more-tools>summary) {min-height:44px!important}
+ html body.has-dashboard-sidebar .dashboard-mobile-brand strong {font-size:13px}
+ html body.has-dashboard-sidebar .dashboard-mobile-bar>span {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ html body.has-dashboard-sidebar :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea,select) {font-size:16px!important;scroll-margin-block:90px 140px}
+ html body.has-dashboard-sidebar :is(.sheet-close,.dialog-close,.research-actions button,.research-header-tools button,.research-icon-tools button,.board-page-controls button,.td-choice-option,.filter-team-grid button,.sheet-footer button,.filter-dialog-footer button) {min-height:44px!important;min-width:44px!important}
+ html body.has-dashboard-sidebar :is(.workspace-sheet,.research-filter-dialog,.model-filter-dialog) {max-height:calc(var(--mobile-viewport-height,100dvh) - 16px)!important;max-width:calc(100vw - 16px)!important;overscroll-behavior:contain}
+ html body.has-dashboard-sidebar :is(.sheet-footer,.filter-dialog-footer) {padding-bottom:calc(12px + env(safe-area-inset-bottom))!important}
+ html body.has-dashboard-sidebar :is(.sheet-header,.sheet-footer) {flex-shrink:0}
+ html body.has-dashboard-sidebar :is(.sheet-body,.filter-dialog-body) {min-height:0;overflow-y:auto;overscroll-behavior:contain}
+ html body.has-dashboard-sidebar main#main .studio-leagues {display:flex!important;flex-wrap:nowrap!important;overflow-x:auto;gap:5px;scrollbar-width:thin;scroll-padding-inline:4px;padding-bottom:5px}
+ html body.has-dashboard-sidebar .studio-leagues>a {flex:0 0 auto;min-height:40px;padding:8px 10px}
+ html body.has-dashboard-sidebar .workspace-masthead {min-width:0}
+ html body.has-dashboard-sidebar .workspace-masthead>.site-sports {position:static!important;display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;gap:4px;min-width:0!important;width:100%!important;max-width:100%!important;scrollbar-width:thin;padding-bottom:4px}
+ html body.has-dashboard-sidebar .workspace-masthead>.site-sports>a {flex:0 0 auto;min-height:40px;padding:8px 10px}
+ html body.has-dashboard-sidebar .board-pagination {gap:8px;margin-block:12px}
+ html body.has-dashboard-sidebar .board-page-controls {gap:4px;flex-wrap:wrap;justify-content:center}
+ html body.has-dashboard-sidebar .board-page-controls button {padding-inline:10px}
+ html body.has-dashboard-sidebar .board-page-controls :is(button[aria-label^="Page"]:not([aria-current]),.board-page-gap) {display:none}
+ html body.has-dashboard-sidebar .research-row :is(.research-name,.research-player-name) {font-size:14px!important;white-space:normal;overflow-wrap:anywhere}
+ html body.has-dashboard-sidebar :is(.research-guide,.sources-strip,.live-line-note,.sim-state-note) {overflow-wrap:anywhere}
+ html body.has-dashboard-sidebar :is(.research-guide summary,.live-breakdown summary) {min-height:44px}
+ html body.has-dashboard-sidebar .live-card-header {align-items:flex-start;flex-wrap:wrap;gap:8px}
+ html body.has-dashboard-sidebar .live-player-identity {min-width:0;flex:1 1 190px}
+ html body.has-dashboard-sidebar .live-player-identity h3 {overflow-wrap:anywhere}
+ html body.has-dashboard-sidebar .live-inputs form {display:flex;flex-wrap:wrap;gap:8px}
+ html body.has-dashboard-sidebar .live-inputs form label {flex:1 1 180px;min-width:0}
+ html body.has-dashboard-sidebar .live-inputs form :is(input,button) {min-height:44px!important}
+ html body.has-dashboard-sidebar .live-inputs form button {align-self:end}
+ html body.has-dashboard-sidebar .pause-player {min-height:44px;display:flex;align-items:center;gap:8px}
+ .mobile-scroll-hint {display:block;font-size:12px;color:var(--muted);margin:5px 0}
+ .mobile-chart-tools {font-size:12px;gap:8px}
+ .mobile-chart-tools button {flex-shrink:0}
+}
+@media(max-height:500px) and (max-width:900px) {
+ html body.has-dashboard-sidebar .dashboard-mobile-bar {position:relative}
+ html body.has-dashboard-sidebar #dashboard-sidebar .dashboard-sidebar-footer {padding:6px}
+ .mobile-chart-dialog .pr-chart-scroll svg {height:240px}
+}
+@media(prefers-reduced-motion:reduce) {
+ body.has-dashboard-sidebar *,body.has-dashboard-sidebar *::before,body.has-dashboard-sidebar *::after {scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}

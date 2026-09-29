@@ -1,7 +1,8 @@
+import { accountStorage as localStorage, accountReady } from './account-sync.js';
 import { icon } from './ui-icons.js';
 import {enhanceTrendControls} from './trends-controls.js';
 import {enhanceCalendars,syncCalendars} from './calendar-control.js';
-import {leagueMark} from './sports-identity.js';
+import {leagueMark,prepareIdentityImages} from './sports-identity.js';
 
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -15,6 +16,9 @@ function applyDisplay() {
   document.documentElement.dataset.motion = settings.motion === 'reduce' ? 'reduce' : 'system';
 }
 applyDisplay();
+// The visual shell can initialize while private account preferences load. A
+// slow session must not postpone navigation or move the whole page after paint.
+void accountReady.then(()=>{settings=read(settingsKey,{});if(!settings||typeof settings!=='object'||Array.isArray(settings))settings={};applyDisplay();});
 
 // One control vocabulary for every workspace, including asynchronously rendered
 // dialogs and toolbars. Tags change presentation only; handlers and values stay local.
@@ -74,7 +78,7 @@ function sheet(title, eyebrow, content, footer = '') {
 
 function displaySettings() {
   const dialog = sheet('Appearance', 'Display settings', `
-    <div class="display-preview"><span class="appearance-label">${icon('palette')} NIGHT THEME</span><strong>Display preferences</strong><p>Black surfaces, neutral controls, and a teal accent.</p><div class="appearance-swatches" aria-label="Theme colors"><span style="--swatch:var(--bg)" title="Black"></span><span style="--swatch:var(--panel2)" title="Charcoal"></span><span style="--swatch:var(--accent)" title="Teal"></span><span style="--swatch:var(--text)" title="White"></span></div></div>
+    <div class="display-preview"><span class="appearance-label">${icon('palette')} NIGHT THEME</span><strong>Display preferences</strong><p>Ink-black surfaces with a soft volt-lime glow.</p><div class="appearance-swatches" aria-label="Theme colors"><span style="--swatch:var(--sl-bg,#07090b)" title="Ink"></span><span style="--swatch:var(--sl-panel-2,#13181c)" title="Slate"></span><span style="--swatch:var(--sl-lime,#a3f06b)" title="Lime"></span><span style="--swatch:var(--sl-cyan,#43c3ff)" title="Sky"></span></div></div>
     <div class="sheet-field"><span>Card spacing</span><div class="display-segments" role="group" aria-label="Card spacing"><button data-density="comfortable" aria-pressed="${settings.density !== 'compact'}">Comfortable</button><button data-density="compact" aria-pressed="${settings.density === 'compact'}">Compact</button></div></div>
     <label class="sheet-switch"><span>Reduce animations</span><input type="checkbox" data-reduce-motion ${settings.motion === 'reduce' ? 'checked' : ''}></label>
     <div><div class="sheet-section-title"><span>Developer mode</span><button class="site-dev-toggle" data-dev-toggle aria-pressed="${document.documentElement.dataset.devMode === 'true'}">${icon('code')}<span>Dev mode</span><b>${document.documentElement.dataset.devMode === 'true' ? 'On' : 'Off'}</b></button></div><p>Show model inputs, formulas, and source data in player research.</p></div>
@@ -90,8 +94,8 @@ function displaySettings() {
 }
 
 function navigationMenu() {
-  const links = [...document.querySelectorAll('.site-overview-link,.site-navigation a,.site-personal a')].map(link => link.outerHTML).join('');
-  sheet('Your workspace', 'Sports Lab', `<nav class="sheet-nav" aria-label="All destinations">${links}</nav>`, `<button class="button subtle" data-display-settings>${icon('settings')} Display settings</button>`);
+  const links = [...document.querySelectorAll('.dashboard-group-home,.site-overview-link,.site-navigation a,.site-personal a')].map(link => link.outerHTML).join('');
+  sheet('Your workspace', 'VisualOdds', `<nav class="sheet-nav" aria-label="All destinations">${links}</nav>`, `<button class="button subtle" data-display-settings>${icon('settings')} Display settings</button>`);
 }
 
 const guide = $('.research-guide');
@@ -111,9 +115,9 @@ for (const dialog of document.querySelectorAll('dialog')) {
   const close = dialog.querySelector(':scope > .dialog-close');
   if (close) {
     const header = document.createElement('div'); header.className = 'research-dialog-bar';
-    const label = document.createElement('span'); label.textContent = 'SPORTS LAB / RESEARCH';
+    const label = document.createElement('span'); label.textContent = 'VISUALODDS / RESEARCH';
     header.append(label, close); dialog.prepend(header);
-    if (dialog.id === 'bet-dialog') label.textContent = 'SPORTS LAB / TICKET EDITOR';
+    if (dialog.id === 'bet-dialog') label.textContent = 'VISUALODDS / TICKET EDITOR';
   }
 }
 
@@ -135,7 +139,7 @@ new MutationObserver(records => { for (const record of records) for (const node 
 
 // Preserve compatible date/market selections when switching research views.
 document.addEventListener('click', event => {
-  const link = event.target.closest('.site-navigation a,.mobile-navigation a,.workspace-switch a,.sheet-nav a,.site-overview-link');
+  const link = event.target.closest('.site-navigation a,.mobile-navigation a,.workspace-switch a,.sheet-nav a,.site-overview-link,.dashboard-group-home');
   if (!link) return;
   const destination = new URL(link.href), current = new URL(location.href);
   if (destination.origin !== current.origin) return;
@@ -171,8 +175,11 @@ if (filterBar && !filterBar.matches('.td-filters')) {
   const controls = [...filterBar.querySelectorAll('select[id],input[type="checkbox"][id],button[id][aria-pressed]')];
   const labelFor = element => {
     const label = [...document.querySelectorAll('label')].find(item => item.htmlFor === element.id);
-    return (element.getAttribute('aria-label') || label?.textContent || element.closest('label')?.textContent || element.textContent || element.id).replace(/^[☆↗\s]+/, '').trim();
+    const copy = (label || element.closest('label'))?.cloneNode(true);
+    copy?.querySelectorAll('select,input,button,small,.field-help,.field-hint').forEach(child => child.remove());
+    return (element.getAttribute('aria-label') || copy?.textContent || element.textContent || element.id).replace(/^[☆↗\s]+/, '').trim();
   };
+  const available = control => control && !control.disabled && !control.closest('[hidden]');
   const describe = control => ({ id: control.id, label: labelFor(control), kind: control.tagName === 'SELECT' ? 'select' : control.tagName === 'BUTTON' ? 'button' : 'checkbox' });
   const fields = controls.map(describe);
   const values = () => Object.fromEntries(fields.map(field => {
@@ -191,9 +198,9 @@ if (filterBar && !filterBar.matches('.td-filters')) {
   function applyFilters(draft) {
     for (const field of fields) {
       const control = document.getElementById(field.id), value = draft[field.id];
-      if (!control || value === undefined) continue;
+      if (!available(control) || value === undefined) continue;
       if (field.kind === 'select') {
-        if (![...control.options].some(option => option.value === value) || control.value === value) continue;
+        if (![...control.options].some(option => option.value === value && !option.disabled && !option.parentElement.matches('optgroup:disabled')) || control.value === value) continue;
         control.value = value; control.dispatchEvent(new Event('change', { bubbles: true }));
       } else if (field.kind === 'button') {
         if ((control.getAttribute('aria-pressed') === 'true') !== Boolean(value)) control.click();
@@ -214,7 +221,7 @@ if (filterBar && !filterBar.matches('.td-filters')) {
   const summary = document.createElement('div'); summary.className = 'filter-active-summary'; summary.hidden = true;
   summary.setAttribute('aria-live', 'polite'); filterBar.after(summary);
   function updateSummary() {
-    const current = values(), active = fields.filter(field => current[field.id] !== defaults[field.id]);
+    const current = values(), active = fields.filter(field => available(document.getElementById(field.id)) && current[field.id] !== defaults[field.id]);
     const count = trigger.querySelector('.filter-count'); count.textContent = active.length; count.hidden = !active.length;
     summary.hidden = !active.length;
     summary.innerHTML = active.map(field => `<span>${esc(field.kind === 'select' ? document.getElementById(field.id).selectedOptions[0]?.textContent : field.label)}</span>`).join('') + (active.length ? '<button type="button" data-clear-ui-filters>Clear filters</button>' : '');
@@ -224,15 +231,15 @@ if (filterBar && !filterBar.matches('.td-filters')) {
   filterBar.addEventListener('click', () => queueMicrotask(updateSummary));
   // A board can update its controls when data arrives or URL state changes.
   const observer = new MutationObserver(updateSummary);
-  controls.forEach(control => observer.observe(control, { attributes: true, attributeFilter: ['aria-pressed'], childList: control.tagName === 'SELECT' }));
+  controls.forEach(control => observer.observe(control, { attributes: true, attributeFilter: ['aria-pressed','hidden','disabled'], childList: control.tagName === 'SELECT' }));
   const section = $('.site-header')?.dataset.siteSection || 'research';
   const sport = $('.site-header')?.dataset.siteSport || 'all';
   const presetKey = `sports-lab-filter-presets:${sport}:${section}`;
   function openFilters() {
     const initial = values();
-    const fieldsHTML = fields.filter(field => {const control=document.getElementById(field.id);return !(control.dataset.choiceNative?control.parentElement:control).closest('[hidden]');}).map(field => {
+    const fieldsHTML = fields.filter(field => available(document.getElementById(field.id))).map(field => {
       const control = document.getElementById(field.id);
-      return field.kind === 'select' ? `<label class="sheet-field">${esc(field.label)}<select data-filter-field="${esc(field.id)}">${[...control.options].map(option => `<option value="${esc(option.value)}"${option.value === initial[field.id] ? ' selected' : ''}>${esc(option.textContent)}</option>`).join('')}</select></label>` : `<label class="sheet-switch"><span>${esc(field.label)}</span><input type="checkbox" data-filter-field="${esc(field.id)}"${initial[field.id] ? ' checked' : ''}></label>`;
+      return field.kind === 'select' ? `<label class="sheet-field">${esc(field.label)}<select data-filter-field="${esc(field.id)}">${[...control.options].map(option => `<option value="${esc(option.value)}"${option.value === initial[field.id] ? ' selected' : ''}${option.disabled || option.parentElement.matches('optgroup:disabled') ? ' disabled' : ''}>${esc(option.textContent)}</option>`).join('')}</select></label>` : `<label class="sheet-switch"><span>${esc(field.label)}</span><input type="checkbox" data-filter-field="${esc(field.id)}"${initial[field.id] ? ' checked' : ''}></label>`;
     }).join('');
     const dialog = sheet('Filters', `${sport === 'all' ? 'All sports' : sport.toUpperCase()} model`, `<nav class="filter-category-nav" role="tablist" aria-label="Filter categories" aria-orientation="vertical"><button type="button" id="board-filter-tab" role="tab" aria-selected="true" aria-controls="board-filter-fields" data-model-filter-tab="board-filter-fields">${icon('filter')}<span>Board filters</span></button><button type="button" id="board-preset-tab" role="tab" aria-selected="false" tabindex="-1" aria-controls="board-filter-presets" data-model-filter-tab="board-filter-presets">${icon('bookmark')}<span>Saved presets</span></button></nav><div class="model-filter-editors"><section id="board-filter-fields" role="tabpanel" aria-labelledby="board-filter-tab"><div class="sheet-section-title"><span>Board filters</span><button type="button" data-reset-draft>Reset all</button></div>${fieldsHTML}</section><section id="board-filter-presets" role="tabpanel" aria-labelledby="board-preset-tab" hidden><div class="sheet-section-title"><span>Saved presets</span></div><div class="sheet-presets"></div><form class="sheet-preset-form"><label class="sr-only" for="preset-name">Preset name</label><input id="preset-name" name="name" maxlength="40" placeholder="Name this preset" required autocomplete="off"><button type="submit" class="button subtle">Save</button></form></section><div class="sheet-message" role="status"></div></div>`, '<button class="button subtle" data-sheet-close>Cancel</button><button class="button primary" data-apply-filters>Apply filters</button>');
     dialog.classList.add('model-filter-dialog');
@@ -244,7 +251,7 @@ if (filterBar && !filterBar.matches('.td-filters')) {
     function setDraft(next) {
       for (const control of dialog.querySelectorAll('[data-filter-field]')) {
         const value = next[control.dataset.filterField];
-        if (control.tagName === 'SELECT') { if ([...control.options].some(option => option.value === value)) {control.value = value;control.dispatchEvent(new Event('change',{bubbles:true}));} }
+        if (control.tagName === 'SELECT') { if ([...control.options].some(option => option.value === value && !option.disabled)) {control.value = value;control.dispatchEvent(new Event('change',{bubbles:true}));} }
         else control.checked = value === true;
       }
     }
@@ -303,7 +310,7 @@ if (pageHeader) document.body.dataset.section = pageHeader.dataset.siteSection;
 if (headingLabel && pageHeader) {
   const sport = pageHeader.dataset.siteSport, section = pageHeader.dataset.siteSection;
   const labels = { research: 'MODEL PROJECTIONS', trends: 'PLAYER TRENDS', live: 'LIVE GAME CENTER', bets: 'MY PICKS', performance: 'MODEL PERFORMANCE', paper: 'PAPER RETURNS', simulation: 'GAME SIMULATION' };
-  if (!headingLabel.querySelector('[id]')) headingLabel.innerHTML = `${icon(section === 'bets' ? 'picks' : section)}<span>${esc(sport ? sport.toUpperCase() + ' / ' : '')}${esc(labels[section] || 'SPORTS LAB')}</span>`;
+  if (!headingLabel.querySelector('[id]')) headingLabel.innerHTML = `${icon(section === 'bets' ? 'picks' : section)}<span>${esc(sport ? sport.toUpperCase() + ' / ' : '')}${esc(labels[section] || 'VISUALODDS')}</span>`;
 }
 
 // Put the player data ahead of repeated board-level explanations. Native details
@@ -316,7 +323,8 @@ function foldPanel(node, title, className) {
   const sync = () => { details.hidden = node.hidden || !node.textContent.trim(); };
   new MutationObserver(sync).observe(node, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] }); sync();
 }
-if (!document.body.classList.contains('bets-app')) foldPanel($('#summary'), 'Board overview', 'overview-fold');
+// Model boards show their overview as the masthead stat strip instead (see below).
+if (!document.body.classList.contains('bets-app') && document.body.dataset.section !== 'research') foldPanel($('#summary'), 'Board overview', 'overview-fold');
 foldPanel($('#prop-status') || $('#line-source'), 'Sportsbook lines & sources', 'sources-fold');
 foldPanel($('#game-context'), 'Matchup & availability', 'context-fold');
 if (document.body.dataset.section === 'live') {
@@ -349,7 +357,7 @@ if (researchActions && $('.context-fold')) {
   desktop.addEventListener('change', () => { tools.open = false; });
 }
 const boardNotes = [...document.querySelectorAll('main > .workspace-fold')];
-if (boardNotes.length > 1) {
+if (boardNotes.length > 1 || (boardNotes.length && document.body.dataset.section === 'research')) {
   const strip = document.createElement('div'); strip.className = 'workspace-context-strip';
   boardNotes[0].before(strip); strip.append(...boardNotes);
 }
@@ -382,47 +390,48 @@ if (deskHeading && ['research', 'trends'].includes(document.body.dataset.section
   for (const selector of ['.season-bar', '.sports-controls', '.td-toolbar']) {
     const controls = $(selector); if (controls) toolbar.append(controls);
   }
+  // Markets are few enough to show inline: a pill strip above a slim command bar.
+  toolbar.classList.add('desk-2026');
+  const command = document.createElement('div'); command.className = 'desk-command';
+  command.append(...toolbar.children);
   const markets = $('.market-picker') || $('#markets') || $('.sports-markets') || $('#td-markets');
   if (markets) {
-    const menu = document.createElement('details'); menu.className = 'desk-market-menu';
-    const summary = document.createElement('summary');
-    summary.innerHTML = `<span>Market</span><strong></strong>${icon('chevron')}`;
-    menu.append(summary, markets); toolbar.append(menu);
-    // The compact toolbar scrolls on smaller desktops. Keep its dropdown in the
-    // top layer so the menu is never clipped by that scrolling container.
-    markets.popover = 'manual';
-    summary.setAttribute('aria-haspopup', 'true');
-    summary.setAttribute('aria-expanded', 'false');
-    const positionMarket = () => {
-      const anchor = summary.getBoundingClientRect();
-      const width = Math.min(document.body.classList.contains('trends-workspace') ? 280 : 540, innerWidth - 24);
-      Object.assign(markets.style, {
-        position: 'fixed', inset: 'auto', margin: '0', width: width + 'px',
-        left: Math.max(12, Math.min(anchor.left, innerWidth - width - 12)) + 'px',
-        top: anchor.bottom + 6 + 'px', maxHeight: Math.max(100, Math.min(336, innerHeight - anchor.bottom - 18)) + 'px'
-      });
+    const strip = document.createElement('div'); strip.className = 'desk-market-strip';
+    const arrow = (direction, label) => {
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'desk-market-scroll'; button.tabIndex = -1;
+      button.dataset.direction = direction; button.setAttribute('aria-label', label);
+      button.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${direction < 0 ? 'm15 6-6 6 6 6' : 'm9 6 6 6-6 6'}"/></svg>`;
+      button.addEventListener('click', () => markets.scrollBy({ left: direction * 280, behavior: 'smooth' }));
+      return button;
     };
-    menu.addEventListener('toggle', () => {
-      summary.setAttribute('aria-expanded', String(menu.open));
-      if (menu.open) { markets.showPopover(); positionMarket(); }
-      else if (markets.matches(':popover-open')) markets.hidePopover();
-    });
-    window.addEventListener('resize', () => { if (menu.open) positionMarket(); });
-    toolbar.addEventListener('scroll', () => { menu.open = false; });
-    const syncMarket = () => {
+    const start = arrow(-1, 'Scroll markets left'), end = arrow(1, 'Scroll markets right');
+    markets.classList.add('desk-market-list');
+    strip.append(start, markets, end);
+    toolbar.append(strip);
+    const syncArrows = () => {
+      const overflow = markets.scrollWidth > markets.clientWidth + 2;
+      strip.classList.toggle('is-scrollable', overflow);
+      start.disabled = markets.scrollLeft < 4;
+      end.disabled = markets.scrollLeft + markets.clientWidth > markets.scrollWidth - 4;
+    };
+    const revealActive = () => {
       const selected = markets.querySelector('[aria-pressed=true],[aria-selected=true],[aria-current=page],.active');
-      summary.querySelector('strong').textContent = (selected instanceof HTMLSelectElement ? selected.selectedOptions[0]?.textContent : selected?.textContent)?.trim() || 'Select market';
-      menu.hidden=markets.hidden;
+      if (selected && selected.offsetParent) {
+        const left = selected.offsetLeft - markets.offsetLeft, right = left + selected.offsetWidth;
+        if (left < markets.scrollLeft || right > markets.scrollLeft + markets.clientWidth) markets.scrollTo({ left: Math.max(0, left - 40) });
+      }
+      strip.hidden = markets.hidden;
+      syncArrows();
     };
-    new MutationObserver(syncMarket).observe(markets, { childList:true, subtree:true, attributes:true, attributeFilter:['aria-pressed','aria-selected','aria-current','class','hidden'] }); syncMarket();
-    const closeMarket = () => { if(markets.matches(':popover-open'))markets.hidePopover();menu.open=false;summary.focus(); };
-    markets.addEventListener('click', event => { if(event.target.closest('button,a')) closeMarket(); });
-    markets.addEventListener('change', () => { syncMarket(); closeMarket(); });
-    menu.addEventListener('keydown', event => { if(event.key==='Escape') { menu.open=false; summary.focus(); } });
-    document.addEventListener('click', event => { if(!menu.contains(event.target)) menu.open=false; });
+    markets.addEventListener('scroll', syncArrows, { passive:true });
+    window.addEventListener('resize', syncArrows);
+    new MutationObserver(revealActive).observe(markets, { childList:true, subtree:true, attributes:true, attributeFilter:['aria-pressed','aria-selected','aria-current','class','hidden'] });
+    requestAnimationFrame(revealActive);
   }
+  toolbar.append(command);
   const filters=$('.td-filters') || $('.research-controls');
-  if(filters) toolbar.append(filters);
+  if(filters) command.append(filters);
   const pageTools = $('.page-tools'); if(pageTools) toolbar.after(pageTools);
   foldPanel($('#board-caption'), 'How to read this board', 'caption-fold');
   const content = $('#content');
@@ -437,8 +446,6 @@ if (deskHeading && ['research', 'trends'].includes(document.body.dataset.section
     $('#trend-refresh').title='Refresh data';
     const saved=$('#td-saved');
     if(saved){saved.innerHTML=icon('bookmark')+'<span>Saved</span>';saved.title='Saved players';}
-    const sort=$('#td-sort');
-    if(sort){sort.options[0].textContent='L10 hit rate';sort.options[1].textContent='L10 average';sort.options[2].textContent='Form change';}
     $('.td-search input')?.setAttribute('placeholder','Search players');
   }
 }
@@ -468,8 +475,25 @@ if (workspaceHeading) {
   const sports = $('.site-sports'), settings = $('.site-header-actions');
   if (sports) workspaceHeading.append(sports);
   if (settings) workspaceHeading.append(settings);
+  // Board pages: the overview cards become the hero stat strip (boards-polish.css).
+  const overview = $('#summary');
+  if (overview && document.body.dataset.section === 'research' && !overview.closest('.workspace-fold')) { overview.classList.add('masthead-stats'); workspaceHeading.append(overview); }
+  // Gradient accent on the title's last word; titles are re-rendered, so re-apply on change.
+  const title = workspaceHeading.querySelector('h1');
+  if (title && ['research', 'trends', 'performance', 'paper', 'live'].includes(document.body.dataset.section)) {
+    const accentTitle = () => {
+      if (title.querySelector('.masthead-accent')) return;
+      const text = [...title.childNodes].filter(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim()).pop();
+      const match = text?.textContent.match(/^([\s\S]*\s)(\S+)(\s*)$/);
+      if (!match) return;
+      const word = document.createElement('span'); word.className = 'masthead-accent'; word.textContent = match[2];
+      text.textContent = match[1]; text.after(word); if (match[3]) word.after(match[3]);
+    };
+    accentTitle(); new MutationObserver(accentTitle).observe(title, { childList: true, characterData: true, subtree: true });
+  }
   // Keep documentation available through one action instead of repeated footer strips.
   if(guide){
+    if(!settings&&!actions.isConnected)workspaceHeading.append(actions);
     const help=document.createElement('button');help.className='icon-button workspace-help';help.type='button';
     help.setAttribute('aria-label','About this data');help.title='About this data';help.innerHTML=icon('info');
     (settings||actions).append(help);guide.hidden=true;
@@ -557,20 +581,10 @@ function prepareAvatars(root) {
   }
 }
 prepareAvatars(document);
-function prepareIdentityImages(root) {
-  const images=root.matches?.('[data-identity-image]')?[root]:[...root.querySelectorAll?.('[data-identity-image]')||[]];
-  for(const img of images) {
-    if(img.dataset.identityReady)continue;
-    img.dataset.identityReady='true';
-    const update=()=>img.classList.toggle('identity-loaded',img.naturalWidth>0);
-    const recover=()=>{
-      update();
-      const fallback=img.dataset.identityFallback;
-      if(fallback){delete img.dataset.identityFallback;img.src=fallback;}
-    };
-    img.addEventListener('load',update);img.addEventListener('error',recover);
-    if(img.complete){if(img.naturalWidth)update();else recover();}
-  }
-}
 prepareIdentityImages(document);
-new MutationObserver(records => { for (const record of records) for (const node of record.addedNodes) if (node instanceof Element && !node.closest('.ui-avatar')) {prepareAvatars(node);prepareIdentityImages(node);} }).observe(document.body, { childList: true, subtree: true });
+new MutationObserver(records => {
+  for(const record of records) {
+    if(record.type==='attributes'){prepareIdentityImages(record.target);continue;}
+    for(const node of record.addedNodes)if(node instanceof Element&&!node.closest('.ui-avatar')){prepareAvatars(node);prepareIdentityImages(node);}
+  }
+}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['src','srcset']});

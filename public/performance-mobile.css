@@ -1,0 +1,17 @@
+.performance-scroll-hint{display:none}
+@media(max-width:760px){
+ .performance-main .page-heading{display:block}.performance-main .heading-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+ .performance-main .heading-actions .button{min-height:44px;flex:1;padding:10px;font-size:13px;white-space:normal}
+ .performance-main .performance-controls{gap:12px;max-width:100%}.performance-main .performance-controls label{flex:1 1 140px;min-width:0;max-width:100%}
+ .performance-main .performance-controls select{width:100%;max-width:100%;min-width:0;min-height:44px;font-size:16px}
+ .performance-main .performance-controls .button{min-height:44px;white-space:normal}
+ .performance-main .performance-section{padding:16px 12px}.performance-main .performance-stat{padding:14px 11px}.performance-main .performance-stat small{font-size:12px}
+ .performance-main :is(p,li,summary){overflow-wrap:anywhere}.performance-main summary{min-height:44px;font-size:13px}
+ .performance-main .performance-scroll-hint{display:block;font-size:12px;line-height:1.5;color:var(--secondary);margin:14px 0 8px}
+ .performance-main .performance-section .table-wrap{max-height:none;max-width:100%;overflow:auto;position:relative;isolation:isolate;overscroll-behavior-inline:contain}
+ .performance-main .data-table{min-width:600px;font-size:13px}.performance-main .data-table :is(th,td):first-child{position:sticky;left:0;z-index:1;background:var(--panel);min-width:145px;width:155px;max-width:165px;box-shadow:2px 0 0 var(--line);overflow-wrap:anywhere;white-space:normal}
+ .performance-main .data-table :is(th,td){padding:12px;line-height:1.5}.performance-main .record-player{min-width:0;align-items:flex-start}.performance-main .record-player strong{white-space:normal;overflow-wrap:anywhere}.performance-main .record-player img{width:28px;height:28px;flex:none}
+ .performance-main .record-details summary{white-space:normal;font-size:12px}
+ .performance-main .performance-status{font-size:13px;line-height:1.5}
+ .performance-main footer{gap:14px;flex-wrap:wrap;padding-bottom:env(safe-area-inset-bottom)}
+}

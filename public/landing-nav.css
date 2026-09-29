@@ -1,4 +1,4 @@
-/* SportsLab's compact site navigation. */
+/* VisualOdds's compact site navigation. */
 body.landing-page .home-header {
   position: sticky;
   top: 0;
@@ -10,7 +10,7 @@ body.landing-page .home-header {
 }
 body.landing-page .home-header.is-scrolled {
   background: rgba(0, 0, 0, .82);
-  box-shadow: 0 1px 0 rgba(113, 225, 213, .11), 0 12px 34px rgba(8, 31, 39, .22);
+  box-shadow: 0 1px 0 rgba(118, 203, 210, .11), 0 12px 34px rgba(8, 31, 39, .22);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
@@ -20,7 +20,7 @@ body.landing-page .home-header::after {
   bottom: -18px;
   left: 8%;
   height: 18px;
-  background: linear-gradient(90deg, transparent, rgba(76, 214, 205, .1) 30%, rgba(115, 82, 186, .08) 70%, transparent);
+  background: linear-gradient(90deg, transparent, rgba(118, 203, 210, .1) 30%, rgba(115, 82, 186, .08) 70%, transparent);
   filter: blur(12px);
   opacity: 0;
   pointer-events: none;
@@ -70,11 +70,11 @@ html { scroll-padding-top: 96px; }
   text-decoration: none;
   white-space: nowrap;
 }
-.home-nav a:hover { color: #8be0d8; }
+.home-nav a:hover { color: #b4e0e6; }
 .home-nav a:focus-visible,
 .home-brand:focus-visible,
 .home-header-action:focus-visible,
-.home-menu-toggle:focus-visible { outline: 2px solid #8be0d8; outline-offset: 4px; }
+.home-menu-toggle:focus-visible { outline: 2px solid #b4e0e6; outline-offset: 4px; }
 .home-header-action {
   display: inline-flex;
   align-items: center;
@@ -86,7 +86,7 @@ html { scroll-padding-top: 96px; }
   padding: 10px 23px;
   border: 0;
   border-radius: 7px;
-  background: linear-gradient(105deg, #65cbc7, #8faad3 52%, #b394d2);
+  background: linear-gradient(105deg, #76cbd2, #8faad3 52%, #b394d2);
   color: #081418;
   font-size: 16px;
   font-weight: 740;
@@ -94,7 +94,7 @@ html { scroll-padding-top: 96px; }
   text-align: center;
   text-decoration: none;
 }
-.home-header-action:hover { border: 0; background: linear-gradient(105deg, #82ded8, #a5bde4 52%, #c6a7e1); color: #071518; }
+.home-header-action:hover { border: 0; background: linear-gradient(105deg, #b4e0e6, #a5bde4 52%, #c6a7e1); color: #071518; }
 .home-menu-toggle { display: none; }
 
 @media (max-width: 1180px) {

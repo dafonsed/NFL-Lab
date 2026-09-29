@@ -3,79 +3,87 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#08080a"><meta name="description" content="Your personal bet tracker. Log tickets, update results, and track profit and loss.">
-  <title>Bet tracker · Sports Lab</title><link rel="icon" href="/favicon.svg">
-  <link rel="stylesheet" href="/style.css"><script type="module" src="/bets.js?v=17"></script>
-</head>
+  <title>Bet tracker · VisualOdds</title><link rel="icon" href="/favicon.svg">
+  <link rel="stylesheet" href="/style.css"><script type="module" src="/bets.js?v=19-tracker-2026"></script>
+<link rel="stylesheet" href="/bet-expanded.css?v=2"></head>
 <body class="bets-app ev-page" data-ev-screen="tracker">
   <a class="skip" href="#main">Skip to bet tracker</a>
   <!--site-header-->
   <main id="main" tabindex="-1">
-    <div class="tracker-page-heading"><div><h1>Bet tracker</h1><p>A clear view of every play.</p></div><div class="tracker-heading-actions"><button class="tracker-button tracker-sample-button" id="toggle-sample" type="button" aria-pressed="false">View sample</button><button class="tracker-button" id="import-slip" aria-label="Import a bet screenshot"><span data-bet-icon="paper"></span> Import</button><button class="tracker-button primary" id="add-bet"><span data-bet-icon="plus"></span> Add bet</button></div></div>
-    <div class="tracker-sample-banner" id="sample-banner" hidden><span class="tracker-sample-dot"></span><strong>Sample data preview</strong><span>Illustrative tickets. Your saved bets are separate.</span><button type="button" id="sample-banner-close">View my bets</button></div>
+    <section class="bt-hero" aria-labelledby="tracker-title">
+      <div class="bt-hero-art" aria-hidden="true"><span class="bt-orb bt-orb-a"></span><span class="bt-orb bt-orb-b"></span><span class="bt-hero-grid"></span></div>
+      <div class="tracker-page-heading"><div><span class="bt-eyebrow"><span class="bt-eyebrow-dot" aria-hidden="true"></span>Bet tracker<span class="bt-eyebrow-sep" aria-hidden="true">·</span><span class="bt-eyebrow-note">Personal ledger</span></span><h1 id="tracker-title">Every ticket, <span class="bt-gradient">every result.</span></h1><p>Log each bet, settle it once, and see exactly where your profit comes from.</p></div><div class="tracker-heading-actions"><button class="tracker-button tracker-sample-button" id="toggle-sample" type="button" aria-pressed="false">View sample</button><button class="tracker-button" id="import-slip" aria-label="Import a bet screenshot"><span data-bet-icon="paper"></span> Import</button><button class="tracker-button primary" id="add-bet"><span data-bet-icon="plus"></span> Add bet</button></div></div>
+      <div class="tracker-sample-banner" id="sample-banner" hidden><span class="tracker-sample-dot"></span><strong>Sample data preview</strong><span>Illustrative tickets. Your saved bets are separate.</span><button type="button" id="sample-banner-close">View my bets</button></div>
+      <div class="tracker-period-bar"><nav class="tracker-period-tabs" aria-label="Performance date range"><button type="button" data-range="1w" aria-pressed="false">Week</button><button type="button" data-range="1m" aria-pressed="false">Month</button><button type="button" data-range="1y" aria-pressed="false">Year</button><button type="button" data-range="all" aria-pressed="true">All time</button><button type="button" data-range="custom" aria-pressed="false">Custom</button></nav><span id="tracker-period-caption">All-time performance</span></div>
+      <div class="tracker-custom-dates" id="tracker-custom-dates" hidden><label>From<input type="date" id="tracker-from" min="1900-01-01" max="2100-12-31"></label><label>To<input type="date" id="tracker-to" min="1900-01-01" max="2100-12-31"></label><span id="tracker-date-error" role="status"></span></div>
+      <dl class="bt-kpis" id="tracker-kpis" aria-label="Performance summary"></dl>
+    </section>
     <div id="storage-error" class="notice" role="alert" hidden></div>
     <div id="tracker-migration-notice" class="notice" role="status" hidden></div>
-    <div class="tracker-period-bar"><nav class="tracker-period-tabs" aria-label="Performance date range"><button type="button" data-range="1w" aria-pressed="false">Week</button><button type="button" data-range="1m" aria-pressed="false">Month</button><button type="button" data-range="1y" aria-pressed="false">Year</button><button type="button" data-range="all" aria-pressed="true">All time</button><button type="button" data-range="custom" aria-pressed="false">Custom</button></nav><span id="tracker-period-caption">All-time performance</span><button type="button" id="tracker-filter-toggle" aria-expanded="false" aria-controls="tracker-filter-panel"><span data-bet-icon="filter"></span>Filters<span id="tracker-filter-count" hidden></span><span class="tracker-filter-chevron" data-bet-icon="chevron"></span></button></div>
-    <div class="tracker-custom-dates" id="tracker-custom-dates" hidden><label>From<input type="date" id="tracker-from" min="1900-01-01" max="2100-12-31"></label><label>To<input type="date" id="tracker-to" min="1900-01-01" max="2100-12-31"></label><span id="tracker-date-error" role="status"></span></div>
     <div class="tracker-primary-layout">
       <div class="tracker-main-column">
         <section id="bet-overview" aria-label="Betting performance"></section>
-        <section class="tracker-ledger-section" aria-labelledby="tickets-title">
-          <div class="tracker-ledger-heading"><div><h2 id="tickets-title">Activity</h2><span id="bet-count" role="status"></span></div><div class="tracker-ledger-actions"><button class="tracker-button" id="refresh-lines"><span data-bet-icon="refresh"></span> Refresh results</button><button class="tracker-button" id="export-bets" disabled><span data-bet-icon="download"></span> Export CSV</button></div></div>
-          <div class="tracker-ledger-toolbar"><div class="tracker-ledger-controls"><nav class="picks-tabs" aria-label="Ticket view"><button data-ticket-view="" aria-pressed="true">All tickets <span data-ticket-count="all">0</span></button><button data-ticket-view="open" aria-pressed="false">Open <span data-ticket-count="open">0</span></button><button data-ticket-view="settled" aria-pressed="false">Settled <span data-ticket-count="settled">0</span></button></nav><div class="searchbox"><span data-bet-icon="search" aria-hidden="true"></span><input id="bet-search" type="search" placeholder="Search tickets" aria-label="Search bets"></div></div>
+        <section class="tracker-ledger-section" data-tab="bets" aria-labelledby="tickets-title">
+          <div class="tracker-ledger-heading"><div><h2 id="tickets-title" class="sr-only">Activity</h2><nav class="tracker-view-tabs" role="tablist" aria-label="Tracker view"><button type="button" role="tab" id="tracker-tab-bets" data-tracker-tab="bets" aria-selected="true" aria-controls="tracker-bets-panel">Bets</button><button type="button" role="tab" id="tracker-tab-advanced" data-tracker-tab="advanced" aria-selected="false" aria-controls="tracker-insights" tabindex="-1">Advanced</button></nav><span id="bet-count" role="status"></span></div><div class="tracker-ledger-actions"><button class="tracker-button" id="refresh-lines"><span data-bet-icon="refresh"></span> Refresh results</button><button class="tracker-button" id="export-bets" disabled><span data-bet-icon="download"></span> Export CSV</button></div></div>
+          <div class="tracker-bets-panel" id="tracker-bets-panel" role="tabpanel" aria-labelledby="tracker-tab-bets">
+          <div class="tracker-ledger-toolbar"><div class="tracker-ledger-controls"><nav class="picks-tabs" aria-label="Ticket view"><button data-ticket-view="" aria-pressed="true">All <span data-ticket-count="all">0</span></button><button data-ticket-view="open" aria-pressed="false">Open <span data-ticket-count="open">0</span></button><button data-ticket-view="settled" aria-pressed="false">Settled <span data-ticket-count="settled">0</span></button></nav><div class="searchbox"><span data-bet-icon="search" aria-hidden="true"></span><input id="bet-search" type="search" placeholder="Search bets" aria-label="Search bets"></div><button type="button" id="tracker-filter-toggle" aria-expanded="false" aria-controls="tracker-filter-panel"><span data-bet-icon="filter"></span>Filters<span id="tracker-filter-count" hidden></span><span class="tracker-filter-chevron" data-bet-icon="chevron"></span></button></div>
           <div id="tracker-active-filters" aria-label="Active ticket filters" hidden></div></div>
           <div id="selected-bet-day" hidden></div>
           <div class="tracking-bar"><p id="tracking-status" role="status">Connected game results refresh every minute while this page is visible.</p></div>
           <section id="bet-list" aria-label="Saved bets"></section>
+          </div>
+          <aside class="tracker-insights" id="tracker-insights" role="tabpanel" aria-labelledby="tracker-tab-advanced" aria-label="Performance breakdown"></aside>
         </section>
       </div>
-      <aside class="tracker-insights" id="tracker-insights" aria-label="Performance breakdown"></aside>
-    </div>
+      <aside class="tracker-filter-rail" aria-label="Bet filters">
     <template id="tracker-filter-template">
       <section class="tracker-filter-panel" id="tracker-filter-panel" aria-label="Ticket filters" hidden>
-        <div class="tracker-filter-heading"><span>Refine your tickets</span><button class="tracker-filter-clear" id="clear-filters" hidden>Clear all</button></div>
+        <div class="tracker-filter-heading"><span>Filters</span><button class="tracker-filter-clear" id="clear-filters" hidden>Clear</button></div>
         <div class="tracker-filter-stack">
-          <label class="tracker-filter-group" for="book-filter"><span>Platform</span><select id="book-filter"><option value="">All platforms</option></select></label>
-          <label class="tracker-filter-group" for="sport-filter"><span>Leagues</span><select id="sport-filter"><option value="">All leagues</option><option>NFL</option><option>MLB</option><option>NBA</option><option>WNBA</option><option>NHL</option><option>Soccer</option><option>Other</option></select></label>
-          <label class="tracker-filter-group" for="market-filter"><span>Markets</span><select id="market-filter"><option value="">All markets</option></select></label>
-          <label class="tracker-filter-group" for="tool-filter"><span>Source</span><select id="tool-filter"><option value="">All sources</option></select></label>
-          <label class="tracker-filter-group" for="tag-filter"><span>Tags</span><select id="tag-filter"><option value="">All tags</option></select></label>
-          <label class="tracker-filter-group" for="status-filter"><span>Result</span><select id="status-filter"><option value="">All results</option><option value="open">Open</option><option value="settled">All settled</option><option value="won">Won</option><option value="lost">Lost</option><option value="push">Push</option><option value="void">Void</option><option value="cashed">Cashed out</option></select></label>
-          <label class="tracker-filter-group" for="ticket-range"><span>Date range</span><select id="ticket-range"><option value="all">All time</option><option value="month">Selected month</option></select></label>
+          <label class="tracker-filter-group" for="book-filter"><span>Sportsbook</span><select id="book-filter" aria-label="Sportsbook"><option value="">All sportsbooks</option></select></label>
+          <label class="tracker-filter-group" for="sport-filter"><span>Leagues</span><select id="sport-filter" aria-label="Leagues"><option value="">All leagues</option><option>NFL</option><option>MLB</option><option>NBA</option><option>WNBA</option><option>NHL</option><option>Soccer</option><option>Other</option></select></label>
+          <label class="tracker-filter-group" for="market-filter"><span>Markets</span><select id="market-filter" aria-label="Markets"><option value="">All markets</option></select></label>
+          <label class="tracker-filter-group" for="tool-filter"><span>Tool</span><select id="tool-filter" aria-label="Tool"><option value="">All tools</option></select></label>
+          <label class="tracker-filter-group" for="tag-filter"><span>Tags</span><select id="tag-filter" aria-label="Tags"><option value="">All tags</option></select></label>
+          <label class="tracker-filter-group" for="status-filter"><span>Result</span><select id="status-filter" aria-label="Result"><option value="">All results</option><option value="open">Open</option><option value="settled">All settled</option><option value="won">Won</option><option value="lost">Lost</option><option value="push">Push</option><option value="void">Void</option><option value="cashed">Cashed out</option></select></label>
+          <label class="tracker-filter-group" for="ticket-range"><span>Date range</span><select id="ticket-range" aria-label="Date range"><option value="all">All time</option><option value="month">Selected month</option></select></label>
         </div>
       </section>
     </template>
+      </aside>
+    </div>
     <div class="tracker-storage"><span><span data-bet-icon="picks"></span> Saved in this browser</span><p>Records stay on this device. Export a copy before clearing site data.</p></div>
-    <footer><span>SPORTS LAB <span class="muted">/ Personal workspace</span></span><span>MLB Stats API + ESPN box scores · Your booked lines stay fixed</span></footer>
+    <footer><span>VISUALODDS <span class="muted">/ Personal workspace</span></span><span>MLB Stats API + ESPN box scores · Your booked lines stay fixed</span></footer>
   </main>
   <dialog id="bet-dialog" aria-labelledby="bet-dialog-title" aria-describedby="bet-dialog-subtitle">
-    <header class="bet-dialog-header"><div><h2 id="bet-dialog-title">Add a bet</h2><p id="bet-dialog-subtitle">Enter the details from your platform ticket.</p></div><button class="sheet-close" id="close-bet" aria-label="Close bet form" type="button">×</button></header>
+    <header class="bet-dialog-header"><div><h2 id="bet-dialog-title">Add Bet</h2><p id="bet-dialog-subtitle">Enter the details from your platform ticket.</p></div><button class="sheet-close" id="close-bet" aria-label="Close bet form" type="button">×</button></header>
     <form id="bet-form" novalidate>
       <div class="bet-form-body">
       <aside id="slip-form-review" class="slip-form-review" hidden></aside>
-      <div class="bet-form-section-heading"><h3 class="form-section-title">Ticket details</h3><span>Required fields</span></div>
       <div class="bet-form-grid">
-        <label class="full-field">Bet / selection<input name="selection" id="selection" required maxlength="240" placeholder="e.g. Bills −3.5 vs Dolphins" autofocus></label>
-        <label>Platform <span class="optional">optional</span><input name="book" list="tracker-platforms" maxlength="80" placeholder="Choose or enter a platform"><datalist id="tracker-platforms"></datalist></label>
-        <label>Date placed<input name="date" type="date" required min="1900-01-01" max="2100-12-31"></label>
-        <label>Sport<select name="sport"><option>NFL</option><option>MLB</option><option>NBA</option><option>WNBA</option><option>NHL</option><option>Soccer</option><option>Other</option></select></label>
-        <label>Market <span class="optional">optional</span><input name="market" maxlength="80" placeholder="e.g. Player points"></label>
-        <label>Source <span class="optional">optional</span><select name="tool"><option value="">Manual</option><option>Positive EV</option><option>Smart Money</option><option>Odds Screen</option><option>Other</option></select></label>
-        <label>Bet type<select name="type"><option value="single">Single</option><option value="parlay">Parlay</option></select></label>
-        <label>Stake (USD)<input name="stake" type="number" min="0.01" max="1000000" step="0.01" required placeholder="0.00" inputmode="decimal"></label>
-        <div class="odds-combo"><label>Odds<input name="odds" id="bet-odds" type="number" step="1" required placeholder="−110" aria-describedby="odds-help"></label><label>Format<select name="oddsFormat" id="odds-format"><option value="american">American</option><option value="decimal">Decimal</option></select></label><small id="odds-help">Use +100 or higher, or −100 or lower.</small></div>
-        <label>Closing odds <span class="optional">optional</span><input name="closingOdds" type="number" step="any" placeholder="e.g. −125"><small>Add the final market price to calculate closing line value.</small></label>
-        <label>Result<select name="status" id="bet-status" aria-describedby="result-help"><option value="open">Open</option><option value="won">Won</option><option value="lost">Lost</option><option value="push">Push — stake refunded</option><option value="void">Void — stake refunded</option><option value="cashed">Cashed out</option></select><small id="result-help">Determined from your leg results. Change result mode to enter your sportsbook’s result.</small></label>
+        <label>Bookmaker<input name="book" list="tracker-platforms" maxlength="80" placeholder="Select a sportsbook"><datalist id="tracker-platforms"></datalist></label>
+        <label>Event <span class="optional">(optional)</span><input name="event" maxlength="120" placeholder="Enter event"></label>
+        <label>Market <span class="optional">(optional)</span><input name="market" maxlength="80" placeholder="Enter market"></label>
+        <label>Bet<input name="selection" id="selection" required maxlength="240" placeholder="Enter bet" autofocus></label>
+        <div class="odds-combo"><label>Odds<input name="odds" id="bet-odds" type="number" step="1" required placeholder="Enter odds" aria-describedby="odds-help"></label><label>Format<select name="oddsFormat" id="odds-format"><option value="american">American</option><option value="decimal">Decimal</option></select></label><small id="odds-help">Use +100 or higher, or −100 or lower.</small></div>
+        <label>Stake<input name="stake" type="number" min="0.01" max="1000000" step="0.01" required placeholder="Enter stake" inputmode="decimal"></label>
+        <label>Status<select name="status" id="bet-status" aria-describedby="result-help"><option value="open">Pending</option><option value="won">Won</option><option value="lost">Lost</option><option value="push">Push — stake refunded</option><option value="void">Void — stake refunded</option><option value="cashed">Cashed out</option></select><small id="result-help">Determined from your leg results. Change result mode to enter your sportsbook’s result.</small></label>
+        <label>Bet Type<select name="type"><option value="single">Single</option><option value="parlay">Parlay</option></select></label>
+        <label>Date<input name="date" type="date" required min="1900-01-01" max="2100-12-31"></label>
+        <label>League<select name="sport"><option>NFL</option><option>MLB</option><option>NBA</option><option>WNBA</option><option>NHL</option><option>Soccer</option><option>Other</option></select></label>
+        <label>Tool <span class="optional">(optional)</span><select name="tool"><option value="">Manual</option><option>Positive EV</option><option>Smart Money</option><option>Odds Screen</option><option>Other</option></select></label>
+        <label>Closing odds <span class="optional">(optional)</span><input name="closingOdds" type="number" step="any" placeholder="Enter closing odds"><small>Adds closing line value to your record.</small></label>
         <label>Result source<select name="settlement" id="ticket-settlement"><option value="manual">Set from sportsbook</option><option value="auto">Track from leg results</option></select></label>
-        <label id="actual-return-field" hidden>Actual total return (USD) <span class="optional">optional</span><input name="returnOverride" type="number" min="0" max="1000000" step="0.01" placeholder="Book’s payout"><small>Includes returned stake. Use for repriced parlays or promotions.</small></label>
-        <label id="cashout-field" hidden>Cash-out return (USD)<input name="cashout" type="number" min="0" max="1000000" step="0.01" inputmode="decimal"><small>Total amount returned by the book.</small></label>
-        <label class="full-field notes-field">Notes <span class="optional">optional</span><textarea name="notes" maxlength="2000" rows="2" placeholder="Add a note about this ticket"></textarea></label>
-        <label class="full-field">Tags <span class="optional">optional</span><input name="tags" maxlength="200" placeholder="e.g. Main slate, Live"><small>Separate tags with commas.</small></label>
+        <label id="actual-return-field" hidden>Actual total return <span class="optional">(optional)</span><input name="returnOverride" type="number" min="0" max="1000000" step="0.01" placeholder="Book’s payout"><small>Includes returned stake. Use for repriced parlays or promotions.</small></label>
+        <label id="cashout-field" hidden>Cash-out return<input name="cashout" type="number" min="0" max="1000000" step="0.01" inputmode="decimal"><small>Total amount returned by the book.</small></label>
+        <label class="full-field notes-field">Notes<textarea name="notes" maxlength="2000" rows="3" placeholder="Add any notes about this bet…"></textarea><span class="bet-notes-count" id="bet-notes-count" aria-hidden="true">0/2000</span></label>
+        <label class="full-field tags-field">Tags<span class="tags-input"><span data-bet-icon="plus" aria-hidden="true"></span><input name="tags" maxlength="200" placeholder="Add tags, separated by commas"></span></label>
       </div>
       <details class="ticket-selections" id="ticket-selections"><summary><span><strong>Track individual selections</strong><small>Optional game and player result tracking</small></span><span class="ticket-selections-chevron" aria-hidden="true">⌄</span></summary><div class="ticket-selections-body"><div class="results-heading"><p>Connect each leg to a game to update its result automatically.</p><button type="button" class="button subtle" id="add-leg">Add selection</button></div><div id="leg-editor"></div></div></details>
       <div id="return-preview" class="return-preview" role="status">Enter a stake and odds to preview your return.</div>
       <p id="form-error" class="form-error" role="alert" tabindex="-1" hidden></p>
       </div>
-      <div class="bet-form-actions"><button class="button danger-button" type="button" id="delete-bet" hidden>Delete bet</button><div><button class="button subtle" type="button" id="cancel-bet">Cancel</button><button class="button primary" type="submit">Save bet</button></div></div>
+      <div class="bet-form-actions"><button class="button danger-button" type="button" id="delete-bet" hidden>Delete bet</button><div><button class="button subtle" type="button" id="cancel-bet">Cancel</button><button class="button primary" type="submit">Save Bet</button></div></div>
     </form>
   </dialog>
   <dialog id="discard-dialog" aria-labelledby="discard-title"><h2 id="discard-title">Discard your changes?</h2><p>Your unsaved ticket details will be lost.</p><div class="delete-actions"><button class="button subtle" id="keep-editing">Keep editing</button><button class="button danger-button" id="discard-bet">Discard changes</button></div></dialog>

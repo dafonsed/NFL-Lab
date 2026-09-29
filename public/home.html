@@ -1,18 +1,59 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#08080a"><meta name="description" content="Research games, player props and recent results across six sports. Inspect Sportslab sources and experimental models.">
-<title>Research today · Sportslab</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css"><script type="module" src="/home.js"></script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#08080a"><meta name="description" content="Your VisualOdds dashboard: today's games, top model picks, hot player trends, positive EV prices and your bet record across six sports.">
+<title>Dashboard · VisualOdds</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css"><script type="module" src="/home.js"></script>
 </head>
-<body class="product-home"><a class="skip" href="#main">Skip to research</a><!--site-header-->
+<body class="product-home hd-page"><a class="skip" href="#main">Skip to dashboard</a><!--site-header-->
 <main id="main" tabindex="-1">
-<div class="home-contextbar"><header class="product-page-heading"><div><h1>Research overview</h1><p id="home-context">Schedules, recorded results and experimental projections.</p></div><a id="full-research" class="button primary" href="/mlb">Open model <span data-ui-icon="arrow" aria-hidden="true"></span></a></header>
-<div class="home-toolbar"><label id="home-date-label">Date<input type="date" id="home-date"></label><label id="home-week-label" hidden>Season / week<select id="home-week"><option value="">Latest available week</option></select></label><label>Prop<select id="home-market" aria-label="Player prop"></select></label><button class="button subtle" id="home-refresh"><span data-ui-icon="refresh" aria-hidden="true"></span>Refresh</button></div></div>
-<label class="home-search-label home-player-search">Find a player<input type="search" id="home-search" placeholder="Player or team" autocomplete="off"></label>
-<div class="home-secondary-toolbar"><details class="home-schedule"><summary>Games on this date <span aria-hidden="true">⌄</span></summary><section id="home-games" aria-label="Game schedule"></section></details>
-<div class="home-board-heading"><div><h2 id="home-board-title">Player props</h2><span id="home-count"></span></div><nav aria-label="Research views"><a id="home-trends" href="/mlb?view=trends"><span data-ui-icon="trends" aria-hidden="true"></span>Trends &amp; charts</a><a id="home-live" href="/mlb/live"><span data-ui-icon="live" aria-hidden="true"></span>Live games</a></nav></div>
-<details class="home-data-context"><summary>Data &amp; historical context</summary><p id="home-disclosure" class="board-disclosure">Model estimates are experimental. Historical results and final outcomes are labeled separately.</p></details></div>
-<p id="home-status" class="home-status" role="status"></p><section id="home-board" aria-label="Player research" aria-busy="true"></section>
-<div class="home-board-footer"><span id="home-source"></span><a id="home-all" href="/mlb">Open the full board →</a></div>
+<div class="hd" id="home-dashboard" aria-busy="true">
+<section class="hd-hero" aria-labelledby="hd-title">
+  <div class="hd-hero-art" aria-hidden="true"><i class="hd-orb hd-orb-a"></i><i class="hd-orb hd-orb-b"></i><i class="hd-grid"></i></div>
+  <div class="hd-hero-copy">
+    <p class="hd-eyebrow"><span class="hd-eyebrow-dot" aria-hidden="true"></span><span id="hd-greeting">Welcome back</span><span class="hd-eyebrow-sep" aria-hidden="true">·</span><span id="home-context">Dashboard</span></p>
+    <h1 id="hd-title"><span class="hd-kicker">Dashboard</span> Today’s edge, <span class="hd-gradient">at a glance.</span></h1>
+    <p class="hd-lede" id="hd-lede">Games, model picks, hot trends and positive EV prices for the selected sport, in one place. Open any panel for the full tool.</p>
+    <div class="hd-sports" id="hd-sports"></div>
+  </div>
+  <dl class="hd-stats" id="hd-stats" aria-label="Today in numbers">
+    <div class="hd-stat"><dt id="hd-stat-games-label">Games today</dt><dd><span data-hd-count="games">—</span></dd></div>
+    <div class="hd-stat"><dt>Props modeled</dt><dd><span data-hd-count="props">—</span></dd></div>
+    <div class="hd-stat"><dt>+EV opportunities</dt><dd><span data-hd-count="ev">—</span></dd></div>
+    <div class="hd-stat is-accent"><dt>Best edge</dt><dd><span data-hd-count="edge" data-hd-suffix="%" data-hd-decimals="1">—</span></dd></div>
+  </dl>
+</section>
 
+<div class="hd-grid-panels">
+  <section class="hd-panel hd-panel-ev" aria-labelledby="hd-ev-title">
+    <header class="hd-panel-head"><div class="hd-panel-title"><span class="hd-panel-icon" aria-hidden="true"><span data-ui-icon="ev"></span></span><h2 id="hd-ev-title">Top +EV bets</h2><span class="hd-chip" id="hd-ev-badge">Pregame</span></div><a id="hd-ev-open" class="hd-open" href="/ev?sport=mlb#ev-pre">Open <span class="sr-only">Positive EV</span><span aria-hidden="true">→</span></a></header>
+    <div class="hd-panel-body" id="hd-ev" aria-live="polite"></div>
+  </section>
+
+  <section class="hd-panel hd-panel-picks" aria-labelledby="hd-picks-title">
+    <header class="hd-panel-head"><div class="hd-panel-title"><span class="hd-panel-icon" aria-hidden="true"><span data-ui-icon="research"></span></span><h2 id="hd-picks-title">Model’s best picks</h2><span class="hd-chip" id="hd-picks-badge">Over chance</span></div><a id="home-model" class="hd-open" href="/mlb">Open <span class="sr-only">Model projections</span><span aria-hidden="true">→</span></a></header>
+    <div class="hd-panel-body" id="hd-picks" aria-live="polite"></div>
+  </section>
+
+  <section class="hd-panel hd-panel-trends" aria-labelledby="hd-trends-title">
+    <header class="hd-panel-head"><div class="hd-panel-title"><span class="hd-panel-icon" aria-hidden="true"><span data-ui-icon="trends"></span></span><h2 id="hd-trends-title">Hot trends</h2><span class="hd-chip" id="hd-trends-badge">Last 10</span></div><a id="home-trends" class="hd-open" href="/mlb?view=trends">Open <span class="sr-only">Player trends</span><span aria-hidden="true">→</span></a></header>
+    <div class="hd-panel-body" id="hd-trends" aria-live="polite"></div>
+  </section>
+
+  <section class="hd-panel hd-panel-games" aria-labelledby="hd-games-title">
+    <header class="hd-panel-head"><div class="hd-panel-title"><span class="hd-panel-icon" aria-hidden="true"><span data-ui-icon="live"></span></span><h2 id="hd-games-title">Today’s games</h2><span class="hd-chip" id="hd-games-badge" hidden></span></div><a id="home-live" class="hd-open" href="/mlb/live">Open <span class="sr-only">Live games</span><span aria-hidden="true">→</span></a></header>
+    <div class="hd-panel-body" id="hd-games" aria-live="polite"></div>
+  </section>
+
+  <section class="hd-panel hd-panel-tracker" aria-labelledby="hd-tracker-title">
+    <header class="hd-panel-head"><div class="hd-panel-title"><span class="hd-panel-icon" aria-hidden="true"><span data-ui-icon="picks"></span></span><h2 id="hd-tracker-title">Bet tracker</h2></div><a id="home-picks" class="hd-open" href="/ev/tracker">Open <span class="sr-only">Bet tracker</span><span aria-hidden="true">→</span></a></header>
+    <div class="hd-panel-body" id="hd-tracker" aria-live="polite"></div>
+  </section>
+
+  <nav class="hd-panel hd-panel-tools" aria-labelledby="hd-tools-title">
+    <header class="hd-panel-head"><div class="hd-panel-title"><span class="hd-panel-icon" aria-hidden="true"><span data-ui-icon="home"></span></span><h2 id="hd-tools-title">Jump to a tool</h2></div></header>
+    <ul class="hd-tools" id="hd-tools"></ul>
+  </nav>
+</div>
+<p class="hd-footnote" id="home-source">Model estimates are experimental. Demo prices in the +EV preview are illustrative until the odds feed is connected.</p>
+</div>
 </main></body></html>

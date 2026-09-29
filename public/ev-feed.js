@@ -8,6 +8,7 @@ const elapsed = value => {
 };
 
 export function toolDataLabel(tool, state, quoteLabel) {
+  if (state.demoPermanent) return 'Demo data';
   const collection = ['fantasy','optimizer','slip','fantasy-alerts'].includes(tool) ? 'dfs' : tool === 'prediction' ? 'contracts' : tool === 'trends' ? 'results' : null;
   if (!collection) return quoteLabel;
   const label = collection === 'dfs' ? 'DFS props' : collection === 'contracts' ? 'contracts' : 'results';
@@ -25,7 +26,7 @@ function coverage(tool) {
   return 'Uses shared sportsbook quotes. EV and comparison tools need complete matching outcomes across books.';
 }
 
-export function createQuoteFeedControls({ sync, getState, getTool, canRefresh = () => true }) {
+export function createQuoteFeedControls({ sync, getState, getTool, canRefresh = () => true, storage }) {
   const panel = document.createElement('section');
   panel.className = 'ev-feed';
   panel.setAttribute('aria-label', 'Quote feed');
@@ -38,9 +39,31 @@ export function createQuoteFeedControls({ sync, getState, getTool, canRefresh = 
   const detail = panel.querySelector('[data-feed-detail]');
   const toolCoverage = panel.querySelector('[data-feed-coverage]');
   let interval = 0, failures = 0, timer = null, pending = false, nextAt = 0, retryNotBefore = 0, error = '', blocked = false, warning = '';
+  // Persist the user's chosen cadence, not an in-flight request or failure state.
+  const preferenceKey = 'sportslab-quote-refresh-ms';
+  try { storage ??= window.localStorage; const saved = Number(storage.getItem(preferenceKey)); interval = waitOptions.includes(saved) ? saved : 0; } catch { /* Session controls still work without storage. */ }
+  select.value = String(interval);
+  const savePreference = () => { try { storage.setItem(preferenceKey, String(interval)); } catch { /* Do not block a local control. */ } };
 
   function update() {
     const state = getState();
+    if (state.demoPermanent) {
+      interval = 0;
+      clearTimeout(timer);
+      nextAt = 0;
+      select.value = '0';
+      select.disabled = true;
+      button.disabled = true;
+      button.textContent = 'Demo mode';
+      status.textContent = 'Permanent demo';
+      status.dataset.tone = 'neutral';
+      meta.textContent = `${state.quotes.length} sample prices · ${state.dfs.length} fantasy props · ${state.contracts.length} prediction contracts`;
+      meta.removeAttribute('title');
+      detail.textContent = 'Demo data stays on across reloads. Live examples stay fresh so every tool remains populated.';
+      toolCoverage.textContent = 'All prices, probabilities, payouts and results shown here are illustrative. Demo edits are saved separately from your real workspace.';
+      return;
+    }
+    select.disabled = false;
     const quotes = state.quotes.filter(quote => quote.source === 'local-api');
     const stale = quotes.filter(quote => quote.live && (!Number.isFinite(Date.parse(quote.ts)) || Date.now() - Date.parse(quote.ts) > 90_000 || Date.parse(quote.ts) > Date.now() + 5_000)).length;
     const newest = quotes.reduce((latest, quote) => Date.parse(quote.ts) > Date.parse(latest || '1970-01-01') ? quote.ts : latest, '');
@@ -70,6 +93,7 @@ export function createQuoteFeedControls({ sync, getState, getTool, canRefresh = 
   }
 
   async function refresh({ automatic = false } = {}) {
+    if (getState().demoPermanent) { update(); return false; }
     if (pending) return false;
     if (automatic && (!interval || blocked)) return false;
     clearTimeout(timer);
@@ -109,6 +133,7 @@ export function createQuoteFeedControls({ sync, getState, getTool, canRefresh = 
 
   function pause() {
     interval = 0;
+    savePreference();
     select.value = '0';
     clearTimeout(timer);
     nextAt = 0;
@@ -118,6 +143,7 @@ export function createQuoteFeedControls({ sync, getState, getTool, canRefresh = 
   select.addEventListener('change', () => {
     const selected = Number(select.value);
     interval = waitOptions.includes(selected) ? selected : 0;
+    savePreference();
     blocked = false;
     failures = 0;
     if (interval) void refresh();
@@ -129,7 +155,8 @@ export function createQuoteFeedControls({ sync, getState, getTool, canRefresh = 
   window.addEventListener('pagehide', () => { clearTimeout(timer); nextAt = 0; });
   window.addEventListener('pageshow', () => { schedule(); update(); });
   // Updating ages is local; only refresh() makes a request via the supplied callback.
-  setInterval(update, 5_000);
+  setInterval(() => { if (!document.hidden) update(); }, 5_000);
   update();
+  schedule();
   return { refresh, pause, update };
 }

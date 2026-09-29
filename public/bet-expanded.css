@@ -1,0 +1,151 @@
+@font-face{font-family:'Bet Detail';src:url('/assets/fonts/OutfitVariable.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
+body .bet-inline-mount:has(.bet-expanded-card){margin:12px 0 18px;min-width:0;grid-column:1/-1}
+body tr.bet-inline-mount:has(.bet-expanded-card)>td{padding:10px 8px!important;border:0!important;background:transparent!important;white-space:normal!important}
+body .bet-expanded-card{--bet-bg:var(--panel,#191919);--bet-rule:var(--line,#303036);--bet-ink:var(--text,#f0f2f6);--bet-muted:var(--muted,#a3aab8);--bet-green:var(--positive,#82b4dc);box-sizing:border-box;position:sticky;left:8px;width:var(--bet-panel-width,100%);max-width:100%;padding:22px 26px 14px!important;border:1px solid var(--bet-rule)!important;border-radius:22px!important;background:var(--bet-bg)!important;color:var(--bet-ink)!important;font:16px/1.4 'Bet Detail','Reference Sans',sans-serif!important;text-align:left;container:bet-detail / inline-size}
+body .bet-expanded-card *{box-sizing:border-box}
+body .bet-expanded-card [hidden]{display:none!important}
+body .bet-expanded-card .bet-expanded-summary{display:grid;grid-template-columns:minmax(30px,.3fr) minmax(0,1.2fr) minmax(0,1.3fr) minmax(105px,.58fr) minmax(95px,.4fr);align-items:center;gap:20px;min-height:88px;padding:0 0 20px!important;margin:0!important;border-bottom:1px solid var(--bet-rule)!important;background:transparent!important}
+body .bet-expanded-card .bet-expanded-summary>div{min-width:0}
+body .bet-expanded-card h3{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 7px!important;font-family:inherit!important;font-size:clamp(16px,1.4cqw,20px)!important;font-weight:530!important;line-height:1.25!important;letter-spacing:-.035em!important;color:var(--bet-ink)!important}
+body .bet-expanded-card .bet-expanded-league{display:inline-flex;align-items:center;gap:6px;font:400 clamp(11px,.95cqw,13px)/1.3 'Bet Detail',sans-serif;color:var(--bet-muted);letter-spacing:0}
+body .bet-expanded-league .league-mark{display:grid;place-items:center;width:19px;height:19px;background:none;border:0}
+body .bet-expanded-league .league-mark :is(img,svg){width:19px;height:19px;object-fit:contain;filter:grayscale(1);opacity:.7}
+body .bet-expanded-card .bet-expanded-market p{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0!important;color:var(--secondary);font-size:clamp(12px,1.05cqw,15px)!important;font-weight:400;line-height:1.45}
+body .bet-expanded-matchup{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+body .bet-expanded-matchup .team-mark{display:grid;place-items:center;position:relative;width:20px;height:20px;background:transparent;border:0;flex:none}
+body .bet-expanded-matchup .team-mark img{width:20px;height:20px;object-fit:contain;position:absolute;inset:0}
+body .bet-expanded-matchup .team-mark>span{display:none}
+body .bet-expanded-time{font-size:inherit;color:var(--muted)}
+body .bet-expanded-card :is(.bet-expanded-selection,.bet-expanded-fair,.bet-expanded-probability){display:flex;flex-direction:column;gap:8px;align-content:center}
+body .bet-expanded-card .bet-expanded-selection strong{font-family:inherit!important;font-size:clamp(16px,1.4cqw,20px)!important;font-weight:440!important;color:var(--bet-ink)!important;line-height:1.3;letter-spacing:-.025em}
+body .bet-expanded-card .bet-expanded-summary small{display:block;font-family:inherit!important;color:var(--bet-muted)!important;font-size:clamp(12px,1cqw,14px)!important;font-weight:350!important;line-height:1.3;margin:0!important}
+body .bet-expanded-card .bet-expanded-fair strong{display:flex;align-items:center;gap:9px;font-family:inherit!important;font-size:clamp(17px,1.4cqw,20px)!important;font-weight:450!important;color:var(--secondary)!important;line-height:1.35}
+body .bet-expanded-card .bet-expanded-fair :is(img,.ev-brand-mark){width:29px!important;height:29px!important;object-fit:contain!important;border-radius:50%!important;flex:none}
+body .bet-expanded-card .bet-expanded-fair .ev-brand-fallback{display:none}
+body .bet-expanded-card .bet-expanded-probability{align-items:center;justify-self:end}
+body .bet-expanded-card .bet-expanded-probability>strong{padding:4px 12px;border:1px solid var(--border-strong);border-radius:25px;color:var(--positive)!important;background:var(--accent-wash);font-family:inherit!important;font-size:clamp(17px,1.4cqw,20px)!important;line-height:1.3;font-weight:500!important;white-space:nowrap}
+body .bet-expanded-card .bet-expanded-collapse{display:grid!important;place-items:center!important;width:29px!important;height:29px!important;min-height:0!important;padding:5px!important;border:1px solid var(--border-strong)!important;border-radius:50%!important;background:transparent!important;color:var(--accent)!important;cursor:pointer;box-shadow:none!important}
+body .bet-expanded-collapse svg{width:17px;height:17px;opacity:0}
+body .bet-expanded-collapse:hover svg,body .bet-expanded-collapse:focus-visible svg{opacity:1}
+body .bet-expanded-card .bet-expanded-toolbar{display:flex;justify-content:flex-end;align-items:center;min-height:58px;padding:12px 0;gap:10px}
+body .bet-expanded-tools{display:flex;align-items:center;gap:8px;flex:0 1 auto;min-width:0;max-width:100%}
+body .bet-expanded-card .bet-expanded-icon{display:grid!important;place-items:center!important;flex:0 0 var(--bet-button,34px)!important;min-width:var(--bet-button,34px)!important;min-height:var(--bet-button,34px)!important;width:var(--bet-button,34px)!important;height:var(--bet-button,34px)!important;border:0!important;padding:0!important;line-height:1!important;transform:none!important;box-shadow:none!important;border-radius:50%!important;background:var(--panel2)!important;color:var(--secondary)!important;cursor:pointer}
+body .bet-expanded-card .bet-expanded-icon svg{display:block!important;flex:none!important;width:18px!important;height:18px!important;margin:0!important;stroke-width:1.65;overflow:visible}
+body .bet-expanded-card .bet-expanded-view-switch .bet-expanded-icon svg{width:17px!important;height:17px!important}
+body .bet-expanded-card .bet-expanded-icon:hover{color:var(--text)!important;background:var(--surface-hover)!important}
+body .bet-expanded-card .bet-expanded-icon:disabled{opacity:.3;cursor:not-allowed}
+body .bet-expanded-card .bet-expanded-icon[aria-pressed=true]{color:var(--accent)!important;background:var(--accent-wash)!important}
+body .bet-expanded-card .bet-expanded-view-switch{display:flex;align-items:center;gap:0;padding:3px;border:0;flex:none;border-radius:999px;background:var(--panel2)}
+body .bet-expanded-card .bet-expanded-view-switch .bet-expanded-icon{--bet-button:28px;padding:0!important;background:transparent!important;color:var(--muted)!important}
+body .bet-expanded-card .bet-expanded-view-switch .bet-expanded-icon[aria-pressed=true]{background:var(--surface-sunken)!important;color:var(--text)!important;box-shadow:none!important}
+body .bet-expanded-more{position:relative;margin:0!important;padding:0!important;border:0!important}
+body .bet-expanded-more>summary{list-style:none;display:grid;place-items:center;width:28px;height:34px;padding:0!important;font-size:12px;letter-spacing:0;color:var(--muted);cursor:pointer}
+body .bet-expanded-more>summary svg{display:block;width:18px;height:18px}
+body .bet-expanded-more>summary::-webkit-details-marker{display:none}
+body .bet-expanded-more>div{position:absolute;right:0;top:48px;display:flex;gap:7px;padding:8px;background:var(--panel2);border:1px solid var(--border-strong);border-radius:12px;z-index:4;box-shadow:0 9px 24px #0004}
+body .bet-expanded-card .bet-expanded-scroll{position:relative;max-width:100%;overflow:auto;padding:0 0 12px;scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+body .bet-expanded-scroll::-webkit-scrollbar{height:7px}
+body .bet-expanded-scroll::-webkit-scrollbar-thumb{border-radius:9px;background:var(--border-strong)}
+body .bet-expanded-card .bet-expanded-table{width:100%!important;min-width:calc(70px + var(--book-count) * 98px)!important;table-layout:fixed!important;border-collapse:separate!important;border-spacing:0!important;background:transparent!important;border:0!important;border-radius:0!important;margin:0!important;box-shadow:none!important;font-family:inherit!important}
+body .bet-expanded-card .bet-expanded-table :is(thead,tbody,tr,th,td){position:static;background:transparent!important;border:0!important;box-shadow:none!important;white-space:nowrap!important;color:var(--secondary)!important;font-family:inherit!important;text-align:center!important;text-transform:none!important;letter-spacing:-.025em;font-weight:350!important}
+body .bet-expanded-card .bet-expanded-table :is(th,td){padding:6px 8px!important}
+body .bet-expanded-card .bet-expanded-table th:first-child{position:sticky;left:0;z-index:1;width:90px;background:var(--bet-bg)!important;text-align:left!important}
+body .bet-expanded-card .bet-expanded-table thead th{height:46px!important}
+body .bet-expanded-card .bet-expanded-table tbody :is(th,td){height:52px!important;font-size:clamp(13px,1.1cqw,16px)!important;line-height:1.4!important}
+body .bet-expanded-card .bet-expanded-table tbody th{font-size:clamp(14px,1.1cqw,16px)!important}
+body .bet-expanded-card .bet-expanded-brand{display:inline-flex;align-items:center;justify-content:center;gap:6px;max-width:100%}
+body .bet-expanded-card .bet-expanded-brand :is(img,.ev-brand-mark){width:26px!important;height:26px!important;max-width:26px!important;object-fit:contain!important;border-radius:50%!important;filter:none!important}
+body .bet-expanded-card .bet-expanded-brand small{font:350 clamp(10px,.85cqw,12px)/1.4 'Bet Detail',sans-serif!important;color:var(--muted)!important;margin:0!important;display:inline!important}
+body .bet-expanded-card .bet-expanded-brand .ev-brand-fallback{font-size:12px;display:none}
+body .bet-expanded-card .bet-expanded-table td em{margin-left:6px;color:var(--positive);font-size:.9em;font-style:normal}
+body .bet-expanded-card .bet-expanded-table td>button{display:inline-block!important;min-height:32px!important;width:auto!important;padding:0!important;border:0!important;background:transparent!important;color:inherit!important;font:inherit!important;border-radius:4px!important;box-shadow:none!important;cursor:pointer}
+body .bet-expanded-card .bet-expanded-table td>button:hover{color:var(--bright)!important}
+body .bet-expanded-card .bet-expanded-footer{position:static;display:flex;flex-direction:row;justify-content:flex-start;align-items:center;gap:16px;min-height:18px;margin:5px 0 0!important;padding:0!important;border:0!important;background:transparent!important;color:var(--muted);font:350 12px/1.5 'Bet Detail',sans-serif!important}
+body .bet-expanded-card .bet-expanded-footer details{margin:0 0 0 auto!important;padding:0!important;border:0!important;background:transparent!important;text-align:right}
+body .bet-expanded-card .bet-expanded-footer summary{cursor:pointer;list-style:none;min-height:0!important;padding:0!important;font:inherit!important;color:var(--muted)}
+body .bet-expanded-card .bet-expanded-footer summary::-webkit-details-marker{display:none}
+body .bet-expanded-card .bet-expanded-footer details[open]{max-width:65%}
+body .bet-expanded-card .bet-expanded-footer p{max-width:720px;margin:10px 0 0;font:400 13px/1.6 'Bet Detail',sans-serif!important;color:var(--secondary)}
+body .bet-expanded-card .bet-comparison-calculator{display:flex;gap:24px;flex-wrap:wrap;padding:18px;margin:8px 0 18px;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}
+body .bet-expanded-card .bet-comparison-calculator :is(label,div){display:grid;gap:7px;color:var(--secondary);font-size:14px}
+body .bet-expanded-card .bet-comparison-calculator input{width:120px;padding:10px;border:1px solid var(--border-strong);border-radius:8px;background:var(--control);color:var(--text);font:inherit}
+body .bet-expanded-card .bet-comparison-feedback{margin:8px 0 14px;color:var(--accent);font:400 14px/1.5 'Bet Detail',sans-serif}
+body .bet-expanded-card :is(button,summary,input,select,[tabindex]):focus-visible{outline:2px solid var(--accent)!important;outline-offset:3px}
+/* The history occupies the same expanded card and keeps the reference's plot proportions. */
+body .bet-expanded-card .bet-reference-chart-toolbar{display:flex;align-items:center;gap:22px;min-width:0;margin:4px 0 17px}
+body .bet-expanded-card .bet-reference-range{position:relative;flex:none;padding:0!important;margin:0!important;border:0!important;background:none!important}
+body .bet-expanded-card .bet-reference-range summary{display:flex;align-items:center;justify-content:space-between;gap:20px;min-width:119px;height:43px;padding:0 16px!important;list-style:none;border:1px solid var(--border-strong);border-radius:25px;font:450 15px/1 'Bet Detail',sans-serif;color:var(--secondary);cursor:pointer}
+body .bet-reference-range summary::-webkit-details-marker{display:none}
+body .bet-reference-range summary svg{width:13px;height:13px;fill:none;stroke:var(--muted);stroke-width:1.5}
+body .bet-reference-range>div{position:absolute;top:49px;left:0;min-width:146px;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);z-index:5;box-shadow:0 12px 30px #0006}
+body .bet-expanded-card .bet-reference-range button{display:block;width:100%;padding:9px 12px!important;border:0!important;border-radius:6px!important;background:none!important;font:400 14px/1.2 'Bet Detail',sans-serif!important;color:var(--secondary)!important;text-align:left;cursor:pointer}
+body .bet-expanded-card .bet-reference-range button[aria-pressed=true],body .bet-expanded-card .bet-reference-range button:hover{background:var(--surface-hover)!important}
+body .bet-reference-legend{display:flex;align-items:center;gap:27px;min-width:0;overflow-x:auto;scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent;padding:5px 0;flex:1}
+body .bet-expanded-card .bet-reference-legend button{display:flex;align-items:center;gap:9px;flex-shrink:0;padding:0!important;min-height:31px!important;border:0!important;border-radius:4px!important;background:none!important;box-shadow:none!important;color:var(--secondary)!important;font:400 16px/1.3 'Bet Detail',sans-serif!important;cursor:pointer;opacity:.35;white-space:nowrap}
+body .bet-expanded-card .bet-reference-legend button[aria-pressed=true]{opacity:1}
+body .bet-reference-legend i{width:8px;height:8px;border-radius:50%;background:var(--series-color);margin-right:3px}
+body .bet-reference-legend :is(img,.ev-brand-mark){width:26px!important;height:26px!important;object-fit:contain;border-radius:50%}
+body .bet-reference-legend b{font-weight:450;color:var(--text)}
+body .bet-reference-plot{position:relative;width:100%;overflow-x:auto;scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+body .bet-reference-plot>svg{display:block;width:100%;min-width:750px;height:auto;overflow:visible;font-family:'Bet Detail',sans-serif}
+body .bet-reference-grid line{stroke:var(--line);stroke-width:.7}
+body .bet-reference-grid text{fill:var(--muted);font-size:17px;font-weight:350}
+body .bet-reference-trace>path{fill:none;stroke:currentColor;stroke-width:2.2;stroke-linejoin:round}
+body .bet-reference-trace .bet-reference-leader{stroke-width:1;opacity:.7}
+body .bet-reference-point{fill:transparent;stroke:none;cursor:crosshair}
+body .bet-reference-point:hover,body .bet-reference-point:focus{fill:currentColor;stroke:var(--panel);stroke-width:2;outline:none!important}
+body .bet-reference-end-bg{fill:currentColor}
+body .bet-reference-end-value{fill:var(--action-ink);font-size:16px;font-weight:550}
+body .bet-reference-selection-fill{fill:var(--accent);opacity:.18}
+body .bet-reference-selection-line{stroke:var(--accent);stroke-width:1;stroke-dasharray:5 5;opacity:.6}
+body .bet-reference-selection-tag rect{fill:var(--accent)}
+body .bet-reference-selection-tag text{fill:var(--action-ink);font-size:16px;font-weight:550}
+body .bet-expanded-card .bet-reference-chart-caption{display:flex;justify-content:space-between;gap:20px;margin:3px 0 13px;color:var(--muted);font-size:12px;line-height:1.5}
+body .bet-reference-tooltip{position:absolute;pointer-events:none;display:grid;gap:5px;min-width:198px;padding:12px 15px;z-index:3;border:1px solid var(--border-strong);border-radius:10px;background:var(--panel2);box-shadow:0 8px 26px #0006;color:var(--text);font:400 14px/1.4 'Bet Detail',sans-serif}
+body .bet-reference-tooltip small{color:var(--secondary);font-size:12px}
+body .bet-reference-empty{display:grid;place-content:center;min-height:300px;text-align:center;padding:24px;color:var(--muted)}
+body .bet-reference-empty strong{font-size:23px;font-weight:450;color:var(--text)}
+body .bet-reference-empty p{font-size:15px;line-height:1.6;margin-top:12px}
+@container bet-detail (max-width:960px){
+ body .bet-expanded-card .bet-expanded-summary{grid-template-columns:28px minmax(0,1.1fr) minmax(0,1.1fr) 90px 99px;gap:15px;min-height:92px}
+ body .bet-expanded-card .bet-expanded-tools{gap:7px}
+ body .bet-expanded-card .bet-expanded-icon{--bet-button:34px}
+ body .bet-expanded-card .bet-expanded-view-switch .bet-expanded-icon{--bet-button:28px}
+ body .bet-expanded-card .bet-expanded-league{font-size:12px}
+ body .bet-expanded-card .bet-expanded-probability>strong{padding:4px 11px}
+}
+@container bet-detail (max-width:650px){
+ body .bet-expanded-card .bet-expanded-summary{grid-template-columns:44px minmax(0,1fr) minmax(98px,.6fr);gap:18px 13px;padding-bottom:23px!important}
+ body .bet-expanded-market{grid-column:2/4}
+ body .bet-expanded-selection{grid-column:2/4}
+ body .bet-expanded-fair{grid-column:2}
+ body .bet-expanded-probability{grid-column:3}
+ body .bet-expanded-card .bet-expanded-summary small{font-size:13px!important}
+ body .bet-expanded-card .bet-expanded-toolbar{min-height:64px;overflow-x:auto;justify-content:flex-start}
+ body .bet-expanded-card .bet-expanded-tools{gap:6px}
+ body .bet-expanded-card .bet-expanded-more>summary{width:44px;height:44px}
+ body .bet-expanded-card .bet-expanded-icon{--bet-button:40px}
+ body .bet-expanded-card .bet-expanded-icon svg{width:18px!important;height:18px!important}
+ body .bet-expanded-card .bet-expanded-view-switch .bet-expanded-icon{--bet-button:34px}
+ body .bet-expanded-card .bet-expanded-table{min-width:calc(65px + var(--book-count)*104px)!important}
+ body .bet-expanded-card .bet-expanded-table th:first-child{width:65px}
+ body .bet-expanded-card .bet-expanded-table :is(th,td){padding:8px!important}
+ body .bet-expanded-card .bet-expanded-brand{display:grid;grid-template-columns:26px auto;justify-content:center;gap:4px 6px}
+ body .bet-expanded-card .bet-expanded-brand::after{grid-column:1/-1;text-align:center;line-height:1.3}
+ body .bet-expanded-card .bet-reference-chart-toolbar{gap:15px;flex-wrap:wrap;margin-top:12px}
+ body .bet-reference-legend{flex-basis:100%;gap:22px}
+ body .bet-expanded-card .bet-reference-chart-caption{flex-direction:column;gap:3px;font-size:12px}
+ body .bet-expanded-card .bet-expanded-footer{flex-wrap:wrap;gap:8px 14px}
+ body .bet-expanded-card .bet-expanded-footer details[open]{max-width:100%;text-align:left}
+}
+@media(max-width:760px){body .bet-expanded-card{padding:18px 16px 14px!important;border-radius:20px!important}body tr.bet-inline-mount:has(.bet-expanded-card)>td{padding:8px!important}}
+/* Prevent the surrounding opportunity table from sizing the nested comparison rows. */
+html body .bet-expanded-card .bet-expanded-table tr{height:auto!important;min-height:0!important}
+html body .bet-expanded-card .bet-expanded-table :is(th,td){width:auto!important;min-width:0!important;max-width:none!important}
+html body .bet-expanded-card .bet-expanded-table th:first-child{width:70px!important;min-width:70px!important}
+@container bet-detail (max-width:650px){html body .bet-expanded-card .bet-expanded-table th:first-child{width:65px!important;min-width:65px!important}}
+body .ev-table-wrap:has(.bet-expanded-card){overflow-anchor:none}
+@container bet-detail (max-width:650px){
+ body .bet-reference-plot>svg{min-width:1100px}
+}
+body .bet-inline-selection>.bet-open-detail{display:block;min-height:0!important;height:auto!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;color:inherit!important;text-align:left;font:inherit;cursor:pointer}body .bet-inline-selection>.bet-open-detail:hover strong{color:var(--positive)!important}

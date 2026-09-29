@@ -1,4 +1,6 @@
 import { decimal, fresh, oddsLabel, probabilityToAmerican } from './ev-core.js?v=2';
+import { boardIcon, bookLogo } from './ev-board.js?v=3';
+import { leagueMark, teamLogo } from './sports-identity.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const svg = body => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
@@ -8,14 +10,65 @@ const layers = svg('<path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5m-18 5 9 5 9-5"/
 const settingsIcon = svg('<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="var(--os-panel)"/><circle cx="15" cy="17" r="3" fill="var(--os-panel)"/>');
 const expandIcon = svg('<path d="M14 4h6v6M20 4l-6 6M10 20H4v-6m0 6 6-6"/>');
 const normalizedLine = q => q.line === '' || q.line == null ? '' : (q.type === 'spread' || q.type === 'alternate' && !/^(over|under)$/i.test(q.side)) ? Math.abs(Number(q.line)) : Number.isFinite(Number(q.line)) ? Number(q.line) : q.line;
+const unavailablePrice = quote => Boolean(quote.suspended) || ['suspended','closed','unavailable'].includes(String(quote.status || '').toLowerCase());
+// One availability check per quote per render pass (same timestamp): the rules are costly on a full slate.
+const currentCache = new WeakMap();
+const currentPrice = (quote, now = Date.now()) => {
+  const cached = currentCache.get(quote);
+  if (cached && cached[0] === now) return cached[1];
+  const value = fresh(quote, now) && !unavailablePrice(quote);
+  currentCache.set(quote, [now, value]);
+  return value;
+};
+const marketName = q => q.displayMarket || (q.player ? q.market.replace(q.player,'').trim() : q.market);
+const trendIcon = svg('<path d="m3 16 5.5-5.5 4 4L21 6"/><path d="M15 6h6v6"/>');
+const lockIcon = svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>');
+const MAIN_TYPES = new Set(['moneyline','three-way','spread','total']);
+const typeRank = q => ({moneyline:0,'three-way':0,spread:1,total:2,prop:3,alternate:4})[q.type] ?? 5;
+const isMain = q => MAIN_TYPES.has(q.type) && !q.player;
+const isProp = q => !isMain(q) && q.type !== 'alternate' && (q.type === 'prop' || Boolean(q.player));
+// Market tabs: grouped views first, then each market by name. Group values share the market filter.
+const ALL_MARKETS = 'group:all';
+const MARKET_GROUPS = [['group:main','Main markets',isMain],['group:props','Player props',isProp],['group:alt','Alternate lines',q => q.type === 'alternate']];
+const matchesMarket = (q, value) => {
+  if (!value || value === ALL_MARKETS) return true;
+  const group = MARKET_GROUPS.find(([key]) => key === value);
+  return group ? group[2](q) : marketName(q) === value;
+};
+const signedSpread = q => q.type === 'spread' || q.type === 'alternate' && !/^(over|under)$/i.test(q.side);
+const lineLabel = q => {
+  if (q.line === '' || q.line == null) return '';
+  const n = Number(q.line);
+  return !Number.isFinite(n) ? String(q.line) : signedSpread(q) && n > 0 ? `+${n}` : String(n);
+};
+const kickoff = q => {
+  const at = Date.parse(q.startTime);
+  if (!Number.isFinite(at)) return q.displayTime || '';
+  const date = new Date(at);
+  return `${date.getMonth() + 1}/${date.getDate()} · ${date.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}`;
+};
+const eventTeams = q => String(q.displayEvent || '').split(/\s+(?:@|vs\.?|v)\s+/i).filter(Boolean);
+// Team sides get the team logo (or a code chip); totals and props get a compact side chip.
+const sideMark = (q, side) => {
+  const team = eventTeams(q).includes(side) || side === q.team ? side : q.player && q.team ? q.team : '';
+  if (!team) return `<span class="os-mark is-side" aria-hidden="true">${/^draw$/i.test(side) ? 'X' : esc(String(side).slice(0,1).toUpperCase())}</span>`;
+  const logo = teamLogo({sport:String(q.sport || '').toLowerCase(),team});
+  return logo ? `<span class="os-mark is-logo" aria-hidden="true"><img src="${esc(logo)}" alt="" width="22" height="22" loading="lazy" decoding="async"></span>` : `<span class="os-mark" aria-hidden="true">${esc(String(team).replace(/[^A-Za-z0-9]/g,'').slice(0,3).toUpperCase())}</span>`;
+};
+const observedAge = value => {
+  const elapsed = Date.now() - Date.parse(value);
+  if (!Number.isFinite(elapsed)) return 'Unknown';
+  const seconds = Math.max(0,Math.floor(elapsed / 1000));
+  return seconds < 60 ? `${seconds}s ago` : seconds < 3600 ? `${Math.floor(seconds / 60)}m ago` : `${Math.floor(seconds / 3600)}h ago`;
+};
 
 // Lines stay separate: a better payout at a different threshold is not the same bet.
 export function buildOddsBoard(records, books, now = Date.now()) {
   const events = new Map();
   for (const q of records) {
-    if (!q.event || !q.market || !q.side || !books.includes(q.book) || q.depthOnly || !Number.isFinite(decimal(q.odds))) continue;
+    if (!q.event || !q.market || !q.side || !books.includes(q.book) || q.depthOnly || (!Number.isFinite(decimal(q.odds)) && !unavailablePrice(q))) continue;
     const eventKey = JSON.stringify([q.sport, q.event, Boolean(q.live)]);
-    const marketKey = JSON.stringify([q.type, q.market, q.player || '', normalizedLine(q)]);
+    const marketKey = JSON.stringify([q.type, q.market, q.player || '', normalizedLine(q), q.period || 'full']);
     if (!events.has(eventKey)) events.set(eventKey, { key:eventKey, first:q, markets:new Map() });
     const event = events.get(eventKey);
     if (!event.markets.has(marketKey)) event.markets.set(marketKey, { key:eventKey + marketKey, first:q, latest:new Map() });
@@ -26,126 +79,226 @@ export function buildOddsBoard(records, books, now = Date.now()) {
   }
   return [...events.values()].map(event => ({...event, markets:[...event.markets.values()].map(market => {
     const quotes = [...market.latest.values()];
-    const sides = [...new Set(quotes.map(q => q.side))].sort((a,b) => /^(over|yes)$/i.test(a) ? -1 : /^(over|yes)$/i.test(b) ? 1 : a.localeCompare(b));
+    // Over/Yes first; team sides follow the event's away @ home order, then alphabetical (Draw last).
+    const order = String(market.first.displayEvent || market.first.event || '');
+    const position = side => { const index = order.indexOf(side); return index < 0 ? Infinity : index; };
+    const sides = [...new Set(quotes.map(q => q.side))].sort((a,b) => /^(over|yes)$/i.test(a) ? -1 : /^(over|yes)$/i.test(b) ? 1 : (position(a) - position(b)) || a.localeCompare(b));
     return {...market, sides:sides.map(side => {
       const prices = quotes.filter(q => q.side === side);
-      const current = prices.filter(q => fresh(q, now));
+      const current = prices.filter(q => currentPrice(q, now));
       const bestDecimal = current.length ? Math.max(...current.map(q => decimal(q.odds))) : null;
       return {side, prices, best:current.find(q => decimal(q.odds) === bestDecimal), bestDecimal, average:current.length ? current.reduce((sum,q) => sum + decimal(q.odds),0) / current.length : null};
     })};
   })}));
 }
 
-export function createOddsScreen({ getQuotes, brandMark, onSport, redraw, getSportsbookState = () => '', onAllSportsbooks = () => {} }) {
-  let eventFilter = '', marketFilter = '', query = '', format = 'decimal', expanded = false;
+export function createOddsScreen({ getQuotes, brandMark, onSport, redraw, storage, defaultFormat = 'decimal', getSportsbookState = () => '', onAllSportsbooks = () => {} }) {
+  // marketFilter: null = default tab (Main markets when present), '' = All markets, else a group or market name.
+  let eventFilter = '', marketFilter = null, query = '', format = defaultFormat === 'american' ? 'american' : 'decimal', expanded = false;
   let settingsOpen = false, hiddenBooks = new Set();
+  let bookOrder = [];
+  let visibleBookOrder = [];
+  try {
+    const saved = JSON.parse(storage?.getItem('sportslab-odds-display-v1') || 'null');
+    if (saved) {
+      if (['american','decimal'].includes(saved.format)) format = saved.format;
+      for (const [key,value] of Object.entries(saved)) if (typeof value === 'string') {
+        if (key === 'event') eventFilter = value;
+        if (key === 'market') marketFilter = value || null;
+        if (key === 'query') query = value;
+      }
+      hiddenBooks = new Set(Array.isArray(saved.hiddenBooks) ? saved.hiddenBooks.filter(book => typeof book === 'string') : []);
+      bookOrder = Array.isArray(saved.bookOrder) ? [...new Set(saved.bookOrder.filter(book => typeof book === 'string'))] : [];
+    }
+  } catch { /* A damaged preference must never prevent prices from rendering. */ }
+  const save = () => { try { storage?.setItem('sportslab-odds-display-v1',JSON.stringify({format,event:eventFilter,market:marketFilter,query,hiddenBooks:[...hiddenBooks],bookOrder})); } catch { /* Current-session controls remain usable. */ } };
   const collapsed = new Set();
   const initializedEvents = new Set();
   let lastGroups = [];
+  let lastDataSignature = '', lastSport = '';
+  let renderNow = Date.now();
+  const dataSignature = (records, now = Date.now()) => JSON.stringify(records.map(q => [q.id,q.sport,q.event,q.market,q.player,q.period,q.line,q.book,q.side,q.odds,q.status,q.suspended,Boolean(q.live),currentPrice(q, now),q.displayTime,q.startTime,q.limit]));
   const price = value => value == null || !Number.isFinite(value) ? '—' : format === 'decimal' ? value.toFixed(2) : oddsLabel(probabilityToAmerican(1 / value));
   const select = (key, label, options, value) => `<label class="os-field"><span class="os-field-label">${label}</span><select id="os-${key}" data-os-filter="${key}" aria-label="${label}">${options.map(([v,text]) => `<option value="${esc(v)}"${v === value ? ' selected' : ''}>${esc(text)}</option>`).join('')}</select></label>`;
-  const toggle = (key, title, content, cls = '') => `<button type="button" class="os-disclosure ${cls}" data-os-toggle="${esc(key)}" aria-expanded="${!collapsed.has(key)}" aria-label="${collapsed.has(key) ? 'Expand' : 'Collapse'} ${esc(title)}">${chevron}${content}</button>`;
-  const quoteButton = (q, best, showBrand = false) => {
-    const stale = !fresh(q);
-    const line = q.line === '' || q.line == null ? '' : `<small>${esc(q.line)}</small>`;
-    return `<button type="button" data-detail="${esc(q.id)}" class="os-price${best && !stale ? ' is-best' : ''}${stale ? ' is-stale' : ''}" title="${esc(q.book)} · ${esc(q.side)} ${esc(q.line)} · ${stale ? 'Stale live price' : q.source === 'example' ? 'Example price' : 'Entered price'}" aria-label="Compare ${esc(q.book)} ${esc(q.side)} ${esc(q.market)} ${esc(q.line)} at ${price(decimal(q.odds))}${stale ? ', stale live price' : ''}">${showBrand ? brandMark(q.book) : ''}<span>${price(decimal(q.odds))}</span>${line}</button>`;
+  // One grid cell per book: lime outline for the best current price, muted red for the worst.
+  const bookCell = (q, row, rowLine) => {
+    if (!q) return '<td class="os-book-cell is-missing"><span class="os-px" aria-label="No price">—</span></td>';
+    if (unavailablePrice(q)) return `<td class="os-book-cell is-locked" title="${esc(q.book)} · suspended"><span class="os-px">${lockIcon}<span class="os-sr">Suspended</span></span></td>`;
+    const stale = !currentPrice(q, renderNow), value = decimal(q.odds);
+    const cls = stale ? ' is-stale' : value === row.bestDecimal ? ' is-best' : value === row.worstDecimal ? ' is-worst' : '';
+    // Spread sides are grouped by absolute line, so show the signed line when a book differs from the row.
+    const line = String(q.line ?? '') !== String(rowLine ?? '') ? `<small>${esc(lineLabel(q))}</small>` : '';
+    return `<td class="os-book-cell${cls}"${stale ? '' : ` data-open-quote="${esc(q.id)}"`} title="${esc(q.book)} · ${stale ? 'stale live price' : price(value)}"><span class="os-px">${line}<b>${price(value)}</b></span></td>`;
+  };
+  // Keep the grid's own scroll position across redraws (collapse, settings, data refresh).
+  const redrawKeeping = (resetTop = false) => {
+    const wrap = document.querySelector('.os-grid-wrap'), left = wrap?.scrollLeft || 0, top = resetTop ? 0 : wrap?.scrollTop || 0;
+    redraw();
+    const next = document.querySelector('.os-grid-wrap');
+    if (next) {next.scrollLeft = left;next.scrollTop = top;}
   };
   function render({ sport = '', demo = false } = {}) {
     const all = getQuotes().filter(q => !q.depthOnly);
     const sports = [...new Set(['NFL','MLB','NBA','WNBA','NHL','Soccer',...all.map(q => q.sport).filter(Boolean)])];
     const leagueQuotes = all.filter(q => !sport || !q.sport || q.sport === sport);
+    // Refresh compares only the displayed league, so other sports never force a redraw.
+    renderNow = Date.now();lastSport = sport;lastDataSignature = dataSignature(leagueQuotes, renderNow);
     const events = [...new Set(leagueQuotes.map(q => q.event))].sort();
-    const markets = [...new Set(leagueQuotes.map(q => q.displayMarket || (q.player ? q.market.replace(q.player,'').trim() : q.market)))].filter(Boolean).sort();
+    const markets = [...new Set(leagueQuotes.map(marketName))].filter(Boolean).sort();
     if (!events.includes(eventFilter)) eventFilter = '';
-    if (!markets.includes(marketFilter)) marketFilter = '';
-    const availableBooks = [...new Set(leagueQuotes.map(q => q.book).filter(Boolean))];
+    const leagueGroups = MARKET_GROUPS.filter(([,,test]) => leagueQuotes.some(test));
+    if (marketFilter && marketFilter !== ALL_MARKETS && !markets.includes(marketFilter) && !leagueGroups.some(([key]) => key === marketFilter)) marketFilter = null;
+    const market = marketFilter ?? (leagueGroups.some(([key]) => key === 'group:main') ? 'group:main' : ALL_MARKETS);
+    // Tabs list the market groups present for the selected league and event.
+    const scopeNames = new Map();
+    for (const q of leagueQuotes) if ((!eventFilter || q.event === eventFilter) && marketName(q) && !scopeNames.has(marketName(q))) scopeNames.set(marketName(q), q);
+    const scoped = [...scopeNames.values()], names = test => [...scopeNames].filter(([,q]) => test(q)).sort(([a,x],[b,y]) => typeRank(x) - typeRank(y) || a.localeCompare(b)).map(([name]) => [name,name]);
+    const tabs = [[ALL_MARKETS,'All markets'],
+      ...(scoped.some(isMain) ? [['group:main','Main markets'],...names(isMain)] : []),
+      ...(scoped.some(isProp) ? [['group:props','Player props'],...names(isProp)] : []),
+      ...(scoped.some(q => q.type === 'alternate') ? [['group:alt','Alternate lines']] : []),
+      ...names(q => !isMain(q) && !isProp(q) && q.type !== 'alternate')];
+    const presentBooks = [...new Set(leagueQuotes.map(q => q.book).filter(Boolean))];
+    bookOrder = [...bookOrder,...presentBooks.filter(book => !bookOrder.includes(book))];
+    const availableBooks = bookOrder.filter(book => presentBooks.includes(book));
+    visibleBookOrder = availableBooks;
     const stateFilter = getSportsbookState();
     const allBooksSelected = !stateFilter && availableBooks.every(book => !hiddenBooks.has(book));
-    const filtered = leagueQuotes.filter(q => (!eventFilter || q.event === eventFilter) && (!marketFilter || (q.displayMarket || (q.player ? q.market.replace(q.player,'').trim() : q.market)) === marketFilter) && (!query || [q.player,q.event,q.market,q.book].some(value => String(value || '').toLowerCase().includes(query.toLowerCase().trim()))));
+    const filtered = leagueQuotes.filter(q => (!eventFilter || q.event === eventFilter) && matchesMarket(q, market) && (!query || [q.player,q.event,q.market,q.book,q.sport,q.league].some(value => String(value || '').toLowerCase().includes(query.toLowerCase().trim()))));
     const present = new Set(filtered.map(q => q.book));
     const books = availableBooks.filter(book => present.has(book) && !hiddenBooks.has(book));
-    const groups = buildOddsBoard(filtered, books);
-    // A full slate stays available without mounting thousands of offscreen cells.
+    const groups = buildOddsBoard(filtered, books, renderNow);
+    // A full slate stays available without mounting thousands of offscreen rows: large demo
+    // views (all markets, props) open the first game only; main-market slates open every game.
+    const heavy = groups.reduce((n,event) => n + event.markets.reduce((sum,m) => sum + m.sides.length,0),0) > 160;
     groups.forEach((event,index) => {
       if (!event.first.demo || initializedEvents.has(event.key)) return;
       initializedEvents.add(event.key);
-      if (index > 0 && !eventFilter) collapsed.add(event.key);
+      if (index > 0 && !eventFilter && heavy) collapsed.add(event.key);
     });
-    lastGroups = groups.flatMap(event => [event.key, ...event.markets.map(market => market.key)]);
-    const colspan = 3 + books.length;
+    lastGroups = groups.map(event => event.key);
+    // One grid: a tbody per game, one row per selection, one column per visible sportsbook.
+    // The first cell of each game carries its start time and collapse toggle; later rows leave it
+    // blank so every row keeps the same cell count (inline analysis rows span them all).
+    const columns = 4 + books.length;
     const rows = groups.map(event => {
       const q = event.first;
-      const time = q.displayTime || q.startTime || '';
-      const eventRow = `<tr class="os-event"><th colspan="${colspan}" scope="rowgroup">${toggle(event.key, q.event, `<span>${esc(q.demo ? q.event : q.displayEvent || q.event)}</span><small>${esc(time)}</small>${q.demo ? `<small class="os-market-count">${event.markets.length} markets</small>` : ''}${q.live ? '<span class="os-live">Live entry</span>' : ''}`)}</th></tr>`;
-      if (collapsed.has(event.key)) return eventRow;
-      return eventRow + event.markets.map(market => {
-        const q = market.first, title = q.player || q.market;
-        const detail = q.player ? q.displayMarket || q.market.replace(q.player,'').trim() : '';
-        const threshold = normalizedLine(q);
-        const marketRow = `<tr class="os-market"><th colspan="${colspan}" scope="rowgroup">${toggle(market.key, `${title} ${detail} ${threshold}`, `<span>${esc(title)}</span>${layers}<small>${esc(detail)}${threshold !== '' ? `${detail ? ' · ' : ''}${esc(threshold)}` : ''}</small>${q.type === 'alternate' ? '<span class="os-alt">Alt</span>' : ''}`, 'os-market-toggle')}</th></tr>`;
-        if (collapsed.has(market.key)) return marketRow;
-        return marketRow + market.sides.map((row,index) => `<tr class="os-side${index === market.sides.length - 1 ? ' os-side-last' : ''}"><th scope="row" class="os-side-name">${esc(row.side)}</th><td class="os-best">${row.best ? quoteButton(row.best,true,true) : '<span class="os-dash">—</span>'}</td><td class="os-average" title="Average decimal price from current entries at this exact line">${price(row.average)}</td>${books.map(book => {const q = row.prices.find(p => p.book === book);return `<td>${q ? quoteButton(q,decimal(q.odds) === row.bestDecimal) : '<span class="os-dash">—</span>'}</td>`;}).join('')}</tr>`).join('');
+      const sportKey = String(q.sport || '').toLowerCase();
+      const isCollapsed = collapsed.has(event.key);
+      const marketCount = `${event.markets.length} ${event.markets.length === 1 ? 'market' : 'markets'}`;
+      const league = !sport && q.sport ? `<span class="os-league" title="${esc(q.sport)}">${leagueMark(sportKey) || ''}</span>` : '';
+      const heading = `<th scope="rowgroup" class="os-c-time"><div class="os-event-heading"><button type="button" class="os-toggle" data-os-toggle="${esc(event.key)}" aria-expanded="${!isCollapsed}" aria-label="${isCollapsed ? 'Expand' : 'Collapse'} ${esc(q.event)}" title="${isCollapsed ? 'Show' : 'Hide'} ${esc(marketCount)}">${chevron}</button><span class="os-when">${q.live ? '<span class="os-live-pill">Live</span>' : `<strong>${esc(kickoff(q))}</strong>`}<small title="${esc(q.event)}">${league}${esc(q.displayEvent || q.event)}</small><span class="os-event-count">${esc(marketCount)}</span></span></div></th>`;
+      if (isCollapsed) return `<tbody class="os-event-group is-collapsed"><tr class="os-row is-game-start">${heading}<td class="os-collapsed-cell" colspan="${columns - 1}"><button type="button" class="os-collapsed-summary" data-os-toggle="${esc(event.key)}" tabindex="-1"><strong>${esc(q.event)}</strong><span>${esc(marketCount)} · Show prices</span></button></td></tr></tbody>`;
+      let rowIndex = 0;
+      const markets = [...event.markets].sort((a,b) => typeRank(a.first) - typeRank(b.first)).map(market => {
+        const q = market.first;
+        const marketLabel = [marketName(q),q.period && q.period !== 'full' ? q.displayPeriod || q.period : ''].filter(Boolean).join(' · ');
+        const sides = market.sides.map(row => {
+          const current = row.prices.filter(quote => currentPrice(quote, renderNow)).sort((a,b) => decimal(b.odds) - decimal(a.odds));
+          const reference = row.best || row.prices[0], worst = current.length >= 3 ? decimal(current.at(-1).odds) : null;
+          return {...row, current, reference, key:JSON.stringify([market.key,row.side]),
+            worstDecimal:worst != null && worst < row.bestDecimal ? worst : null,
+            implied:current.length ? current.reduce((sum,quote) => sum + 1 / decimal(quote.odds),0) / current.length : NaN,
+            selection:[q.player,row.side,reference ? lineLabel({...reference,side:row.side}) : ''].filter(Boolean).join(' ')};
+        });
+        // Consensus no-vig fair value from the average implied probability of every side.
+        const impliedTotal = sides.reduce((sum,row) => sum + row.implied,0);
+        const hold = sides.length >= 2 && Number.isFinite(impliedTotal) ? impliedTotal - 1 : NaN;
+        sides.forEach(row => { row.fair = Number.isFinite(hold) ? row.implied / impliedTotal : NaN; });
+        return sides.map((row,sideIndex) => {
+          const best = row.best, index = rowIndex++;
+          const open = best ? ` data-open-quote="${esc(best.id)}"` : '';
+          const byBook = new Map(row.prices.map(quote => [quote.book,quote]));
+          const time = index === 0 ? heading : '<td class="os-c-time"></td>';
+          const averageTitle = `Average of ${row.current.length} current ${row.current.length === 1 ? 'price' : 'prices'} at this line${Number.isFinite(row.fair) ? ` · no-vig fair ${price(1 / row.fair)}` : ''}`;
+          const tools = `${best && !best.demo ? `<button type="button" class="os-icon" data-suite-action="track" data-id="${esc(best.id)}" aria-label="Track ${esc(row.selection)} at ${esc(best.book)}" title="Track best price">${boardIcon('track',14)}</button>` : ''}${row.reference ? `<button type="button" class="os-icon" data-line-history="${esc(row.reference.id)}" aria-label="Line history for ${esc(row.selection)}" title="Line history">${trendIcon}</button>` : ''}`;
+          return `<tr class="os-row${index === 0 ? ' is-game-start' : ''}${sideIndex === 0 && index > 0 ? ' is-market-start' : ''}${best ? '' : ' is-stale'}" data-os-row="${esc(row.key)}">${time}
+            <td class="os-selection"${open}><div class="os-sel">${sideMark(q,row.side)}<span class="os-sel-copy">${best ? `<button type="button" class="os-sel-name" data-detail="${esc(best.id)}" aria-expanded="false" aria-label="Compare prices and analysis for ${esc(row.selection)}">${esc(row.selection)}</button>` : `<strong>${esc(row.selection)}</strong>`}<small>${esc(marketLabel)}${q.live ? ' · <em>Live</em>' : ''}</small></span><span class="os-row-tools">${tools}</span></div></td>
+            <td class="os-best-cell"${open}>${best ? `<span class="os-best"><strong>${price(row.bestDecimal)}</strong><span class="os-best-logo" title="${esc(best.book)}">${bookLogo(best.book,18)}</span></span><span class="os-sr"> at ${esc(best.book)}</span>` : '<strong>—</strong><span class="os-sr">No current price</span>'}</td>
+            <td class="os-average"${open} title="${esc(averageTitle)}"><strong>${price(row.average)}</strong></td>
+            ${books.map(book => bookCell(byBook.get(book), row, row.reference?.line)).join('')}
+          </tr>`;
+        }).join('');
       }).join('');
+      return `<tbody class="os-event-group">${markets}</tbody>`;
     }).join('');
+    const newest = filtered.reduce((latest,q) => (Date.parse(q.ts) || 0) > (Date.parse(latest?.ts) || 0) ? q : latest, null);
     const count = groups.reduce((n,event) => n + event.markets.length,0);
     const samples = filtered.some(q => q.source === 'example');
-    return `<section class="os-screen${expanded ? ' os-wide' : ''}" aria-label="Sportsbook odds comparison">
+    return `<section class="os-screen evb-board${expanded ? ' os-wide' : ''}" aria-label="Sportsbook odds comparison">
+      <div class="os-panel">
       <div class="os-toolbar">
-        <div class="os-settings"><button type="button" class="os-round" data-os-action="settings" aria-expanded="${settingsOpen}" aria-controls="os-settings-panel" aria-label="Odds screen settings">${settingsIcon}</button>
-          <div id="os-settings-panel" class="os-settings-panel" ${settingsOpen ? '' : 'hidden'}><strong>Display settings</strong>${select('format','Odds format',[['decimal','Decimal'],['american','American']],format)}<button type="button" class="os-all-books" data-os-action="all-books">All sportsbooks<span>${allBooksSelected ? 'Selected' : 'Show all'}</span></button>${stateFilter ? `<p class="os-book-scope">Filtered to ${esc(stateFilter)}. Choose all sportsbooks to compare across states.</p>` : ''}<fieldset><legend>Sportsbook columns</legend>${availableBooks.length ? availableBooks.map(book => `<label><input type="checkbox" data-os-book="${esc(book)}" ${hiddenBooks.has(book) ? '' : 'checked'}>${brandMark(book)}<span>${esc(book)}</span></label>`).join('') : '<p>Add prices to choose sportsbooks.</p>'}</fieldset></div>
-        </div>
         <div class="os-filterbar" role="search" aria-label="Filter odds">
           ${select('sport','League',[['','All leagues'],...sports.map(v => [v,v])],sport)}
           ${select('event','Event',[['','All events'],...events.map(v => [v,v])],eventFilter)}
-          ${select('market','Market',[['','All markets'],...markets.map(v => [v,v])],marketFilter)}
-          <label class="os-field os-search"><span>Player</span><input id="os-search" type="search" aria-label="Search players or teams" placeholder="Search players or teams" value="${esc(query)}" autocomplete="off"></label>
-          <button type="button" class="os-search-button" data-os-action="search" aria-label="Focus player search">${searchIcon}</button>
+          ${select('market','Market',[[ALL_MARKETS,'All markets'],...leagueGroups.map(([key,label]) => [key,label]),...markets.map(v => [v,v])],market)}
+          <label class="os-field os-search">${searchIcon}<span>Player</span><input id="os-search" type="search" aria-label="Search players, teams, leagues or markets" placeholder="Player, team or market" value="${esc(query)}" autocomplete="off"></label>
         </div>
-        <button type="button" class="os-round" data-os-action="expand" aria-pressed="${expanded}" aria-label="${expanded ? 'Exit expanded view' : 'Expand odds screen'}">${expandIcon}</button>
+        <div class="os-toolbar-actions"><div class="os-settings"><button type="button" class="os-round" data-os-action="settings" aria-expanded="${settingsOpen}" aria-controls="os-settings-panel" aria-label="Odds screen settings">${settingsIcon}</button>
+          <div id="os-settings-panel" class="os-settings-panel" ${settingsOpen ? '' : 'hidden'}><div class="os-settings-heading"><strong>Display settings</strong><button type="button" data-os-action="settings" aria-label="Close odds settings">Close</button></div>${select('format','Odds format',[['decimal','Decimal'],['american','American']],format)}<button type="button" class="os-all-books" data-os-action="all-books">All sportsbooks<span>${allBooksSelected ? 'Selected' : 'Show all'}</span></button>${stateFilter ? `<p class="os-book-scope">Filtered to ${esc(stateFilter)}. Choose all sportsbooks to compare across states.</p>` : ''}<fieldset><legend>Sportsbook columns</legend>${availableBooks.length ? availableBooks.map((book,index) => `<div class="os-book-option"><label><input type="checkbox" data-os-book="${esc(book)}" ${hiddenBooks.has(book) ? '' : 'checked'}>${brandMark(book)}<span>${esc(book)}</span></label><button type="button" data-os-order="${esc(book)}" data-os-direction="-1" aria-label="Move ${esc(book)} earlier" ${index === 0 ? 'disabled' : ''}>↑</button><button type="button" data-os-order="${esc(book)}" data-os-direction="1" aria-label="Move ${esc(book)} later" ${index === availableBooks.length - 1 ? 'disabled' : ''}>↓</button></div>`).join('') : '<p>Add prices to choose sportsbooks.</p>'}</fieldset></div>
+        </div><button type="button" class="os-round" data-os-action="expand" aria-pressed="${expanded}" aria-label="${expanded ? 'Exit expanded view' : 'Expand odds screen'}">${expandIcon}</button></div>
       </div>
-      <div class="os-board-meta"><span><span class="os-status-dot"></span>${demo ? 'Demo mode' : samples ? 'Example prices' : 'Entered prices'}<span class="os-meta-separator">/</span>${groups.length} ${groups.length === 1 ? 'event' : 'events'}<span class="os-meta-separator">/</span>${count} ${count === 1 ? 'market' : 'markets'}</span><button type="button" data-os-action="reset" class="os-reset">Reset filters</button></div>
-      ${groups.length ? `<div class="os-table-wrap" role="region" aria-label="Odds by sportsbook; scroll horizontally for more books" tabindex="0"><table class="os-table"><caption class="os-sr">Sportsbook prices grouped by event, market and line. Best and average use current prices at the same line.</caption><colgroup><col class="os-label-col"><col class="os-best-col"><col class="os-average-col">${books.map(() => '<col class="os-book-col">').join('')}</colgroup><thead><tr><th scope="col"><button type="button" data-os-action="rows" class="os-rows" aria-label="${lastGroups.every(key => collapsed.has(key)) ? 'Expand all rows' : 'Collapse all rows'}">Rows ${chevron}</button></th><th scope="col">Best</th><th scope="col">Avg</th>${books.map(book => `<th scope="col" title="${esc(book)}"><span class="os-book-heading">${brandMark(book)}<span class="os-sr">${esc(book)}</span></span></th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="os-empty"><div>${layers}</div><h2>${all.length ? 'No matching prices' : 'Your odds board starts here'}</h2><p>${all.length ? 'Try a different market, league or player, or show more sportsbook columns in settings.' : 'Add a price or import your records to compare sportsbooks side by side.'}</p><button type="button" ${all.length ? 'data-os-action="reset"' : 'data-add="quote"'}>${all.length ? 'Clear filters' : 'Add a price'}</button></div>`}
-      <p class="os-footnote">${demo ? 'Demo mode · Simulated matchups, rosters and prices. ' : samples ? 'Example data. ' : ''}Best prices are highlighted in green. Prices at different lines are compared separately. ${filtered.some(q => q.live && !fresh(q)) ? 'Faded live prices are stale and excluded from best and average. ' : ''}No live odds feed is connected.</p>
+      ${tabs.length > 2 ? `<div class="os-tabs-wrap"><button type="button" class="os-tabs-scroll" data-os-scroll="-1" aria-label="Scroll market groups left" tabindex="-1" disabled>${chevron}</button><div class="os-tabs" role="toolbar" aria-label="Market groups">${tabs.map(([value,label]) => `<button type="button" class="os-tab" data-os-tab="${esc(value)}" aria-pressed="${value === market}">${esc(label)}</button>`).join('')}</div><button type="button" class="os-tabs-scroll" data-os-scroll="1" aria-label="Scroll market groups right" tabindex="-1">${chevron}</button></div>` : ''}
+      <div class="os-board-meta"><p><span class="os-status-dot"></span><strong>${demo ? 'Demo mode' : samples ? 'Example prices' : 'Entered prices'}</strong><span class="os-meta-separator">·</span>${groups.length} ${groups.length === 1 ? 'event' : 'events'}<span class="os-meta-separator">·</span>${count} ${count === 1 ? 'market' : 'markets'}<span class="os-meta-separator">·</span>${books.length} ${books.length === 1 ? 'book' : 'books'}${newest ? `<span class="os-meta-separator">·</span><span>Updated <span data-os-age="${esc(newest.id)}">${observedAge(newest.ts)}</span></span>` : ''}</p><div class="os-board-actions">${groups.length ? `<button type="button" data-os-action="rows" class="os-rows" aria-label="${lastGroups.every(key => collapsed.has(key)) ? 'Expand all events' : 'Collapse all events'}">${lastGroups.every(key => collapsed.has(key)) ? 'Expand all' : 'Collapse all'} ${chevron}</button>` : ''}<button type="button" data-os-action="reset" class="os-reset">Reset filters</button></div></div>
+      </div>
+      ${groups.length ? `<div class="os-grid-wrap" tabindex="0" role="region" aria-label="Odds grid. Scroll horizontally to see every sportsbook."><table class="os-grid" style="--os-books:${books.length}" aria-label="Sportsbook prices by game"><thead><tr><th scope="col" class="os-c-time">Time</th><th scope="col" class="os-selection">Team / selection</th><th scope="col" class="os-best-cell">Best odds</th><th scope="col" class="os-average" title="Average of current prices at the same line">Avg odds</th>${books.map(book => `<th scope="col" class="os-book-head" title="${esc(book)}"><span class="os-book-logo">${bookLogo(book,26)}</span><span class="os-sr">${esc(book)}</span></th>`).join('')}</tr></thead>${rows}</table></div>` : `<div class="os-empty"><div>${layers}</div><h2>${all.length ? 'No matching prices' : 'Your odds board starts here'}</h2><p>${all.length ? 'Try a different market, league or player, or show more sportsbook columns in settings.' : 'Add a price or import your records to compare sportsbooks side by side.'}</p><button type="button" ${all.length ? 'data-os-action="reset"' : 'data-add="quote"'}>${all.length ? 'Clear filters' : 'Add a price'}</button></div>`}
+      <p class="os-footnote">${demo ? 'Demo mode · Simulated matchups, rosters and prices. ' : samples ? 'Example data. ' : ''}The best price in each row is outlined in lime and the lowest is tinted red; the average uses current books at the same line (hover it for the consensus no-vig fair price). Prices at different lines are compared separately. Click a row or price for the full comparison. ${filtered.some(q => q.live && !fresh(q)) ? 'Faded live prices are stale and excluded from best and average. ' : ''}No live odds feed is connected.</p>
     </section>`;
   }
-  function restore(selector) { document.querySelector(selector)?.focus(); }
+  function restore(selector) { document.querySelector(selector)?.focus({preventScroll:true}); }
   function click(event) {
-    const target = event.target.closest('[data-os-action],[data-os-toggle]');
+    // Line history, price-comparison ([data-detail] / [data-open-quote]) and track controls belong to the host.
+    if (event.target.closest('[data-line-history]')) return false;
+    const target = event.target.closest('[data-os-action],[data-os-toggle],[data-os-order],[data-os-tab],[data-os-scroll]');
     if (!target) return false;
+    if (target.dataset.osScroll) { target.parentElement.querySelector('.os-tabs')?.scrollBy({left:Number(target.dataset.osScroll) * 260,behavior:'smooth'}); return true; }
+    if ('osTab' in target.dataset) {
+      const value = target.dataset.osTab;
+      marketFilter = value;collapsed.clear();initializedEvents.clear();
+      save();redrawKeeping(true);
+      [...document.querySelectorAll('[data-os-tab]')].find(node => node.dataset.osTab === value)?.focus({preventScroll:true});
+      return true;
+    }
+    if (target.dataset.osOrder) {
+      const index = bookOrder.indexOf(target.dataset.osOrder), nextBook = visibleBookOrder[visibleBookOrder.indexOf(target.dataset.osOrder) + Number(target.dataset.osDirection)], next = bookOrder.indexOf(nextBook);
+      if (index >= 0 && next >= 0 && next < bookOrder.length) [bookOrder[index],bookOrder[next]] = [bookOrder[next],bookOrder[index]];
+      save();redrawKeeping();
+      [...document.querySelectorAll('[data-os-order]')].find(node => node.dataset.osOrder === target.dataset.osOrder && node.dataset.osDirection === target.dataset.osDirection)?.focus({preventScroll:true});
+      return true;
+    }
     const key = target.dataset.osToggle;
     if (key) {
       collapsed.has(key) ? collapsed.delete(key) : collapsed.add(key);
-      redraw();
-      [...document.querySelectorAll('[data-os-toggle]')].find(node => node.dataset.osToggle === key)?.focus();
+      redrawKeeping();
+      [...document.querySelectorAll('[data-os-toggle]')].find(node => node.dataset.osToggle === key)?.focus({preventScroll:true});
       return true;
     }
     const action = target.dataset.osAction;
-    if (action === 'search') {restore('#os-search');return true;}
     if (action === 'settings') settingsOpen = !settingsOpen;
     if (action === 'all-books') {hiddenBooks.clear();onAllSportsbooks();}
     if (action === 'expand') expanded = !expanded;
     if (action === 'rows') {const close = !lastGroups.every(key => collapsed.has(key));lastGroups.forEach(key => close ? collapsed.add(key) : collapsed.delete(key));}
-    if (action === 'reset') {eventFilter = '';marketFilter = '';query = '';hiddenBooks.clear();collapsed.clear();initializedEvents.clear();}
-    redraw();restore(`[data-os-action="${action}"]`);return true;
+    if (action === 'reset') {eventFilter = '';marketFilter = null;query = '';hiddenBooks.clear();collapsed.clear();initializedEvents.clear();}
+    save();redrawKeeping(action === 'reset');restore(`[data-os-action="${action}"]`);return true;
   }
   function change(event) {
     const target = event.target;
     if (target.dataset.osBook) {
       target.checked ? hiddenBooks.delete(target.dataset.osBook) : hiddenBooks.add(target.dataset.osBook);
-      redraw();[...document.querySelectorAll('[data-os-book]')].find(node => node.dataset.osBook === target.dataset.osBook)?.focus();return true;
+      save();redrawKeeping();[...document.querySelectorAll('[data-os-book]')].find(node => node.dataset.osBook === target.dataset.osBook)?.focus();return true;
     }
     const key = target.dataset.osFilter;
     if (!key) return false;
-    if (key === 'sport') {eventFilter = '';marketFilter = '';query = '';collapsed.clear();initializedEvents.clear();onSport(target.value);}
+    if (key === 'sport') {eventFilter = '';marketFilter = null;query = '';collapsed.clear();initializedEvents.clear();onSport(target.value);}
     if (key === 'event') {eventFilter = target.value;collapsed.clear();initializedEvents.clear();}
     if (key === 'market') {marketFilter = target.value;collapsed.clear();initializedEvents.clear();}
     if (key === 'format') format = target.value;
-    redraw();queueMicrotask(() => restore(`[data-control="os-${key}"] .td-choice-trigger`));return true;
+    save();redrawKeeping(key !== 'format');queueMicrotask(() => restore(`[data-control="os-${key}"] .td-choice-trigger`));return true;
   }
   function input(event) {
     if (event.target.id !== 'os-search') return false;
     const position = event.target.selectionStart;
-    query = event.target.value;collapsed.clear();initializedEvents.clear();redraw();
+    query = event.target.value;collapsed.clear();initializedEvents.clear();save();redraw();
     const field = document.querySelector('#os-search');field?.focus();field?.setSelectionRange(position,position);return true;
   }
   function keydown(event) {
@@ -154,11 +307,26 @@ export function createOddsScreen({ getQuotes, brandMark, onSport, redraw, getSpo
   }
   function refresh() {
     if (settingsOpen || document.activeElement?.closest('.os-screen') || document.querySelector('.os-screen [aria-expanded="true"][aria-haspopup]')) return;
-    const board = document.querySelector('.os-table-wrap');
-    const left = board?.scrollLeft || 0, top = board?.scrollTop || 0;
-    redraw();
-    const next = document.querySelector('.os-table-wrap');
-    if (next) {next.scrollLeft = left;next.scrollTop = top;}
+    const records = getQuotes().filter(q => !q.depthOnly && (!lastSport || !q.sport || q.sport === lastSport));
+    // Unchanged prices (or an open inline comparison the user is reading) only refresh ages in place.
+    if (dataSignature(records) === lastDataSignature || document.querySelector('.os-screen .bet-inline-mount')) {
+      const byId = new Map(records.map(quote => [quote.id,quote]));
+      document.querySelectorAll('.os-screen [data-os-age]').forEach(node => {
+        const quote = byId.get(node.dataset.osAge);
+        if (quote) node.textContent = observedAge(quote.ts);
+      });
+      return;
+    }
+    redrawKeeping();
   }
   return {render,click,change,input,keydown,refresh};
 }
+
+// Market-group arrows grey out at either end of the strip (tabs render scrolled to the start).
+if (typeof document !== 'undefined') document.addEventListener('scroll', event => {
+  const tabs = event.target;
+  if (!tabs?.matches?.('.os-tabs')) return;
+  const wrap = tabs.parentElement;
+  wrap.querySelector('[data-os-scroll="-1"]')?.toggleAttribute('disabled', tabs.scrollLeft <= 2);
+  wrap.querySelector('[data-os-scroll="1"]')?.toggleAttribute('disabled', tabs.scrollLeft + tabs.clientWidth >= tabs.scrollWidth - 2);
+}, true);

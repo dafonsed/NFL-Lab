@@ -57,3 +57,29 @@ test('Trends windows use real sample sizes, retain zeroes and mark saved odds',(
  assert.match($('.trend-rate').first().attr('title'),/1 pushes/);assert.equal($('.trend-average strong').text(),'0');assert.match($('.trend-line').text(),/0Saved quote/);assert.equal($('.trend-odds strong').text(),'-110');assert.equal($('.trend-save').attr('aria-pressed'),'true');assert.equal($('.trend-player-link strong').text(),'Player <A>');assert.deepEqual(p,before);
  const missing=load(trendTable([{p:{...p,prop:null,rows:[]},line:null}]));assert.equal(missing('.trend-rate').first().find('strong').text(),'—');assert.equal(missing('.trend-rate').first().find('small').text(),'0 games');assert.equal(missing('.trend-odds strong').text(),'—');assert.equal(missing('.trend-average strong').text(),'—');
 });
+
+test('Trends marks only the displayed sorted column and averages the selected sample',()=>{
+ const p={key:'ranked',playerId:'1',name:'Player',label:'Points',team:'ABC',opponent:'XYZ',sport:'nba',rows:Array.from({length:10},(_,i)=>({date:`2026-01-${String(20-i).padStart(2,'0')}`,value:i<5?2:20,opponent:i%2?'OTHER':'XYZ'})),prop:null};
+ const rows=[{p,line:1}];
+ for(const [window,label] of [['5','L5'],['10','L10'],['20','L20'],['h2h','H2H']]){
+  const $=load(trendTable(rows,{sort:'rate',window}));
+  assert.equal($('thead [aria-sort]').length,1);
+  assert.equal($('thead .trend-ranked').text(),label);
+  assert.equal($('thead .trend-ranked').attr('aria-sort'),'descending');
+  assert.equal($('tbody .trend-ranked').length,1);
+  assert.equal($('tbody .trend-ranked').attr('data-window-label'),label);
+  assert.equal($('thead button').length,0);
+ }
+ const average=load(trendTable(rows,{sort:'average',window:'5'}));
+ assert.match(average('thead .trend-ranked').text(),/AverageLast 5 games/);
+ assert.equal(average('.trend-average.trend-ranked strong').text(),'2');
+ assert.equal(average('.trend-average small').text(),'5 games');
+ assert.equal(average('thead [aria-sort]').length,1);
+ const all=load(trendTable(rows,{sort:'average',window:'all'}));
+ assert.equal(all('.trend-average.trend-ranked strong').text(),'11');
+ for(const options of [{sort:'rate',window:'all'},{sort:'change',window:'5'},{sort:'name',window:'10'},{}]){
+  const $=load(trendTable(rows,options));
+  assert.equal($('.trend-ranked,[aria-sort]').length,0);
+  assert.equal($('.trend-average strong').text(),'11');
+ }
+});

@@ -1,0 +1,539 @@
+/* landing-widgets: the landing page's example tool windows drawn in the same visual language as
+   the signed-in app (ev-suite-2026.css boards, the odds screen and the trends table), so the
+   preview on the marketing page looks like the product it advertises. */
+
+/* ------------------------------------------------------------------ shared board chrome */
+.lx-mock {text-align:left;font-variant-numeric:tabular-nums}
+.lx-head {display:flex;align-items:center;justify-content:space-between;gap:12px 16px;flex-wrap:wrap;margin:0 0 14px}
+.lx-count {margin:0;color:var(--sl-muted);font-size:13.5px;line-height:1.3}
+.lx-count strong {color:var(--sl-text);font-weight:650}
+.lx-dot {display:inline-block;width:7px;height:7px;margin-right:8px;border-radius:50%;background:var(--sl-lime);box-shadow:0 0 0 3px rgb(163 240 107/.15);vertical-align:1px}
+.lx-pills {display:flex;gap:8px;flex-wrap:wrap}
+.lx-pills span {display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 13px;border:1px solid var(--sl-line-2);border-radius:999px;background:rgb(255 255 255/.02);color:var(--sl-muted);font-size:12px;font-weight:550;white-space:nowrap}
+.lx-pills b {color:var(--sl-text);font-size:13px;font-weight:700}
+.lx-mock .is-lime {color:var(--sl-lime)!important}
+.lx-tabs {display:flex;gap:6px;flex-wrap:wrap}
+.lx-tabs span {display:inline-flex;align-items:center;height:34px;padding:0 14px;border:1px solid var(--sl-line-2);border-radius:999px;color:var(--sl-text-2);font-size:12.5px;font-weight:600;white-space:nowrap}
+.lx-tabs span.is-on {border-color:var(--sl-text);background:var(--sl-text);color:#07090b}
+.lx-tabs.is-lime span.is-on {border-color:var(--sl-lime);background:var(--sl-lime);color:var(--sl-lime-ink);box-shadow:0 8px 22px -12px rgb(163 240 107/.8)}
+.lx-seg {display:inline-flex;padding:3px;border:1px solid var(--sl-line-2);border-radius:999px}
+.lx-seg span {display:inline-flex;align-items:center;height:28px;padding:0 16px;border-radius:999px;color:var(--sl-muted);font-size:12.5px;font-weight:600}
+.lx-seg span.is-on {background:var(--sl-lime);color:var(--sl-lime-ink)}
+
+.lx-board {overflow:hidden;border:1px solid var(--sl-line);border-radius:18px;background:linear-gradient(180deg,rgb(255 255 255/.018),rgb(255 255 255/.006))}
+.lx-row {display:grid;align-items:center;gap:14px;min-height:74px;padding:10px 18px;border-top:1px solid var(--sl-line);color:var(--sl-text-2);font-size:13px;transition:background-color .15s}
+.lx-row:not(.lx-th):hover {background:rgb(255 255 255/.025)}
+.lx-th {min-height:44px;padding-block:0;border-top:0;color:var(--sl-muted);font-size:10.5px;font-weight:650;letter-spacing:.1em;text-transform:uppercase}
+.lx-th .is-sorted {color:var(--sl-lime)}
+.lx-th .is-sorted::after {content:' ↓'}
+.lx-th>span {white-space:nowrap}
+.lx-row strong {color:var(--sl-text);font-weight:650}
+.lx-row small {color:var(--sl-muted);font-size:11.5px}
+.lx-book {display:block;flex:none;width:30px;height:30px;border-radius:9px;object-fit:cover}
+.lx-book.is-round {border-radius:50%}
+.lx-stack {display:grid;gap:3px}
+.lx-stack strong {font-size:14px}
+
+/* ------------------------------------------------------------------ Positive EV */
+.lx-ev .lx-row {grid-template-columns:96px minmax(140px,1.15fr) minmax(84px,.7fr) minmax(170px,1.4fr) 80px 84px 80px 66px}
+.lx-edge {display:grid;justify-items:start;gap:7px}
+.lx-edge b {color:var(--sl-lime);font:700 20px/1 var(--sl-display);letter-spacing:-.02em}
+.lx-edge i {display:block;width:calc(var(--w) * .8);max-width:80px;height:3px;border-radius:3px;background:var(--sl-lime);box-shadow:0 0 10px rgb(163 240 107/.45)}
+.lx-event {display:grid;gap:3px;min-width:0}
+.lx-event>small {font-size:11.5px}
+.lx-event>strong {overflow:hidden;font-size:14px;line-height:1.25;white-space:nowrap;text-overflow:ellipsis}
+.lx-event em {display:inline-flex;align-items:center;gap:6px;color:var(--sl-text-2);font-size:11.5px;font-style:normal;font-weight:600}
+.lx-event em img {width:14px;height:14px;object-fit:contain}
+.lx-market {color:var(--sl-text-2);font-size:13px;font-weight:500}
+.lx-bet {display:flex;align-items:center;gap:11px;min-width:0}
+.lx-bet>span {display:grid;gap:3px;min-width:0}
+.lx-bet strong {overflow:hidden;font-size:14px;white-space:nowrap;text-overflow:ellipsis}
+.lx-quote {display:grid;justify-items:start;gap:5px}
+.lx-quote b {display:inline-grid;place-items:center;min-width:60px;height:36px;padding:0 10px;border:1px solid var(--sl-line-2);border-radius:11px;background:#0b0e11;color:var(--sl-text);font-size:14px;font-weight:700}
+.lx-quote small {font-size:11px}
+.lx-go {display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 13px;border:1px solid rgb(163 240 107/.45);border-radius:999px;background:rgb(163 240 107/.08);color:var(--sl-lime);font-size:12.5px;font-weight:650;white-space:nowrap;transition:background-color .15s,color .15s}
+.lx-go svg {width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.lx-row:hover .lx-go {background:var(--sl-lime);color:var(--sl-lime-ink)}
+
+/* ------------------------------------------------------------------ Arbitrage */
+.lx-arb .lx-row {grid-template-columns:80px minmax(150px,.8fr) minmax(430px,2.4fr);min-height:0;padding-block:14px}
+.lx-arb .lx-th {padding-block:0}
+.lx-tag {display:inline-flex;align-items:center;height:26px;padding:0 9px;border:1px solid rgb(163 240 107/.4);border-radius:8px;background:rgb(163 240 107/.08);color:var(--sl-lime);font-size:12.5px;font-weight:700}
+.lx-arb .lx-event>strong {display:flex;align-items:center;gap:8px;font-size:15px}
+.lx-arb .lx-event>span {color:var(--sl-text-2);font-size:13px}
+.lx-legs {display:grid;grid-template-columns:34px minmax(0,1fr);grid-template-rows:auto auto;overflow:hidden;border:1px solid var(--sl-line-2);border-radius:14px;background:#0b0e11}
+.lx-way {grid-row:1/3;display:grid;place-content:center;border-right:1px solid rgb(163 240 107/.4);background:rgb(163 240 107/.07);color:var(--sl-lime);font-size:11.5px;font-weight:750;line-height:1.25;text-align:center}
+.lx-leg {display:grid;grid-template-columns:30px minmax(0,1fr) 62px 72px 60px;align-items:center;gap:12px;padding:10px 14px}
+.lx-leg+.lx-leg {border-top:1px solid var(--sl-line)}
+.lx-leg-name {display:grid;gap:2px;min-width:0}
+.lx-leg-name strong {overflow:hidden;font-size:13.5px;white-space:nowrap;text-overflow:ellipsis}
+.lx-num {display:grid;justify-items:end;gap:2px;text-align:right}
+.lx-num strong {font-size:13.5px}
+.lx-num small {font-size:10.5px}
+
+/* ------------------------------------------------------------------ Odds screen */
+.lx-odds-note {display:none}
+.lx-mock#mock-odds .lx-head {align-items:center}
+.lx-odds .lx-row {grid-template-columns:minmax(140px,1.4fr) 92px 70px repeat(6,minmax(56px,1fr));gap:8px;min-height:56px;padding-block:8px;text-align:center}
+.lx-odds .lx-th {min-height:48px}
+.lx-odds .lx-th>:nth-child(-n+3) {text-align:left}
+.lx-odds .lx-th .lx-book {width:24px;height:24px;margin:auto;border-radius:7px}
+.lx-odds .lx-row:not(.lx-th)>span {color:var(--sl-text);font-size:13.5px;font-weight:600}
+.lx-sel {position:relative;display:grid!important;gap:2px;text-align:left}
+.lx-sel small {font-weight:500}
+.lx-side {position:absolute;left:-30px;top:50%;display:grid;place-items:center;width:20px;height:20px;margin-top:-10px;border:1px solid var(--sl-line-2);border-radius:50%;color:var(--sl-muted);font-size:10px;font-style:normal;font-weight:700}
+.lx-odds .lx-row:not(.lx-th)>.lx-best {display:inline-flex;align-items:center;gap:6px;justify-content:flex-start;color:var(--sl-lime);font-weight:700}
+.lx-best img {width:16px;height:16px;border-radius:5px}
+.lx-odds .lx-row:not(.lx-th)>.lx-avg {color:var(--sl-muted);text-align:left;font-weight:500}
+.lx-odds .lx-row>:is(.is-best,.is-worst) {display:grid;place-items:center;height:36px;border-radius:10px}
+.lx-odds .lx-row:not(.lx-th)>.is-best {border:1px solid rgb(163 240 107/.45);background:rgb(163 240 107/.1);color:var(--sl-lime)}
+.lx-odds .lx-row:not(.lx-th)>.is-worst {border:1px solid rgb(255 111 111/.22);background:rgb(255 111 111/.1);color:#ff8f8f}
+.lx-odds .lx-row:not(.lx-th) {padding-left:48px}
+.lx-odds .lx-th {padding-left:48px}
+
+/* ------------------------------------------------------------------ Player trends */
+.lx-props .lx-row {grid-template-columns:minmax(230px,2.2fr) 64px 92px repeat(3,minmax(64px,.6fr)) 72px;gap:12px;padding-block:0;min-height:78px}
+.lx-props .lx-th {min-height:44px}
+.lx-props .lx-th>:nth-child(n+4) {text-align:center}
+.lx-props .lx-th>.is-sorted {align-self:stretch;display:flex;align-items:center;justify-content:center;gap:4px;margin:0 -6px;background:rgb(163 240 107/.04)}
+.lx-player {display:flex;align-items:center;gap:12px;min-width:0}
+.lx-player>span {display:grid;gap:3px;min-width:0}
+.lx-player strong {font-size:14.5px}
+.lx-player small {overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.lx-avatar {display:grid;place-items:center;flex:none;width:40px;height:40px;border:1px solid rgb(163 240 107/.22);border-radius:50%;background:radial-gradient(circle at 50% 20%,rgb(163 240 107/.18),transparent 70%),#141a17;color:var(--sl-text);font-size:12.5px;font-style:normal;font-weight:700}
+.lx-dashes {display:flex!important;gap:3px;margin-top:3px}
+.lx-dashes i {width:11px;height:4px;border-radius:2px;background:rgb(255 255 255/.1)}
+.lx-dashes i.h {background:var(--sl-lime);box-shadow:0 0 6px rgb(163 240 107/.4)}
+.lx-line {color:var(--sl-text)!important;font-size:14.5px;font-weight:700}
+.lx-price {display:inline-flex;align-items:center;gap:8px}
+.lx-price img {width:16px;height:16px;border-radius:5px}
+.lx-price b {display:inline-grid;place-items:center;min-width:54px;height:34px;padding:0 9px;border:1px solid var(--sl-line-2);border-radius:10px;background:#0b0e11;color:var(--sl-text);font-size:13.5px}
+.lx-rate {align-self:stretch;display:grid;align-content:center;justify-items:center;gap:6px}
+.lx-rate.is-col {margin:0 -6px;background:rgb(163 240 107/.04)}
+.lx-rate b {color:var(--sl-text);font-size:14px;font-weight:700}
+.lx-rate i {display:block;width:36px;height:3px;border-radius:3px;background:linear-gradient(90deg,var(--sl-text-2) var(--r),rgb(255 255 255/.1) 0)}
+.lx-rate.is-high b {color:var(--sl-lime)}
+.lx-rate.is-high i {background:linear-gradient(90deg,var(--sl-lime) var(--r),rgb(255 255 255/.1) 0)}
+.lx-rate.is-low b {color:#ff8f8f}
+.lx-rate.is-low i {background:linear-gradient(90deg,#ff8f8f var(--r),rgb(255 255 255/.1) 0)}
+.lx-props .lx-row>:last-child {text-align:center}
+
+/* ------------------------------------------------------------------ small screens: the window scrolls sideways */
+@media (max-width:1100px) {
+  .lx-mock {min-width:960px}
+}
+
+/* ------------------------------------------------------------------ other landing widgets */
+/* How it works, step 2: hit / miss bars against a dashed line, like the player research chart. */
+.sl-step-bars {position:relative}
+.sl-step-bars i {border-radius:6px 6px 3px 3px!important;background:linear-gradient(180deg,#c8f9a2,#86dc50)!important}
+.sl-step-bars i.is-miss {background:linear-gradient(180deg,rgb(255 143 143/.8),rgb(224 103 107/.35))!important}
+.sl-step-line {position:absolute;left:0;right:0;bottom:58%;z-index:1;border-top:1px dashed rgb(255 255 255/.35);pointer-events:none}
+
+/* Tracker calendar: the app's toned-down tile treatment (no glow halos). */
+.hero-tracker-day.positive.gain-high {box-shadow:none!important;background:linear-gradient(180deg,rgb(163 240 107/.2),rgb(163 240 107/.1))!important;border-color:rgb(163 240 107/.42)!important}
+.hero-tracker-day.has-picks:hover {box-shadow:0 10px 20px -12px rgb(0 0 0/.9)!important}
+
+/* ======================================================================= flat product panels
+   Solid dark panels with a hairline edge: no lit gradient borders or green halos. */
+body .home-product-preview, body .hero-tracker {
+  border:1px solid rgb(255 255 255/.08);border-radius:18px;background:#0d1114;
+  box-shadow:0 30px 70px -40px rgb(0 0 0/.9);
+}
+body .sl-window {box-shadow:0 40px 100px -50px rgb(0 0 0/.95),0 0 0 1px rgb(255 255 255/.03)}
+body .sl-gradient-text {background:none;-webkit-background-clip:border-box;background-clip:border-box;color:var(--sl-lime)}
+body .hero-tracker-profit.positive strong {background:none;color:var(--sl-lime);-webkit-background-clip:border-box;background-clip:border-box;filter:none;text-shadow:none}
+body .preview-game.is-above .preview-game-bar {box-shadow:none}
+
+/* ======================================================================= odds comparison (#home-market-panel) */
+#home-market-panel .mp-card {display:grid;gap:0;padding:22px 24px 18px;text-align:left}
+#home-market-panel .mp-top {display:flex;align-items:center;justify-content:space-between;gap:12px}
+#home-market-panel .mp-league {display:inline-flex;align-items:center;gap:7px;color:var(--sl-muted);font-size:12.5px;font-weight:650;letter-spacing:.06em}
+#home-market-panel .mp-league img {width:16px;height:16px;object-fit:contain}
+#home-market-panel .mp-extra {color:var(--sl-lime);font-size:14px;font-weight:650}
+#home-market-panel .mp-title {margin:10px 0 0;color:var(--sl-text);font-size:24px;letter-spacing:-.02em}
+#home-market-panel .mp-sub {margin:4px 0 0;color:var(--sl-muted);font-size:14px}
+#home-market-panel .mp-tabs {margin:16px 0 0;width:max-content}
+#home-market-panel .mp-stage {margin:18px -24px 0;padding:18px 24px 20px;border-block:1px solid rgb(255 255 255/.07);background:#080a0c}
+#home-market-panel .mp-banner {margin:0 0 16px;color:var(--sl-text-2);font-size:12px;font-weight:650;letter-spacing:.08em;text-align:center;text-transform:uppercase}
+#home-market-panel .mp-sides {display:grid;grid-template-columns:1fr 1fr}
+#home-market-panel .mp-side {display:grid;gap:14px;padding:0 10px}
+#home-market-panel .mp-side+.mp-side {border-left:1px solid rgb(255 255 255/.08)}
+#home-market-panel .mp-side h4 {display:flex;align-items:center;justify-content:center;gap:7px;margin:0;color:var(--sl-text);font-size:15px;font-weight:600}
+#home-market-panel .mp-side h4 svg {width:15px;height:15px;fill:none;stroke:var(--sl-lime);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+#home-market-panel .mp-cols {display:grid;grid-template-columns:repeat(3,1fr);align-items:end;gap:10px;height:190px}
+#home-market-panel .mp-col {display:grid;grid-template-rows:auto 1fr auto;justify-items:center;align-items:end;gap:6px;height:100%}
+#home-market-panel .mp-col>b {color:var(--sl-text-2);font:650 12.5px/1 ui-monospace,'SF Mono',Menlo,Consolas,monospace;letter-spacing:-.02em}
+#home-market-panel .mp-col.is-best>b {color:var(--sl-lime)}
+#home-market-panel .mp-bar {position:relative;display:flex;align-items:flex-end;justify-content:center;width:min(100%,58px);height:var(--h);padding-bottom:8px;border-radius:8px 8px 4px 4px;
+  background:linear-gradient(180deg,#3a444c,#262d33);transform-origin:bottom}
+#home-market-panel .mp-col.is-best .mp-bar {background:linear-gradient(180deg,#a3f06b,#5aa832)}
+#home-market-panel .mp-bar img {width:28px;height:28px;border-radius:7px;box-shadow:0 2px 6px rgb(0 0 0/.35)}
+#home-market-panel .mp-col>small {color:var(--sl-text-2);font-size:13px;font-weight:600}
+#home-market-panel .mp-foot {display:grid;grid-template-columns:1fr 1fr;margin:0 -24px;border-bottom:1px solid rgb(255 255 255/.07)}
+#home-market-panel .mp-foot>div {display:grid;justify-items:center;gap:4px;padding:14px 10px;text-align:center}
+#home-market-panel .mp-foot>div+div {border-left:1px solid rgb(255 255 255/.07)}
+#home-market-panel .mp-foot small {color:var(--sl-muted);font-size:11px;font-weight:650;letter-spacing:.07em;text-transform:uppercase}
+#home-market-panel .mp-foot strong {color:var(--sl-lime);font-size:22px;font-weight:650;letter-spacing:-.02em}
+#home-market-panel .mp-foot span {color:var(--sl-text-2);font-size:12.5px}
+#home-market-panel .preview-footnote {margin:14px 0 0;color:var(--sl-faint);font-size:12px}
+@media (max-width:560px) {
+  #home-market-panel .mp-card {padding:18px 16px 14px}
+  #home-market-panel .mp-stage {margin-inline:-16px;padding-inline:10px}
+  #home-market-panel .mp-foot {margin-inline:-16px}
+  #home-market-panel .mp-side {padding:0 4px}
+  #home-market-panel .mp-cols {gap:6px;height:160px}
+  #home-market-panel .mp-bar img {width:22px;height:22px}
+}
+
+/* ======================================================================= live dot */
+.lx-dot.is-live {position:relative}
+.lx-dot.is-live::after {content:'';position:absolute;inset:0;border-radius:inherit;background:inherit}
+
+/* ======================================================================= motion
+   Bars grow from the baseline in sequence, rows rise in, calendar days pop, live dots ping.
+   Everything sits in its final state when motion is reduced. */
+@keyframes lx-grow {from {transform:scaleY(0)} to {transform:scaleY(1)}}
+@keyframes lx-grow-x {from {transform:scaleX(0)} to {transform:scaleX(1)}}
+@keyframes lx-rise {from {opacity:0;transform:translateY(14px)} to {opacity:1;transform:none}}
+@keyframes lx-pop {0% {opacity:0;transform:scale(.5)} 65% {opacity:1;transform:scale(1.09)} 100% {opacity:1;transform:scale(1)}}
+@keyframes lx-ping {75%,100% {opacity:0;transform:scale(2.4)}}
+@keyframes lx-live {0%,100% {color:var(--sl-lime)} 50% {color:#5aa832}}
+@media (prefers-reduced-motion:no-preference) {
+  .is-playing .mp-bar {animation:lx-grow .75s cubic-bezier(.2,.7,.2,1) var(--d,0ms) both}
+  .is-playing .mp-col>b {animation:lx-rise .45s cubic-bezier(.2,.7,.2,1) calc(var(--d,0ms) + 450ms) both}
+  .is-playing .mp-foot>div {animation:lx-rise .5s cubic-bezier(.2,.7,.2,1) 900ms both}
+  .is-playing .mp-extra {animation:lx-live 1.6s ease-in-out 1.2s infinite}
+
+  .lx-mock:not([hidden]) .lx-row:not(.lx-th) {animation:lx-rise .5s cubic-bezier(.2,.7,.2,1) both}
+  .lx-mock:not([hidden]) .lx-row:nth-child(3) {animation-delay:70ms}
+  .lx-mock:not([hidden]) .lx-row:nth-child(4) {animation-delay:140ms}
+  .lx-mock:not([hidden]) .lx-row:nth-child(5) {animation-delay:210ms}
+  .lx-mock:not([hidden]) .lx-row:nth-child(6) {animation-delay:280ms}
+  .lx-mock:not([hidden]) .lx-row:nth-child(7) {animation-delay:350ms}
+  .lx-mock:not([hidden]) :is(.lx-edge i,.lx-rate i) {transform-origin:left;animation:lx-grow-x .8s cubic-bezier(.2,.7,.2,1) 300ms both}
+  .lx-mock:not([hidden]) .lx-th+.lx-row .lx-edge b {animation:lx-live 1.6s ease-in-out 1s infinite}
+  .lx-dot.is-live::after {animation:lx-ping 1.6s cubic-bezier(0,0,.2,1) infinite}
+
+  .is-playing .hero-tracker-day.has-picks, .hero-tracker.is-playing .hero-tracker-day.has-picks {animation:lx-pop .45s cubic-bezier(.2,.7,.2,1) calc(var(--i,0) * 35ms + 200ms) both}
+
+  .is-playing .preview-game-bar {transform-origin:bottom;animation:lx-grow .7s cubic-bezier(.2,.7,.2,1) both}
+  .preview-game:nth-child(2) .preview-game-bar {animation-delay:70ms} .preview-game:nth-child(3) .preview-game-bar {animation-delay:140ms}
+  .preview-game:nth-child(4) .preview-game-bar {animation-delay:210ms} .preview-game:nth-child(5) .preview-game-bar {animation-delay:280ms}
+  .preview-game:nth-child(6) .preview-game-bar {animation-delay:350ms} .preview-game:nth-child(7) .preview-game-bar {animation-delay:420ms}
+  .preview-game:nth-child(8) .preview-game-bar {animation-delay:490ms} .preview-game:nth-child(9) .preview-game-bar {animation-delay:560ms}
+  .preview-game:nth-child(10) .preview-game-bar {animation-delay:630ms} .preview-game:nth-child(n+11) .preview-game-bar {animation-delay:700ms}
+
+  .is-playing .sl-step-bars i {transform-origin:bottom;animation:lx-grow .7s cubic-bezier(.2,.7,.2,1) both}
+  .is-playing .sl-step-bars i:nth-of-type(2) {animation-delay:80ms} .is-playing .sl-step-bars i:nth-of-type(3) {animation-delay:160ms}
+  .is-playing .sl-step-bars i:nth-of-type(4) {animation-delay:240ms} .is-playing .sl-step-bars i:nth-of-type(5) {animation-delay:320ms}
+  .is-playing .sl-step-bars i:nth-of-type(6) {animation-delay:400ms} .is-playing .sl-step-bars i:nth-of-type(7) {animation-delay:480ms}
+  .is-playing .sl-step-bars i:nth-of-type(8) {animation-delay:560ms}
+}
+
+/* Panel headers: plain small-caps label instead of a glowing pill badge. */
+body .product-panel-label {padding:0;border:0;background:none;box-shadow:none;color:var(--sl-muted);font-size:11px;font-weight:650;letter-spacing:.09em;text-transform:uppercase}
+body .product-panel-label::before {display:none}
+@media (max-width:560px) {
+  #home-market-panel .mp-col>b {font-size:10px;letter-spacing:-.04em}
+  #home-market-panel .mp-banner {font-size:11px}
+}
+
+/* ======================================================================= card system (oj-*)
+   Feed-style cards: a lighter header band with the key facts and one big green number, a
+   near-black body with the visual, logo + odds chips, and small uppercase label / value
+   footers. Shared by the hero feed and the three product previews. */
+:root {--oj-band:#12171c;--oj-body:#07090b;--oj-edge:rgb(255 255 255/.09);--oj-edge-2:rgb(255 255 255/.06)}
+.oj-card {display:grid;min-width:0;overflow:hidden;border:1px solid var(--oj-edge);border-radius:14px;background:var(--oj-body);text-align:left;font-variant-numeric:tabular-nums}
+.oj-band {display:grid;gap:4px;padding:16px 18px;background:var(--oj-band)}
+.oj-band-top {display:flex;align-items:center;gap:8px;min-width:0}
+.oj-band h3, .oj-band h4 {margin:2px 0 0;color:var(--sl-text);font-family:var(--sl-font);font-weight:700;letter-spacing:-.01em}
+.oj-band h4 {font-size:16px;line-height:1.25}
+.oj-band h3 {font-size:22px;line-height:1.2}
+.oj-band p {margin:0;color:var(--sl-text-2);font-size:13px;line-height:1.35}
+.oj-pct {color:var(--sl-lime);font-size:26px;font-weight:500;letter-spacing:-.02em;line-height:1}
+.oj-chip {padding:2px 7px;border:1px solid rgb(163 240 107/.35);border-radius:5px;color:var(--sl-lime);font:600 11px/1.3 ui-monospace,'SF Mono',Menlo,Consolas,monospace;white-space:nowrap}
+.oj-when {margin-left:auto;color:var(--sl-muted);font-size:12px;white-space:nowrap}
+.oj-league {display:inline-flex;align-items:center;gap:7px;margin-top:6px;color:var(--sl-muted);font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.oj-band-top>.oj-league {margin-top:0}
+.oj-league img {width:14px;height:14px;object-fit:contain}
+.oj-lock {margin-left:auto;color:var(--sl-lime);font-size:14px;font-weight:600;white-space:nowrap}
+.oj-band-main {display:flex;align-items:flex-end;justify-content:space-between;gap:12px;min-width:0}
+.oj-band-main>div {min-width:0}
+.oj-split {display:grid;grid-template-columns:1fr 1fr;background:var(--oj-body)}
+.oj-split>div {display:grid;gap:10px;min-width:0;padding:14px 18px}
+.oj-split>div+div {border-left:1px solid var(--oj-edge-2)}
+.oj-side-label {color:var(--sl-text);font-size:14px;font-weight:500}
+.oj-row {display:flex;align-items:center;justify-content:space-between;gap:8px}
+.oj-row strong {color:var(--sl-text);font-size:14px;font-weight:600}
+.oj-price {display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 8px 0 3px;border:1px solid rgb(255 255 255/.12);border-radius:7px;background:rgb(255 255 255/.04);white-space:nowrap}
+.oj-price img {width:22px;height:22px;border-radius:5px;object-fit:cover}
+.oj-price b {color:var(--sl-text);font-size:14.5px;font-weight:700}
+.oj-price:not(:has(img)) {padding-left:8px}
+.oj-price.is-hot {border-color:rgb(163 240 107/.55);background:rgb(163 240 107/.14)}
+.oj-price.is-cold b {color:#ff8f8f}
+.oj-banner {margin:0;color:var(--sl-text-2);font-size:11.5px;font-weight:650;letter-spacing:.08em;text-transform:uppercase}
+.oj-body {display:grid;gap:14px;padding:16px 18px;background:var(--oj-body)}
+.oj-body-head {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.oj-foot {display:grid;grid-auto-columns:1fr;grid-auto-flow:column;border-top:1px solid var(--oj-edge-2);background:var(--oj-body)}
+.oj-foot>div {display:grid;justify-items:center;align-content:center;gap:4px;min-width:0;padding:13px 10px;text-align:center}
+.oj-foot>div+div {border-left:1px solid var(--oj-edge-2)}
+.oj-foot small {color:var(--sl-muted);font-size:10.5px;font-weight:650;letter-spacing:.08em;text-transform:uppercase}
+.oj-foot strong {color:var(--sl-text);font-size:17px;font-weight:600}
+.oj-foot .is-lime {color:var(--sl-lime)}
+.oj-foot-link {display:inline-flex;align-items:center;gap:6px;color:var(--sl-lime);font-size:14px;font-weight:600;text-decoration:none}
+.oj-foot-link svg {width:15px;height:15px}
+.oj-empty {margin:0;color:var(--sl-muted);font-size:13px}
+
+/* ------------------------------------------------------------------ hero feed */
+body .sl-window-body {grid-template-columns:minmax(0,1fr)}
+body .sl-window-main {padding:18px 20px 22px}
+body .sl-window {background:#0b0e11;border:1px solid var(--oj-edge)}
+body .sl-window-bar {min-height:54px;padding:0 16px;background:var(--oj-band);border-bottom:1px solid var(--oj-edge-2)}
+body .sl-window-tabs {padding:0;border:0;background:none;box-shadow:none;gap:2px}
+body .sl-window-tabs button {position:relative;padding:17px 14px;border-radius:0;background:none!important;box-shadow:none!important;color:var(--sl-muted);font-size:13.5px;font-weight:600}
+body .sl-window-tabs button[aria-selected=true] {color:var(--sl-text)}
+body .sl-window-tabs button[aria-selected=true]::after {content:'';position:absolute;left:14px;right:14px;bottom:0;height:2px;border-radius:2px 2px 0 0;background:var(--sl-lime)}
+.oj-mock {text-align:left}
+.oj-feed-head {display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px}
+.oj-feed-head p {margin:0;color:var(--sl-muted);font-size:13.5px}
+.oj-feed-head p strong {color:var(--sl-text);font-weight:650}
+.oj-feed-head>span {color:var(--sl-muted);font-size:12.5px;white-space:nowrap}
+.oj-feed {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:stretch}
+.oj-feed>.oj-card {grid-template-rows:1fr auto}
+.oj-feed>.oj-card:nth-child(n+4) {display:none}
+.oj-feed-note {margin:12px 0 0;color:var(--sl-faint);font-size:12px}
+.oj-card.is-cold .oj-pct {color:#ff8f8f}
+.oj-card.is-cold .oj-chip {border-color:rgb(255 143 143/.35);color:#ff8f8f}
+.oj-books {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:14px 18px}
+.oj-books .oj-price {justify-content:space-between}
+.oj-trend {display:grid;gap:12px;padding:14px 18px}
+.oj-bars {position:relative;display:flex;align-items:flex-end;gap:4px;height:46px}
+.oj-bars::before {content:'';position:absolute;left:0;right:0;bottom:var(--line);border-top:1px dashed rgb(255 255 255/.35);z-index:1}
+.oj-bars i {flex:1;height:var(--h);border-radius:3px 3px 1px 1px;background:linear-gradient(180deg,rgb(255 143 143/.8),rgb(224 103 107/.35))}
+.oj-bars i.up {background:linear-gradient(180deg,#c8f9a2,#6fbf3e)}
+.oj-trend .oj-side-label {color:var(--sl-muted);font-size:13px}
+.oj-trend .oj-side-label strong {color:var(--sl-text)}
+@media (max-width:1100px) {
+  .oj-mock {min-width:0}
+  .oj-feed {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .oj-feed>.oj-card:nth-child(n+3) {display:none}
+}
+@media (max-width:640px) {
+  body .sl-window-main {padding:14px 12px 18px}
+  .oj-feed {grid-template-columns:minmax(0,1fr)}
+  .oj-feed>.oj-card:nth-child(n+2) {display:none}
+  .oj-feed-head>span {display:none}
+  body .sl-window-tabs button {padding:15px 10px;font-size:13px}
+}
+
+/* ------------------------------------------------------------------ product previews */
+body .home-product-preview {background:var(--oj-body)}
+body .home-product-preview>.oj-card {border:0;border-radius:0}
+body .home-product-preview .oj-band select {min-height:36px;border-radius:9px;background-color:rgb(0 0 0/.35);border-color:rgb(255 255 255/.1)}
+.oj-research .preview-chart-scroll {margin:0}
+.oj-research .preview-chart-detail {margin:0;padding:0;border:0}
+.oj-research .preview-window {flex:none}
+.oj-research .preview-source {margin:0;padding:12px 18px;border-top:1px solid var(--oj-edge-2);background:var(--oj-body)}
+.oj-live .oj-band-top {gap:10px}
+.oj-live .oj-band-top label {margin-right:auto}
+.oj-live .oj-band-top select {min-height:34px;padding-block:0}
+.oj-status {display:inline-flex;align-items:center;gap:7px;color:var(--sl-text-2);font-size:12px;font-weight:650;letter-spacing:.08em;text-transform:uppercase}
+.oj-status i {position:relative;width:7px;height:7px;border-radius:50%;background:var(--sl-muted)}
+.oj-status.is-live i, .oj-status.is-live {color:var(--sl-lime)}
+.oj-status.is-live i {background:var(--sl-lime)}
+.oj-status.is-final i {background:var(--sl-text-2)}
+.oj-status.is-delayed {color:var(--sl-amber)}
+.oj-status.is-delayed i {background:var(--sl-amber)}
+.oj-icon-button {display:inline-grid;place-items:center;width:34px;height:34px;padding:0;border:1px solid rgb(255 255 255/.1);border-radius:9px;background:rgb(0 0 0/.3);color:var(--sl-text-2);cursor:pointer}
+.oj-icon-button:hover {color:var(--sl-text);border-color:rgb(255 255 255/.2)}
+.oj-icon-button svg {width:15px;height:15px}
+.oj-live .oj-band-main {margin-top:10px}
+.oj-scoreboard {display:grid;overflow:hidden;border:1px solid var(--oj-edge-2);border-radius:12px}
+.oj-score-row {display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px 14px;color:var(--sl-muted)}
+.oj-score-row+.oj-score-row {border-top:1px solid var(--oj-edge-2)}
+.oj-score-row b {color:var(--sl-text-2);font-size:28px;font-weight:600;letter-spacing:-.02em}
+.oj-score-row.is-leader b {color:var(--sl-text)}
+.oj-score-row.is-leader .oj-score-team strong {color:var(--sl-text)}
+.oj-score-team {display:grid;gap:2px;min-width:0}
+.oj-score-team strong {overflow:hidden;color:var(--sl-text-2);font-size:15px;font-weight:600;white-space:nowrap;text-overflow:ellipsis}
+.oj-score-team small {font-size:11.5px}
+.oj-team-logo {width:34px;height:34px;object-fit:contain}
+.oj-team-logo.is-text {display:grid;place-items:center;border:1px solid var(--oj-edge);border-radius:9px;color:var(--sl-text);font-size:11px;font-weight:700}
+.oj-price .oj-team-logo {width:20px;height:20px}
+.oj-live .oj-split {margin:0 -18px -16px;border-top:1px solid var(--oj-edge-2)}
+.oj-live .oj-split>div {grid-template-columns:1fr auto;align-items:center}
+.oj-live .live-league-directory {margin:0}
+
+/* odds comparison card uses the band too */
+#home-market-panel .mp-card {padding:0}
+#home-market-panel .mp-band {padding:20px 24px 18px}
+#home-market-panel .mp-stage {margin:0;border-top:0}
+#home-market-panel .mp-foot {margin:0}
+#home-market-panel .preview-footnote {margin:0;padding:12px 24px 14px}
+
+/* ------------------------------------------------------------------ motion */
+@keyframes oj-slide {from {opacity:0;transform:translateY(-16px) scale(.98)} to {opacity:1;transform:none}}
+@media (prefers-reduced-motion:no-preference) {
+  .oj-mock:not([hidden]) .oj-feed>.oj-card {animation:lx-rise .55s cubic-bezier(.2,.7,.2,1) both}
+  .oj-mock:not([hidden]) .oj-feed>.oj-card:nth-child(2) {animation-delay:90ms}
+  .oj-mock:not([hidden]) .oj-feed>.oj-card:nth-child(3) {animation-delay:180ms}
+  .oj-feed>.oj-card.is-new {animation:oj-slide .6s cubic-bezier(.2,.7,.2,1) both!important}
+  .oj-feed>.oj-card:first-child .oj-pct {animation:lx-live 1.6s ease-in-out 1s infinite}
+  .oj-card.is-cold:first-child .oj-pct {animation:none}
+  .oj-mock:not([hidden]) .oj-bars i {transform-origin:bottom;animation:lx-grow .6s cubic-bezier(.2,.7,.2,1) both}
+  .oj-bars i:nth-child(2) {animation-delay:40ms} .oj-bars i:nth-child(3) {animation-delay:80ms} .oj-bars i:nth-child(4) {animation-delay:120ms}
+  .oj-bars i:nth-child(5) {animation-delay:160ms} .oj-bars i:nth-child(6) {animation-delay:200ms} .oj-bars i:nth-child(7) {animation-delay:240ms}
+  .oj-bars i:nth-child(8) {animation-delay:280ms} .oj-bars i:nth-child(9) {animation-delay:320ms} .oj-bars i:nth-child(10) {animation-delay:360ms}
+  .oj-status.is-live i::after {content:'';position:absolute;inset:0;border-radius:50%;background:inherit;animation:lx-ping 1.6s cubic-bezier(0,0,.2,1) infinite}
+  .is-playing .oj-score-row {animation:lx-rise .5s cubic-bezier(.2,.7,.2,1) both}
+  .is-playing .oj-score-row+.oj-score-row {animation-delay:120ms}
+  .is-playing .oj-split>div {animation:lx-rise .5s cubic-bezier(.2,.7,.2,1) 250ms both}
+  .is-playing .oj-foot>div {animation:lx-rise .5s cubic-bezier(.2,.7,.2,1) 400ms both}
+}
+
+body .sl-mock.oj-mock {min-width:0}
+body .sl-window-main {padding-bottom:78px}
+@media (max-width:900px) {body .sl-window-main {padding-bottom:22px}}
+
+/* ======================================================================= player research
+   Uses the hero feed's three tones: card-top band, window-tone chart area, card-bottom footer. */
+#home-tool-panel {--oj-band:#12171c;--oj-body:#0b0e11;--oj-edge:rgb(255 255 255/.09);--oj-edge-2:rgb(255 255 255/.06)}
+body #home-tool-panel {background:#0b0e11;border-color:rgb(255 255 255/.09)}
+body #home-tool-panel :is(.oj-foot,.preview-source) {background:#07090b}
+
+/* ======================================================================= calmer primary buttons
+   Dark ink on lime (readable), a small soft shadow instead of a lime halo. */
+body .home-button:not(.home-button-ghost), body .home-plan.is-featured .home-plan-action {
+  color:var(--sl-lime-ink);font-weight:650;
+  box-shadow:0 4px 14px -8px rgb(163 240 107/.45),inset 0 1px 0 rgb(255 255 255/.35);
+}
+body .home-button:not(.home-button-ghost):hover, body .home-plan.is-featured .home-plan-action:hover {
+  color:var(--sl-lime-ink);box-shadow:0 6px 18px -8px rgb(163 240 107/.55),inset 0 1px 0 rgb(255 255 255/.4);
+}
+
+/* ======================================================================= FAQ
+   Numbered questions on flat cards; the open card gets a lime edge, the plus turns into a
+   close mark, and the answer eases open (height is animated in landing-motion.js). */
+body .sl-faq-list {gap:10px}
+body .sl-faq-list details {position:relative;overflow:hidden;border:1px solid rgb(255 255 255/.08);border-radius:14px;background:#0e1215;transition:border-color .25s,background-color .25s}
+body .sl-faq-list details::before {content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--sl-lime);transform:scaleY(0);transform-origin:top;transition:transform .35s cubic-bezier(.2,.7,.2,1)}
+body .sl-faq-list details:hover {border-color:rgb(255 255 255/.14)}
+body .sl-faq-list details[open] {border-color:rgb(163 240 107/.28);background:#11161a}
+body .sl-faq-list details[open]::before {transform:scaleY(1)}
+body .sl-faq-list summary {display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:16px;padding:20px 22px;font-size:16.5px;font-weight:600;list-style:none;cursor:pointer}
+body .sl-faq-list summary::after {display:none}
+body .sl-faq-list summary:focus-visible {outline:2px solid var(--sl-lime);outline-offset:-2px;border-radius:14px}
+.sl-faq-num {color:var(--sl-faint);font:600 12.5px/1 ui-monospace,'SF Mono',Menlo,Consolas,monospace;transition:color .25s}
+details[open] .sl-faq-num {color:var(--sl-lime)}
+.sl-faq-q {color:var(--sl-text)}
+.sl-faq-icon {position:relative;display:grid;place-items:center;width:30px;height:30px;border:1px solid rgb(255 255 255/.1);border-radius:50%;background:rgb(255 255 255/.03);transition:transform .35s cubic-bezier(.2,.7,.2,1),background-color .25s,border-color .25s}
+.sl-faq-icon::before, .sl-faq-icon::after {content:'';position:absolute;width:12px;height:1.8px;border-radius:2px;background:var(--sl-text-2);transition:background-color .25s}
+.sl-faq-icon::after {transform:rotate(90deg)}
+details[open] .sl-faq-icon {transform:rotate(45deg);border-color:rgb(163 240 107/.4);background:rgb(163 240 107/.1)}
+details[open] .sl-faq-icon::before, details[open] .sl-faq-icon::after {background:var(--sl-lime)}
+.sl-faq-answer {overflow:hidden}
+body .sl-faq-list .sl-faq-answer p {margin:0;padding:0 22px 22px 60px;color:var(--sl-text-2);font-size:15.5px;line-height:1.6;max-width:66ch}
+.sl-faq-help {display:flex;align-items:center;gap:14px;max-width:420px;margin-top:26px;padding:16px 18px;border:1px solid rgb(255 255 255/.08);border-radius:14px;background:#0e1215;color:var(--sl-text);text-decoration:none;transition:border-color .2s,background-color .2s}
+.sl-faq-help:hover {border-color:rgb(163 240 107/.35);background:#11161a}
+.sl-faq-help>span:nth-child(2) {display:grid;gap:3px;flex:1;min-width:0}
+.sl-faq-help strong {font-size:15px;font-weight:650}
+.sl-faq-help small {color:var(--sl-muted);font-size:13px}
+.sl-faq-help-icon {display:grid;place-items:center;flex:none;width:38px;height:38px;border-radius:11px;background:rgb(163 240 107/.1);color:var(--sl-lime)}
+.sl-faq-help-icon svg {width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sl-faq-help-arrow {color:var(--sl-lime);font-size:17px;transition:transform .2s}
+.sl-faq-help:hover .sl-faq-help-arrow {transform:translateX(3px)}
+@media (max-width:640px) {
+  body .sl-faq-list summary {gap:12px;padding:17px 16px;font-size:15.5px}
+  body .sl-faq-list .sl-faq-answer p {padding:0 16px 18px 16px}
+}
+
+/* ======================================================================= footer
+   Brand and actions on one row, five even link columns, a quiet legal bar. */
+body .home-footer {border-top:1px solid rgb(255 255 255/.07);background:#080a0c}
+.home-footer-top {display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;padding:48px 0 36px;border-bottom:1px solid rgb(255 255 255/.06)}
+body .home-footer-brand {display:grid;gap:10px}
+body .home-footer-brand .home-brand {display:inline-flex;align-items:center;gap:10px;color:var(--sl-text);font:700 21px/1 var(--sl-display);letter-spacing:-.02em;text-decoration:none}
+body .home-footer-brand .home-brand em {color:var(--sl-lime);font-style:normal}
+body .home-footer-brand p {margin:0;color:var(--sl-muted);font-size:14.5px;max-width:none}
+.home-footer-actions {display:flex;gap:10px;flex-wrap:wrap}
+body .home-footer-cta {min-height:42px;padding:0 20px;font-size:14px}
+body .home-footer-cta .ui-icon {width:15px;height:15px}
+body .home-footer-grid {grid-template-columns:repeat(5,minmax(0,1fr));gap:32px;padding:40px 0 44px}
+body .home-footer-column {display:grid;align-content:start;gap:12px}
+body .home-footer-column h2 {margin:0 0 4px;color:var(--sl-text);font:650 12px/1.3 var(--sl-font);letter-spacing:.08em;text-transform:uppercase}
+body .home-footer-column a {width:max-content;max-width:100%;color:var(--sl-muted);font-size:14px;text-decoration:none;transition:color .15s,transform .15s}
+body .home-footer-column a:hover {color:var(--sl-text);transform:translateX(2px)}
+body .home-footer-bottom {display:flex;align-items:center;justify-content:space-between;gap:12px 24px;flex-wrap:wrap;padding:20px 0 30px;border-top:1px solid rgb(255 255 255/.06);color:var(--sl-faint);font-size:13px}
+.home-footer-bottom p {display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0}
+.home-footer-bottom a {color:var(--sl-muted);text-decoration:none}
+.home-footer-bottom a:hover {color:var(--sl-text)}
+.home-footer-links {gap:18px!important}
+.home-footer-age {display:inline-grid;place-items:center;height:22px;padding:0 7px;border:1px solid rgb(255 255 255/.14);border-radius:6px;color:var(--sl-text-2);font-size:11px;font-weight:700}
+@media (max-width:900px) {
+  body .home-footer-grid {grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:560px) {
+  body .home-footer-grid {grid-template-columns:repeat(2,minmax(0,1fr));gap:28px 20px}
+  .home-footer-actions {width:100%}
+  .home-footer-actions .home-footer-cta {flex:1}
+}
+
+/* Live card: no game picker any more, so the title spans the band. */
+.oj-live .oj-band-main {display:block}
+body .sl-section-head a.sl-faq-help {color:var(--sl-text);text-decoration:none}
+body .sl-faq-help strong {color:var(--sl-text)}
+body .home-footer-bottom .home-footer-legal {display:block;line-height:1.6}
+.home-footer-age {margin-right:10px;vertical-align:1px}
+@media (max-width:900px) {body .sl-faq-grid {gap:28px}}
+
+/* Logo marks: no lime halo around the icon, just a small neutral shadow for depth. */
+body .home-brand img {filter:drop-shadow(0 2px 6px rgb(0 0 0/.45))}
+body .sl-cta-inner img {filter:drop-shadow(0 6px 14px rgb(0 0 0/.5))}
+
+/* Logo strip: clear space between the caption and the moving logos. */
+body .hero-brands {padding-top:44px;padding-bottom:28px}
+body .hero-brands .sl-brands-caption {margin:0 auto 34px;padding:0 20px}
+@media (max-width:640px) {body .hero-brands .sl-brands-caption {margin-bottom:24px}}
+
+/* ======================================================================= logo strips
+   Caption: a small-caps label between two hairlines. League logos sit on the same 42px
+   tiles as the sportsbook icons so both strips share one scale. */
+body .sl-brands-caption {display:flex;align-items:center;justify-content:center;gap:16px;max-width:760px;margin:0 auto 30px;padding:0 20px;color:var(--sl-muted);font-size:12px;font-weight:650;letter-spacing:.12em;text-transform:uppercase}
+body .sl-brands-caption::before, body .sl-brands-caption::after {content:'';flex:1;max-width:120px;height:1px;background:linear-gradient(90deg,transparent,rgb(255 255 255/.16))}
+body .sl-brands-caption::after {background:linear-gradient(90deg,rgb(255 255 255/.16),transparent)}
+body .sl-brands-caption>span {white-space:nowrap}
+body .hero-brands .sl-brands-caption {margin-bottom:30px}
+body .home-sports {padding:56px 0 28px}
+body .home-sport-set a {padding:6px 38px}
+body .home-sport-set img, body .home-sport-set a:hover img {box-sizing:border-box;width:42px;height:42px;padding:7px;border:1px solid rgb(255 255 255/.1);border-radius:11px;background:#14191e;object-fit:contain;filter:none;opacity:1}
+body .home-soccer-link svg {box-sizing:border-box;width:42px;height:42px;margin:0;padding:8px;border:1px solid rgb(255 255 255/.1);border-radius:11px;background:#14191e;stroke:#fff;stroke-width:1.4}
+@media (max-width:640px) {
+  body .sl-brands-caption {gap:10px;font-size:11px;letter-spacing:.1em}
+  body .sl-brands-caption::before, body .sl-brands-caption::after {max-width:40px}
+  body .home-sport-set a {padding:6px 22px}
+  body .home-sport-set img, body .home-soccer-link svg {width:36px;height:36px;padding:6px}
+}
+
+/* ======================================================================= feature links
+   Quiet outline pill with a lime arrow chip: reads as a button without shouting. */
+body .home-feature-link {display:inline-flex;align-items:center;gap:12px;height:44px;padding:0 6px 0 18px;border:1px solid rgb(255 255 255/.12);border-radius:999px;background:rgb(255 255 255/.03);color:var(--sl-text);font-size:14.5px;font-weight:600;text-decoration:none;transition:border-color .2s,background-color .2s}
+body .home-feature-link:hover {border-color:rgb(163 240 107/.4);background:rgb(163 240 107/.06)}
+.home-feature-arrow {display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:rgb(163 240 107/.12);color:var(--sl-lime);transition:background-color .2s,color .2s}
+.home-feature-arrow .ui-icon {width:15px;height:15px;transition:transform .2s}
+body .home-feature-link:hover .home-feature-arrow {background:var(--sl-lime);color:var(--sl-lime-ink)}
+body .home-feature-link:hover .home-feature-arrow .ui-icon {transform:translateX(2px)}
+
+/* How it works: no cyan glow pinned to the section's top edge (it drew a hard seam). */
+body .sl-how {background:none}
+body .home-sports .sl-brands-caption {margin:0 auto 30px}
+body .home-sport-set img, body .home-sport-set a:hover img {padding:5px}
+body .home-soccer-link svg {padding:7px}
+.oj-live .oj-band-top .oj-status {margin-left:auto}
+
+/* Scroll-triggered widgets ([data-play]) hold their starting frame until they are properly on
+   screen; landing-motion.js then adds .is-playing and the animations above run once. */
+@media (prefers-reduced-motion:no-preference) {
+  .sl-motion [data-play]:not(.is-playing) :is(.mp-bar,.preview-game-bar,.sl-step-bars i) {transform:scaleY(0)}
+  .sl-motion [data-play]:not(.is-playing) :is(.hero-tracker-day.has-picks,.mp-col>b,.mp-foot>div,.oj-score-row,.oj-split>div,.oj-foot>div) {opacity:0}
+}

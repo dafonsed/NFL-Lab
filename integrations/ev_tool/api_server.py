@@ -1,8 +1,8 @@
-"""Local quote handoff for the Sportslab EV workspace.
+"""Local quote handoff for the VisualOdds EV workspace.
 
 The supplied archive's scraping implementation is incomplete. This service
 accepts normalized quotes from a trusted local process and makes them available
-to quote-based EV tools through the Sportslab same-origin bridge.
+to quote-based EV tools through the VisualOdds same-origin bridge.
 """
 
 from datetime import datetime
@@ -17,7 +17,7 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, Field
 
 
-app = FastAPI(title="Sportslab EV Tool API", version="1.0.0")
+app = FastAPI(title="VisualOdds EV Tool API", version="1.0.0")
 DATA_FILE = Path(
     os.environ.get("EV_TOOL_QUOTES_FILE")
     or Path(__file__).resolve().parents[2] / "data" / "ev-tool-quotes.json"
@@ -65,7 +65,7 @@ def match_id(quote):
 
 @app.get("/")
 def health():
-    return {"status": "ok", "service": "Sportslab EV Tool API", "version": "1.0.0"}
+    return {"status": "ok", "service": "VisualOdds EV Tool API", "version": "1.0.0"}
 
 
 @app.get("/status")

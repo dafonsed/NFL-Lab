@@ -1,0 +1,4 @@
+// A navigation fallback only. Private pages, API responses and market prices are never cached.
+self.addEventListener('install',()=>self.skipWaiting());
+self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
+self.addEventListener('fetch',event=>{const url=new URL(event.request.url);if(event.request.mode==='navigate'&&url.origin===self.location.origin&&url.pathname==='/ev')event.respondWith(fetch(event.request).catch(()=>new Response('<!doctype html><html lang="en"><meta name="viewport" content="width=device-width, initial-scale=1"><title>VisualOdds offline</title><body style="background:#17212f;color:#edf3fc;font:18px system-ui;padding:40px"><h1>You’re offline</h1><p>Reconnect to open VisualOdds. Your saved browser records will be available on this device.</p><a style="color:#6ed9ef" href="/ev">Try again</a></body></html>',{headers:{'Content-Type':'text/html; charset=utf-8'}})))});
