@@ -5,7 +5,8 @@ import { SITE_PLATFORMS, SPORTSBOOK_PLATFORMS, FANTASY_PLATFORMS, PREDICTION_PLA
 import { inlineBookMark } from '../public/bet-inline.js';
 import { parseBetSlip } from '../public/bet-slip-parser.js';
 import { sportsbookStatus } from '../public/sportsbook-availability.js';
-import { createDfsWorkspace, dfsPreview } from '../public/dfs-workspace.js';
+import { createDfsWorkspace } from '../public/dfs-workspace.js';
+import { dfsPreview } from './fixtures/dfs-props.mjs';
 import { validateBet, readBets, writeBets } from '../public/bet-utils.js';
 
 test('every requested site has an entry option, comparison logo, receipt identity and local asset', async () => {

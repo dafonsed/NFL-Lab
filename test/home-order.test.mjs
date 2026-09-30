@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import { sortProfiles } from '../public/player-order.js';
 import { finite, selectGames, summarize, recentChange } from '../public/research-data.js';
 import { computeAdvancedEv } from '../public/ev-advanced-math.js';
-import { permanentDemoWorkspace } from '../public/ev-preview.js';
+import { permanentDemoWorkspace } from './fixtures/ev-preview.js';
 
 // Exercise the dashboard's real ranking helpers (the pure block in home.js),
 // without the DOM and request code around them.

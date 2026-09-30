@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { computeAdvancedEv, consensusPrice } from '../public/ev-advanced-math.js';
-import { permanentDemoWorkspace } from '../public/ev-preview.js';
+import { permanentDemoWorkspace } from './fixtures/ev-preview.js';
 
 // computeAdvancedEv indexes markets once per batch; each fair value must match
 // the unindexed consensus for the same quote, settings and time.

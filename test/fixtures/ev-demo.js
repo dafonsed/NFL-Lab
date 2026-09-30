@@ -1,3 +1,4 @@
+// Test fixture: sample workspaces for unit tests only. Never served or loaded by the site.
 // Every seeded record is hypothetical. The connected feed can supply the same shape later.
 export function smartMoneyDemoQuotes() {
   const ts = new Date().toISOString();

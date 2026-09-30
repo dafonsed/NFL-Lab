@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { decimal, implied, probabilityToAmerican, fairProbability, evRows, fractionalKellyStake, arbitrageRows, arbitrage, middleRows, promoConversion, parlay, fantasySlip, closingLineValue, gradedBet, pearson, sharpMatches, alertMatches, validateWorkspace } from '../public/ev-core.js';
-import { exampleWorkspace } from '../public/ev-demo.js';
+import { exampleWorkspace } from './fixtures/ev-demo.js';
 
 test('market math calculates no-vig EV from other complete books', () => {
   const state = exampleWorkspace();

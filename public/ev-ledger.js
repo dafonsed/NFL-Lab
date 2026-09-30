@@ -1,18 +1,14 @@
 import { accountStorage, accountReady, accountSyncState } from './account-sync.js';
-import { EV_DEMO_MODE, EV_DEMO_BETS_STORE } from './ev-preview.js?v=twelve-books-2';
 import { readBets, writeBets, validateBet, betReturns, STATUSES, SPORTS, BET_STORAGE_KEY } from './bet-utils.js?v=3';
 import { performanceSummary, marketIdentity, quoteAvailable, consensusPrice } from './ev-advanced-math.js';
 
 await accountReady;
 
-// Match /ev/tracker's account-owned ledger and isolated anonymous showcase.
-// /ev itself uses the showcase key too so its dialog and tracker share one bucket.
-const demoLedger = () => EV_DEMO_MODE && !accountSyncState().userId && /^\/ev(?:\/|$)/.test(globalThis.location?.pathname || '');
-const storageKey = key => demoLedger() && key === BET_STORAGE_KEY ? EV_DEMO_BETS_STORE : key;
+// The ledger shares /ev/tracker's account-owned bet records.
 export const suiteLedgerStorage = {
-  getItem: key => accountStorage.getItem(storageKey(key)),
-  setItem: (key,value) => accountStorage.setItem(storageKey(key),value),
-  removeItem: key => accountStorage.removeItem(storageKey(key))
+  getItem: key => accountStorage.getItem(key),
+  setItem: (key,value) => accountStorage.setItem(key,value),
+  removeItem: key => accountStorage.removeItem(key)
 };
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
@@ -27,7 +23,7 @@ const clone = value => JSON.parse(JSON.stringify(value));
 const selectedKey = quote => `${marketIdentity(quote)}|${String(quote.side || '').trim().toLowerCase()}`;
 const eventKey = quote => JSON.stringify([quote.sport, quote.league || quote.sport, quote.eventId || quote.event]);
 const quoteLabel = quote => [quote.player, quote.market, quote.side, quote.line === '' || quote.line == null ? '' : quote.line].filter(value => value !== '').join(' · ');
-const sourceLabel = quote => quote?.source === 'example' || quote?.demo ? 'Example' : quote?.source === 'manual' || !quote?.source ? 'Entered' : String(quote.source);
+const sourceLabel = quote => quote?.source === 'manual' || !quote?.source ? 'Entered' : String(quote.source);
 const button = (label, action, id = '') => `<button type="button" data-evl-action="${action}" data-evl-id="${esc(id)}">${esc(label)}</button>`;
 const input = (name, label, value = '', type = 'text', extra = '') => `<label class="evl-field"><span>${esc(label)}</span><input name="${name}" type="${type}" value="${esc(value)}" ${extra}></label>`;
 const select = (name, label, value, options, filter = false) => `<label class="evl-field"><span>${esc(label)}</span><select ${filter ? `data-evl-filter="${name}"` : `name="${name}"`}>${options.map(item => { const [key, title] = Array.isArray(item) ? item : [item, item]; return `<option value="${esc(key)}"${String(key) === String(value) ? ' selected' : ''}>${esc(title)}</option>`; }).join('')}</select></label>`;
@@ -86,9 +82,9 @@ export function createEvLedger({ getState, save, redraw, navigate, getSettings =
     const rows = personal().map(bet => ({ ref:`personal:${bet.id}`, id:bet.id, bet, meta:metaFor(bet.id), source:'personal', label:'Personal ledger' }));
     for (const [index, raw] of (Array.isArray(getState().bets) ? getState().bets : []).entries()) {
       try {
-        const example = raw.source === 'example' || raw.demo === true;
+        if (raw.source === 'example' || raw.demo === true) continue;
         rows.push({ ref:`legacy:${index}`, id:`legacy:${raw.id || index}`, bet:legacyBet(raw), meta:{ ...raw, ...metaFor(`legacy:${raw.id || index}`) },
-          source:example ? 'example' : 'legacy', label:example ? 'Example workspace' : 'Legacy workspace', raw });
+          source:'legacy', label:'Legacy workspace', raw });
       } catch { /* Invalid legacy records stay untouched in their original collection. */ }
     }
     return rows;
@@ -120,7 +116,7 @@ export function createEvLedger({ getState, save, redraw, navigate, getSettings =
   function filterBar(rows) {
     const current = options(), values = field => [...new Set(rows.map(row => field === 'league' ? row.meta.league || row.bet.sport : row.bet[field]).filter(Boolean))].sort();
     const field = (key,label,type='text') => `<label class="evl-field"><span>${label}</span><input data-evl-filter="${key}" type="${type}" value="${esc(current[key])}"></label>`;
-    return `<div class="evl-filters">${field('query','Search bets','search')}${select('status','Status',current.status,[['all','All results'],['open','Open'],['live','Live'],['ungraded','Needs grading'],['settled','Settled'],['won','Won'],['lost','Lost'],['push','Push'],['void','Void']],true)}${select('source','Record source',current.source,[['personal','Personal ledger'],['legacy','Legacy workspace'],['example','Examples only'],['all','All sources']],true)}${field('from','From','date')}${field('to','Through','date')}<details class="evl-extra"><summary>More filters</summary><div class="evl-filters">${['sport','league','market','book','tool'].map(key=>select(key,key[0].toUpperCase()+key.slice(1),current[key],[['','All'],...values(key).map(value=>[value,value])],true)).join('')}${select('tag','Tag',current.tag,[['','All tags'],...[...new Set(rows.flatMap(row=>row.bet.tags))].sort().map(tag=>[tag,tag])],true)}${button('Clear filters','reset')}</div></details></div>`;
+    return `<div class="evl-filters">${field('query','Search bets','search')}${select('status','Status',current.status,[['all','All results'],['open','Open'],['live','Live'],['ungraded','Needs grading'],['settled','Settled'],['won','Won'],['lost','Lost'],['push','Push'],['void','Void']],true)}${select('source','Record source',current.source,[['personal','Personal ledger'],['legacy','Legacy workspace'],['all','All sources']],true)}${field('from','From','date')}${field('to','Through','date')}<details class="evl-extra"><summary>More filters</summary><div class="evl-filters">${['sport','league','market','book','tool'].map(key=>select(key,key[0].toUpperCase()+key.slice(1),current[key],[['','All'],...values(key).map(value=>[value,value])],true)).join('')}${select('tag','Tag',current.tag,[['','All tags'],...[...new Set(rows.flatMap(row=>row.bet.tags))].sort().map(tag=>[tag,tag])],true)}${button('Clear filters','reset')}</div></details></div>`;
   }
   const statistic = (label,value) => `<div><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`;
   const stats = summary => `<div class="evl-stats">${statistic('Settled profit',cash(summary.profit))}${statistic('ROI',pct(summary.roi))}${statistic('Amount risked',cash(summary.risked))}${statistic('Open exposure',cash(summary.openExposure))}${statistic('Comparable CLV',pct(summary.averageClv))}</div>`;
@@ -174,7 +170,7 @@ export function createEvLedger({ getState, save, redraw, navigate, getSettings =
     if (!['tracker','performance'].includes(tool)) return '';
     active=tool;
     const all=allRows(),rows=filtered(all),summary=performanceSummary(rows.map(summaryInput));
-    return `<section class="evl-root"><header class="evl-heading"><div><h2>${tool==='tracker'?'Your bet ledger':'Performance'}</h2><p>${tool==='tracker'?'Booked prices, notes and outcomes across every tool.':'Follow profit, exposure and the closing prices you record.'}</p></div>${tool==='tracker'?button('Performance','performance'):button('Bet ledger','tracker')}</header>${message?`<p class="evl-message" role="status">${esc(message)}</p>`:''}${storageError?`<p class="evl-error" role="alert">${esc(storageError)} Existing stored data has been preserved.</p>`:''}${filterBar(all)}${rows.some(row=>row.source==='example')?'<p class="evl-note">This view includes explicitly labelled example records.</p>':''}${stats(summary)}${tool==='tracker'?tracker(rows):performance(rows,summary)}</section>`;
+    return `<section class="evl-root"><header class="evl-heading"><div><h2>${tool==='tracker'?'Your bet ledger':'Performance'}</h2><p>${tool==='tracker'?'Booked prices, notes and outcomes across every tool.':'Follow profit, exposure and the closing prices you record.'}</p></div>${tool==='tracker'?button('Performance','performance'):button('Bet ledger','tracker')}</header>${message?`<p class="evl-message" role="status">${esc(message)}</p>`:''}${storageError?`<p class="evl-error" role="alert">${esc(storageError)} Existing stored data has been preserved.</p>`:''}${filterBar(all)}${stats(summary)}${tool==='tracker'?tracker(rows):performance(rows,summary)}</section>`;
   }
   function modal(title,content,onSubmit) {
     dialog?.close(); dialog?.remove();

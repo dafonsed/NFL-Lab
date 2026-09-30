@@ -3,33 +3,30 @@ import { wagerCard } from './ev-bet-card.js';
 import { renderEvBoard, renderEvBoardDetail, renderBetPanel, boostedOffer, boardIcon, bookLogo, startLabel, selectionText } from './ev-board.js?v=3';
 import { createEvSuite, EV_SUITE_TOOLS } from './ev-suite.js?v=local-suite-4';
 import { computeAdvancedEv, consensusPrice, constrainedArb, middleOutcomes } from './ev-advanced-math.js';
-import { readSuiteState, writeSuiteState, readSuiteWorkspace, writeSuiteWorkspace } from './ev-suite-storage.js';
+import { readSuiteState, writeSuiteState } from './ev-suite-storage.js?v=2';
 import { installMobileWorkspace, quoteRevision, preserveReadingOrder } from './ev-mobile.js';
 import { accountStorage as localStorage, accountReady, getAccountPreferences, accountSyncState } from './account-sync.js';
 await accountReady;
 import { secondaryShell, toolHero, accentTitle, toolPanel, toolEmpty, toolStats, toolNote, toolReceipt, toolBoard, boardTicket, boardButton, boardIconButton, boardToggle } from './ev-secondary-views.js?v=3';
-import { EV_DEMO_MODE, EV_DEMO_STORE, permanentDemoWorkspace, refreshDemoObservations } from './ev-preview.js?v=twelve-books-2';
 import { SECONDARY_TOOLS } from './ev-tool-catalog.js';
-import { createQuoteFeedControls, toolDataLabel } from './ev-feed.js?v=2-demo';
+import { emptyWorkspace, purgeDemoData, clearLegacyDemoStorage } from './ev-workspace-clean.js?v=1';
+import { createQuoteFeedControls, toolDataLabel } from './ev-feed.js?v=3';
 import { SITE_PLATFORMS, SPORTSBOOK_PLATFORMS, PREDICTION_PLATFORMS, EXCHANGE_PLATFORMS, canonicalPlatform, platformAsset, platformLabel, platformOptions, isContestPlatform } from './platform-catalog.js';
 import { betTrackerUrl, legacyBetTrackerUrl } from './navigation.js?v=tracker-1';
 import { decimal, implied, expectedReturn, money, percent, signed, probabilityToAmerican, fairProbability, fresh, groups, marketKey, evRows, fractionalKellyStake, holdRows, arbitrage, arbitrageRows, middleRows, promoConversion, parlay, fantasySlip, closingLineValue, gradedBet, pearson, sharpMatches, alertMatches, validateWorkspace } from './ev-core.js?v=3';
-import { exampleWorkspace, smartMoneyDemoQuotes } from './ev-demo.js?v=6';
 import { teamMark, leagueMark } from './sports-identity.js';
 import { comparisonAnnotations } from './bet-comparison.js?v=4';
 import { inlineBetCard as betComparisonCard, bindInlineComparison as bindComparison } from './bet-inline.js?v=card-click-3';
 import { openArbCalculator } from './arb-calculator.js?v=2';
 import { openLineHistory, buildLineSeries } from './line-history.js?v=1';
-import { arbitrageWorkspaceQuotes, isArbitrageDemo } from './arbitrage-demo.js';
 import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform } from './dfs-workspace.js?v=10-rows';
 import { createOddsScreen } from './odds-screen.js?v=7';
-import { ODDS_DEMO_ENABLED, oddsWorkspaceQuotes, oddsDemoHistory } from './odds-demo.js?v=1';
 
 import {readSportsbookState, saveSportsbookState, sportsbookAvailable, availableSportsbookQuotes, STATE_CHANGE_EVENT} from './sportsbook-availability.js';
 
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
-const STORE = EV_DEMO_MODE ? EV_DEMO_STORE : 'sportslab-ev-workbench-v1';
+const STORE = 'sportslab-ev-workbench-v1';
 const TOOLS = [
   ['Markets', 'odds', 'Odds comparison', 'Compare every entered sportsbook price, consensus fair probability and recorded movement.'],
   ['Markets', 'ev-pre', 'Positive EV · pregame', 'Compare each offered price against no-vig consensus from other complete books.'],
@@ -55,43 +52,32 @@ const toolMeta = Object.fromEntries(TOOLS.map(row => [row[1], row]));
 const SUITE_ICONS = { ledger:'bookmark', settings:'filter', performance:'performance', history:'trends', 'fantasy-lab':'picks', wallets:'research', lineups:'players', promotions:'tag', alerts:'live', connections:'settings' };
 const arrays = ['quotes', 'history', 'dfs', 'contracts', 'contractHistory', 'traders', 'trades', 'bets', 'results', 'alerts', 'notifications', 'slips'];
 function load() {
-  if (EV_DEMO_MODE) {
-    let saved = null;
-    try { saved = readSuiteWorkspace() || JSON.parse(localStorage.getItem(STORE)); } catch { /* The showcase also works without storage. */ }
-    return normalize(permanentDemoWorkspace(saved));
-  }
+  clearLegacyDemoStorage(window.localStorage, window.sessionStorage);
+  clearLegacyDemoStorage(localStorage, null);
   try {
     const parsed = JSON.parse(localStorage.getItem(STORE));
     if (parsed?.version === 1) {
-      const saved = normalize(parsed);
-      if (saved.example && saved.quotes.some(q => q.source === 'example' && (/^Book [ABC]$/.test(q.book) || q.book === 'Exchange X'))) {
-        const demo = exampleWorkspace();
-        for (const key of arrays) saved[key] = [...saved[key].filter(item => item.source !== 'example'), ...demo[key]];
-        saved.paytables = { ...demo.paytables, ...saved.paytables };
-        localStorage.setItem(STORE, JSON.stringify(saved));
-      }
-      return saved;
+      // Earlier releases seeded example and demo records. The workspace now holds only feed
+      // quotes and records the member entered, so remove any that were saved.
+      if (purgeDemoData(parsed)) localStorage.setItem(STORE, JSON.stringify(parsed));
+      return normalize(parsed);
     }
   } catch { /* Browser storage can be disabled. */ }
-  return normalize(exampleWorkspace());
+  return normalize(emptyWorkspace());
 }
 function normalize(data) {
   for (const key of arrays) if (!Array.isArray(data[key])) data[key] = [];
-  for (const key of ['dfs','contracts','bets','results']) for (const item of data[key]) if (item.source === 'example' && !item.sport) item.sport = 'NFL';
   const quoteIds = new Set(data.quotes.map(x => x.id)), contractIds = new Set(data.contracts.map(x => x.id));
   data.history = data.history.filter(x => quoteIds.has(x.quoteId));
   data.contractHistory = data.contractHistory.filter(x => contractIds.has(x.contractId));
   if (!data.paytables || typeof data.paytables !== 'object' || Array.isArray(data.paytables)) data.paytables = {};
   for (const [collection,field] of [['quotes','book'],['history','book'],['dfs','app'],['contracts','platform'],['traders','platform']]) {
-    for (const item of data[collection]) if (item[field]) {
-      const example = /\s*\(example\)$/i.test(item[field]);
-      item[field] = canonicalPlatform(item[field]) + (example ? ' (example)' : '');
-    }
+    for (const item of data[collection]) if (item[field]) item[field] = canonicalPlatform(item[field]);
   }
   // Keep saved payout rules attached when an older app alias is normalized.
   // Existing rules under the canonical name take precedence over alias rules.
   for (const [name,rules] of Object.entries(data.paytables)) {
-    const canonical = canonicalPlatform(name) + (/\s*\(example\)$/i.test(name) ? ' (example)' : '');
+    const canonical = canonicalPlatform(name);
     if (canonical !== name) data.paytables = {...data.paytables,[canonical]:{...rules,...(Object.hasOwn(data.paytables,canonical) ? data.paytables[canonical] : {})}};
   }
   return data;
@@ -101,8 +87,7 @@ try { state.suite = readSuiteState() || state.suite; } catch { /* A save will su
 let feedControls = null;
 let preserveLiveOrder = false;
 const hasApiSnapshot = () => Boolean(state.apiSyncedAt) || state.quotes.some(q => q.source === 'local-api');
-const oddsDemoActive = () => ODDS_DEMO_ENABLED && !hasApiSnapshot();
-const oddsQuotes = () => oddsWorkspaceQuotes(state.quotes, new Date(), oddsDemoActive());
+const oddsQuotes = () => state.quotes;
 let active = toolMeta[location.hash.slice(1)] ? location.hash.slice(1) : 'ev-pre';
 let search = '';
 let bookmaker = '', marketType = '', showAllBooks = false, selectedSportsbooks = null, bookMenuOpen = false, bankroll = 5000, kelly = .25, flatMultiplier = 1, evSort = 'ev', detailQuoteId = '';
@@ -117,10 +102,10 @@ const fantasyNames = DFS_PLATFORMS;
 const brandMarks = Object.fromEntries([...SITE_PLATFORMS.map(item => item.name),'DraftKings Pick6','Pinnacle'].map(name => [name,platformAsset(name)]));
 const brandMark = (name, cls = '') => platformAsset(name)
   ? `<img class="ev-brand-mark ${cls}" src="${platformAsset(name)}" alt="">`
-  : `<span class="ev-brand-fallback ${cls}" aria-hidden="true">${esc(name.replace(/\s*\(example\)$/, '').slice(0,2))}</span>`;
+  : `<span class="ev-brand-fallback ${cls}" aria-hidden="true">${esc(name.slice(0,2))}</span>`;
 let sportsbookState = readSportsbookState();
-const bookAvailable = name => EV_DEMO_MODE || sportsbookAvailable(name, sportsbookState);
-const eligibleQuotes = records => EV_DEMO_MODE ? records : availableSportsbookQuotes(records, sportsbookState);
+const bookAvailable = name => sportsbookAvailable(name, sportsbookState);
+const eligibleQuotes = records => availableSportsbookQuotes(records, sportsbookState);
 const sportsbookSelected = name => bookAvailable(name) && (selectedSportsbooks === null || selectedSportsbooks.has(name));
 const sportsbookOptions = () => [...new Set([...(active === 'sharp' ? ['Pinnacle'] : []), ...sportsbookNames, ...state.quotes.map(quote => quote.book).filter(Boolean)])].filter(bookAvailable);
 try {
@@ -165,7 +150,7 @@ const suite = createEvSuite({
 const oddsLabel = value => suite.displayOdds(value);
 const now = () => new Date().toISOString();
 const uid = () => crypto.randomUUID();
-const origin = x => x.source === 'example' ? '<span class="ev-status example">Example</span>' : x.source === 'local-api' ? '<span class="ev-status">API</span>' : '<span class="ev-status">Manual</span>';
+const origin = x => x.source === 'local-api' ? '<span class="ev-status">API</span>' : '<span class="ev-status">Manual</span>';
 const age = ts => { const n = Date.parse(ts); if (!Number.isFinite(n)) return 'Unknown time'; const s = Math.max(0, Math.floor((Date.now() - n) / 1000)); return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.floor(s / 60)}m ago` : `${Math.floor(s / 3600)}h ago`; };
 const qName = q => `${q.event} · ${q.market}${q.line !== '' && q.line != null ? ' ' + q.line : ''} · ${q.side}`;
 const qStatus = q => q.live ? `<span class="ev-status${fresh(q) ? '' : ' stale'}">${fresh(q) ? 'Live entry' : 'Stale live'} · ${age(q.ts)}</span>` : `<span class="ev-caption">Pregame · ${age(q.ts)}</span>`;
@@ -173,7 +158,7 @@ const filterText = value => String(value ?? '').toLowerCase().includes(search);
 const visible = (item, fields) => (!sport || !item.sport || item.sport === sport) && (!search || fields.some(key => filterText(item[key])));
 const inDateRange = ts => designFilters.date === 'all' || (Number.isFinite(Date.parse(ts)) && (designFilters.date === 'today' ? new Date(ts).toDateString() === new Date().toDateString() : Date.parse(ts) >= Date.now() - 7 * 86_400_000));
 const quotePassesDesign = q => !['odds','arb-pre','arb-live','sharp'].includes(active) || ((!designFilters.league || (q.league || q.sport) === designFilters.league) && inDateRange(q.ts) && (designFilters.period === 'all' || (designFilters.period === 'live') === Boolean(q.live)) && (designFilters.maxOdds === 'all' || Number(q.odds) <= Number(designFilters.maxOdds)));
-const quoteSource = () => EV_DEMO_MODE ? state.quotes : hasApiSnapshot() ? state.quotes.filter(q => q.source !== 'example') : ['arb-pre','arb-live'].includes(active) ? arbitrageWorkspaceQuotes(state.quotes) : state.quotes;
+const quoteSource = () => state.quotes;
 const quotes = () => quoteSource().filter(q => visible(q, ['event', 'market', 'book', 'side', 'sport']) && quotePassesDesign(q) && suite.quoteVisible(q));
 const dfs = () => state.dfs.filter(q => visible(q, ['player', 'market', 'app', 'side']) && (active !== 'fantasy' || ((!designFilters.league || (q.league || q.sport) === designFilters.league) && inDateRange(q.ts) && (!designFilters.side || q.side === designFilters.side))));
 const fmtLine = line => line === '' || line == null ? '—' : esc(line);
@@ -185,10 +170,9 @@ const metric = (label, value, cls = '') => `<div class="ev-metric ${cls}"><span>
 function persist() {
   try {
     localStorage.setItem(STORE, JSON.stringify(state));
-    if(EV_DEMO_MODE) writeSuiteWorkspace(state);
     if(state.suite) writeSuiteState(state.suite);
     const apiCount = state.quotes.filter(q => q.source === 'local-api').length;
-    $('#ev-notice').textContent = state.apiSyncedAt || apiCount ? `${apiCount} API quotes saved. Use Sync API or auto-refresh to update prices.` : state.example ? 'Example market data. Add or import your own prices, or connect a quote feed.' : 'Workspace saved in this browser. Add prices, import records, or connect a quote feed.';
+    $('#ev-notice').textContent = state.apiSyncedAt || apiCount ? `${apiCount} API quotes saved. Use Sync API or auto-refresh to update prices.` : 'Workspace saved in this browser. Add prices, import records, or connect a quote feed.';
     return true;
   } catch {
     $('#ev-notice').textContent = 'Browser storage is unavailable. Export your work before leaving this page.';
@@ -223,7 +207,6 @@ function normalizeApiQuote(raw) {
   };
 }
 async function syncLocalApi() {
-  if (EV_DEMO_MODE) throw Object.assign(Error('Permanent demo mode is enabled. Demo prices remain on every tool.'), { retryable:false });
   const workspace = state;
   const response = await fetch('/api/ev/quotes', { cache: 'no-store', signal: AbortSignal.timeout(15_000) });
   let payload;
@@ -247,7 +230,7 @@ async function syncLocalApi() {
   if (feed.size !== records.length) throw invalid('The quote response contains duplicate IDs. Each selection and sportsbook needs a unique quote ID.');
   if (state !== workspace) throw invalid('The workspace changed during sync. Try again after your import.');
   const existing = new Map(state.quotes.filter(quote => quote.source === 'local-api').map(quote => [quote.id, quote]));
-  state.quotes = [...state.quotes.filter(quote => !['local-api','example'].includes(quote.source) && !feed.has(quote.id)), ...feed.values()];
+  state.quotes = [...state.quotes.filter(quote => quote.source !== 'local-api' && !feed.has(quote.id)), ...feed.values()];
   const retainedIds = new Set(state.quotes.map(quote => quote.id));
   state.history = state.history.filter(item => retainedIds.has(item.quoteId));
   for (const quote of feed.values()) {
@@ -351,29 +334,8 @@ function renderDesignFilters() {
 }
 let inlineDetail=null;
 const evReferenceModels = new Map();
-const previewSelections = new Set();
 function render() {
-  if (EV_DEMO_MODE) {
-    refreshDemoObservations(state);
-    const key = `${active}:${sport}`;
-    if (!previewSelections.has(key)) {
-      previewSelections.add(key);
-      if (active === 'parlay' && !parlayIds.length && !buildersRestored) parlayIds = state.quotes.filter(q => (!sport || q.sport === sport) && !q.live && q.book === 'DraftKings' && q.type === 'prop' && q.side === 'Over').slice(0,3).map(q => q.id);
-      if (active === 'slip' && !fantasyIds.length && !buildersRestored) {
-        fantasyApp = 'PrizePicks';
-        fantasyIds = state.dfs.filter(q => (!sport || q.sport === sport) && q.app === fantasyApp && q.side === 'Over').slice(0,3).map(q => q.id);
-      }
-    }
-  }
   feedControls?.update();
-  if (!['arb-pre','arb-live'].includes(active) && $('#ev-notice').dataset.arbDemo) {
-    delete $('#ev-notice').dataset.arbDemo;
-    $('#ev-notice').textContent = state.example ? 'Example market data. Add or import your own prices; no live feed is connected.' : 'Manual workspace saved in this browser. No market feed is connected.';
-  }
-  if (active !== 'odds' && $('#ev-notice').dataset.oddsDemo) {
-    delete $('#ev-notice').dataset.oddsDemo;
-    $('#ev-notice').textContent = state.example ? 'Example market data. Add or import your own prices; no live feed is connected.' : 'Manual workspace saved in this browser. No market feed is connected.';
-  }
   if (active === 'tracker') { location.replace(legacyBetTrackerUrl(new URL(location.href)) || betTrackerUrl(sport.toLowerCase())); return; }
   renderNav();
   const titles = { odds:'Odds Screen', 'ev-pre':'Positive EV', 'ev-live':'Live Positive EV', fantasy:'DFS Props', 'arb-pre':'Arbitrage', 'arb-live':'Live Arbitrage', sharp:'Smart Money', tracker:'Bet Tracker' };
@@ -427,7 +389,7 @@ function render() {
   const usesKelly = ['ev-pre','ev-live'].includes(active);
   const usesFlat = ['arb-pre','arb-live'].includes(active);
   $('#ev-kelly').value = usesKelly ? kelly : flatMultiplier.toFixed(2);
-  const dataKind = (active === 'odds' && oddsDemoActive()) || (usesFlat && !hasApiSnapshot() && isArbitrageDemo(state.quotes)) ? 'Demo mode' : active === 'fantasy' ? (state.dfs.length ? 'Entered props' : 'Design preview') : hasApiSnapshot() ? 'API snapshot' : state.example ? 'Example prices' : 'Manual prices';
+  const dataKind = active === 'fantasy' ? (state.dfs.length ? 'Entered props' : 'No props yet') : hasApiSnapshot() ? 'API snapshot' : state.quotes.length ? 'Manual prices' : 'No prices yet';
   $('#ev-data-kind').textContent = toolDataLabel(active, state, dataKind);
   $('#ev-top-badge').textContent = toolDataLabel(active, state, dataKind);
   $('#ev-multiplier-label').textContent = usesKelly ? 'Kelly multiplier' : 'Flat multiplier';
@@ -442,13 +404,12 @@ function render() {
   $('#ev-title').textContent = pageTitle;
   $('#ev-description').textContent = toolMeta[active][3];
   const viewActions = {
-    odds: oddsDemoActive() ? '' : state.example ? button('Remove examples', 'data-remove-examples') : button('Load examples', 'data-load-examples'), 'ev-pre': state.example ? button('Remove examples', 'data-remove-examples') : button('Load examples', 'data-load-examples'), 'ev-live': state.example && !EV_DEMO_MODE ? button('Replay live examples', 'data-replay-live') : '',
-    'arb-pre': '', 'arb-live': state.example && !EV_DEMO_MODE ? button('Replay live examples', 'data-replay-live') : '', middles: action('Add price', 'quote') + (state.example && !EV_DEMO_MODE ? button('Replay live examples', 'data-replay-live') : ''), holds: action('Add price', 'quote'),
-    sharp: state.example && !EV_DEMO_MODE ? button('Replay live examples', 'data-replay-live') : '', fantasy: '', optimizer: action('Add DFS prop', 'dfs'), slip: action('Add DFS prop', 'dfs'),
+    odds: '', 'ev-pre': '', 'ev-live': '',
+    'arb-pre': '', 'arb-live': '', middles: action('Add price', 'quote'), holds: action('Add price', 'quote'),
+    sharp: '', fantasy: '', optimizer: action('Add DFS prop', 'dfs'), slip: action('Add DFS prop', 'dfs'),
     'fantasy-alerts': action('New alert', 'alert', 'data-kind="fantasy-new"'), prediction: action('Add contract', 'contract'), tracker: action('Add bet', 'bet'), trends: action('Add result', 'result'), 'line-alerts': action('New alert', 'alert')
   };
   $('#ev-view-actions').innerHTML = viewActions[active] || '';
-  if (EV_DEMO_MODE) $('#ev-view-actions').querySelectorAll('[data-remove-examples],[data-load-examples],[data-replay-live]').forEach(button => button.remove());
   const positiveScreen = ['ev-pre','ev-live'].includes(active);
   document.body.classList.toggle('ev-detail-mode', positiveScreen && Boolean(detailQuoteId));
   $('#ev-menu-actions').append($('.ev-header-actions'));
@@ -545,10 +506,7 @@ function layoutSelectedBooks() {
 }
 
 function renderOdds() {
-  const demo = oddsDemoActive();
-  if (demo) {$('#ev-notice').dataset.oddsDemo = 'true';$('#ev-notice').textContent = 'Demo mode is on for development. Matchups, rosters, prices and line movement are simulated.';}
-  else delete $('#ev-notice').dataset.oddsDemo;
-  return oddsScreen.render({sport,demo});
+  return oddsScreen.render({sport});
 }
 
 function renderEvExpanded(quote, fair, ev, asCard = false) {
@@ -581,7 +539,7 @@ function renderEvExpanded(quote, fair, ev, asCard = false) {
       <div><strong>${money(stakeEstimate)}</strong><span>Rec. bet</span></div>
       <div class="ev-opportunity-ev"><strong>${(ev * 100).toFixed(2)}%</strong><span>Estimated EV</span></div>
     </div>
-    ${open ? `<div class="ev-opportunity-actions"><span>Observed ${age(quote.ts)} · ${quote.source === 'local-api' ? 'Local API' : quote.source === 'example' ? 'Example' : 'Manual'} price</span><div><button type="button" data-edit="quote" data-id="${esc(quote.id)}">Edit price</button>${quote.live ? '' : `<button type="button" data-parlay="${esc(quote.id)}">Add to parlay</button>`}</div></div>
+    ${open ? `<div class="ev-opportunity-actions"><span>Observed ${age(quote.ts)} · ${quote.source === 'local-api' ? 'Local API' : 'Manual'} price</span><div><button type="button" data-edit="quote" data-id="${esc(quote.id)}">Edit price</button>${quote.live ? '' : `<button type="button" data-parlay="${esc(quote.id)}">Add to parlay</button>`}</div></div>
     <div class="ev-price-matrix-scroller"><table class="ev-price-matrix"><thead><tr><th scope="col">Selection</th><th scope="col">Average</th><th scope="col">Best</th>${books.map(book => `<th scope="col">${brandMark(book)}<span>${esc(book)}</span></th>`).join('')}</tr></thead><tbody>${matrix}</tbody></table></div>
     <p class="ev-opportunity-note">Prices shown are entered records for this market. Confirm availability, limits and freshness independently.</p>` : ''}
   </article>${asCard ? '' : '</td></tr>'}`;
@@ -599,7 +557,7 @@ function renderEv(live) {
   rows.sort((a,b)=>Number(Boolean(state.suite?.flags?.[b.quote.id]?.pin))-Number(Boolean(state.suite?.flags?.[a.quote.id]?.pin)));
   if (preserveLiveOrder) preserveReadingOrder(rows, [...document.querySelectorAll('.evb-row[data-wager-id]')].map(card=>card.dataset.wagerId), row=>row.quote.id);
   const emptyTitle = !pool.length ? 'No prices for this sport yet' : 'No positive EV selections match these filters';
-  const emptyBody = !pool.length ? 'Add or import prices to compare. You can also load clearly labeled examples.' : 'Add complete opposing prices from at least two books, or clear a filter. Use Sync API to refresh saved prices.';
+  const emptyBody = !pool.length ? 'Prices appear here once the odds feed syncs. You can also add or import your own prices.' : 'Add complete opposing prices from at least two books, or clear a filter. Use Sync API to refresh saved prices.';
   const shown = rows.slice(0,evVisibleCount);
   const books = new Set(rows.map(row => row.quote.book)).size;
   const summary = `<div class="evb-summary"><p><strong>${rows.length} positive ${rows.length === 1 ? 'selection' : 'selections'}</strong> from ${all.length} comparable prices</p>${rows.length ? `<dl><div><dt>Top edge</dt><dd class="is-positive">${(Math.max(...rows.map(row => row.ev)) * 100).toFixed(2)}%</dd></div><div><dt>Books</dt><dd>${books}</dd></div><div><dt>Bankroll</dt><dd>${money(bankroll)}</dd></div></dl>` : ''}</div>`;
@@ -638,7 +596,7 @@ function evReferenceModel(quote, fair, ev) {
     market:quote.displayMarket || (quote.player ? quote.market.replace(quote.player,'').trim() : quote.market),
     selection:`${quote.player ? quote.player+' ' : ''}${quote.side}${quote.line !== '' && quote.line != null ? ' '+quote.line : ''}`,
     event:quote.displayEvent || quote.event,
-    time:`${quote.source === 'example' || quote.demo ? 'Demo · ' : ''}${quote.live ? 'Live' : 'Pregame'} · Observed ${age(quote.ts)}`,
+    time:`${quote.live ? 'Live' : 'Pregame'} · Observed ${age(quote.ts)}`,
     fairOdds:Number.isFinite(fair)?oddsLabel(probabilityToAmerican(fair)):'—',fairMark:'',fairLabel:'Fair value · consensus',
     probability:percent(fair),probabilityLabel:'True probability',
     metrics:[{label:quote.book,value:oddsLabel(quote.odds)},{label:'Expected value',value:Number.isFinite(ev)?`${(ev*100).toFixed(2)}%`:'—'},{label:'Rec. bet',value:money(fractionalKellyStake(bankroll,kelly,fair,quote.odds))},...(Number(quote.liquidity)>0?[{label:'Available',value:money(Number(quote.liquidity))}]:[])],
@@ -683,7 +641,7 @@ function bindEvReferenceCards() {
 }
 
 function comparisonForQuote(quote) {
-  const source = active === 'odds' ? oddsQuotes() : active === 'sharp' && !state.quotes.some(item => item.id === quote.id) ? smartMoneyDemoQuotes() : quoteSource();
+  const source = quoteSource();
   const peers = groups(source).find(group => group.some(item => item.id === quote.id)) || [quote];
   const fair = consensusPrice(quote, source, suite.settings()).probability;
   const books = [...new Set(peers.map(item => item.book))].filter(bookAvailable).sort((a,b) => {
@@ -709,23 +667,23 @@ function comparisonForQuote(quote) {
     const line=available[0]?.line;
     return {side,selection:`${side}${line!==''&&line!=null?' '+fmtLine(line):''}`,average:Number.isFinite(average)?oddsLabel(average):'—',best:best?oddsLabel(best.odds):'—',bestMark:best?brandMark(best.book):'',prices:prices.map(item=>({raw:item?Number(item.odds):NaN,value:item?oddsLabel(item.odds):'—',best:!!item&&item.id===best?.id,liquidity:item?.exchange&&Number(item.liquidity)>0?money(Number(item.liquidity)):''}))};
   });
-  const historyBySide=Object.fromEntries(sideNames.map(side=>{const current=books.map(book=>latest(book,side)).filter(Boolean),ids=new Set(current.map(item=>item.id)),seen=new Set();return [side,[...state.history.filter(item=>ids.has(item.quoteId)),...current.flatMap(oddsDemoHistory),...current].filter(item=>{const key=[item.book,item.ts,item.odds,item.line].join('|');if(seen.has(key))return false;seen.add(key);return true;})];}));
+  const historyBySide=Object.fromEntries(sideNames.map(side=>{const current=books.map(book=>latest(book,side)).filter(Boolean),ids=new Set(current.map(item=>item.id)),seen=new Set();return [side,[...state.history.filter(item=>ids.has(item.quoteId)),...current].filter(item=>{const key=[item.book,item.ts,item.odds,item.line].join('|');if(seen.has(key))return false;seen.add(key);return true;})];}));
   const priceHistory=historyBySide[quote.side];
   const offeredPair=sideNames.map(side=>latest(quote.book,side));
   const vig=offeredPair.length>=2&&offeredPair.every(Boolean)?(offeredPair.reduce((sum,item)=>sum+implied(item.odds),0)-1)*100:NaN;
   const recommended=fractionalKellyStake(bankroll,kelly,fair,quote.odds);
-  return {id:quote.id,market:quote.market,sport:quote.sport,event:quote.event,time:quote.demo ? `${quote.displayTime} · Demo` : quote.startTime || `${quote.live ? fresh(quote)?'Live':'Stale live' : 'Pregame'} · ${age(quote.ts)}`,selection,
+  return {id:quote.id,market:quote.market,sport:quote.sport,event:quote.event,time:quote.startTime || `${quote.live ? fresh(quote)?'Live':'Stale live' : 'Pregame'} · ${age(quote.ts)}`,selection,
     fairOdds:Number.isFinite(fair) ? oddsLabel(probabilityToAmerican(fair)) : null,fairMark:brandMark(quote.book),
     book:quote.book,rawLine:quote.line,side:quote.side,rawOdds:Number(quote.odds),offerOdds:oddsLabel(quote.odds),rawFair:fair,rawStake:recommended,recommended:money(recommended),ev:Number.isFinite(fair)?(expectedReturn(fair,quote.odds)*100).toFixed(2)+'%':'—',vig:Number.isFinite(vig)?vig.toFixed(1)+'%':null,
     probability:Number.isFinite(fair) ? percent(fair) : null,probabilityLabel:'Est. probability',
-    context:`${quote.demo ? 'Example demo' : quote.source === 'example' ? 'Example' : 'Saved'} prices · ${books.length} ${books.length === 1 ? 'book' : 'books'} · Observed ${age(quote.ts)}`,
-    note:`${quote.demo ? 'Demo matchup, roster, prices and price history. ' : ''}Fair value uses your saved reference-book, weighting, and ${suite.settings().devigMethod} no-vig settings. Missing values mean there is not enough qualifying data. Detailed analysis shows each reference and any estimated threshold.`,
+    context:`${quote.source === 'local-api' ? 'Feed' : 'Saved'} prices · ${books.length} ${books.length === 1 ? 'book' : 'books'} · Observed ${age(quote.ts)}`,
+    note:`Fair value uses your saved reference-book, weighting, and ${suite.settings().devigMethod} no-vig settings. Missing values mean there is not enough qualifying data. Detailed analysis shows each reference and any estimated threshold.`,
     columns,rows,historyBySide,history:priceHistory,canSwap:!!opposite,swapId:peers.find(item=>item.side===opposite)?.id,canEdit,canTrack:canEdit};
 }
 // Line History modal for any [data-line-history="<quote id>"] button.
 function openQuoteLineHistory(id, trigger) {
   let quote = null;
-  for (const list of [quoteSource, oddsQuotes, smartMoneyDemoQuotes]) { quote = list().find(item => item.id === id); if (quote) break; }
+  for (const list of [quoteSource]) { quote = list().find(item => item.id === id); if (quote) break; }
   if (!quote) return;
   const model = comparisonForQuote(quote);
   const market = quote.displayMarket || (quote.player ? String(quote.market).replace(quote.player, '').trim() : quote.market);
@@ -754,7 +712,7 @@ function showBetComparison(id, kind = 'quote', options = {}) {
     if (!bet) return;
     model = {market:'Tracked bet',sport:bet.sport,event:bet.selection,time:bet.date,selection:bet.selection,fairLabel:'Booked odds',fairOdds:oddsLabel(bet.odds),probabilityLabel:'Est. probability',context:`${bet.result} · ${money(Number(bet.stake))} stake`,note:'Only the booked price is available for this tracked bet. Fair probability and other bookmaker prices were not recorded.',columns:[{name:bet.book || 'Sportsbook',mark:brandMark(bet.book || 'Sportsbook'),line:'—',odds:oddsLabel(bet.odds)}],actions:[{label:'Edit bet',icon:'✎',attrs:`data-compare-edit-bet="${esc(bet.id)}"`}]};
   } else {
-    const source = active === 'odds' ? oddsQuotes() : active === 'sharp' && !hasApiSnapshot() ? [...state.quotes,...smartMoneyDemoQuotes()] : quoteSource();
+    const source = quoteSource();
     const quote = source.find(item => item.id === id);
     if (!quote) return;
     model = {...comparisonForQuote(quote),
@@ -1028,14 +986,6 @@ function renderHoldBoard(rows, ctx, empty) {
 
 function renderArb(live) {
   const settings = suite.settings();
-  const preview = EV_DEMO_MODE || (!hasApiSnapshot() && isArbitrageDemo(state.quotes));
-  if (preview) {
-    $('#ev-notice').dataset.arbDemo = 'true';
-    $('#ev-notice').textContent = 'Demo prices are simulated. Your saved workspace is unchanged.';
-  } else if ($('#ev-notice').dataset.arbDemo) {
-    delete $('#ev-notice').dataset.arbDemo;
-    $('#ev-notice').textContent = 'Manual workspace saved in this browser. No market feed is connected.';
-  }
   const budget = Math.max(.01, Number(bankroll) || 5000);
   const firstStake = Math.max(.01, Number(stake) * flatMultiplier || 100);
   const minimumMargin = Math.max(Number(settings.minArbPercent || 0) / 100, Number(designFilters.minEdge) || 0);
@@ -1058,8 +1008,7 @@ function renderArb(live) {
     opportunities.sort((left,right) => Number(pinned(right.legs)) - Number(pinned(left.legs)));
   }
   const count = opportunities.length;
-  const demoIntro = preview ? `<div class="ev-arb-demo-note"><div><strong>Demo opportunities <span>${count} ${count === 1 ? 'match' : 'matches'}</span></strong><p>Simulated matchups and prices. Try the filters or open a calculator.</p></div>${button('Add your prices', `data-add="quote" data-live="${live}"`)}</div>` : '';
-  return `<div class="ev-stack ev-arb-screen evb-board pair-board arb-board">${demoIntro}${count ? renderArbBoard(opportunities, pairContext({live, firstStake, budget})) : `<div class="ev-empty ev-arb-empty"><strong>No arbitrage matches</strong><p>${preview || state.quotes.length ? 'No opposing prices match the selected books, pricing settings, and stake limits. Adjust a filter or add another market price.' : 'Add both sides of a market at different sportsbooks to compare prices and calculate the stake split.'}</p><div class="ev-arb-empty-actions">${button('Add price', `data-add="quote" data-live="${live}"`)}${preview || state.quotes.length ? button('Clear filters', 'data-arb-clear') : ''}</div></div>`}<p class="ev-caption ev-method-note">Rounded stakes use supplied limits, commissions, and boosts. Missing capacity is labeled; calculated outcomes do not confirm availability at a sportsbook. Open a row to compare every book.</p></div>`;
+  return `<div class="ev-stack ev-arb-screen evb-board pair-board arb-board">${count ? renderArbBoard(opportunities, pairContext({live, firstStake, budget})) : `<div class="ev-empty ev-arb-empty"><strong>No arbitrage matches</strong><p>${state.quotes.length ? 'No opposing prices match the selected books, pricing settings, and stake limits. Adjust a filter or add another market price.' : 'Add both sides of a market at different sportsbooks to compare prices and calculate the stake split.'}</p><div class="ev-arb-empty-actions">${button('Add price', `data-add="quote" data-live="${live}"`)}${state.quotes.length ? button('Clear filters', 'data-arb-clear') : ''}</div></div>`}<p class="ev-caption ev-method-note">Rounded stakes use supplied limits, commissions, and boosts. Missing capacity is labeled; calculated outcomes do not confirm availability at a sportsbook. Open a row to compare every book.</p></div>`;
 }
 
 function renderMiddles() {
@@ -1144,9 +1093,7 @@ function renderSharp() {
   const threshold = Number(localStorage.getItem('sportslab-ev-sharp-min') || 1000);
   const cash = value => new Intl.NumberFormat('en-US', { style:'currency', currency:'USD', maximumFractionDigits:0 }).format(value);
   const shortCash = value => Number(value) >= 1000 ? `$${(Number(value)/1000).toFixed(1)}k` : cash(value);
-  const enteredQuotes = state.quotes.filter(q => q.source !== 'example');
-  const preview = EV_DEMO_MODE || (!hasApiSnapshot() && enteredQuotes.length === 0);
-  const source = EV_DEMO_MODE ? state.quotes : preview ? smartMoneyDemoQuotes() : enteredQuotes;
+  const source = state.quotes;
   const filtered = source.filter(q => !sport || q.sport === sport);
   const matches = sharpMatches(filtered.filter(q => !q.depthOnly), threshold).filter(x => bookAvailable(x.sportsbook.book) && (!marketType || x.exchange.type === marketType) && (!bookmaker || [x.exchange.book,x.sportsbook.book].includes(bookmaker)) && (!search || [x.exchange.event,x.exchange.market,x.exchange.side,x.exchange.book,x.sportsbook.side,x.sportsbook.book,x.exchange.sport].some(value => filterText(value))) && suite.quoteVisible(x.exchange));
   const eventName = q => q.displayEvent || q.event;
@@ -1186,7 +1133,7 @@ function renderSharp() {
       <tr class="sm-agg"><th scope="row">Best</th>${sides.map(side => side.best ? `<td class="is-best"><span class="sm-cell-book">${bookLogo(side.best.book, 16)}${esc(oddsLabel(side.best.odds))}</span></td>` : '<td class="is-empty">—</td>').join('')}</tr>
       <tr class="sm-agg sm-exchange-row"><th scope="row">Exchange</th>${sides.map(side => side.exchangePrice ? `<td>${esc(oddsLabel(side.exchangePrice.odds))}${Number(side.exchangePrice.liquidity) > 0 ? `<small class="sm-chip">${shortCash(side.exchangePrice.liquidity)}</small>` : ''}</td>` : '<td class="is-empty">—</td>').join('')}</tr>
       ${bookRows}</tbody></table></div>` : '<p class="sm-empty-note">No opposing sportsbook prices entered.</p>';
-    const depth = `<section class="sm-depth" aria-label="Exchange market depth"><header><strong>Exchange depth</strong><span>${esc(selectionText(q))}</span></header>${depthRows.length ? `<div class="sm-ladder" role="img" aria-label="Exchange depth for ${esc(selectionText(q))}. ${depthRows.map(item => `${esc(item.book)} ${oddsLabel(item.odds)}, ${cash(item.liquidity)} available`).join('; ')}">${depthRows.map(item => `<div class="sm-depth-row${item.id === q.id ? ' is-leading' : ''}"><span class="sm-depth-odds">${esc(oddsLabel(item.odds))}</span><span class="sm-depth-track"><i style="width:${Math.max(4,Math.round(Number(item.liquidity)/maxDepth*100))}%"></i><b>${cash(item.liquidity)}</b></span><span class="sm-depth-source" title="${esc(item.book)}">${bookLogo(item.book, 18)}</span></div>`).join('')}</div>` : '<p class="sm-empty-note">No exchange depth entered.</p>'}<footer>${depthRows.length} price ${depthRows.length === 1 ? 'level' : 'levels'} · ${preview ? 'Demo prices' : `Observed ${age(q.ts)}`}</footer></section>`;
+    const depth = `<section class="sm-depth" aria-label="Exchange market depth"><header><strong>Exchange depth</strong><span>${esc(selectionText(q))}</span></header>${depthRows.length ? `<div class="sm-ladder" role="img" aria-label="Exchange depth for ${esc(selectionText(q))}. ${depthRows.map(item => `${esc(item.book)} ${oddsLabel(item.odds)}, ${cash(item.liquidity)} available`).join('; ')}">${depthRows.map(item => `<div class="sm-depth-row${item.id === q.id ? ' is-leading' : ''}"><span class="sm-depth-odds">${esc(oddsLabel(item.odds))}</span><span class="sm-depth-track"><i style="width:${Math.max(4,Math.round(Number(item.liquidity)/maxDepth*100))}%"></i><b>${cash(item.liquidity)}</b></span><span class="sm-depth-source" title="${esc(item.book)}">${bookLogo(item.book, 18)}</span></div>`).join('')}</div>` : '<p class="sm-empty-note">No exchange depth entered.</p>'}<footer>${depthRows.length} price ${depthRows.length === 1 ? 'level' : 'levels'} · Observed ${age(q.ts)}</footer></section>`;
     return `<aside class="sm-panel" id="sm-panel" style="--o:${order}" aria-label="Selected opportunity: ${esc(selectionText(offer))} at ${esc(offer.book)}">
       <header class="sm-panel-head"><div class="sm-panel-liquidity"><strong>${shortCash(x.liquidity)}</strong><span>Opp. Liquidity${q.limit ? ` · ${cash(q.limit)} limit` : ''}</span></div><button type="button" class="sm-trend" data-line-history="${esc(offer.id)}" aria-haspopup="dialog" aria-label="Line history for ${esc(selectionText(offer))} at ${esc(offer.book)}" title="Line history">${boardIcon('history', 18)}</button></header>
       <div class="sm-panel-event"><strong>${esc(eventName(q))}</strong><span>${esc(titleCase(market))} · ${esc(meta(q))}</span></div>
@@ -1213,13 +1160,13 @@ function renderSharp() {
     </button>`;
   };
   const total = matches.reduce((sum, x) => sum + x.liquidity, 0);
-  const summary = `<div class="evb-summary"><p><strong>${matches.length} ${matches.length === 1 ? 'opportunity' : 'opportunities'}</strong> ranked by ${{event:'event',odds:'sportsbook odds'}[sharpSort] || 'opposing liquidity'} · ${preview ? 'Demo prices' : 'Saved prices'}</p>${matches.length ? `<dl><div><dt>Top liquidity</dt><dd class="is-positive">${cash(maxLiquidity)}</dd></div><div><dt>Total</dt><dd>${shortCash(total)}</dd></div><div><dt>Books</dt><dd>${new Set(matches.map(x => x.sportsbook.book)).size}</dd></div></dl>` : ''}</div>`;
+  const summary = `<div class="evb-summary"><p><strong>${matches.length} ${matches.length === 1 ? 'opportunity' : 'opportunities'}</strong> ranked by ${{event:'event',odds:'sportsbook odds'}[sharpSort] || 'opposing liquidity'} · ${hasApiSnapshot() ? 'Feed prices' : 'Saved prices'}</p>${matches.length ? `<dl><div><dt>Top liquidity</dt><dd class="is-positive">${cash(maxLiquidity)}</dd></div><div><dt>Total</dt><dd>${shortCash(total)}</dd></div><div><dt>Books</dt><dd>${new Set(matches.map(x => x.sportsbook.book)).size}</dd></div></dl>` : ''}</div>`;
   const split = matches.length ? `<div class="sm-split"><div class="sm-list" role="listbox" aria-label="Smart Money opportunities" aria-orientation="vertical">${matches.map(item).join('')}</div>${panel(selected, matches.indexOf(selected) * 2 + 1)}</div>` : '';
-  return `<div class="sharp-workspace evb-board"><div class="sharp-page-bar"><div class="sharp-page-title"><h1>Smart Money</h1><span class="sharp-data-badge">${preview ? 'Demo data' : 'Saved prices'}</span></div><div class="sharp-toolbar"><label class="sharp-search">${icon('search')}<input id="sharp-search" type="search" placeholder="Search markets" aria-label="Search Smart Money markets" value="${esc(search)}" autocomplete="off"></label><button type="button" data-sharp-filters aria-expanded="${sharpFiltersOpen}">${icon('filter')}<span>Filters</span></button><button type="button" data-sharp-refresh title="Refresh comparison" aria-label="Refresh comparison">${icon('refresh')}</button></div></div>
+  return `<div class="sharp-workspace evb-board"><div class="sharp-page-bar"><div class="sharp-page-title"><h1>Smart Money</h1><span class="sharp-data-badge">${hasApiSnapshot() ? 'Feed prices' : 'Saved prices'}</span></div><div class="sharp-toolbar"><label class="sharp-search">${icon('search')}<input id="sharp-search" type="search" placeholder="Search markets" aria-label="Search Smart Money markets" value="${esc(search)}" autocomplete="off"></label><button type="button" data-sharp-filters aria-expanded="${sharpFiltersOpen}">${icon('filter')}<span>Filters</span></button><button type="button" data-sharp-refresh title="Refresh comparison" aria-label="Refresh comparison">${icon('refresh')}</button></div></div>
     <div class="sharp-filter-tray" ${sharpFiltersOpen ? '' : 'hidden'}><label>League<select id="sharp-sport"><option value="">All leagues</option>${['NFL','MLB','NBA','WNBA','NHL','Soccer'].map(value => `<option value="${value}" ${sport === value ? 'selected' : ''}>${value}</option>`).join('')}</select></label><label>Market<select id="sharp-market"><option value="">All markets</option>${[['moneyline','Moneyline'],['spread','Spreads'],['total','Totals'],['prop','Player props'],['alternate','Alternates'],['future','Futures']].map(([value,label]) => `<option value="${value}" ${marketType === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><label class="sharp-min-field"><span class="sharp-filter-label">Min liquidity</span><span class="sharp-currency">$</span><input id="sharp-min" type="number" min="0" step="100" value="${threshold}"></label><button type="button" data-sharp-clear>Clear filters</button></div>
     <div class="evb-results-bar">${summary}${matches.length > 1 ? sortControl : ''}</div>
-    ${matches.length ? split : `<div class="sharp-list-empty"><strong>No matching opportunities</strong><p>Try another league, market, or liquidity filter.</p><button type="button" data-sharp-clear>Clear filters</button></div>`}
-    <p class="sharp-method-note">${preview ? 'Sample matchups, schedules and prices for preview. ' : ''}Liquidity is the amount available at an exchange price; it does not verify betting activity. Select an opportunity to compare exchange depth and every sportsbook.</p></div>`;
+    ${matches.length ? split : (source.length ? `<div class="sharp-list-empty"><strong>No matching opportunities</strong><p>Try another league, market, or liquidity filter.</p><button type="button" data-sharp-clear>Clear filters</button></div>` : `<div class="sharp-list-empty"><strong>No exchange prices yet</strong><p>Smart Money compares exchange liquidity with sportsbook prices. Opportunities appear once the odds feed syncs.</p></div>`)}
+    <p class="sharp-method-note">Liquidity is the amount available at an exchange price; it does not verify betting activity. Select an opportunity to compare exchange depth and every sportsbook.</p></div>`;
 }
 
 // Select one Smart Money opportunity. The chosen item stays fixed on screen while the detail panel
@@ -1268,7 +1215,7 @@ function renderOptimizer() {
     label:'Ranked two-pick combinations',
     summary:{text:`<strong>${combos.length} eligible ${combos.length===1?'combination':'combinations'}</strong> ranked by projected EV`,pills:[['Best projected EV',signed(combos[0].ev),combos[0].ev>0],['Platforms',String(new Set(rows.map(x=>x.app)).size)]]},
     columns:{metric:'Proj. EV',event:'Events',market:'Market',bet:'Picks & app',odds:'Payout',prob:'Both hit'},
-    rows:combos.slice(0,state.demoPermanent ? 100 : combos.length).map(x=>({
+    rows:combos.map(x=>({
       id:'optimizer-'+x.a.id+'-'+x.b.id,
       metric:{value:signed(x.ev),bar:Math.max(0,x.ev),negative:x.ev<0,tier:x.ev>=.1?'high':x.ev>=.04?'mid':'low'},
       event:{time:x.a.startLabel||'',title:x.a.event||'Event not entered',note:x.b.event&&x.b.event!==x.a.event?x.b.event:'',sport:[...new Set([x.a.sport,x.b.sport].filter(Boolean))].join(' / ')},
@@ -1451,7 +1398,7 @@ function saveForm(event) {
   const item = parseForm();
   if (!item) return;
   const {type,id} = editing, key = collection[type], previous = id ? state[key].find(x => x.id === id) : null;
-  const record = { ...previous, ...item, id: id || uid(), source:EV_DEMO_MODE ? 'example' : 'manual', ...(EV_DEMO_MODE ? {demo:true} : {}) };
+  const record = { ...previous, ...item, id: id || uid(), source:'manual' };
   if (type === 'dfs' || type === 'contract') record.ts = now();
   if (type === 'alert') {
     record.enabled = previous?.enabled ?? true;
@@ -1611,9 +1558,6 @@ $('#ev-search').addEventListener('input', event => { search = event.target.value
 $('#ev-add-quote').addEventListener('click', () => active === 'fantasy' ? openForm('dfs') : openForm('quote', null, active === 'sharp' ? { exchange:true } : ['ev-live','arb-live'].includes(active) ? { live:true } : {}));
 $('#ev-sync-api').addEventListener('click', () => { void feedControls.refresh(); });
 $('#ev-view-actions').addEventListener('click', event => { const target = event.target.closest('[data-add]'); if (target) openForm(target.dataset.add, null, { live:target.dataset.live === 'true', exchange:target.dataset.exchange === 'true', kind:target.dataset.kind || 'price' }); });
-$('#ev-view-actions').addEventListener('click', event => { if (!event.target.closest('[data-remove-examples]')) return; for (const key of arrays) state[key] = state[key].filter(x => x.source !== 'example'); state.example = false; parlayIds = []; fantasyIds = []; commit(); });
-$('#ev-view-actions').addEventListener('click', event => { if (!event.target.closest('[data-load-examples]')) return; const demo = exampleWorkspace(); for (const key of arrays) state[key].push(...demo[key]); state.paytables = { ...demo.paytables, ...state.paytables }; state.example = true; commit(); });
-$('#ev-view-actions').addEventListener('click', event => { if (!event.target.closest('[data-replay-live]')) return; for (const quote of state.quotes.filter(q => q.live && q.source === 'example')) { quote.ts = now(); snapshotQuote(quote); } commit(); });
 document.addEventListener('click', event => {
   document.querySelectorAll('.wager-more[open]').forEach(menu => {
     if (!menu.contains(event.target)) menu.open = false;
@@ -1658,7 +1602,7 @@ $('#ev-view').addEventListener('click', event => {
   if (target.dataset.sharpSort) { sharpSort = target.dataset.sharpSort; return render(); }
   if (target.dataset.sharpAnalysis) { const actions = target.closest('.sm-panel-actions'); if (!actions) return; showBetComparison(target.dataset.sharpAnalysis, 'quote', {anchor:actions}); return actions.nextElementSibling?.matches('.bet-inline-mount') && actions.nextElementSibling.scrollIntoView({block:'nearest'}); }
   if (target.hasAttribute('data-sharp-filters')) { sharpFiltersOpen = !sharpFiltersOpen; return render(); }
-  if (target.hasAttribute('data-sharp-refresh')) { render(); $('#ev-notice').textContent = state.quotes.some(q => q.source !== 'example') ? 'Comparison refreshed from saved prices.' : 'Demo comparison refreshed.'; return; }
+  if (target.hasAttribute('data-sharp-refresh')) { render(); $('#ev-notice').textContent = state.quotes.length ? 'Comparison refreshed from saved prices.' : 'Demo comparison refreshed.'; return; }
   if (target.hasAttribute('data-sharp-clear')) { search = ''; marketType = ''; bookmaker = ''; sport = ''; history.replaceState(history.state, '', `${location.pathname}?sport=all${location.hash}`); localStorage.setItem('sportslab-ev-sharp-min','0'); return render(); }
   if (target.dataset.sort) { evSort = target.dataset.sort; return render(); }
   if (target.dataset.evbToggle) return toggleEvBoardRow(target.dataset.evbToggle);
@@ -1790,7 +1734,7 @@ $('#ev-import-apply').addEventListener('click', async () => {
     validateWorkspace(data);
     suite.validateImport(data);
     suite.importLedger(data);
-    feedControls.pause(); state = EV_DEMO_MODE ? normalize(permanentDemoWorkspace({ ...data, demoRevision:1, demoDay:new Date().toISOString().slice(0,10) })) : normalize(data); parlayIds=Array.isArray(state.suite?.builderIds)?state.suite.builderIds.filter(id=>state.quotes.some(q=>q.id===id)):[];buildersRestored=true;saveBuilderSession();evaluateAlerts(); persist(); $('#ev-import-dialog').close(); render();
+    feedControls.pause(); purgeDemoData(data); state = normalize(data); parlayIds=Array.isArray(state.suite?.builderIds)?state.suite.builderIds.filter(id=>state.quotes.some(q=>q.id===id)):[];buildersRestored=true;saveBuilderSession();evaluateAlerts(); persist(); $('#ev-import-dialog').close(); render();
   } catch (error) { $('#ev-import-error').textContent = error.message; }
 });
 window.addEventListener('hashchange', () => { const key = location.hash.slice(1); if (toolMeta[key]) { if (key !== active) closeToolDialogs(); active = key; bookmaker = ''; marketType = ''; showAllBooks = false; bookMenuOpen = false; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; render(); } });
@@ -1798,7 +1742,6 @@ let displayedQuoteRevision = '';
 document.addEventListener('ev-tool-change', () => { displayedQuoteRevision = quoteRevision(state.quotes); });
 setInterval(() => {
   if (document.hidden) return;
-  if (EV_DEMO_MODE) refreshDemoObservations(state);
   const editing = bookMenuOpen || document.fullscreenElement || document.querySelector('dialog[open],.wager-more[open],.bet-comparison-history:not([hidden]),.evx-more[open],.evx-tools-menu[open]') || document.activeElement?.closest('input,textarea,select,[contenteditable],.ev-control-grid,.bet-inline-mount,.ev-reference-mount,.evb-detail');
   if (editing) return;
   if (active === 'odds') { if(!suite.hasView(active))oddsScreen.refresh(); return; }
@@ -1807,7 +1750,7 @@ setInterval(() => {
   document.querySelectorAll('.ev-selection-card[data-wager-id]').forEach(card => {
     const quote = state.quotes.find(q => q.id === card.dataset.wagerId);
     const label = card.querySelector('.wager-meta>span:last-child,.bet-inline-market>small');
-    if (quote && label) label.textContent = `${quote.source === 'example' || quote.demo ? 'Demo · ' : ''}${quote.live ? 'Live' : 'Pregame'} · Observed ${age(quote.ts)}`;
+    if (quote && label) label.textContent = `${quote.live ? 'Live' : 'Pregame'} · Observed ${age(quote.ts)}`;
   });
   if (['ev-live','arb-live','sharp','line-alerts'].includes(active) && quoteRevision(state.quotes) !== displayedQuoteRevision) {
     preserveLiveOrder = true;

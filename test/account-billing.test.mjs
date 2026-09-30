@@ -108,7 +108,7 @@ test('live data routes, HTML aliases and unknown API routes cannot bypass access
   for (const route of ['/api/board', '/api/mlb/board', '/api/sports/board', '/api/nfl/research', '/index.html', '/mlb.html', '/nba/live']) assert.equal(requiredFeature(route), 'research');
   assert.equal(requiredFeature('/api/not-yet-reviewed'), '__deny__');
   assert.equal(requiredFeature('/api/bets/catalog'), 'bet-tracker');
-  assert.equal(requiredFeature('/ev', new URL('http://localhost/ev?demo=1')), null);
+  assert.equal(requiredFeature('/ev', new URL('http://localhost/ev?demo=1')), 'ev-feed', 'no demo bypass');
   assert.equal(requiredFeature('/api/landing/research'), null);
   assert.equal(requiredFeature('/betting-calculators/arbitrage'), null);
 });

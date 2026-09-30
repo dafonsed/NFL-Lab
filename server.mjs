@@ -1,4 +1,5 @@
 import { handleReferralLink } from './lib/accounts/referrals.mjs';
+import { handlePreviewLogin, previewLoginButton } from './lib/preview-login.mjs';
 import { renderContentSitemap } from './lib/content/registry.mjs';
 import { renderBeginnerGuide, renderLearnLibrary } from './lib/learn-library.mjs';
 import { renderArt } from './lib/editorial-art.mjs';
@@ -99,6 +100,8 @@ export const server = http.createServer(async (req, res) => {
       return accountJson(res, { error: 'Account route not found.' }, 404);
     }
     if (handleReferralLink(req, res, url, { secure: !!process.env.VERCEL })) return;
+    // Local design preview only (scripts/design-preview.mjs); inert everywhere else.
+    if (await handlePreviewLogin(req, res, url)) return;
     // Front-end error reports are public (signed-out pages crash too) and handled before plan gating.
     if (await handleClientErrors(req, res, url)) return;
     if (!['/api/cron/predictions', '/api/cron/mlb-predictions'].includes(url.pathname) && await enforceAccountAccess(req, res, url, accounts?.system)) return;
@@ -264,10 +267,10 @@ export const server = http.createServer(async (req, res) => {
     for (const file of ['admin.js', 'admin.css', 'admin-catalog.js', 'admin-store.js', 'admin-values.js']) names['/' + file] = file;
     for (const file of ['admin-shell.js', 'admin-unified.css', 'admin-overview.js', 'admin-overview.css']) names['/' + file] = file;
     for (const file of ['help.css', 'help.js', 'help-search.js']) names['/' + file] = file;
-    for (const file of ['ev.js', 'ev-core.js', 'ev-demo.js', 'ev-preview.js', 'ev-feed.js', 'ev-feed.css', 'ev-bet-card.js', 'ev-bet-cards.css', 'dfs-workspace.js', 'dfs-workspace.css', 'odds-screen.js', 'odds-screen.css', 'odds-demo.js', 'ev.css', 'ev.html']) names['/' + file] = file;
+    for (const file of ['ev.js', 'ev-core.js', 'ev-workspace-clean.js', 'ev-feed.js', 'ev-feed.css', 'ev-bet-card.js', 'ev-bet-cards.css', 'dfs-workspace.js', 'dfs-workspace.css', 'odds-screen.js', 'odds-screen.css', 'ev.css', 'ev.html']) names['/' + file] = file;
     for (const file of ['ev-suite.js', 'ev-suite.css', 'ev-suite-storage.js', 'ev-advanced-math.js', 'ev-operations.js', 'ev-operations.css', 'ev-market-views.js', 'ev-market-views.css', 'ev-ledger.js', 'ev-ledger.css', 'ev-fantasy-lab.js', 'ev-fantasy-lab.css', 'ev.webmanifest', 'ev-sw.js', 'ev-app-icon.svg']) names['/' + file] = file;
-    for (const file of ['platform-catalog.js', 'arbitrage-demo.js', 'ev-tool-catalog.js', 'ev-more-menu.js', 'ev-secondary-views.js', 'ev-more-tools.css']) names['/' + file] = file;
-    for (const file of ['research-filters.css', 'research-details.css', 'tool-dropdowns.css', 'arb-calculator.js', 'arb-calculator.css', 'bet-comparison.js', 'bet-comparison.css', 'bet-dashboard-v2.js', 'bet-dashboard-v3.js', 'bet-history.js', 'bet-inline.js', 'bet-inline.css', 'bet-sample-data.js',   'bet-tracker-reference.css', 'ev-arb-reference.css', 'ev-book-picker.css', 'ev-filter-polish.css',  'sites-redesign.css', 'smart-money.css']) names['/' + file] = file;
+    for (const file of ['platform-catalog.js', 'ev-tool-catalog.js', 'ev-more-menu.js', 'ev-secondary-views.js', 'ev-more-tools.css']) names['/' + file] = file;
+    for (const file of ['research-filters.css', 'research-details.css', 'tool-dropdowns.css', 'arb-calculator.js', 'arb-calculator.css', 'bet-comparison.js', 'bet-comparison.css', 'bet-dashboard-v2.js', 'bet-dashboard-v3.js', 'bet-history.js', 'bet-inline.js', 'bet-inline.css',   'bet-tracker-reference.css', 'ev-arb-reference.css', 'ev-book-picker.css', 'ev-filter-polish.css',  'sites-redesign.css', 'smart-money.css']) names['/' + file] = file;
     if (/^\/ev-icons\/(date|leagues|markets|odds|sports)\.svg$/.test(pagePath)) names[pagePath] = pagePath.slice(1);
     if (['/product-switcher.js','/product-switcher.css'].includes(pagePath)) names[pagePath] = pagePath.slice(1);
     if (['/sportsbook-availability.js','/sportsbook-state.js','/sportsbook-state.css'].includes(pagePath)) names[pagePath] = pagePath.slice(1);
@@ -327,7 +330,7 @@ export const server = http.createServer(async (req, res) => {
     if (!name) return errorResponse(req, res, url, 'Not found.', 404);
     const bytes = await fs.readFile(path.join(publicDir, name));
     const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.gz': 'application/gzip', '.webmanifest': 'application/manifest+json' };
-    const body = name === 'docs.html' ? withSiteChrome(bytes.toString('utf8'), { current: 'api' }).replace('</head>', siteChromeAssets() + '</head>') : ['login.html', 'register.html', ...Object.values(accountPages)].includes(name) ? bytes : name.endsWith('.html') ? renderSitePage(bytes.toString('utf8'), url, { features: req.sportslabFeatures || null, group: preferredGroup }) : bytes;
+    const body = name === 'docs.html' ? withSiteChrome(bytes.toString('utf8'), { current: 'api' }).replace('</head>', siteChromeAssets() + '</head>') : name === 'login.html' && previewLoginButton(req, url) ? bytes.toString('utf8').replace('<p class="account-switch">', previewLoginButton(req, url) + '<p class="account-switch">') : ['login.html', 'register.html', ...Object.values(accountPages)].includes(name) ? bytes : name.endsWith('.html') ? renderSitePage(bytes.toString('utf8'), url, { features: req.sportslabFeatures || null, group: preferredGroup }) : bytes;
     await sendPublicResponse(req, res, body, { headers: { 'Content-Type': (types[path.extname(name)] || 'text/plain') + '; charset=utf-8', 'Cache-Control': 'no-cache' } });
   } catch (e) { console.error('[request] Request failed.'); const status = e.status || 500; errorResponse(req, res, url, 'This request could not be completed. Please try again.', status); }
 });

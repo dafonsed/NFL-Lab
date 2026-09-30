@@ -12,14 +12,11 @@ import { icon } from './ui-icons.js';
 import { BetDashboard } from './bet-dashboard-v3.js?v=6';
 import { BetSlipImport } from './bet-slip-import.js';
 import { inlineBetCard as betComparisonCard, bindInlineComparison as bindComparison } from './bet-inline.js?v=card-click-3';
-import { sampleBets } from './bet-sample-data.js?v=3';
-import { EV_DEMO_MODE, EV_DEMO_BETS_STORE, permanentDemoBets } from './ev-preview.js?v=twelve-books-2';
+import { clearLegacyDemoStorage } from './ev-workspace-clean.js?v=1';
 
-const permanentEvDemo = EV_DEMO_MODE && !accountSyncState().userId && location.pathname.startsWith('/ev/');
-const trackerStorage = permanentEvDemo ? {
-  getItem: () => localStorage.getItem(EV_DEMO_BETS_STORE),
-  setItem: (_key, value) => localStorage.setItem(EV_DEMO_BETS_STORE, value)
-} : localStorage;
+// The tracker shows only the member's own tickets; storage that held demo tickets is cleared.
+clearLegacyDemoStorage(window.localStorage, null);
+const trackerStorage = localStorage;
 
 const $ = selector => document.querySelector(selector);
 const form = $('#bet-form');
@@ -43,9 +40,8 @@ const leagueMark = sport => {
 const tagColor = name => [...name].reduce((value,letter)=>value+letter.charCodeAt(0),0)%4;
 const shortDay = date => new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { month:'numeric', day:'numeric' });
 const today = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; };
-let bets = [], editing = null, toastTimer, storageReady = false, sampleMode = null;
-const examples = permanentEvDemo ? permanentDemoBets(sampleBets()) : sampleBets();
-const activeBets = () => sampleMode ? examples : bets;
+let bets = [], editing = null, toastTimer, storageReady = false;
+const activeBets = () => bets;
 let dirty = false, saving = false, returnFocus = null;
 let tracking=false;
 const ticketSignatures = new WeakMap();
@@ -107,24 +103,6 @@ function toast(message) {
 
 function load() {
   try {
-    if (permanentEvDemo) {
-      bets = examples;
-      const saved = new Map(readBets(trackerStorage).map(bet => [bet.id,bet]));
-      bets = examples.map(sample => {
-        const previous = saved.get(sample.id);
-        saved.delete(sample.id);
-        return previous?.date === sample.date ? previous : sample;
-      }).concat([...saved.values()]);
-      writeBets(trackerStorage, bets);
-      sampleMode = false;
-      storageReady = true;
-      $('#storage-error').hidden = true;
-      $('#tracker-migration-notice').hidden = true;
-      $('#add-bet').disabled = false;
-      $('#import-slip').disabled = false;
-      render();
-      return;
-    }
     const notice = $('#tracker-migration-notice');
     try {
       const { migrated, skipped } = migrateLegacyTracker(localStorage);
@@ -136,7 +114,6 @@ function load() {
     }
     notice.hidden = !notice.textContent;
     bets = readBets(trackerStorage);
-    if (sampleMode === null) sampleMode = !bets.length;
     storageReady = true;
     $('#storage-error').hidden = true;
   } catch {
@@ -277,23 +254,11 @@ function render() {
   const accountState = accountSyncState();
   const storageLabel = $('.tracker-storage>span');
   const storageDetail = $('.tracker-storage>p');
-  storageLabel.textContent = accountState.userId ? 'Account bet records' : 'This page’s demo workspace';
+  storageLabel.textContent = accountState.userId ? 'Account bet records' : 'Saved in this browser';
   storageDetail.textContent = accountState.userId
     ? 'Account changes sync while connected. Export a copy of your tickets whenever you need it.'
-    : 'Demo edits last until this page is reloaded. Export your tickets to keep a copy.';
+    : 'Tickets are saved in this browser. Sign in to sync them to your account, or export a copy.';
   document.body.classList.toggle('tracker-empty', storageReady && !shown.length);
-  document.body.classList.toggle('tracker-sample-mode', !!sampleMode);
-  $('#sample-banner').hidden = !sampleMode && !permanentEvDemo;
-  if (permanentEvDemo) {
-    $('#sample-banner strong').textContent = 'Permanent demo bets';
-    $('#sample-banner span:not(.tracker-sample-dot)').textContent = 'Illustrative tickets and results. Changes stay in the demo workspace.';
-    $('#sample-banner-close').hidden = true;
-    $('#toggle-sample').hidden = true;
-  }
-  $('#toggle-sample').setAttribute('aria-pressed', String(!!sampleMode));
-  $('#toggle-sample').textContent = sampleMode ? 'View my bets' : 'View sample';
-  $('#toggle-sample').setAttribute('aria-label', $('#toggle-sample').textContent);
-  $('#toggle-sample').title = $('#toggle-sample').textContent;
   document.querySelectorAll('[data-range]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.range === dashboard.range)));
   $('#tracker-custom-dates').hidden = dashboard.range !== 'custom';
   $('#tracker-period-caption').textContent = dashboard.view === 'calendar' ? 'Monthly calendar' : ({'1w':'Last 7 days','1m':'Last 30 days','1y':'Last 365 days',all:'All-time performance',custom:'Custom date range'})[dashboard.range];
@@ -305,8 +270,8 @@ function render() {
     return;
   }
   const hasConnectedLegs = bets.some(bet => bet.legs?.some(leg => leg.mode === 'auto'));
-  $('#refresh-lines').hidden = sampleMode || !hasConnectedLegs;
-  $('.tracking-bar').hidden = sampleMode || !hasConnectedLegs;
+  $('#refresh-lines').hidden = !hasConnectedLegs;
+  $('.tracking-bar').hidden = !hasConnectedLegs;
   const calendarFocus=document.activeElement?.getAttribute('data-calendar-day');
   dashboard.render(shown);
   renderInsights(dashboard.periodBets(shown));
@@ -330,7 +295,7 @@ function render() {
   document.querySelectorAll('[data-ticket-count]').forEach(element => { element.textContent = ticketCounts[element.dataset.ticketCount]; });
   const expanded=new Set([...document.querySelectorAll('.bet-ticket details[open]')].map(el=>el.closest('[data-ticket-id]').dataset.ticketId+':'+el.className));
   const focusedEdit=document.activeElement?.dataset.edit;
-  const viewKey = JSON.stringify([sampleMode, dashboard.range, dashboard.view, dashboard.month, dashboard.selectedDay, dashboard.customStart, dashboard.customEnd,
+  const viewKey = JSON.stringify([dashboard.range, dashboard.view, dashboard.month, dashboard.selectedDay, dashboard.customStart, dashboard.customEnd,
     ...['bet-search','sport-filter','status-filter','book-filter','market-filter','tool-filter','tag-filter','ticket-range'].map(id => $('#' + id).value)]);
   if (viewKey !== ticketViewKey) { ticketLimit = ticketPageSize; ticketViewKey = viewKey; }
   const matching = filteredBets();
@@ -344,8 +309,8 @@ function render() {
   const activeFilters = ['book-filter','sport-filter','market-filter','tool-filter','tag-filter'].filter(id=>$('#'+id).value);
   $('#tracker-active-filters').hidden = !activeFilters.length;
   $('#tracker-active-filters').innerHTML = '<span class="tracker-filter-label">Filtered by</span>' + activeFilters.map(id=>`<button type="button" class="tracker-filter-chip" data-remove-filter="${id}" aria-label="Remove ${esc($('#'+id).value)} filter">${esc($('#'+id).value)}${icon('close')}</button>`).join('') + '<button type="button" class="tracker-reset-filters" data-clear-ticket-filters>Clear filters</button>';
-  $('#bet-count').textContent = shown.length ? `${visible.length}${matching.length > visible.length ? ` of ${matching.length}` : ''} ${matching.length === 1 ? 'ticket' : 'tickets'} shown · Newest first${sampleMode ? ' · Sample' : ''}` : 'Your tickets will appear here';
-  $('#export-bets').disabled = sampleMode || !visible.length;
+  $('#bet-count').textContent = shown.length ? `${visible.length}${matching.length > visible.length ? ` of ${matching.length}` : ''} ${matching.length === 1 ? 'ticket' : 'tickets'} shown · Newest first` : 'Your tickets will appear here';
+  $('#export-bets').disabled = !visible.length;
   $('#export-bets').innerHTML = icon('download')+' Export CSV';
   $('#export-bets').setAttribute('aria-label', 'Export visible tickets as CSV');
   if (!visible.length) {
@@ -371,14 +336,14 @@ function render() {
       const book = bet.book || 'No sportsbook';
       const mark = sportsbookMark(bet.book);
       const clv=closingLineValue(bet);
-      return `<article class="bet-ticket" data-ticket-id="${esc(bet.id)}"><details class="bet-ticket-disclosure"><summary class="bet-row"><span class="bet-book-mark">${mark}</span><span class="bet-description"><strong class="bet-selection">${bet.market ? `<span class="bet-market-name">${esc(bet.market)}</span> · ` : ''}${esc(bet.selection)}</strong><small>${bet.status === 'won' || bet.status === 'lost' ? '' : `<span class="bet-status-pill is-${esc(bet.status)}">${esc(STATUSES[bet.status])}</span>`}${bet.event ? `<span class="bet-meta-event">${esc(bet.event)}</span><i aria-hidden="true"></i>` : ''}<span class="bet-meta-league">${leagueMark(bet.sport)}${esc(bet.sport)}</span><i aria-hidden="true"></i><span>${esc(shortDay(bet.date))}</span><i aria-hidden="true"></i><span>${esc(book)}</span></small></span><span class="bet-row-result"><strong class="${bet.status === 'open' ? 'pending' : tone(net)}">${repricing ? '—' : signedMoney(net)}</strong><small><span class="bet-result-note">${bet.status === 'open' ? `To win · ${money(bet.stake)} stake` : `${clv === null ? '—' : `${clv > 0 ? '+' : ''}${clv.toFixed(1)}%`} CLV`}</span><span class="bet-price">${esc(odds)}</span></small></span><span class="bet-row-chevron" aria-hidden="true">${icon('chevron')}</span></summary><div class="bet-ticket-detail ticket-receipt"><dl class="ticket-receipt-grid"><div><dt>Stake</dt><dd>${money(bet.stake)}</dd></div><div><dt>Booked odds <span>${bet.oddsFormat === 'decimal' ? 'Decimal' : 'American'}</span></dt><dd>${esc(odds)}</dd></div><div class="ticket-receipt-return"><dt>${bet.status === 'open' ? 'Potential return' : 'Total returned'}</dt><dd>${repricing ? '—' : money(result.returned ?? result.potentialReturn)}</dd></div><div><dt>Closing line value</dt><dd class="${tone(clv)}">${clv === null ? '—' : `${clv > 0 ? '+' : ''}${clv.toFixed(2)}%`}</dd></div></dl>${bet.notes && !(sampleMode && bet.notes === 'Illustrative sample ticket.') ? `<div class="ticket-receipt-note"><span>Notes</span><p>${esc(bet.notes)}</p></div>` : ''}${legs.length ? `<div class="ticket-tracking"><p class="leg-summary"><strong>${legs.filter(leg => legState(leg) === 'won').length} / ${legs.length} legs hit</strong><span>${esc(bet.settlement === 'auto' ? ticketSettlement(legs).note : 'Ticket result set from sportsbook.')}</span></p><ol class="tracked-legs">${legs.map(legMarkup).join('')}</ol></div>` : ''}<div class="ticket-receipt-footer"><span class="ticket-receipt-source"><span>Source</span><strong>${esc(bet.tool || 'Manual')}</strong></span>${bet.tags?.length ? `<div class="ticket-receipt-tags" aria-label="Ticket tags">${bet.tags.map(tag=>`<span>${esc(tag)}</span>`).join('')}</div>` : ''}${sampleMode ? '<span class="ticket-receipt-sample">Sample ticket</span>' : `<button class="ticket-receipt-edit" type="button" data-edit="${esc(bet.id)}" aria-label="Edit ${esc(bet.selection)}">Edit ticket ${icon('chevron')}</button>`}</div></div></details></article>`;
+      return `<article class="bet-ticket" data-ticket-id="${esc(bet.id)}"><details class="bet-ticket-disclosure"><summary class="bet-row"><span class="bet-book-mark">${mark}</span><span class="bet-description"><strong class="bet-selection">${bet.market ? `<span class="bet-market-name">${esc(bet.market)}</span> · ` : ''}${esc(bet.selection)}</strong><small>${bet.status === 'won' || bet.status === 'lost' ? '' : `<span class="bet-status-pill is-${esc(bet.status)}">${esc(STATUSES[bet.status])}</span>`}${bet.event ? `<span class="bet-meta-event">${esc(bet.event)}</span><i aria-hidden="true"></i>` : ''}<span class="bet-meta-league">${leagueMark(bet.sport)}${esc(bet.sport)}</span><i aria-hidden="true"></i><span>${esc(shortDay(bet.date))}</span><i aria-hidden="true"></i><span>${esc(book)}</span></small></span><span class="bet-row-result"><strong class="${bet.status === 'open' ? 'pending' : tone(net)}">${repricing ? '—' : signedMoney(net)}</strong><small><span class="bet-result-note">${bet.status === 'open' ? `To win · ${money(bet.stake)} stake` : `${clv === null ? '—' : `${clv > 0 ? '+' : ''}${clv.toFixed(1)}%`} CLV`}</span><span class="bet-price">${esc(odds)}</span></small></span><span class="bet-row-chevron" aria-hidden="true">${icon('chevron')}</span></summary><div class="bet-ticket-detail ticket-receipt"><dl class="ticket-receipt-grid"><div><dt>Stake</dt><dd>${money(bet.stake)}</dd></div><div><dt>Booked odds <span>${bet.oddsFormat === 'decimal' ? 'Decimal' : 'American'}</span></dt><dd>${esc(odds)}</dd></div><div class="ticket-receipt-return"><dt>${bet.status === 'open' ? 'Potential return' : 'Total returned'}</dt><dd>${repricing ? '—' : money(result.returned ?? result.potentialReturn)}</dd></div><div><dt>Closing line value</dt><dd class="${tone(clv)}">${clv === null ? '—' : `${clv > 0 ? '+' : ''}${clv.toFixed(2)}%`}</dd></div></dl>${bet.notes ? `<div class="ticket-receipt-note"><span>Notes</span><p>${esc(bet.notes)}</p></div>` : ''}${legs.length ? `<div class="ticket-tracking"><p class="leg-summary"><strong>${legs.filter(leg => legState(leg) === 'won').length} / ${legs.length} legs hit</strong><span>${esc(bet.settlement === 'auto' ? ticketSettlement(legs).note : 'Ticket result set from sportsbook.')}</span></p><ol class="tracked-legs">${legs.map(legMarkup).join('')}</ol></div>` : ''}<div class="ticket-receipt-footer"><span class="ticket-receipt-source"><span>Source</span><strong>${esc(bet.tool || 'Manual')}</strong></span>${bet.tags?.length ? `<div class="ticket-receipt-tags" aria-label="Ticket tags">${bet.tags.map(tag=>`<span>${esc(tag)}</span>`).join('')}</div>` : ''}${`<button class="ticket-receipt-edit" type="button" data-edit="${esc(bet.id)}" aria-label="Edit ${esc(bet.selection)}">Edit ticket ${icon('chevron')}</button>`}</div></div></details></article>`;
     }).join('')}</div>`;
   }).join('')}</div>`;
   // Reuse unchanged tickets during price/result refreshes and filtering. This
   // keeps native disclosures, focus and scroll anchors attached to their nodes.
   const template = document.createElement('template');
   template.innerHTML = ledgerMarkup;
-  const signatures = new Map(visible.map(bet => [bet.id, JSON.stringify([bet, sampleMode])]));
+  const signatures = new Map(visible.map(bet => [bet.id, JSON.stringify(bet)]));
   template.content.querySelectorAll('.bet-ticket').forEach(node => ticketSignatures.set(node, signatures.get(node.dataset.ticketId)));
   template.content.querySelectorAll('.bet-ticket details').forEach(el => { el.open = expanded.has(el.closest('[data-ticket-id]').dataset.ticketId + ':' + el.className); });
   const currentLedger = $('#bet-list .bet-ledger');
@@ -570,7 +535,6 @@ form.addEventListener('submit', async event => {
     saving = true; submit.disabled = true; submit.textContent = 'Saving…'; form.setAttribute('aria-busy','true');
     await new Promise(resolve => requestAnimationFrame(resolve));
     const bet = { ...validated, id: editing?.id || crypto.randomUUID(), updatedAt: new Date().toISOString() };
-    sampleMode = false;
     if(!editing){
       dashboard.month=bet.date.slice(0,7);
       dashboard.selectedDay='';
@@ -593,15 +557,6 @@ form.addEventListener('click', event => { if (event.target.closest('[data-remove
 form.addEventListener('input', updateForm);
 form.addEventListener('change', updateForm);
 $('#add-bet').addEventListener('click', () => openForm());
-function toggleSample(force) {
-  if (permanentEvDemo) return;
-  sampleMode = force ?? !sampleMode;
-  dashboard.selectedDay = '';
-  clearFilters();
-  render();
-}
-$('#toggle-sample').addEventListener('click', () => toggleSample());
-$('#sample-banner-close').addEventListener('click', () => toggleSample(false));
 $('#import-slip').addEventListener('click',()=>slipImport.open());
 $('#add-leg').addEventListener('click',()=>{ dirty = true; editor.add(field('sport').value,field('date').value); $('#leg-editor .leg-editor:last-child input, #leg-editor .leg-editor:last-child select')?.focus(); });
 $('#ticket-settlement').addEventListener('change', () => {
@@ -642,7 +597,7 @@ $('#bet-list').addEventListener('click', event => {
     return;
   }
   const ticket = event.target.closest('.bet-ticket-disclosure>summary');
-  if (ticket && !sampleMode) { event.preventDefault(); return showTicketComparison(ticket.closest('[data-ticket-id]')?.dataset.ticketId, ticket); }
+  if (ticket) { event.preventDefault(); return showTicketComparison(ticket.closest('[data-ticket-id]')?.dataset.ticketId, ticket); }
   const button = event.target.closest('button');
   if (button?.hasAttribute('data-add')) openForm();
   if (button?.hasAttribute('data-clear')) clearFilters();
@@ -741,7 +696,6 @@ $('#confirm-import').addEventListener('click', () => {
   importDialog.close();
   if (!incoming.length) return;
   try {
-    sampleMode = false;
     mutate(latest => [...latest, ...incoming]);
     toast(`Imported ${incoming.length} ${incoming.length === 1 ? 'ticket' : 'tickets'}.`);
   } catch (error) { toast(error.message); }
@@ -757,7 +711,6 @@ $('#export-bets').addEventListener('click', () => {
   toast(`Exported ${visible.length} ${visible.length === 1 ? 'bet' : 'bets'}.`);
 });
 async function refreshLines({all=false}={}){
-  if (permanentEvDemo) return;
   if(tracking||!storageReady||document.hidden||dialog.open||slipImport.dialog.open)return;
   const candidates=bets.filter(b=>b.legs?.some(l=>l.mode==='auto'&&!l.override&&(all||!['won','lost','push','void'].includes(legState(l))||Date.parse(l.date)>Date.now()-3*86400000)));
   const groups=new Map(candidates.flatMap(b=>b.legs.filter(l=>l.mode==='auto'&&!l.override).map(l=>[gameKey(l),l])));
@@ -791,7 +744,7 @@ async function refreshLines({all=false}={}){
 $('#refresh-lines').addEventListener('click',()=>refreshLines({all:true}));
 setInterval(refreshLines,60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshLines({all:true});});
-window.addEventListener('storage', event => { if ([BET_STORAGE_KEY, LEGACY_EV_STORAGE_KEY, EV_DEMO_BETS_STORE, null].includes(event.key)) load(); });
+window.addEventListener('storage', event => { if ([BET_STORAGE_KEY, LEGACY_EV_STORAGE_KEY, null].includes(event.key)) load(); });
 const requestedSport = new URLSearchParams(location.search).get('sport');
 const sportOption = [...$('#sport-filter').options].find(option => option.value.toLowerCase() === requestedSport?.toLowerCase());
 if (sportOption) $('#sport-filter').value = sportOption.value;

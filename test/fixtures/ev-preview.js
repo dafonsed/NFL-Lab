@@ -1,4 +1,5 @@
-import { FANTASY_PLATFORMS, PREDICTION_PLATFORMS, isContestPlatform } from './platform-catalog.js';
+// Test fixture: sample workspaces for unit tests only. Never served or loaded by the site.
+import { FANTASY_PLATFORMS, PREDICTION_PLATFORMS, isContestPlatform } from '../../public/platform-catalog.js';
 
 // Temporary product-wide showcase. Keep enabled until the owner requests live mode.
 export const EV_DEMO_MODE = true;

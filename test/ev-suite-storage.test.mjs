@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createAccountStore, ACCOUNT_DRAFT_PREFIX } from '../public/account-sync.js';
-import { createSuiteStorage, DEMO_SESSION_PREFIX } from '../public/ev-suite-storage.js';
-import { permanentDemoWorkspace } from '../public/ev-preview.js';
+import { createSuiteStorage } from '../public/ev-suite-storage.js';
+import { permanentDemoWorkspace } from './fixtures/ev-preview.js';
 
 const now = Date.parse('2026-09-27T18:00:00Z');
 const WORKSPACE = 'sportslab-ev-workbench-v1', LEDGER = 'nfl-lab.personal-bets.v1';
@@ -32,9 +32,8 @@ function backend() {
 async function signedIn(remote, local = memory()) {
   const account = createAccountStore({ fetcher: remote.fetcher, legacyStorage: local, delay: 60_000 });
   await account.initialize();
-  const session = memory();
-  const suite = createSuiteStorage({ storage: account.storage, userId: () => account.info().userId, session });
-  return { account, suite, session };
+  const suite = createSuiteStorage({ storage: account.storage, userId: () => account.info().userId });
+  return { account, suite };
 }
 const exampleRecords = value => JSON.stringify(value).includes('"source":"example"');
 
@@ -42,40 +41,20 @@ test('the permanent demo workspace alone exceeds the account data limit', () => 
   assert.ok(JSON.stringify(permanentDemoWorkspace(null, now)).length > MAX_VALUE);
 });
 
-test('opening the demo while signed in syncs settings and real bets without example records', async () => {
-  const remote = backend(), { account, suite, session } = await signedIn(remote);
+test('suite settings sync for a signed-in account alongside real bets', async () => {
+  const remote = backend(), { account, suite } = await signedIn(remote);
   const ledger = JSON.stringify({ version: 1, bets: [{ id: 'real-bet', stake: 20, odds: -110 }] });
   account.storage.setItem(LEDGER, ledger);
-
-  const demo = permanentDemoWorkspace(null, now);
-  demo.quotes[0].odds = 135;
-  suite.writeSuiteWorkspace(demo);
   suite.writeSuiteState({ presets: [{ id: 'mine', name: 'Main view' }] });
-
   const result = await account.flush();
   assert.deepEqual(result.errors, []);
-  assert.deepEqual(result.pending, []);
-  assert.ok(remote.puts.every(put => put.size <= MAX_VALUE), JSON.stringify(remote.puts));
   const saved = remote.records.get('bets').value;
   assert.equal(saved.storage[LEDGER], ledger);
   assert.equal(exampleRecords(saved), false);
-  assert.equal(Object.hasOwn(JSON.parse(saved.storage[WORKSPACE]), 'demoWorkspace'), false);
   assert.deepEqual(suite.readSuiteState(), { presets: [{ id: 'mine', name: 'Main view' }] });
-
-  // Demo edits stay in this tab for the signed-in user.
-  assert.ok(session.getItem(DEMO_SESSION_PREFIX + 'user-a'));
-  assert.equal(suite.readSuiteWorkspace().quotes[0].odds, 135);
 });
 
-test('demo edits survive a full tab storage quota in document memory', async () => {
-  const remote = backend(), { suite, session } = await signedIn(remote);
-  session.setItem = () => { throw new DOMException('Quota exceeded', 'QuotaExceededError'); };
-  suite.writeSuiteWorkspace(permanentDemoWorkspace(null, now));
-  assert.equal(suite.readSuiteWorkspace().quotes.length, permanentDemoWorkspace(null, now).quotes.length);
-  assert.equal(remote.puts.length, 0);
-});
-
-test('an oversized pending demo draft from an older build is released so real bets sync again', async () => {
+test('an oversized demo draft from an older build is dropped so real bets sync again', async () => {
   const ledger = JSON.stringify({ version: 1, bets: [{ id: 'real-bet' }] });
   const envelope = { version: 1, example: false, suite: { presets: [] }, demoWorkspace: permanentDemoWorkspace(null, now) };
   const draft = { value: { storage: { [LEDGER]: ledger, [WORKSPACE]: JSON.stringify(envelope) } }, version: 0 };
@@ -86,7 +65,7 @@ test('an oversized pending demo draft from an older build is released so real be
   await stuck.initialize();
   assert.match((await stuck.flush()).errors[0].message, /could not sync/);
 
-  const { account, suite, session } = await signedIn(remote, local);
+  const { account, suite } = await signedIn(remote, local);
   assert.equal(suite.releaseAccountDemoWorkspace(), true);
   const result = await account.flush();
   assert.deepEqual(result.errors, []);
@@ -94,6 +73,5 @@ test('an oversized pending demo draft from an older build is released so real be
   assert.equal(saved[LEDGER], ledger);
   assert.deepEqual(JSON.parse(saved[WORKSPACE]).suite, { presets: [] });
   assert.equal(exampleRecords(saved), false);
-  assert.ok(session.getItem(DEMO_SESSION_PREFIX + 'user-a'), 'earlier demo edits move to this tab');
   assert.equal(suite.releaseAccountDemoWorkspace(), false);
 });

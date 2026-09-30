@@ -4,7 +4,8 @@
 // production accounts. Uses the account test runtime, which refuses to run
 // outside NODE_ENV=test. Sessions survive restarts because the secret and
 // database persist in data/.
-// Test sign-in: designer@example.test with PASSWORD from test/helpers/admin-api-fixture.mjs.
+// Test sign-in: "Continue as guest" on /login, or designer@example.test with PASSWORD from
+// test/helpers/admin-api-fixture.mjs.
 import fs from 'node:fs';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -43,5 +44,12 @@ await system.db.insertInto('accessGrant').values({
   expiresAt: new Date(now.getTime() + 7 * 864e5).toISOString(), revokedAt: null, createdAt: now.toISOString(),
 }).execute();
 configureAccountTestRuntime(system);
+// "Continue as guest" on /login signs straight in to this test account (localhost only).
+const { enablePreviewLogin } = await import('../lib/preview-login.mjs');
+enablePreviewLogin(async () => {
+  const response = await system.auth.api.signInEmail({ body: { email, password: PASSWORD, rememberMe: true }, asResponse: true, headers: new Headers({ origin }) });
+  if (!response.ok) throw new Error('Preview sign-in failed.');
+  return response.headers.getSetCookie();
+});
 await import('../server.mjs');
 console.log(`Design preview ready at ${origin} — sign in as ${email}`);

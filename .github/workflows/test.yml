@@ -25,10 +25,8 @@ jobs:
         run: >-
           node --test
           --test-skip-pattern="a missing consensus remains unavailable"
-          --test-skip-pattern="demo provides complete, usable arbitrage pairs"
           --test-skip-pattern="fallback matrix preserves missing values"
           --test-skip-pattern="market math calculates no-vig EV"
-          --test-skip-pattern="prices have complete sides, realistic margin"
           --test-skip-pattern="reference cards accept side prices"
           --test-skip-pattern="reference cards keep consensus probability"
           --test-skip-pattern="reference comparison keeps different player markets"
