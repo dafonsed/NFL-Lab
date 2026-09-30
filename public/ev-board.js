@@ -124,6 +124,5 @@ export function renderEvBoardDetail(ctx, quote, fair) {
       { icon:'flag', label:'Report a problem', attrs:`data-suite-action="report" data-id="${esc(id)}"` },
       { icon:'refresh', label:'Refresh prices', attrs:`data-evb-refresh="${esc(id)}"` }
     ],
-    books:model.columns.map(column => column.name), rows,
-    addAttrs:`data-add="quote" data-live="${Boolean(quote.live)}"` });
+    books:model.columns.map(column => column.name), rows });
 }

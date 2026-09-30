@@ -182,3 +182,11 @@ body.ev-page .tool-workspace .tool-stats dt{margin-bottom:6px;color:var(--muted)
 body.ev-page .tool-workspace .tool-stats dd{font-size:22px;font-weight:600}
 @media(min-width:801px) and (max-width:1450px){body.site-layout .ev-site-header .ev-primary-nav{gap:2px}body.site-layout .ev-site-header .ev-primary-nav a{padding:0 8px;font-size:12px}.ev-more-primary{display:flex;flex-wrap:wrap;gap:7px;padding-top:16px}.ev-site-header .ev-more-primary a{padding:7px 10px;color:var(--secondary);text-decoration:none;font-size:12px;border:1px solid var(--border-strong);border-radius:7px}}
 @media(max-width:800px){body.site-layout .ev-site-header .ev-nav-cluster{grid-column:1/-1;grid-row:2;align-self:center;justify-content:space-between;width:100%;gap:8px}body.site-layout .ev-site-header .ev-primary-nav{flex:1;min-width:0;padding:0;gap:2px}body.site-layout .ev-site-header .ev-primary-nav a{display:inline-flex}.ev-site-header .ev-more-panel{top:120px;max-height:calc(100dvh - 132px)}}
+/* Shared filter bar for Middles, Low holds, Parlay and Promo (public/ev-filters.js). */
+.tool-filter-bar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin:14px 0 4px}
+.tool-filter-bar .tool-filter{display:flex;flex-direction:column;gap:5px;min-width:130px}
+.tool-filter-bar .tool-filter>span{color:var(--es-muted,#8a948f);font:600 11px/1 var(--es-font,inherit);letter-spacing:.08em;text-transform:uppercase}
+.tool-filter-bar select{height:40px;border-radius:999px}
+.tool-filter-clear{height:40px;padding:0 16px;border:1px solid var(--es-line-2,#2a3036);border-radius:999px;background:transparent;color:inherit;font-weight:600;cursor:pointer}
+.tool-filter-clear:hover{border-color:rgb(163 240 107/.5)}
+@media(max-width:640px){.tool-filter-bar .tool-filter{flex:1 1 calc(50% - 10px);min-width:0}}

@@ -7,6 +7,7 @@ import * as core from '../public/ev-core.js';
 import * as views from '../public/ev-secondary-views.js';
 import {wagerCard} from '../public/ev-bet-card.js';
 import {canonicalPlatform, isContestPlatform, PREDICTION_PLATFORMS} from '../public/platform-catalog.js';
+import {TOOL_FILTER_DEFAULTS, oddsWithin} from '../public/ev-filters.js';
 
 const source=await fs.readFile(new URL('../public/ev.js',import.meta.url),'utf8');
 const quote=(id,extra={})=>({id,sport:'NBA',event:'BOS vs NYK',player:'Player <One>',market:'Points',type:'prop',side:'Over',line:20.5,book:'FanDuel',odds:120,ts:'2026-09-25T10:00:00Z',...extra});
@@ -19,7 +20,8 @@ function render(name,extra={}) {
     esc:views.toolEsc,fmtLine:String,age:()=> 'Recorded',visible:()=>true,bookAvailable:()=>true,eligibleQuotes:rows=>rows,
     qName:q=>q.player+' '+q.side+' '+q.line,origin:()=>'<span class="ev-status">Manual</span>',
     table:(head,rows)=>`<table><thead><tr>${head.map(text=>`<th>${views.toolEsc(text)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`,
-    button:(label,attrs='')=>`<button type="button" ${attrs}>${label}</button>`,action:()=>'',...extra});
+    button:(label,attrs='')=>`<button type="button" ${attrs}>${label}</button>`,action:()=>'',
+    toolFilters:{...TOOL_FILTER_DEFAULTS},oddsWithin,filteredEmpty:fallback=>fallback,...extra});
   const $=load(vm.runInContext(source.slice(start,end)+`\n${name}()`,context));
   assert.equal($('.wager-card button button').length,0,'actions are separate controls');
   return {$,context};

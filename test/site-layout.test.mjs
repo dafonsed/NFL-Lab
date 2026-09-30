@@ -87,7 +87,7 @@ test('EV workbench keeps sport context and loads its own page assets', async () 
   assert.equal($('.ev-primary-nav a[href="/ev?sport=wnba#fantasy"]').text(),'DFS Props');
   assert.equal($('script[src^="/ev.js?"]').length,1);
   assert.equal($('link[rel="stylesheet"][href^="/ev.css?"]').length,1);
-  assert.equal($('link[rel="stylesheet"][href="/ev-more-tools.css?v=2"]').length,1);
+  assert.equal($('link[rel="stylesheet"][href="/ev-more-tools.css?v=3"]').length,1);
   const styles=$('link[rel=stylesheet]').map((_,el)=>$(el).attr('href')).get();
   const palette=styles.findIndex(href=>href.startsWith('/workspace-palette.css'));
   const cards=styles.findIndex(href=>href.startsWith('/ev-bet-cards.css'));

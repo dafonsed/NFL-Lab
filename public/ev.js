@@ -1,32 +1,37 @@
 import { browserAlertsControl, deliverAlerts, toggleBrowserAlerts } from './alert-delivery.js?v=1';
 import { wagerCard } from './ev-bet-card.js';
-import { renderEvBoard, renderEvBoardDetail, renderBetPanel, boostedOffer, boardIcon, bookLogo, startLabel, selectionText } from './ev-board.js?v=3';
+import { renderEvBoard, renderEvBoardDetail, renderBetPanel, boostedOffer, boardIcon, bookLogo, startLabel, selectionText } from './ev-board.js?v=4';
 import { createEvSuite, EV_SUITE_TOOLS } from './ev-suite.js?v=local-suite-4';
 import { computeAdvancedEv, consensusPrice, constrainedArb, middleOutcomes } from './ev-advanced-math.js';
 import { readSuiteState, writeSuiteState } from './ev-suite-storage.js?v=2';
 import { installMobileWorkspace, quoteRevision, preserveReadingOrder } from './ev-mobile.js';
 import { accountStorage as localStorage, accountReady, getAccountPreferences, accountSyncState } from './account-sync.js';
 await accountReady;
-import { secondaryShell, toolHero, accentTitle, toolPanel, toolEmpty, toolStats, toolNote, toolReceipt, toolBoard, boardTicket, boardButton, boardIconButton, boardToggle } from './ev-secondary-views.js?v=3';
+import { secondaryShell, toolHero, accentTitle, toolPanel, toolEmpty, toolStats, toolNote, toolReceipt, toolBoard, boardTicket, boardButton, boardIconButton, boardToggle } from './ev-secondary-views.js?v=4';
 import { SECONDARY_TOOLS } from './ev-tool-catalog.js';
 import { emptyWorkspace, purgeDemoData, clearLegacyDemoStorage } from './ev-workspace-clean.js?v=1';
-import { createQuoteFeedControls, toolDataLabel } from './ev-feed.js?v=3';
+import { createQuoteFeedControls, toolDataLabel } from './ev-feed.js?v=4';
+import { START_WINDOWS, MIN_ODDS, MIN_EV, MIN_WIN_CHANCE, TOOL_FILTERS, TOOL_FILTER_DEFAULTS, activeFilterCount, startsWithin, oddsWithin, quoteMatches, readToolFilters, saveToolFilters, toolFilterBar } from './ev-filters.js?v=1';
 import { SITE_PLATFORMS, SPORTSBOOK_PLATFORMS, PREDICTION_PLATFORMS, EXCHANGE_PLATFORMS, canonicalPlatform, platformAsset, platformLabel, platformOptions, isContestPlatform } from './platform-catalog.js';
 import { betTrackerUrl, legacyBetTrackerUrl } from './navigation.js?v=tracker-1';
-import { decimal, implied, expectedReturn, money, percent, signed, probabilityToAmerican, fairProbability, fresh, groups, marketKey, evRows, fractionalKellyStake, holdRows, arbitrage, arbitrageRows, middleRows, promoConversion, parlay, fantasySlip, closingLineValue, gradedBet, pearson, sharpMatches, alertMatches, validateWorkspace } from './ev-core.js?v=3';
+import { decimal, implied, expectedReturn, money, percent, signed, probabilityToAmerican, fairProbability, fresh, groups, marketKey, evRows, fractionalKellyStake, holdRows, arbitrage, arbitrageRows, middleRows, promoConversion, parlay, fantasySlip, closingLineValue, gradedBet, pearson, sharpMatches, alertMatches } from './ev-core.js?v=3';
 import { teamMark, leagueMark } from './sports-identity.js';
 import { comparisonAnnotations } from './bet-comparison.js?v=4';
 import { inlineBetCard as betComparisonCard, bindInlineComparison as bindComparison } from './bet-inline.js?v=card-click-3';
 import { openArbCalculator } from './arb-calculator.js?v=2';
 import { openLineHistory, buildLineSeries } from './line-history.js?v=1';
 import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform } from './dfs-workspace.js?v=10-rows';
-import { createOddsScreen } from './odds-screen.js?v=7';
+import { createOddsScreen } from './odds-screen.js?v=8';
 
 import {readSportsbookState, saveSportsbookState, sportsbookAvailable, availableSportsbookQuotes, STATE_CHANGE_EVENT} from './sportsbook-availability.js';
 
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const STORE = 'sportslab-ev-workbench-v1';
+// API quotes, their price history and the sync time are re-fetched every few seconds, so they
+// stay in this browser only. Saving them to the account would exceed its size limit (blocking
+// tracked-bet saves in the same document) and upload on every refresh.
+const QUOTE_CACHE = 'sportslab-ev-quote-cache-v1';
 const TOOLS = [
   ['Markets', 'odds', 'Odds comparison', 'Compare every entered sportsbook price, consensus fair probability and recorded movement.'],
   ['Markets', 'ev-pre', 'Positive EV · pregame', 'Compare each offered price against no-vig consensus from other complete books.'],
@@ -54,19 +59,26 @@ const arrays = ['quotes', 'history', 'dfs', 'contracts', 'contractHistory', 'tra
 function load() {
   clearLegacyDemoStorage(window.localStorage, window.sessionStorage);
   clearLegacyDemoStorage(localStorage, null);
+  const withQuotes = data => {
+    const cache = readQuoteCache();
+    if (cache) Object.assign(data, { quotes: cache.quotes, history: cache.history, apiSyncedAt: cache.apiSyncedAt });
+    return normalize(data);
+  };
   try {
     const parsed = JSON.parse(localStorage.getItem(STORE));
     if (parsed?.version === 1) {
       // Earlier releases seeded example and demo records. The workspace now holds only feed
       // quotes and records the member entered, so remove any that were saved.
       if (purgeDemoData(parsed)) localStorage.setItem(STORE, JSON.stringify(parsed));
-      return normalize(parsed);
+      return withQuotes(parsed);
     }
   } catch { /* Browser storage can be disabled. */ }
-  return normalize(emptyWorkspace());
+  return withQuotes(emptyWorkspace());
 }
 function normalize(data) {
   for (const key of arrays) if (!Array.isArray(data[key])) data[key] = [];
+  // Prices come only from the quote API. Saved manual or imported prices are dropped.
+  data.quotes = data.quotes.filter(x => x?.source === 'local-api');
   const quoteIds = new Set(data.quotes.map(x => x.id)), contractIds = new Set(data.contracts.map(x => x.id));
   data.history = data.history.filter(x => quoteIds.has(x.quoteId));
   data.contractHistory = data.contractHistory.filter(x => contractIds.has(x.contractId));
@@ -91,7 +103,9 @@ const oddsQuotes = () => state.quotes;
 let active = toolMeta[location.hash.slice(1)] ? location.hash.slice(1) : 'ev-pre';
 let search = '';
 let bookmaker = '', marketType = '', showAllBooks = false, selectedSportsbooks = null, bookMenuOpen = false, bankroll = 5000, kelly = .25, flatMultiplier = 1, evSort = 'ev', detailQuoteId = '';
-let evLeague = '', evDateRange = 'week', evMaxOdds = '200';
+let evLeague = '', evDateRange = 'all', evMaxOdds = '200';
+// Filters for Middles, Low holds, Parlay and Promo plus the extra Positive EV thresholds.
+let toolFilters = readToolFilters(window.localStorage);
 let bookSearch = '';
 let designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' };
 let designSort = 'recommended';
@@ -156,10 +170,15 @@ const qName = q => `${q.event} · ${q.market}${q.line !== '' && q.line != null ?
 const qStatus = q => q.live ? `<span class="ev-status${fresh(q) ? '' : ' stale'}">${fresh(q) ? 'Live entry' : 'Stale live'} · ${age(q.ts)}</span>` : `<span class="ev-caption">Pregame · ${age(q.ts)}</span>`;
 const filterText = value => String(value ?? '').toLowerCase().includes(search);
 const visible = (item, fields) => (!sport || !item.sport || item.sport === sport) && (!search || fields.some(key => filterText(item[key])));
+// DFS props are entered by hand and carry no event start, so they keep the observed-date filter.
 const inDateRange = ts => designFilters.date === 'all' || (Number.isFinite(Date.parse(ts)) && (designFilters.date === 'today' ? new Date(ts).toDateString() === new Date().toDateString() : Date.parse(ts) >= Date.now() - 7 * 86_400_000));
-const quotePassesDesign = q => !['odds','arb-pre','arb-live','sharp'].includes(active) || ((!designFilters.league || (q.league || q.sport) === designFilters.league) && inDateRange(q.ts) && (designFilters.period === 'all' || (designFilters.period === 'live') === Boolean(q.live)) && (designFilters.maxOdds === 'all' || Number(q.odds) <= Number(designFilters.maxOdds)));
+const quotePassesDesign = q => !['odds','arb-pre','arb-live','sharp'].includes(active) || ((!designFilters.league || (q.league || q.sport) === designFilters.league) && startsWithin(q, designFilters.date) && (designFilters.period === 'all' || (designFilters.period === 'live') === Boolean(q.live)) && (designFilters.maxOdds === 'all' || oddsWithin(q.odds, '', designFilters.maxOdds)));
+// Market-wide filters only. Book, odds and EV thresholds apply to result rows, because fair
+// prices come from the other books and a promotion's hedge sits at a different book.
+const QUOTE_LEVEL_FILTERS = ['league', 'market', 'period', 'when'];
+const quotePassesTool = q => { const keys = TOOL_FILTERS[active]; return !keys || quoteMatches(q, Object.fromEntries(QUOTE_LEVEL_FILTERS.filter(key => keys.includes(key)).map(key => [key, toolFilters[key]]))); };
 const quoteSource = () => state.quotes;
-const quotes = () => quoteSource().filter(q => visible(q, ['event', 'market', 'book', 'side', 'sport']) && quotePassesDesign(q) && suite.quoteVisible(q));
+const quotes = () => quoteSource().filter(q => visible(q, ['event', 'market', 'book', 'side', 'sport', 'player']) && quotePassesDesign(q) && quotePassesTool(q) && suite.quoteVisible(q));
 const dfs = () => state.dfs.filter(q => visible(q, ['player', 'market', 'app', 'side']) && (active !== 'fantasy' || ((!designFilters.league || (q.league || q.sport) === designFilters.league) && inDateRange(q.ts) && (!designFilters.side || q.side === designFilters.side))));
 const fmtLine = line => line === '' || line == null ? '—' : esc(line);
 const oddsCell = q => `<button type="button" data-detail="${esc(q.id)}" aria-label="Compare ${esc(q.side)} at ${esc(q.book)}"><strong>${oddsLabel(q.odds)}</strong><small>${esc(q.book)}</small></button>`;
@@ -167,12 +186,18 @@ const button = (label, attributes = '') => `<button type="button" ${attributes}>
 const empty = (title, body) => `<div class="ev-empty"><strong>${esc(title)}</strong>${esc(body)}</div>`;
 const table = (headings, rows) => rows.length ? `<div class="ev-table-wrap"><table class="ev-table"><thead><tr>${headings.map(h => `<th scope="col">${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>` : '';
 const metric = (label, value, cls = '') => `<div class="ev-metric ${cls}"><span>${esc(label)}</span><strong>${value}</strong></div>`;
+function readQuoteCache() {
+  try { const cache = JSON.parse(window.localStorage.getItem(QUOTE_CACHE)); return cache && Array.isArray(cache.quotes) && Array.isArray(cache.history) ? cache : null; }
+  catch { return null; }
+}
 function persist() {
   try {
-    localStorage.setItem(STORE, JSON.stringify(state));
+    const { quotes, history, apiSyncedAt, ...account } = state;
+    try { window.localStorage.setItem(QUOTE_CACHE, JSON.stringify({ quotes, history, apiSyncedAt })); } catch { /* The next sync refills quotes. */ }
+    localStorage.setItem(STORE, JSON.stringify({ ...account, quotes: [], history: [] }));
     if(state.suite) writeSuiteState(state.suite);
     const apiCount = state.quotes.filter(q => q.source === 'local-api').length;
-    $('#ev-notice').textContent = state.apiSyncedAt || apiCount ? `${apiCount} API quotes saved. Use Sync API or auto-refresh to update prices.` : 'Workspace saved in this browser. Add prices, import records, or connect a quote feed.';
+    $('#ev-notice').textContent = state.apiSyncedAt || apiCount ? `${apiCount} API quotes saved. Use Sync API or auto-refresh to update prices.` : 'Waiting for the quote API. Prices appear here once it syncs.';
     return true;
   } catch {
     $('#ev-notice').textContent = 'Browser storage is unavailable. Export your work before leaving this page.';
@@ -281,7 +306,8 @@ function renderNav() {
 // Tool dialogs belong to the tool that opened them; switching tools closes them.
 const closeToolDialogs = () => document.querySelectorAll('dialog#evx-dialog[open]').forEach(dialog => dialog.close());
 function setTool(key) { if (key === 'tracker') return location.assign(betTrackerUrl(sport.toLowerCase())); if (!toolMeta[key]) return; closeToolDialogs(); active = key; pairVisibleCount = 40; bookmaker = ''; marketType = ''; showAllBooks = false; bookMenuOpen = false; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; $('.ev-tool-details').open = false; history.replaceState(history.state, '', location.pathname + location.search + '#' + key); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-function action(label, type, extra = '') { return button(label, `data-add="${type}" ${extra}`); }
+// Sportsbook prices come only from the quote API, so there is no manual "add price" action.
+function action(label, type, extra = '') { return type === 'quote' ? '' : button(label, `data-add="${type}" ${extra}`); }
 const filterIcons = {
   sport:'◉', platform:'▱', league:'♜', market:'▥', date:'▣', period:'◷', side:'↕', odds:'☷', liquidity:'≋', edge:'↗', stake:'$'
 };
@@ -318,19 +344,36 @@ function renderDesignFilters() {
   const sportControl = designSelect('sport','Sports', [['',arb ? 'All sports' : 'Sports'],...sports.map(value => [value,value])],sport,arb ? 'Sport' : '');
   const leagueControl = designSelect('league','Leagues', [['','Leagues'],...leagues.map(value => [value,value])],designFilters.league,sharp ? 'Leagues' : '');
   const marketControl = designSelect('market',fantasy ? 'Stat' : 'Markets', [['',fantasy ? 'Stat' : arb ? 'All markets' : 'Markets'],...marketNames.map(value => [value,value])],marketType,arb ? 'Market' : sharp ? 'Markets' : '');
-  const dateControl = designSelect('date','Date Range', [['all','Any'],['today','Today'],['week','7 days']],designFilters.date,arb ? 'Date range' : 'Date Range');
+  if (!fantasy && !START_WINDOWS.some(([value]) => value === designFilters.date)) designFilters.date = 'all';
+  const dateControl = fantasy
+    ? designSelect('date','Date Range', [['all','Any'],['today','Today'],['week','7 days']],designFilters.date,'Date Range')
+    : designSelect('date','Starts', START_WINDOWS,designFilters.date,'Starts');
   const bookControl = designSelect('platform',fantasy ? 'Platforms' : 'Sportsbooks', [['',fantasy ? 'Platforms' : 'Sportsbooks'],...availableBooks.map(value => [value,value])],bookmaker,sharp ? 'Sportsbooks' : '');
   const periodControl = designSelect('period','Period', arb ? [['pregame','Pregame'],['live','Live']] : [['all','All games'],['pregame','Pregame'],['live','Live']],arb ? (active === 'arb-live' ? 'live' : 'pregame') : designFilters.period,arb ? 'Period' : '');
   const oddsControl = designSelect('odds','Max Odds', [['all','Any'],['200','+200'],['300','+300'],['500','+500']],designFilters.maxOdds,'Max Odds');
   const liquidityControl = `<label class="ev-design-filter"><span class="ev-design-icon" aria-hidden="true">${filterIcons.liquidity}</span><span class="ev-design-prefix">Min Liquidity</span><input data-filter="liquidity" aria-label="Minimum liquidity" type="number" min="0" step="1" value="${esc(localStorage.getItem('sportslab-ev-sharp-min') || 1000)}"></label>`;
-  const edgeControl = designSelect('edge','Min Edge', [['0','Any edge'],['0.005','0.5%'],['0.01','1%'],['0.02','2%']],designFilters.minEdge,'Minimum edge');
+  const edgeControl = designSelect('edge','Min Return', [['0','Any return'],['0.005','0.5%'],['0.01','1%'],['0.02','2%'],['0.03','3%'],['0.05','5%']],designFilters.minEdge,'Min return');
   const stakeControl = `<label class="ev-design-filter"><span class="ev-design-icon" aria-hidden="true">${designFilterIcon('stake')}</span><span class="ev-design-prefix">First Stake</span><input data-filter="stake" aria-label="First side stake" type="number" min="1" step="1" value="${esc(stake)}"></label>`;
   const sideControl = designSelect('side','Over or Under', [['','Over/Under'],['Over','Over'],['Under','Under']],designFilters.side);
   const controls = fantasy ? [sportControl,bookControl,leagueControl,marketControl,dateControl,sideControl]
     : odds ? [sportControl,leagueControl,marketControl,periodControl,dateControl]
-    : arb ? [sportControl,marketControl,edgeControl,stakeControl,dateControl,periodControl]
+    : arb ? [sportControl,leagueControl,marketControl,edgeControl,stakeControl,dateControl,periodControl]
     : [sportControl,leagueControl,marketControl,oddsControl,liquidityControl,dateControl];
   container.innerHTML = controls.join('');
+}
+// Min odds, Min EV and Min win chance for Positive EV, beside the existing Max odds filter.
+function renderEvThresholds() {
+  let container = $('#ev-reference-extra');
+  if (!container) {
+    container = document.createElement('span');
+    container.id = 'ev-reference-extra';
+    container.className = 'ev-reference-extra';
+    $('.ev-reference-filters').append(container);
+  }
+  const choice = (key, icon, label, options, title) => `<label class="ev-odds-filter" title="${esc(title)}"><span aria-hidden="true">${icon}</span><span>${esc(label)}</span><select data-ev-threshold="${key}" aria-label="${esc(label)}">${options.map(([value,text]) => `<option value="${esc(value)}" ${value === toolFilters[key] ? 'selected' : ''}>${esc(text)}</option>`).join('')}</select></label>`;
+  container.innerHTML = choice('evMinOdds','☷','Min Odds',MIN_ODDS,'Shortest price to include.')
+    + choice('minEv','↗','Min EV',MIN_EV,'Hide bets with a smaller expected edge.')
+    + choice('minProb','◔','Min Win Chance',MIN_WIN_CHANCE,'Fair no-vig probability. Raise it to skip long shots.');
 }
 let inlineDetail=null;
 const evReferenceModels = new Map();
@@ -376,10 +419,13 @@ function render() {
   $('#ev-reference-league').innerHTML = `<option value="">${positiveView ? 'Leagues' : 'All leagues'}</option>` + leagues.map(value => `<option value="${esc(value)}">${esc(value)}</option>`).join('');
   if (!leagues.includes(evLeague)) evLeague = '';
   $('#ev-reference-league').value = evLeague;
+  if (!START_WINDOWS.some(([value]) => value === evDateRange)) evDateRange = 'all';
   $('#ev-reference-date').value = evDateRange;
+  $('#ev-reference-date').closest('label').hidden = active === 'ev-live';
   $('#ev-reference-max-odds').value = evMaxOdds;
+  renderEvThresholds();
   $('#ev-sort-mode').innerHTML = ['ev-pre','ev-live'].includes(active)
-    ? '<option value="ev">Recommended</option><option value="event">Event</option><option value="odds">Odds</option>'
+    ? '<option value="ev">Recommended</option><option value="prob">Win chance</option><option value="start">Start time</option><option value="event">Event</option><option value="odds">Odds</option>'
     : '<option value="recommended">Recommended</option><option value="event">Event</option><option value="time">Time</option>';
   $('#ev-sort-mode').value = ['ev-pre','ev-live'].includes(active) ? evSort : designSort;
   renderDesignFilters();
@@ -389,7 +435,7 @@ function render() {
   const usesKelly = ['ev-pre','ev-live'].includes(active);
   const usesFlat = ['arb-pre','arb-live'].includes(active);
   $('#ev-kelly').value = usesKelly ? kelly : flatMultiplier.toFixed(2);
-  const dataKind = active === 'fantasy' ? (state.dfs.length ? 'Entered props' : 'No props yet') : hasApiSnapshot() ? 'API snapshot' : state.quotes.length ? 'Manual prices' : 'No prices yet';
+  const dataKind = active === 'fantasy' ? (state.dfs.length ? 'Entered props' : 'No props yet') : hasApiSnapshot() ? 'API snapshot' : 'No prices yet';
   $('#ev-data-kind').textContent = toolDataLabel(active, state, dataKind);
   $('#ev-top-badge').textContent = toolDataLabel(active, state, dataKind);
   $('#ev-multiplier-label').textContent = usesKelly ? 'Kelly multiplier' : 'Flat multiplier';
@@ -425,7 +471,7 @@ function render() {
     const heroActions={ledger:button('Performance','data-suite-action="navigate" data-id="performance"')+button('Add a bet','data-evl-action="add" data-evl-id="" data-evl-hero class="tool-hero-primary"'),performance:button('Bet ledger','data-suite-action="navigate" data-id="ledger" class="tool-hero-primary"'),alerts:button('Pricing & filters','data-suite-action="navigate" data-id="settings"'),settings:button('Alert center','data-suite-action="navigate" data-id="alerts"')};
     content=`<div class="tool-workspace es-2026" data-tool-workspace="${esc(active)}">${toolHero({title:pageTitle,description:esc(toolMeta[active][3]),group:toolMeta[active][0],symbol:SUITE_ICONS[active],actions:heroActions[active]||'',stats:suite.heroStats?.(active)||[]})}<div class="tool-content">${content}</div></div>`;
   }
-  $('#ev-view').innerHTML = secondaryShell(active, content, {actions:viewActions[active] || '',sport,search,dataLabel:toolDataLabel(active,state,dataKind)});
+  $('#ev-view').innerHTML = secondaryShell(active, content, {actions:viewActions[active] || '',sport,search,dataLabel:toolDataLabel(active,state,dataKind),filters:toolFilterBar(active, toolFilters, state.quotes.filter(q => !sport || q.sport === sport))});
   suite.mount();
   if (positiveScreen && !suiteView) bindEvReferenceCards();
   document.dispatchEvent(new Event('ev-tool-change'));
@@ -472,7 +518,9 @@ function renderBooks() {
   }
   const labels = { odds:'Compare lines', 'ev-pre':'Find bets', 'ev-live':'Find bets', fantasy:'Find props', 'arb-pre':'Find arbs', 'arb-live':'Find arbs', sharp:'Find opportunities' };
   $('#ev-find').firstChild.textContent = (labels[active] || 'View results') + ' ';
-  $('#ev-add-quote').textContent = active === 'fantasy' ? 'Add DFS prop' : active === 'sharp' ? 'Add exchange price' : 'Add price';
+  // Only DFS props can be entered by hand; sportsbook prices come from the API.
+  $('#ev-add-quote').textContent = 'Add DFS prop';
+  $('#ev-add-quote').hidden = active !== 'fantasy';
   menu.scrollTop = menuScroll;
   if (focusedBook) menu.querySelector('[data-book-option="' + CSS.escape(focusedBook) + '"]')?.focus({preventScroll:true});
   layoutSelectedBooks();
@@ -539,28 +587,34 @@ function renderEvExpanded(quote, fair, ev, asCard = false) {
       <div><strong>${money(stakeEstimate)}</strong><span>Rec. bet</span></div>
       <div class="ev-opportunity-ev"><strong>${(ev * 100).toFixed(2)}%</strong><span>Estimated EV</span></div>
     </div>
-    ${open ? `<div class="ev-opportunity-actions"><span>Observed ${age(quote.ts)} · ${quote.source === 'local-api' ? 'Local API' : 'Manual'} price</span><div><button type="button" data-edit="quote" data-id="${esc(quote.id)}">Edit price</button>${quote.live ? '' : `<button type="button" data-parlay="${esc(quote.id)}">Add to parlay</button>`}</div></div>
+    ${open ? `<div class="ev-opportunity-actions"><span>Observed ${age(quote.ts)} · API price</span><div>${quote.live ? '' : `<button type="button" data-parlay="${esc(quote.id)}">Add to parlay</button>`}</div></div>
     <div class="ev-price-matrix-scroller"><table class="ev-price-matrix"><thead><tr><th scope="col">Selection</th><th scope="col">Average</th><th scope="col">Best</th>${books.map(book => `<th scope="col">${brandMark(book)}<span>${esc(book)}</span></th>`).join('')}</tr></thead><tbody>${matrix}</tbody></table></div>
-    <p class="ev-opportunity-note">Prices shown are entered records for this market. Confirm availability, limits and freshness independently.</p>` : ''}
+    <p class="ev-opportunity-note">Prices shown come from the quote API for this market. Confirm availability, limits and freshness independently.</p>` : ''}
   </article>${asCard ? '' : '</td></tr>'}`;
 }
 
 function renderEv(live) {
-  const today = new Date().toDateString(), weekAgo = Date.now() - 7 * 86_400_000;
-  const pool = state.quotes.filter(q => (!sport || q.sport === sport) && (!evLeague || (q.league || q.sport) === evLeague) && (evDateRange === 'all' || evDateRange === 'today' && new Date(q.ts).toDateString() === today || evDateRange === 'week' && Date.parse(q.ts) >= weekAgo));
+  // Live games have all started, so the start-time window only narrows pregame prices.
+  const pool = state.quotes.filter(q => (!sport || q.sport === sport) && (!evLeague || (q.league || q.sport) === evLeague) && (live || startsWithin(q, evDateRange)));
   const all = computeAdvancedEv(pool, suite.settings()).filter(row=>Boolean(row.quote.live)===live && suite.quoteVisible(row.quote));
-  const rows = all.filter(({quote:q,ev}) => ev > 0 && (evMaxOdds === 'all' || Number(q.odds) <= Number(evMaxOdds)) && sportsbookSelected(q.book) && (!marketType || q.type === marketType) && (!search || [q.event,q.market,q.book,q.side,q.sport].some(value => filterText(value))));
+  const { evMinOdds, minEv, minProb } = toolFilters;
+  const rows = all.filter(({quote:q,ev,fair}) => ev > 0 && oddsWithin(q.odds, evMinOdds, evMaxOdds === 'all' ? '' : evMaxOdds)
+    && (!minEv || ev * 100 >= Number(minEv)) && (!minProb || fair * 100 >= Number(minProb))
+    && sportsbookSelected(q.book) && (!marketType || q.type === marketType) && (!search || [q.event,q.market,q.book,q.side,q.sport,q.player].some(value => filterText(value))));
+  const startOf = q => { const start = Date.parse(q.startTime); return Number.isFinite(start) ? start : Infinity; };
   if (evSort === 'event') rows.sort((a,b) => a.quote.event.localeCompare(b.quote.event) || b.ev - a.ev);
   else if (evSort === 'odds') rows.sort((a,b) => decimal(b.quote.odds) - decimal(a.quote.odds));
+  else if (evSort === 'prob') rows.sort((a,b) => b.fair - a.fair || b.ev - a.ev);
+  else if (evSort === 'start') rows.sort((a,b) => startOf(a.quote) - startOf(b.quote) || b.ev - a.ev);
   else rows.sort((a,b) => b.ev - a.ev);
   rows.sort((a,b)=>Number(Boolean(comparisonAnnotations(b.quote.id).pin))-Number(Boolean(comparisonAnnotations(a.quote.id).pin)));
   rows.sort((a,b)=>Number(Boolean(state.suite?.flags?.[b.quote.id]?.pin))-Number(Boolean(state.suite?.flags?.[a.quote.id]?.pin)));
   if (preserveLiveOrder) preserveReadingOrder(rows, [...document.querySelectorAll('.evb-row[data-wager-id]')].map(card=>card.dataset.wagerId), row=>row.quote.id);
   const emptyTitle = !pool.length ? 'No prices for this sport yet' : 'No positive EV selections match these filters';
-  const emptyBody = !pool.length ? 'Prices appear here once the odds feed syncs. You can also add or import your own prices.' : 'Add complete opposing prices from at least two books, or clear a filter. Use Sync API to refresh saved prices.';
+  const emptyBody = !pool.length ? 'Prices appear here once the odds feed syncs.' : 'No book is currently priced above the fair line for these filters. Clear a filter or wait for the next refresh.';
   const shown = rows.slice(0,evVisibleCount);
   const books = new Set(rows.map(row => row.quote.book)).size;
-  const summary = `<div class="evb-summary"><p><strong>${rows.length} positive ${rows.length === 1 ? 'selection' : 'selections'}</strong> from ${all.length} comparable prices</p>${rows.length ? `<dl><div><dt>Top edge</dt><dd class="is-positive">${(Math.max(...rows.map(row => row.ev)) * 100).toFixed(2)}%</dd></div><div><dt>Books</dt><dd>${books}</dd></div><div><dt>Bankroll</dt><dd>${money(bankroll)}</dd></div></dl>` : ''}</div>`;
+  const summary = `<div class="evb-summary"><p><strong>${rows.length} positive ${rows.length === 1 ? 'selection' : 'selections'}</strong> from ${pool.filter(q => Boolean(q.live) === live).length} API prices checked</p>${rows.length ? `<dl><div><dt>Top edge</dt><dd class="is-positive">${(Math.max(...rows.map(row => row.ev)) * 100).toFixed(2)}%</dd></div><div><dt>Books</dt><dd>${books}</dd></div><div><dt>Bankroll</dt><dd>${money(bankroll)}</dd></div></dl>` : ''}</div>`;
   const more = rows.length > evVisibleCount ? `<button type="button" class="ev-parlay-more" data-ev-more>Show ${Math.min(40,rows.length-evVisibleCount)} more selections · ${Math.min(evVisibleCount,rows.length)} of ${rows.length} shown</button>` : '';
   return `<div class="ev-stack ev-positive-screen evb-board"><div class="wager-results-bar evb-results-bar">${summary}</div>${rows.length ? renderEvBoard(evBoardContext(shown, live)) + more : empty(emptyTitle,emptyBody)}<p class="ev-caption ev-method-note">Fair probability uses your saved reference-book, weighting and no-vig settings. Recommended stakes use your bankroll and Kelly multiplier. Open a row to compare every book. ${live ? 'Live entries expire after 90 seconds.' : ''} Confirm price, limits and freshness independently.</p></div>`;
 }
@@ -879,7 +933,7 @@ function arbRow(key) {
       {icon:'flag', label:'Report a problem', attrs:`data-suite-action="report" data-id="${esc(a.id)}"`},
       {icon:'refresh', label:'Refresh prices', attrs:`data-pair-refresh="${esc(key)}"`}
     ],
-    ...arbPrices(ctx, rows, [a, b]), addAttrs:`data-add="quote" data-live="${Boolean(a.live)}"`,
+    ...arbPrices(ctx, rows, [a, b]),
     note:`${(plan.margin * 100).toFixed(2)}% return on ${money(plan.actualTotal)} · lowest outcome ${money(plan.minProfit)} · capacity ${esc(pairCapacity(plan))} · observed ${esc(ctx.age(pairOldest(a, b)))}. Stakes are rounded${plan.limited ? ' and reduced to supplied limits' : ''} and include supplied commissions and boosts.${plan.pushPossible ? ' A shared push returns both cash stakes; the lowest outcome includes it.' : ''}`});
   return pairBoardRow(key, a, pinned, cells, detail);
 }
@@ -1008,9 +1062,13 @@ function renderArb(live) {
     opportunities.sort((left,right) => Number(pinned(right.legs)) - Number(pinned(left.legs)));
   }
   const count = opportunities.length;
-  return `<div class="ev-stack ev-arb-screen evb-board pair-board arb-board">${count ? renderArbBoard(opportunities, pairContext({live, firstStake, budget})) : `<div class="ev-empty ev-arb-empty"><strong>No arbitrage matches</strong><p>${state.quotes.length ? 'No opposing prices match the selected books, pricing settings, and stake limits. Adjust a filter or add another market price.' : 'Add both sides of a market at different sportsbooks to compare prices and calculate the stake split.'}</p><div class="ev-arb-empty-actions">${button('Add price', `data-add="quote" data-live="${live}"`)}${state.quotes.length ? button('Clear filters', 'data-arb-clear') : ''}</div></div>`}<p class="ev-caption ev-method-note">Rounded stakes use supplied limits, commissions, and boosts. Missing capacity is labeled; calculated outcomes do not confirm availability at a sportsbook. Open a row to compare every book.</p></div>`;
+  return `<div class="ev-stack ev-arb-screen evb-board pair-board arb-board">${count ? renderArbBoard(opportunities, pairContext({live, firstStake, budget})) : `<div class="ev-empty ev-arb-empty"><strong>No arbitrage matches</strong><p>${state.quotes.length ? 'No opposing prices match the selected books, pricing settings, and stake limits. Adjust a filter or wait for the next refresh.' : 'Arbitrage matches appear here once the quote API returns both sides of a market at different sportsbooks.'}</p><div class="ev-arb-empty-actions">${state.quotes.length ? button('Clear filters', 'data-arb-clear') : ''}</div></div>`}<p class="ev-caption ev-method-note">Rounded stakes use supplied limits, commissions, and boosts. Missing capacity is labeled; calculated outcomes do not confirm availability at a sportsbook. Open a row to compare every book.</p></div>`;
 }
 
+// When a tool's filters hide every result, say so instead of implying the feed has no prices.
+const filteredEmpty = (fallback, symbol = 'filter') => TOOL_FILTERS[active] && activeFilterCount(toolFilters, TOOL_FILTERS[active]) && state.quotes.length
+  ? toolEmpty('Nothing matches these filters', 'The quote API has prices, but none pass the filters you picked. Loosen or clear a filter to see more.', button('Clear filters', 'data-tool-filter-clear'), symbol)
+  : fallback;
 function renderMiddles() {
   const settings = suite.settings();
   const pinned = row => [row.over,row.under].some(q => state.suite?.flags?.[q.id]?.pin);
@@ -1025,19 +1083,21 @@ function renderMiddles() {
       const outcomes = [lower-1,(lower+upper)/2,upper+1,lower,upper].map(score=>middleOutcomes(row.over,row.under,plan.stakes[0],plan.stakes[1],score));
       if (outcomes.some(outcome=>!outcome)) return null;
       return {...row,plan,inside:outcomes[1],outside:Math.min(outcomes[0].profit,outcomes[2].profit),lower:outcomes[3],upper:outcomes[4]};
-    }).filter(Boolean).sort((left,right)=>Number(pinned(right))-Number(pinned(left)));
-  return `<div class="tool-stack evb-board pair-board middle-board">${renderMiddleBoard(rows, pairContext({stake}), toolPanel('Middle opportunities','Compare overlapping totals and spread lines.',toolEmpty('Find a winning window','Add a lower Over and a higher Under, or opposing spreads with room for both sides to win. Prices must meet your availability and stake settings.',action('Add market prices','quote'),'expand')))}</div>`;
+    }).filter(row => row && (!toolFilters.minWidth || row.width >= Number(toolFilters.minWidth))).sort((left,right)=>Number(pinned(right))-Number(pinned(left)));
+  return `<div class="tool-stack evb-board pair-board middle-board">${renderMiddleBoard(rows, pairContext({stake}), toolPanel('Middle opportunities','Compare overlapping totals and spread lines.',filteredEmpty(toolEmpty('Find a winning window','Middles appear when the quote API has a lower Over and a higher Under, or opposing spreads with room for both sides to win. Prices must meet your availability and stake settings.',action('Add market prices','quote'),'expand'))))}</div>`;
 }
 
 function renderHolds() {
-  const rows = [false,true].flatMap(mode=>holdRows(eligibleQuotes(quotes()),mode)).sort((a,b)=>a.hold-b.hold);
-  const empty = toolEmpty('Compare your first two-sided market','Enter opposing selections so you can see the combined margin across books.',action('Add prices','quote'),'performance');
+  const rows = [false,true].flatMap(mode=>holdRows(eligibleQuotes(quotes()),mode)).filter(row=>!toolFilters.maxHold || row.hold*100 <= Number(toolFilters.maxHold)).sort((a,b)=>a.hold-b.hold);
+  const empty = filteredEmpty(toolEmpty('No two-sided markets yet','Holds appear here once the quote API returns both sides of a market across books.',action('Add prices','quote'),'performance'));
   return `<div class="tool-stack evb-board pair-board hold-board">${renderHoldBoard(rows, pairContext(), empty)}</div>`;
 }
 
 function renderPromo() {
   const outcome = promoConversion({...promoInput, boost:promoInput.kind === 'bonus' ? 0 : promoInput.boost});
-  const paired = groups(eligibleQuotes(quotes())).flatMap(rows=>rows.length>=2?rows.filter(q=>fresh(q)).map(q=>({q,opposite:rows.filter(x=>x.side!==q.side&&x.book!==q.book&&fresh(x)).sort((a,b)=>decimal(b.odds)-decimal(a.odds))[0]})).filter(x=>x.opposite):[]);
+  // Promo book and min odds describe the promotion side only; the hedge can be at any other book.
+  const promoSide = q => fresh(q) && (!toolFilters.book || q.book === toolFilters.book) && oddsWithin(q.odds, toolFilters.minOdds);
+  const paired = groups(eligibleQuotes(quotes())).flatMap(rows=>rows.length>=2?rows.filter(promoSide).map(q=>({q,opposite:rows.filter(x=>x.side!==q.side&&x.book!==q.book&&fresh(x)).sort((a,b)=>decimal(b.odds)-decimal(a.odds))[0]})).filter(x=>x.opposite):[]);
   const fields = `<div class="tool-form-grid"><label>Promotion type<select data-promo="kind"><option value="bonus" ${promoInput.kind==='bonus'?'selected':''}>Bonus bet · stake not returned</option><option value="boost" ${promoInput.kind==='boost'?'selected':''}>Odds boost · cash stake</option></select></label><label>${promoInput.kind==='bonus'?'Bonus value':'Cash stake'} ($)<input data-promo="stake" type="number" min="0.01" step="0.01" value="${esc(promoInput.stake)}"></label><label>Profit boost (%)<input data-promo="boost" type="number" min="0" step="0.1" value="${esc(promoInput.boost)}" ${promoInput.kind==='bonus'?'disabled':''}></label><label>Promotion odds<input data-promo="promoOdds" type="number" step="1" value="${esc(promoInput.promoOdds)}"><small>American odds, such as +150.</small></label><label>Hedge odds<input data-promo="hedgeOdds" type="number" step="1" value="${esc(promoInput.hedgeOdds)}"><small>The opposing selection at another book.</small></label></div>`;
   const result = toolReceipt('Hedge stake',outcome?money(outcome.hedge):'—', [['Promotion wins',outcome?money(outcome.ifPromoWins):'—'],['Hedge wins',outcome?money(outcome.ifHedgeWins):'—'],[promoInput.kind==='bonus'?'Bonus conversion':'Cash stake',outcome?(promoInput.kind==='bonus'?percent(outcome.conversion):money(promoInput.stake)):'—']],outcome?'Calculated from the prices entered. Check promotion terms and settlement rules before using this plan.':'Enter a positive stake and valid American odds to calculate both outcomes.');
   const bonus = promoInput.kind === 'bonus';
@@ -1058,7 +1118,7 @@ function renderPromo() {
         stake:{value:money(plan.hedge),sub:`at ${opposite.book}`},
         actions:boardButton(loaded?'Loaded':'Use prices',`data-promo-pair="${esc(q.id)}" data-hedge="${esc(opposite.id)}" aria-pressed="${loaded}"`)+boardToggle(`Compare prices for ${pick(q)}`,`data-detail="${esc(q.id)}"`)};
     })
-  }) : toolPanel('Use saved market prices','Load a promotion price and its opposing hedge in one click.',toolEmpty('Bring a market into your plan','Add prices on both sides at different books, then load a pair into the calculator.',action('Add prices','quote'),'tag'));
+  }) : toolPanel('Use saved market prices','Load a promotion price and its opposing hedge in one click.',filteredEmpty(toolEmpty('No hedge prices yet','Once the quote API returns both sides at different books, load a pair into the calculator.',action('Add prices','quote'),'tag')));
   return `<div class="tool-stack"><div class="tool-two-column">${toolPanel('Your promotion','Adjust the inputs to compare the two outcomes.',fields)}${result}</div>${prices}${toolNote('Pairs are ranked by the smaller of the two outcomes at your current promotion settings. Bonus conversion uses a stake-not-returned bonus. Odds boosts use a cash stake and boost the profit portion of the price.')}</div>`;
 }
 
@@ -1068,7 +1128,10 @@ function renderParlay() {
   const result = parlay(legs);
   const valid = result && Number.isFinite(result.ev) && new Set(selected.map(q=>q.book)).size===1;
   const invalidReason = selected.length < 2 ? 'Choose at least two legs from different events.' : new Set(selected.map(q=>q.book)).size > 1 ? 'Choose one sportsbook for every leg. These books cannot form one ticket.' : new Set(selected.map(q=>q.event)).size < selected.length ? 'Same-event legs may be correlated. This independent-leg calculator does not support that combination.' : 'A fair estimate needs complete comparison prices for every leg.';
-  const options = evRows(quotes(),false).filter(({quote})=>bookAvailable(quote.book));
+  const options = evRows(quotes(),false).filter(({quote,ev})=>bookAvailable(quote.book)
+    && (!toolFilters.book || quote.book === toolFilters.book)
+    && (toolFilters.legEv === '' || ev * 100 >= Number(toolFilters.legEv))
+    && oddsWithin(quote.odds, '', toolFilters.maxOdds));
   const pick = q => [q.player,q.side,q.line!==''&&q.line!=null?String(q.line):''].filter(Boolean).join(' ');
   const available = options.length ? toolBoard({layout:'cards',variant:'parlay',
     label:'Available parlay legs',compact:true,
@@ -1084,7 +1147,7 @@ function renderParlay() {
         prob:{value:percent(fair),sub:'No-vig'},
         actions:boardButton(inTicket?'Added':'Add leg',`data-parlay="${esc(q.id)}" aria-pressed="${inTicket}" aria-label="${inTicket?'Remove':'Add'} ${esc(pick(q))} ${inTicket?'from':'to'} parlay"`)+boardToggle(`Compare prices for ${pick(q)}`,`data-detail="${esc(q.id)}"`)};
     })
-  })+`${options.length > parlayVisibleCount ? `<button type="button" class="ev-parlay-more" data-parlay-more>Show ${Math.min(40,options.length-parlayVisibleCount)} more legs · ${options.length} available</button>` : ''}` : toolEmpty('Start with a priced market','Enter both sides at two books to calculate a fair probability for each leg.',action('Add prices','quote'),'plus');
+  })+`${options.length > parlayVisibleCount ? `<button type="button" class="ev-parlay-more" data-parlay-more>Show ${Math.min(40,options.length-parlayVisibleCount)} more legs · ${options.length} available</button>` : ''}` : filteredEmpty(toolEmpty('No priced markets yet','Parlay legs appear once the quote API returns both sides at two books.',action('Add prices','quote'),'plus'));
   const ticket = legs.length ? boardTicket(legs.map(q=>({book:q.book,title:pick(q),sub:`${q.displayEvent||q.event} · ${q.displayMarket||q.market} · Fair ${percent(q.probability)}`,price:oddsLabel(q.odds),action:button('Remove',`data-parlay-remove="${esc(q.id)}"`)}))) : toolEmpty('Your ticket starts here','Choose legs from one sportsbook and different events.','','picks');
   return `<div class="ev-parlay-summary"><div><strong>${selected.length} ${selected.length===1?'leg':'legs'}</strong><span>${valid ? `${result.payout.toFixed(2)} decimal · ${signed(result.ev)} EV` : 'Choose compatible legs'}</span></div><button type="button" data-parlay-ticket>Review ticket</button></div><div class="tool-two-column evt-builder" id="ev-parlay-browse">${options.length ? `<div class="tool-stack">${available}</div>` : toolPanel('Available legs','Prices with a complete comparison market.',available)}<div class="tool-stack" id="ev-parlay-ticket" tabindex="-1"><button type="button" data-parlay-browse>Back to available legs</button>${toolPanel('Your parlay',selected.length+' selected '+(selected.length===1?'leg':'legs'),ticket)}${toolReceipt('Combined decimal odds',valid?result.payout.toFixed(2):'—',[['Fair chance',valid?percent(result.probability):'—'],['Expected value',valid?signed(result.ev):'—']],valid?'Probabilities assume independent legs. Book pricing and parlay rules may change the actual offer.':invalidReason)}</div></div>`;
 }
@@ -1284,7 +1347,7 @@ function renderPrediction() {
   const positions=state.traders.filter(x=>x.name===traderName&&contractIds.has(x.contractId));
   const trades=state.trades.filter(x=>x.trader===traderName&&contractIds.has(x.contractId));
   const snapshots=state.contractHistory.filter(h=>contractIds.has(h.contractId)).slice().reverse().slice(0,100);
-  const controls=`<div class="tool-board-toolbar"><h2>Markets you follow</h2><div><label>Platform<select id="ev-prediction-platform"><option value="">All prediction platforms</option>${[...new Set([...PREDICTION_PLATFORMS,...state.contracts.map(c=>canonicalPlatform(c.platform))])].map(name=>`<option value="${esc(name)}" ${predictionPlatform===name?'selected':''}>${esc(name)}</option>`).join('')}</select></label>${action('Add exchange price','quote','data-exchange="true"')}</div></div>`;
+  const controls=`<div class="tool-board-toolbar"><h2>Markets you follow</h2><div><label>Platform<select id="ev-prediction-platform"><option value="">All prediction platforms</option>${[...new Set([...PREDICTION_PLATFORMS,...state.contracts.map(c=>canonicalPlatform(c.platform))])].map(name=>`<option value="${esc(name)}" ${predictionPlatform===name?'selected':''}>${esc(name)}</option>`).join('')}</select></label></div></div>`;
   const cards=contracts.length?toolBoard({layout:'cards',variant:'prediction',
     label:'Prediction market contracts',
     summary:{text:`<strong>${contracts.length} ${contracts.length===1?'contract':'contracts'}</strong> · prices in cents per $1 settlement`,pills:[['Positions',String(positions.length)],['Recorded trades',String(trades.length)]]},
@@ -1360,6 +1423,7 @@ function fieldMarkup(field, item) {
 }
 function openForm(type, id = null, presets = {}) {
   if (type === 'bet') return location.assign(betTrackerUrl(sport.toLowerCase()));
+  if (type === 'quote') return;
   const old = id ? state[collection[type]].find(x => x.id === id) : null;
   const item = { sport: sport || 'NFL', type:'game', side:'Over', live:false, exchange:false, liquidity:0, probability:.5, date:new Date().toISOString().slice(0,10), result:'open', kind:'price', threshold:0, enabled:true, ...old, ts:now(), ...presets };
   editing = { type, id };
@@ -1397,6 +1461,7 @@ function saveForm(event) {
   if (!editing) return;
   const item = parseForm();
   if (!item) return;
+  if (editing.type === 'quote') return;
   const {type,id} = editing, key = collection[type], previous = id ? state[key].find(x => x.id === id) : null;
   const record = { ...previous, ...item, id: id || uid(), source:'manual' };
   if (type === 'dfs' || type === 'contract') record.ts = now();
@@ -1479,12 +1544,17 @@ $('#ev-timing-toggle').addEventListener('click', () => {
 document.querySelector('[data-ev-focus-search]')?.addEventListener('click', () => { if (active === 'odds') { $('#os-search')?.focus(); return; } if (active === 'fantasy') { $('#dfs-search')?.focus(); return; } document.body.classList.toggle('ev-search-open'); $('#ev-search').focus(); });
 $('#ev-search').addEventListener('keydown', event => { if (event.key === 'Escape') { document.body.classList.remove('ev-search-open'); document.querySelector('[data-ev-focus-search]')?.focus(); } });
 $('#ev-odds-tabs').addEventListener('click', event => { const tab = event.target.closest('[data-odds-tab]'); if (tab) { marketType = tab.dataset.oddsTab; render(); } });
-$('#ev-reset-filters').addEventListener('click', () => { bookmaker = ''; selectedSportsbooks = null; bookMenuOpen = false; marketType = ''; search = ''; evLeague = ''; evDateRange = 'week'; evMaxOdds = '200'; evSort = 'ev'; designSort = 'recommended'; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; if (sport !== '') { sport = ''; history.replaceState(history.state, '', location.pathname + '?sport=all' + location.hash); } render(); });
+$('#ev-reset-filters').addEventListener('click', () => { bookmaker = ''; selectedSportsbooks = null; bookMenuOpen = false; marketType = ''; search = ''; evLeague = ''; evDateRange = 'all'; evMaxOdds = '200'; toolFilters = { ...toolFilters, evMinOdds:'', minEv:'', minProb:'' }; saveToolFilters(toolFilters, window.localStorage); evSort = 'ev'; designSort = 'recommended'; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; if (sport !== '') { sport = ''; history.replaceState(history.state, '', location.pathname + '?sport=all' + location.hash); } render(); });
 $('#ev-market-type').addEventListener('change', event => { marketType = event.target.value; render(); });
 $('#ev-reference-market').addEventListener('change', event => { marketType = event.target.value; render(); });
 $('#ev-reference-league').addEventListener('change', event => { evLeague = event.target.value; render(); });
 $('#ev-reference-date').addEventListener('change', event => { evDateRange = event.target.value; render(); });
 $('#ev-reference-max-odds').addEventListener('change', event => { evMaxOdds = event.target.value; render(); });
+$('.ev-reference-filters').addEventListener('change', event => {
+  const key = event.target.dataset?.evThreshold;
+  if (!key) return;
+  toolFilters = { ...toolFilters, [key]: event.target.value }; saveToolFilters(toolFilters, window.localStorage); evVisibleCount = 40; render();
+});
 $('#ev-sort-mode').addEventListener('change', event => { if (['ev-pre','ev-live'].includes(active)) evSort = event.target.value; else designSort = event.target.value; render(); });
 $('.ev-filter-panel').addEventListener('change', event => {
   const control = event.target.closest('[data-filter]');
@@ -1555,7 +1625,7 @@ $('#ev-reference-sport').addEventListener('change', event => {
   render();
 });
 $('#ev-search').addEventListener('input', event => { search = event.target.value.toLowerCase().trim(); evVisibleCount = 40; render(); });
-$('#ev-add-quote').addEventListener('click', () => active === 'fantasy' ? openForm('dfs') : openForm('quote', null, active === 'sharp' ? { exchange:true } : ['ev-live','arb-live'].includes(active) ? { live:true } : {}));
+$('#ev-add-quote').addEventListener('click', () => { if (active === 'fantasy') openForm('dfs'); });
 $('#ev-sync-api').addEventListener('click', () => { void feedControls.refresh(); });
 $('#ev-view-actions').addEventListener('click', event => { const target = event.target.closest('[data-add]'); if (target) openForm(target.dataset.add, null, { live:target.dataset.live === 'true', exchange:target.dataset.exchange === 'true', kind:target.dataset.kind || 'price' }); });
 document.addEventListener('click', event => {
@@ -1579,6 +1649,10 @@ $('#ev-view').addEventListener('click', event => {
   if (lineHistory) return openQuoteLineHistory(lineHistory.dataset.lineHistory, lineHistory);
   if (active === 'odds' && oddsScreen.click(event)) return;
   if (active === 'fantasy' && dfsWorkspace.click(event)) return;
+  if (event.target.closest('[data-tool-filter-clear]')) {
+    toolFilters = { ...toolFilters, ...Object.fromEntries((TOOL_FILTERS[active] || []).map(key => [key, TOOL_FILTER_DEFAULTS[key]])) };
+    saveToolFilters(toolFilters, window.localStorage); render(); return;
+  }
   const target = event.target.closest('button');
   if (!target) {
     const boardRow = event.target.closest('.evb-row[data-evb-row]');
@@ -1680,6 +1754,7 @@ $('#ev-view').addEventListener('change', event => {
   if (active === 'odds' && oddsScreen.change(event)) return;
   if (active === 'fantasy' && dfsWorkspace.change(event)) return;
   const t = event.target;
+  if (t.dataset.toolFilter) { toolFilters = { ...toolFilters, [t.dataset.toolFilter]: t.value }; saveToolFilters(toolFilters, window.localStorage); pairVisibleCount = 40; parlayVisibleCount = 40; render(); $(`[data-tool-filter="${t.dataset.toolFilter}"]`)?.focus(); return; }
   if (t.hasAttribute('data-tool-sport')) { sport = t.value; history.replaceState(history.state, '', `${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}${location.hash}`); render(); return; }
   if (t.id === 'sharp-sport') { sport = t.value; history.replaceState(history.state, '', `${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}${location.hash}`); render(); }
   else if (t.id === 'sharp-market') { marketType = t.value; render(); }
@@ -1722,21 +1797,6 @@ $('#ev-export').addEventListener('click', () => {
   a.href = url; a.download = `sportslab-ev-${new Date().toISOString().slice(0,10)}.json`; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
-$('#ev-import').addEventListener('click', () => { $('#ev-file').value = ''; $('#ev-import-error').textContent = ''; $('#ev-import-dialog').showModal(); });
-$('#ev-import-close').addEventListener('click', () => $('#ev-import-dialog').close());
-$('#ev-import-cancel').addEventListener('click', () => $('#ev-import-dialog').close());
-$('#ev-import-apply').addEventListener('click', async () => {
-  const file = $('#ev-file').files[0];
-  if (!file) return $('#ev-import-error').textContent = 'Choose a JSON file first.';
-  if (file.size > 5_000_000) return $('#ev-import-error').textContent = 'The file must be under 5 MB.';
-  try {
-    const data = JSON.parse(await file.text());
-    validateWorkspace(data);
-    suite.validateImport(data);
-    suite.importLedger(data);
-    feedControls.pause(); purgeDemoData(data); state = normalize(data); parlayIds=Array.isArray(state.suite?.builderIds)?state.suite.builderIds.filter(id=>state.quotes.some(q=>q.id===id)):[];buildersRestored=true;saveBuilderSession();evaluateAlerts(); persist(); $('#ev-import-dialog').close(); render();
-  } catch (error) { $('#ev-import-error').textContent = error.message; }
-});
 window.addEventListener('hashchange', () => { const key = location.hash.slice(1); if (toolMeta[key]) { if (key !== active) closeToolDialogs(); active = key; bookmaker = ''; marketType = ''; showAllBooks = false; bookMenuOpen = false; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; render(); } });
 let displayedQuoteRevision = '';
 document.addEventListener('ev-tool-change', () => { displayedQuoteRevision = quoteRevision(state.quotes); });
@@ -1769,4 +1829,6 @@ installMobileWorkspace();
 for(const type of ['click','change','input','submit','dragstart','dragover','drop'])$('#main').addEventListener(type,event=>{if(suite.handleEvent(event))event.stopImmediatePropagation();},true);
 suite.startRefresh();
 persist(); render();
+// Load the latest quotes as soon as the dashboard opens instead of waiting for Sync API.
+void feedControls.refresh();
 

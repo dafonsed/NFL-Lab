@@ -204,3 +204,5 @@ html body.ev-page #main .dfs-controls{padding:14px 16px!important;gap:10px!impor
   html body.ev-page #main .dfs-controls .dfs-search{flex-basis:100%!important}
 }
 html body.ev-page #main #ev-view .dfs-controls .dfs-search input{border:0!important;background:transparent!important;box-shadow:none!important}
+/* Positive EV thresholds sit in the same row as the other reference filters. */
+.ev-reference-extra{display:contents}

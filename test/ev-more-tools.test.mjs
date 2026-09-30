@@ -8,6 +8,7 @@ import {MORE_TOOLS,SECONDARY_TOOLS} from '../public/ev-tool-catalog.js';
 import {evToolUrl} from '../public/ev-tool-catalog.js';
 import * as views from '../public/ev-secondary-views.js';
 import * as core from '../public/ev-core.js';
+import {TOOL_FILTER_DEFAULTS, oddsWithin} from '../public/ev-filters.js';
 
 test('every secondary destination is reachable from the sidebar with sport context', () => {
   for (const path of ['/ev?sport=nfl','/ev/tracker?sport=mlb','/ev/dashboard?sport=all']) {
@@ -45,7 +46,7 @@ test('EV pages load shared sidebar behavior after the tool styles', async () => 
   const $=load(renderSitePage(template,new URL('http://localhost/ev')));
   assert.equal($('script[src^="/dashboard-navigation.js"]').attr('type'),'module');
   assert.equal($('script[src^="/dashboard-navigation.js"]').length,1);
-  assert.equal($('link[rel=stylesheet][href="/ev-more-tools.css?v=2"]').length,1);
+  assert.equal($('link[rel=stylesheet][href="/ev-more-tools.css?v=3"]').length,1);
   const styles=$('link[rel=stylesheet]').map((_,el)=>$(el).attr('href')).get();
   const palette=styles.findIndex(href=>href.startsWith('/workspace-palette.css'));
   const cards=styles.findIndex(href=>href.startsWith('/ev-bet-cards.css'));
@@ -58,7 +59,7 @@ test('promo view balances outcomes and never applies a disabled cash boost to a 
   const source=await fs.readFile(new URL('../public/ev.js',import.meta.url),'utf8');
   const start=source.indexOf('function renderPromo()');
   const end=source.indexOf('\nfunction ',start+1);
-  const context=vm.createContext({...views,...core,promoInput:{kind:'bonus',stake:100,promoOdds:150,hedgeOdds:-130,boost:50},eligibleQuotes:x=>x,quotes:()=>[],esc:views.toolEsc,money:n=>'$'+n.toFixed(2),percent:n=>(n*100).toFixed(1)+'%',action:()=>'',button:()=>''});
+  const context=vm.createContext({...views,...core,promoInput:{kind:'bonus',stake:100,promoOdds:150,hedgeOdds:-130,boost:50},eligibleQuotes:x=>x,quotes:()=>[],toolFilters:{...TOOL_FILTER_DEFAULTS},oddsWithin,filteredEmpty:fallback=>fallback,esc:views.toolEsc,money:n=>'$'+n.toFixed(2),percent:n=>(n*100).toFixed(1)+'%',action:()=>'',button:()=>''});
   const $=load(vm.runInContext(source.slice(start,end)+'\nrenderPromo()',context));
   assert.equal($('.tool-receipt-value').text(),'$84.78');
   assert.deepEqual($('.tool-receipt dd').map((_,el)=>$(el).text()).get(),['$65.22','$65.22','65.2%']);
