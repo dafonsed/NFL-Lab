@@ -1,7 +1,7 @@
 import { probabilityToAmerican, fantasySlip, money, oddsLabel, decimal, fresh } from './ev-core.js';
 import { teamLogo } from './sports-identity.js';
 import { FANTASY_PLATFORMS, SPORTSBOOK_PLATFORMS, canonicalPlatform, platformAsset, isFantasyPlatform, isContestPlatform } from './platform-catalog.js';
-import { boardIcon, renderBetPanel } from './ev-board.js?v=3';
+import { boardIcon, renderBetPanel } from './ev-board.js?v=4';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const normalize = value => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');

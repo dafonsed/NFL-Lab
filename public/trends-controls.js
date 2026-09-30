@@ -6,7 +6,7 @@ const controlSync=new WeakMap();
 const selectors='#td-week,#td-league,#td-game,#td-sort,#td-venue';
 const labels={'td-week':'NFL week','td-league':'League','td-game':'Matchup','td-sort':'Sort players','td-venue':'Game venue'};
 const symbols={'td-week':'calendar','td-league':'soccer','td-game':'calendar','td-sort':'settings','td-venue':'filter'};
-const captions={'ev-reference-date':'Date Range','ev-reference-max-odds':'Max Odds'};
+const captions={'ev-reference-date':'Starts','ev-reference-max-odds':'Max Odds'};
 let active;
 let sequence=0;
 

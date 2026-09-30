@@ -9,6 +9,7 @@ import {wagerCard} from '../public/ev-bet-card.js';
 import {boardIcon,bookLogo,startLabel,selectionText,renderBetPanel} from '../public/ev-board.js';
 import {leagueMark,teamMark} from '../public/sports-identity.js';
 import {constrainedArb,middleOutcomes} from '../public/ev-advanced-math.js';
+import {TOOL_FILTER_DEFAULTS,oddsWithin} from '../public/ev-filters.js';
 
 const source = await fs.readFile(new URL('../public/ev.js',import.meta.url),'utf8');
 const quote = (id, overrides={}) => ({id,sport:'NBA',event:'Home & Away',market:'Player points',player:'Ada <Example>',
@@ -24,7 +25,8 @@ function render(name,quotes,extra={},args='') {
     esc:views.toolEsc,fmtLine:value=>views.toolEsc(value),age:()=> 'Just now',$:()=>notice,
     localStorage:{getItem:()=> '1000'},filterText:()=>true,
     brandMark:book=>`<span class="ev-brand-fallback">${views.toolEsc(book)}</span>`,
-    button:(label,attrs='')=>`<button type="button" ${attrs}>${label}</button>`,action:()=>'',...extra});
+    button:(label,attrs='')=>`<button type="button" ${attrs}>${label}</button>`,action:()=>'',
+    toolFilters:{...TOOL_FILTER_DEFAULTS},oddsWithin,filteredEmpty:fallback=>fallback,...extra});
   const start=source.indexOf(`function ${name}(`),end=source.indexOf('\nfunction ',start+1);
   assert.ok(start>=0&&end>start,`${name} is available`);
   // Arbitrage, Middles and Low holds share the paired-board helpers declared just above renderArb.

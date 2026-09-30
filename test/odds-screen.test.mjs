@@ -42,7 +42,7 @@ test('excludes hidden books, exchange depth and invalid prices', () => {
 
 test('renders honest empty state and escapes entered market text', () => {
   const empty = createOddsScreen({getQuotes:()=>[],brandMark:()=>'',redraw:()=>{},onSport:()=>{}}).render({sport:'MLB'});
-  assert.match(empty,/Your odds board starts here/);
+  assert.match(empty,/Waiting for prices/); assert.doesNotMatch(empty,/data-add="quote"|Add a price/);
   const html = createOddsScreen({getQuotes:()=>[quote({player:'<img onerror=x>',market:'<script>x<\/script>'})],brandMark:()=>'',redraw:()=>{},onSport:()=>{}}).render({sport:'MLB'});
   assert.doesNotMatch(html,/<script>|<img onerror/);
   assert.match(html,/&lt;img onerror=x&gt;/);

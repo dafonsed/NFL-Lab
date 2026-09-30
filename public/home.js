@@ -198,8 +198,11 @@ function evPanel() {
   if (!$('#hd-ev')) return;
   let quotes = [];
   try {
-    const workspace = JSON.parse(accountStorage.getItem('sportslab-ev-workbench-v1') || 'null');
-    quotes = Array.isArray(workspace?.quotes) ? workspace.quotes.filter(quote => !isDemoRecord(quote)) : [];
+    // The +EV page keeps API quotes in this browser cache (see public/ev.js QUOTE_CACHE).
+    const cache = JSON.parse(window.localStorage.getItem('sportslab-ev-quote-cache-v1') || 'null');
+    const workspace = cache ? null : JSON.parse(accountStorage.getItem('sportslab-ev-workbench-v1') || 'null');
+    const saved = cache?.quotes ?? workspace?.quotes;
+    quotes = Array.isArray(saved) ? saved.filter(quote => quote?.source === 'local-api' && !isDemoRecord(quote)) : [];
   } catch { quotes = []; }
   const code = sport === 'soccer' ? 'Soccer' : label;
   const rows = computeAdvancedEv(sport === 'all' ? quotes : quotes.filter(q => (q.league || q.sport) === code || q.sport === code), EV_SETTINGS);

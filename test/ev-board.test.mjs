@@ -38,7 +38,7 @@ test('an open row renders the shared bet panel with the selected side and best p
   assert.match(html, /data-evb-boost="q1" data-odds="140" data-fair="0\.492"/, 'the boost field carries the offer and fair value');
   assert.match(html, /data-evb-analysis="q1"/);
   assert.match(html, /data-suite-action="track" data-id="q1"/);
-  assert.match(html, /class="evd-add"[^>]*data-add="quote"/, 'the dashed column adds a price');
+  assert.doesNotMatch(html, /evd-add|data-add="quote"/, 'prices come only from the quote API, so there is no add-price column');
 });
 
 test('boosted offers recompute the price and EV', () => {

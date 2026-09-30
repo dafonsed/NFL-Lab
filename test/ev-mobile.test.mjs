@@ -36,7 +36,7 @@ test('quote refresh restores cadence, avoids overlapping requests and pauses hid
   replace('setTimeout',(fn,ms)=>{pendingTimers.set(++nextId,{fn,ms});return nextId;});
   replace('clearTimeout',id=>pendingTimers.delete(id)); replace('setInterval',()=>1);
   try {
-    const feed = createQuoteFeedControls({getState:()=>({quotes:[]}),getTool:()=> 'ev-live',sync:()=>{requests++;return new Promise(done=>{resolve=done;});}});
+    const feed = createQuoteFeedControls({getState:()=>({quotes:[]}),getTool:()=> 'ev-pre',sync:()=>{requests++;return new Promise(done=>{resolve=done;});}});
     assert.equal(select.value,'30000');
     assert.equal([...pendingTimers.values()][0].ms,30000);
     const first = feed.refresh();
@@ -49,6 +49,45 @@ test('quote refresh restores cadence, avoids overlapping requests and pauses hid
     assert.equal(pendingTimers.size,1);
     feed.pause(); assert.equal(storage.get('sportslab-quote-refresh-ms'),'0');
     assert.equal(pendingTimers.size,0);
+  } finally {
+    for (const [key,descriptor] of Object.entries(original)) descriptor ? Object.defineProperty(globalThis,key,descriptor) : delete globalThis[key];
+  }
+});
+
+test('quote refresh defaults to 10 seconds and live tools are forced to 3 seconds', () => {
+  const original = Object.fromEntries(['document','window','navigator','setTimeout','clearTimeout','setInterval'].map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]));
+  const replace = (key,value) => Object.defineProperty(globalThis,key,{configurable:true,writable:true,value});
+  const build = (saved) => {
+    const select = element(), button = element(), fields = new Map(), timers = new Map(), storage = new Map(saved == null ? [] : [['sportslab-quote-refresh-ms',saved]]);
+    const panel = {...element(),querySelector:selector=>selector==='select'?select:fields.get(selector)};
+    for (const selector of ['[data-feed-status]','[data-feed-meta]','[data-feed-detail]','[data-feed-coverage]']) fields.set(selector,element());
+    let nextId = 0;
+    replace('document',{hidden:false,createElement:()=>panel,querySelector:selector=>selector==='.ev-header'?{after(){}}:button,addEventListener(){}});
+    replace('window',{addEventListener(){},localStorage:{getItem:key=>storage.has(key)?storage.get(key):null,setItem:(key,value)=>storage.set(key,value)}});
+    replace('navigator',{onLine:true});
+    replace('setTimeout',(fn,ms)=>{timers.set(++nextId,{fn,ms});return nextId;});
+    replace('clearTimeout',id=>timers.delete(id)); replace('setInterval',()=>1);
+    return { select, timers, storage };
+  };
+  try {
+    let env = build(null);
+    createQuoteFeedControls({getState:()=>({quotes:[]}),getTool:()=> 'ev-pre',sync:async()=>({saved:true})});
+    assert.equal(env.select.value,'10000');
+    assert.equal([...env.timers.values()][0].ms,10000);
+
+    env = build('0'); let tool = 'ev-live';
+    const feed = createQuoteFeedControls({getState:()=>({quotes:[]}),getTool:()=>tool,sync:async()=>({saved:true})});
+    assert.equal(env.select.value,'3000', 'Live ignores a saved Off preference.');
+    assert.equal(env.select.disabled,true);
+    assert.equal([...env.timers.values()][0].ms,3000);
+    feed.pause();
+    assert.equal([...env.timers.values()][0].ms,3000, 'Live refresh cannot be paused.');
+    tool = 'ev-pre'; feed.update();
+    assert.equal(env.select.value,'0');
+    assert.equal(env.select.disabled,false);
+    assert.equal(env.timers.size,0, 'Pregame keeps the viewer\'s Off choice.');
+    tool = 'arb-live'; feed.update();
+    assert.equal([...env.timers.values()][0].ms,3000);
   } finally {
     for (const [key,descriptor] of Object.entries(original)) descriptor ? Object.defineProperty(globalThis,key,descriptor) : delete globalThis[key];
   }
