@@ -94,6 +94,20 @@ function updateProfile() {
   }
 }
 async function loadAccount() { account = await api('/api/account'); updateProfile(); }
+// Referral link and sign-up count (created on first view).
+async function loadReferral() {
+  try {
+    const data = await api('/api/account/referral');
+    $('#referral-url').value = data.url;
+    $('#referral-count').textContent = String(data.signups);
+    $('#referral-count-label').textContent = data.signups === 1 ? 'person has signed up with your link' : 'people have signed up with your link';
+  } catch { $('#referral-url').value = 'Your referral link is unavailable right now.'; }
+}
+$('#copy-referral')?.addEventListener('click', async () => {
+  const input = $('#referral-url');
+  try { await navigator.clipboard.writeText(input.value); message($('#referral-status'), 'Link copied.'); }
+  catch { input.select(); message($('#referral-status'), 'Select the link and copy it.'); }
+});
 
 bindForm('#profile-form', async (_form, data, status) => {
   await api('/api/account/profile', { method: 'PATCH', body: { name: data.get('name').trim() } }); await loadAccount(); message(status, 'Your profile has been saved.');
@@ -164,7 +178,11 @@ bindAction('#mfa-toggle', securityStatus, async () => {
   let secret = '';
   try { secret = new URL(data.totpURI).searchParams.get('secret') || ''; } catch { /* Missing setup details handled below. */ }
   if (!secret) throw Object.assign(new Error('No setup key'), { userMessage: 'The authenticator setup could not be loaded. Close this dialog and try again.' });
-  $('#mfa-dialog-title').textContent = 'Set up your authenticator'; $('#mfa-dialog-description').textContent = 'Add this account in your authenticator using the setup key. Verify a code to finish.';
+  $('#mfa-dialog-title').textContent = 'Set up your authenticator'; $('#mfa-dialog-description').textContent = 'Scan the QR code with your authenticator app (or type the setup key), then enter a code to finish.';
+  // QR drawn locally from the otpauth URI (public/vendor/qrcode); the secret never leaves this page.
+  const qrBox = $('#mfa-qr');
+  qrBox.hidden = typeof window.qrcode !== 'function';
+  if (!qrBox.hidden) { const qr = window.qrcode(0, 'M'); qr.addData(data.totpURI); qr.make(); qrBox.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 3, scalable: true }); }
   $('#mfa-secret').value = secret; $('#mfa-setup').hidden = false; $('#mfa-verify-form [data-status]').hidden = true;
   displayRecoveryCodes(data.backupCodes); $('#mfa-dialog').showModal();
 });
@@ -279,6 +297,7 @@ const refreshSectionNav = setupSectionNav();
 
 try {
   await loadAccount(); $('#account-load-status').hidden = true; $('#account-content').hidden = false; $('#sign-out').disabled = false;
+  loadReferral();
   if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
   refreshSectionNav?.();
   const notice = new URLSearchParams(location.search).get('notice');

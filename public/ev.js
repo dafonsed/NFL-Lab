@@ -1,3 +1,4 @@
+import { browserAlertsControl, deliverAlerts, toggleBrowserAlerts } from './alert-delivery.js?v=1';
 import { wagerCard } from './ev-bet-card.js';
 import { renderEvBoard, renderEvBoardDetail, renderBetPanel, boostedOffer, boardIcon, bookLogo, startLabel, selectionText } from './ev-board.js?v=3';
 import { createEvSuite, EV_SUITE_TOOLS } from './ev-suite.js?v=local-suite-4';
@@ -261,18 +262,26 @@ async function syncLocalApi() {
   try { saved = commit(); } finally { preserveLiveOrder = false; }
   return { count: feed.size, saved };
 }
+// Email delivery runs on the server (lib/accounts/alert-mailer.mjs) for signed-in accounts that turn it on here.
+function emailAlertsControl() {
+  const on = state.alertEmail === true;
+  return `<div class="browser-alerts email-alerts" data-state="${on ? 'on' : 'off'}"><button type="button" data-email-alerts aria-pressed="${on}">${on ? 'Email alerts on' : 'Email me new matches'}</button><small>${on ? 'New matches are emailed to your account address (checked on a schedule; each match is sent once).' : 'Get new matches by email, even when VisualOdds is closed.'}</small></div>`;
+}
 function evaluateAlerts() {
+  const fresh = [];
   for (const rule of state.alerts) {
     if (rule.enabled === false) continue;
     const matched = alertMatches(rule, state);
     const seen = new Set(rule.seen || []);
     for (const match of matched) if (!seen.has(match.id)) {
       state.notifications.unshift({ id: uid(), ruleId: rule.id, message: `${rule.kind === 'fantasy-new' ? 'New fantasy prop' : rule.kind === 'ev' ? 'EV threshold' : rule.kind === 'movement' ? 'Line movement' : 'Price threshold'}: ${match.label}`, ts: now(), read: false });
+      fresh.push(state.notifications[0]);
       seen.add(match.id);
     }
     rule.seen = [...seen];
   }
   state.notifications = state.notifications.slice(0, 300);
+  deliverAlerts(fresh);
 }
 function commit() { evaluateAlerts(); const saved = persist(); render(); return saved; }
 function renderNav() {
@@ -1313,7 +1322,7 @@ function renderFantasyAlerts() {
   const rules=state.alerts.filter(x=>x.kind==='fantasy-new'&&visible(x,['market','event']));
   const notes=state.notifications.filter(x=>rules.some(r=>r.id===x.ruleId));
   const watches=rules.length?`<div class="ev-list">${rules.map(r=>`<div class="ev-list-item"><div><strong>${esc(r.market||'Any market')}</strong><span>${esc(r.sport||'All sports')} · Minimum hit rate ${Number(r.threshold)||0}%</span><span class="tool-rule-status ${r.enabled===false?'is-paused':''}">${r.enabled===false?'Paused':'Watching'}</span></div><div>${button('Edit',`data-edit="alert" data-id="${esc(r.id)}"`)}${button(r.enabled===false?'Resume':'Pause',`data-alert-toggle="${esc(r.id)}"`)}</div></div>`).join('')}</div>`:toolEmpty('Watch the props you care about','Choose a market and a minimum estimated hit rate. New matching entries will appear in your activity.',action('Create a fantasy alert','alert','data-kind="fantasy-new"'),'bookmark');
-  return `<div class="tool-stack">${toolStats([['Active watches',rules.filter(x=>x.enabled!==false).length],['Paused',rules.filter(x=>x.enabled===false).length],['Unread matches',notes.filter(x=>!x.read).length]])}<div class="tool-two-column">${toolPanel('Your watchlist','Rules apply when new player props enter this workspace.',watches)}${toolPanel('Recent activity','Matches from your saved fantasy alerts.',notes.length?renderNotifications(notes):toolEmpty('You’re all caught up','New matching props will appear here as you add or import data.','','live'))}</div>${toolNote('These are local workspace alerts. They do not fetch player props or send push notifications while the page is closed.')}</div>`;
+  return `<div class="tool-stack">${browserAlertsControl()}${emailAlertsControl()}${toolStats([['Active watches',rules.filter(x=>x.enabled!==false).length],['Paused',rules.filter(x=>x.enabled===false).length],['Unread matches',notes.filter(x=>!x.read).length]])}<div class="tool-two-column">${toolPanel('Your watchlist','Rules apply when new player props enter this workspace.',watches)}${toolPanel('Recent activity','Matches from your saved fantasy alerts.',notes.length?renderNotifications(notes):toolEmpty('You’re all caught up','New matching props will appear here as you add or import data.','','live'))}</div>${toolNote('These are local workspace alerts. They do not fetch player props or send push notifications while the page is closed.')}</div>`;
 }
 
 function renderNotifications(notes) {
@@ -1368,7 +1377,7 @@ function renderLineAlerts() {
   const all = state.history.filter(h => (!sport || !h.sport || h.sport === sport) && (!search || ['event','market','book','side'].some(k => filterText(h[k])))).sort((a,b) => b.ts.localeCompare(a.ts));
   const rules = state.alerts.filter(x => x.kind !== 'fantasy-new' && visible(x,['event','market']));
   const notes = state.notifications.filter(x => rules.some(r => r.id === x.ruleId));
-  return `<div class="ev-stack">${toolStats([['Active watches',rules.filter(x=>x.enabled!==false).length],['Unread alerts',notes.filter(x=>!x.read).length],['Price snapshots',all.length]])}<div class="tool-two-column">${toolPanel('Price and EV watches','Alerts fire in this browser when a newly saved or imported record meets a threshold. They do not poll sportsbooks.',rules.length ? `<div class="ev-list">${rules.map(r => `<div class="ev-list-item"><div><strong>${r.kind === 'ev' ? 'EV at least ' + r.threshold + '%' : r.kind === 'movement' ? 'Line change at least ' + r.threshold : 'American price at least ' + oddsLabel(r.threshold)}</strong><span> ${esc(r.sport || 'All sports')} · ${esc(r.event || 'Any event')} · ${esc(r.market || 'Any market')} · ${r.liveOnly ? 'Live only' : 'All'} · ${r.enabled === false ? 'Paused' : 'Active'}</span></div><div>${button('Edit', `data-edit="alert" data-id="${esc(r.id)}"`)} ${button(r.enabled === false ? 'Resume' : 'Pause', `data-alert-toggle="${esc(r.id)}"`)}</div></div>`).join('')}</div>` : toolEmpty('Choose your price target','Set a price, EV threshold, or line movement to watch.',action('Create alert','alert'),'live'),{actions:action('New alert','alert')})}${toolPanel('Alert activity','Matches from your saved rules.',notes.length?renderNotifications(notes):toolEmpty('You’re all caught up','Matching price updates will appear here.','','live'))}</div>${toolPanel('Recorded line movement','The latest 200 price snapshots, newest first.',all.length ? table(['Time', 'Market', 'Book', 'Side', 'Line', 'Price', 'Change'], all.slice(0,200).map(h => { const sequence = state.history.filter(x => x.quoteId === h.quoteId), index = sequence.findIndex(x => x.id === h.id), prior = sequence[index-1]; return `<tr><td>${new Date(h.ts).toLocaleString()}</td><td>${esc(h.event)}<small>${esc(h.market)}</small></td><td>${esc(h.book)}</td><td>${esc(h.side)}</td><td data-num>${fmtLine(h.line)}</td><td data-num>${oddsLabel(h.odds)}</td><td>${prior ? `${oddsLabel(prior.odds)} → ${oddsLabel(h.odds)}${String(prior.line) !== String(h.line) ? ` · line ${fmtLine(prior.line)} → ${fmtLine(h.line)}` : ''}` : 'First entry'}</td></tr>`; })) : toolEmpty('Follow a line from its first price','Each new or edited price creates a timestamped snapshot.',action('Add price','quote'),'trends'))}</div>`;
+  return `<div class="ev-stack">${browserAlertsControl()}${emailAlertsControl()}${toolStats([['Active watches',rules.filter(x=>x.enabled!==false).length],['Unread alerts',notes.filter(x=>!x.read).length],['Price snapshots',all.length]])}<div class="tool-two-column">${toolPanel('Price and EV watches','Alerts fire in this browser when a newly saved or imported record meets a threshold. They do not poll sportsbooks.',rules.length ? `<div class="ev-list">${rules.map(r => `<div class="ev-list-item"><div><strong>${r.kind === 'ev' ? 'EV at least ' + r.threshold + '%' : r.kind === 'movement' ? 'Line change at least ' + r.threshold : 'American price at least ' + oddsLabel(r.threshold)}</strong><span> ${esc(r.sport || 'All sports')} · ${esc(r.event || 'Any event')} · ${esc(r.market || 'Any market')} · ${r.liveOnly ? 'Live only' : 'All'} · ${r.enabled === false ? 'Paused' : 'Active'}</span></div><div>${button('Edit', `data-edit="alert" data-id="${esc(r.id)}"`)} ${button(r.enabled === false ? 'Resume' : 'Pause', `data-alert-toggle="${esc(r.id)}"`)}</div></div>`).join('')}</div>` : toolEmpty('Choose your price target','Set a price, EV threshold, or line movement to watch.',action('Create alert','alert'),'live'),{actions:action('New alert','alert')})}${toolPanel('Alert activity','Matches from your saved rules.',notes.length?renderNotifications(notes):toolEmpty('You’re all caught up','Matching price updates will appear here.','','live'))}</div>${toolPanel('Recorded line movement','The latest 200 price snapshots, newest first.',all.length ? table(['Time', 'Market', 'Book', 'Side', 'Line', 'Price', 'Change'], all.slice(0,200).map(h => { const sequence = state.history.filter(x => x.quoteId === h.quoteId), index = sequence.findIndex(x => x.id === h.id), prior = sequence[index-1]; return `<tr><td>${new Date(h.ts).toLocaleString()}</td><td>${esc(h.event)}<small>${esc(h.market)}</small></td><td>${esc(h.book)}</td><td>${esc(h.side)}</td><td data-num>${fmtLine(h.line)}</td><td data-num>${oddsLabel(h.odds)}</td><td>${prior ? `${oddsLabel(prior.odds)} → ${oddsLabel(h.odds)}${String(prior.line) !== String(h.line) ? ` · line ${fmtLine(prior.line)} → ${fmtLine(h.line)}` : ''}` : 'First entry'}</td></tr>`; })) : toolEmpty('Follow a line from its first price','Each new or edited price creates a timestamped snapshot.',action('Add price','quote'),'trends'))}</div>`;
 }
 
 const FIELDS = {
@@ -1702,6 +1711,8 @@ $('#ev-view').addEventListener('click', event => {
   if (target.dataset.optimize) { fantasyIds = target.dataset.optimize.split(','); fantasyApp = state.dfs.find(x => x.id === fantasyIds[0])?.app || ''; return setTool('slip'); }
   if (target.dataset.promoPair) { const a = state.quotes.find(x => x.id === target.dataset.promoPair), b = state.quotes.find(x => x.id === target.dataset.hedge); if (a && b) { promoInput.promoOdds = a.odds; promoInput.hedgeOdds = b.odds; render(); } return; }
   if (target.dataset.alertToggle) { const rule = state.alerts.find(x => x.id === target.dataset.alertToggle); if (rule) { rule.enabled = rule.enabled === false; commit(); } return; }
+  if (target.hasAttribute('data-email-alerts')) { state.alertEmail = state.alertEmail !== true; commit(); return; }
+  if (target.hasAttribute('data-browser-alerts')) { toggleBrowserAlerts().then(() => render()); return; }
   if (target.dataset.notificationDismiss) { state.notifications = state.notifications.filter(x => x.id !== target.dataset.notificationDismiss); return commit(); }
   if (target.id === 'ev-save-paytable') { const inputs = [...$('#ev-view').querySelectorAll('[data-pay-hits]')]; if (!state.paytables[fantasyApp]) state.paytables[fantasyApp] = {}; state.paytables[fantasyApp][String(fantasyIds.length)] = inputs.map(x => Math.max(0, Number(x.value) || 0)); return commit(); }
 });

@@ -7,7 +7,7 @@
 :root {
   --sl-bg:#07090b;--sl-sunken:#0a0d10;--sl-panel:#0e1215;--sl-panel-2:#13181c;--sl-panel-3:#192025;
   --sl-line:#1b2328;--sl-line-2:#262f36;--sl-line-3:#34404a;
-  --sl-text:#edf2ee;--sl-text-2:#b9c3be;--sl-muted:#7e8a86;--sl-faint:#56615d;
+  --sl-text:#edf2ee;--sl-text-2:#b9c3be;--sl-muted:#7e8a86;--sl-faint:#76817d;
   --sl-lime:#a3f06b;--sl-lime-2:#8be04c;--sl-lime-3:#c4f79c;--sl-lime-ink:#0a200f;
   --sl-lime-wash:rgb(163 240 107/.09);--sl-lime-line:rgb(163 240 107/.28);
   --sl-cyan:#43c3ff;--sl-cyan-wash:rgb(67 195 255/.1);--sl-red:#ff6f6f;--sl-red-wash:rgb(255 111 111/.1);--sl-amber:#f7c25a;

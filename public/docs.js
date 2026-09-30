@@ -64,7 +64,7 @@ for (const group of endpointGroups) {
 function setTheme(theme) {
   root.dataset.theme = theme;
   themeButton.setAttribute('aria-label', `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`);
-  document.querySelector('meta[name="theme-color"]').content = '#0a1d2b';
+  document.querySelector('meta[name="theme-color"]').content = '#07090b';
 }
 try { setTheme(localStorage.getItem('sportslab-docs-theme') === 'light' ? 'light' : 'dark'); }
 catch { setTheme('dark'); }

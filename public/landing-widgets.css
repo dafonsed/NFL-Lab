@@ -459,7 +459,7 @@ body .home-footer-brand p {margin:0;color:var(--sl-muted);font-size:14.5px;max-w
 .home-footer-actions {display:flex;gap:10px;flex-wrap:wrap}
 body .home-footer-cta {min-height:42px;padding:0 20px;font-size:14px}
 body .home-footer-cta .ui-icon {width:15px;height:15px}
-body .home-footer-grid {grid-template-columns:repeat(5,minmax(0,1fr));gap:32px;padding:40px 0 44px}
+body .home-footer-grid {grid-template-columns:repeat(6,minmax(0,1fr));gap:28px;padding:40px 0 44px}
 body .home-footer-column {display:grid;align-content:start;gap:12px}
 body .home-footer-column h2 {margin:0 0 4px;color:var(--sl-text);font:650 12px/1.3 var(--sl-font);letter-spacing:.08em;text-transform:uppercase}
 body .home-footer-column a {width:max-content;max-width:100%;color:var(--sl-muted);font-size:14px;text-decoration:none;transition:color .15s,transform .15s}
@@ -537,3 +537,14 @@ body .home-soccer-link svg {padding:7px}
   .sl-motion [data-play]:not(.is-playing) :is(.mp-bar,.preview-game-bar,.sl-step-bars i) {transform:scaleY(0)}
   .sl-motion [data-play]:not(.is-playing) :is(.hero-tracker-day.has-picks,.mp-col>b,.mp-foot>div,.oj-score-row,.oj-split>div,.oj-foot>div) {opacity:0}
 }
+.oj-band-main p a {color:var(--sl-lime);text-decoration:none;font-weight:600}
+.oj-band-main p a:hover {text-decoration:underline}
+
+/* Keyboard focus baseline: zero specificity (:where), so components with their own focus style keep it. */
+:where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {outline:2px solid #a3f06b;outline-offset:2px}
+
+/* Faint text meets WCAG AA (4.5:1) on the page and card backgrounds. */
+html:root {--sl-faint:#76817d}
+
+/* How it works step 01: real sportsbook icons in the price chips. */
+.sl-step-visual span img{width:18px;height:18px;margin-right:7px;border-radius:5px;vertical-align:-4px;object-fit:cover}

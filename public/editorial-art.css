@@ -1,0 +1,14 @@
+/* Editorial illustrations for guide covers and cards: one SVG per scene, in the site palette.
+   Overrides the old 2x2 sprite positioning used by the article, hub and guide stylesheets. */
+html body [class*="longform-art--"]:not([style*="/art/"]) {background-color:#0e1215 !important;background-repeat:no-repeat !important;background-size:cover !important;background-position:center !important}
+html body .longform-art--odds:not([style*="/art/"]) {background-image:url("/assets/art/odds.svg") !important}
+html body .longform-art--probability:not([style*="/art/"]) {background-image:url("/assets/art/probability.svg") !important}
+html body .longform-art--comparison:not([style*="/art/"]) {background-image:url("/assets/art/comparison.svg") !important}
+html body .longform-art--calculator:not([style*="/art/"]) {background-image:url("/assets/art/calculator.svg") !important}
+html body .longform-art--arbitrage:not([style*="/art/"]) {background-image:url("/assets/art/arbitrage.svg") !important}
+html body .longform-art--trends:not([style*="/art/"]) {background-image:url("/assets/art/trends.svg") !important}
+html body .longform-art--ticket:not([style*="/art/"]) {background-image:url("/assets/art/ticket.svg") !important}
+html body .longform-art--tracker:not([style*="/art/"]) {background-image:url("/assets/art/tracker.svg") !important}
+
+/* Per-page pictures (/art/<key>.svg) are set inline; size them the same way. */
+html body [style*="/art/"] {background-color:#0e1215 !important;background-repeat:no-repeat !important;background-size:cover !important;background-position:center !important}

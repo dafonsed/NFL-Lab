@@ -12,12 +12,41 @@ from threading import RLock
 import json
 import os
 
-from fastapi import FastAPI, HTTPException, Query
+from hmac import compare_digest
+
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.encoders import jsonable_encoder
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 
 app = FastAPI(title="VisualOdds EV Tool API", version="1.0.0")
+# Only answer requests addressed to this machine (blocks DNS-rebinding reads from web pages).
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=[host.strip() for host in os.environ.get("EV_TOOL_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",") if host.strip()],
+)
+
+
+@app.middleware("http")
+async def require_key_and_json(request: Request, call_next):
+    """Every request needs the shared X-API-Key the VisualOdds server sends; writes must be JSON.
+
+    Without these checks any web page open in the developer's browser could POST quotes to this
+    local service (a no-preflight "simple" request) and poison the EV workspace.
+    """
+    expected = os.environ.get("EV_TOOL_API_KEY", "")
+    supplied = request.headers.get("x-api-key", "")
+    if not expected:
+        return JSONResponse({"detail": "Set EV_TOOL_API_KEY for this service."}, status_code=503)
+    if not compare_digest(supplied.encode(), expected.encode()):
+        return JSONResponse({"detail": "Invalid or missing API key."}, status_code=401)
+    if request.method in {"POST", "PUT", "PATCH"}:
+        content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
+        if content_type != "application/json":
+            return JSONResponse({"detail": "Send JSON with Content-Type: application/json."}, status_code=415)
+    return await call_next(request)
 DATA_FILE = Path(
     os.environ.get("EV_TOOL_QUOTES_FILE")
     or Path(__file__).resolve().parents[2] / "data" / "ev-tool-quotes.json"

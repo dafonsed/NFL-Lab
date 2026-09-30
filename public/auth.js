@@ -30,7 +30,7 @@ form.addEventListener('submit', async event => {
     if (mode === 'register') {
       await api('/api/auth/sign-up/email', { method: 'POST', body: {
         name: fields.get('name').trim(), email: fields.get('email').trim(), password: fields.get('password'),
-        termsAccepted: fields.get('termsAccepted') === 'on', policyVersion: '2026-09-28',
+        ageConfirmed: fields.get('ageConfirmed') === 'on', termsAccepted: fields.get('termsAccepted') === 'on', policyVersion: '2026-09-28',
         marketingConsent: fields.get('marketingConsent') === 'on', callbackURL: '/account'
       }});
       form.reset();
@@ -52,3 +52,35 @@ form.addEventListener('submit', async event => {
     }
   } finally { setBusy(form, false); }
 });
+
+// Google sign-in, shown only when the server has it configured. New accounts need the same
+// age and Terms boxes as email sign-up; returning users just continue.
+const social = document.querySelector('#account-social');
+if (social) {
+  api('/api/account/providers').then(data => { social.hidden = !data?.providers?.includes('google'); }).catch(() => {});
+  if (mode === 'login' && query.get('error') === 'TWO_FACTOR_REQUIRED') message(status, 'This account uses two-step verification. Sign in with your email, password and authenticator code.');
+  else if (mode === 'login' && query.get('error') === 'GOOGLE_SIGN_IN') message(status, 'Google sign-in did not finish. If you are new, create an account first, or sign in with your email.');
+  social.addEventListener('click', async event => {
+    const button = event.target.closest('[data-social]');
+    if (!button) return;
+    status.hidden = true;
+    const signUp = mode === 'register';
+    if (signUp) {
+      const age = form.elements.namedItem('ageConfirmed'), terms = form.elements.namedItem('termsAccepted');
+      if (!age.checked) { age.reportValidity(); age.focus(); return; }
+      if (!terms.checked) { terms.reportValidity(); terms.focus(); return; }
+    }
+    setBusy(form, true);
+    try {
+      const data = await api('/api/auth/sign-in/social', { method: 'POST', body: {
+        provider: button.dataset.social, callbackURL: next || '/research', requestSignUp: signUp,
+        ...(signUp ? { ageConfirmed: true, termsAccepted: true, policyVersion: '2026-09-28' } : {}),
+      } });
+      if (data?.url) location.assign(data.url);
+      else throw new Error('No redirect');
+    } catch (error) {
+      message(status, error.userMessage || error.message || 'Google sign-in is unavailable right now. Try again or use your email.');
+      setBusy(form, false);
+    }
+  });
+}

@@ -85,7 +85,7 @@ try {
   configured = true;
   if (!process.env.ACCOUNT_BROWSER_PRICING_ONLY) {
   const email = 'suspended-browser@example.test', password = 'Bright autumn research maps stay private!';
-  const signup = await context.request.post(origin + '/api/auth/sign-up/email', { headers: { Origin: origin }, data: { email, password, name: 'Suspended Browser Fixture', termsAccepted: true, policyVersion: POLICY_VERSION, marketingConsent: false } });
+  const signup = await context.request.post(origin + '/api/auth/sign-up/email', { headers: { Origin: origin }, data: { email, password, name: 'Suspended Browser Fixture', ageConfirmed: true, termsAccepted: true, policyVersion: POLICY_VERSION, marketingConsent: false } });
   assert.equal(signup.status(), 200); await system.mail.drain();
   const url = outbox.find(mail => /Verify your/.test(mail.subject)).text.match(/https?:\/\/[^\s]+/)[0];
   await context.request.get(url);

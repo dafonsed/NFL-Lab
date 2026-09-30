@@ -231,3 +231,27 @@ html:root body:is([data-site-page="home"],[data-site-page$="-home"]):not(#hd-roo
 }
 html:root body[data-site-page="ev-home"]:not(#hd-root) #main .hd-all-mark {display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:rgb(163 240 107/.12);color:var(--sl-lime,#a3f06b)}
 html:root body[data-site-page="ev-home"]:not(#hd-root) #main .hd-all-mark svg {width:13px;height:13px}
+
+/* Setup checklist (public/onboarding.js) */
+html:root body:is([data-site-page="home"],[data-site-page$="-home"]):not(#hd-root):not(#ob-a) #main .vo-onboard {
+  display:grid;gap:14px;margin:0 0 18px;padding:20px 22px;border:1px solid rgb(163 240 107/.22);border-radius:20px;background:radial-gradient(420px 160px at 0% 0%,rgb(163 240 107/.07),transparent 70%),#0e1215;
+  &[hidden] {display:none}
+  & .vo-onboard-head {display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+  & .vo-onboard-kicker {color:#a3f06b;font:650 11.5px/1 Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:.09em;text-transform:uppercase}
+  & h2 {margin:8px 0 0;color:#edf2ee;font-size:20px;font-weight:650;letter-spacing:-.02em}
+  & .vo-onboard-dismiss {height:32px;padding:0 14px;border:1px solid rgb(255 255 255/.12);border-radius:999px;background:transparent;color:#b9c3be;font-size:13px;font-weight:600;cursor:pointer}
+  & .vo-onboard-dismiss:hover {border-color:rgb(255 255 255/.24);color:#edf2ee}
+  & .vo-onboard-meter {height:4px;border-radius:4px;background:rgb(255 255 255/.07);overflow:hidden}
+  & .vo-onboard-meter i {display:block;height:100%;border-radius:inherit;background:#a3f06b;transition:width .4s cubic-bezier(.2,.7,.2,1)}
+  & .vo-onboard-steps {display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin:0;padding:0;list-style:none}
+  & .vo-onboard-steps li {display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:1fr auto;gap:8px 12px;padding:14px;border:1px solid rgb(255 255 255/.08);border-radius:14px;background:rgb(255 255 255/.02)}
+  & .vo-onboard-check {display:grid;place-items:center;width:28px;height:28px;border:1px solid rgb(255 255 255/.14);border-radius:50%;color:#b9c3be;font:700 12px/1 Inter,ui-sans-serif,sans-serif}
+  & li.is-done .vo-onboard-check {border-color:#a3f06b;background:#a3f06b;color:#0a200f}
+  & .vo-onboard-copy {display:grid;gap:3px;min-width:0}
+  & .vo-onboard-copy strong {color:#edf2ee;font-size:14.5px;font-weight:650}
+  & .vo-onboard-copy small {color:#7e8a86;font-size:12.5px;line-height:1.4}
+  & li.is-done .vo-onboard-copy strong {color:#b9c3be;text-decoration:line-through;text-decoration-color:rgb(163 240 107/.5)}
+  & .vo-onboard-steps a {grid-column:2;justify-self:start;display:inline-flex;align-items:center;height:32px;padding:0 14px;border:1px solid rgb(163 240 107/.45);border-radius:999px;background:rgb(163 240 107/.08);color:#a3f06b;font-size:13px;font-weight:650;text-decoration:none}
+  & .vo-onboard-steps a:hover {background:#a3f06b;color:#0a200f}
+  & .vo-onboard-state {grid-column:2;color:#a3f06b;font-size:12.5px;font-weight:650}
+}

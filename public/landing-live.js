@@ -118,6 +118,21 @@ function mountMarketPreview(root) {
   render();
 }
 
+// Shown when the live feed cannot be read (e.g. signed-out visitors): a fixed, clearly labelled example.
+const SAMPLE_LIVE = {
+  sample: true,
+  game: { id: 'sample', state: 'post', status: 'Final', teams: [
+    { homeAway: 'away', abbreviation: 'PHI', name: 'Philadelphia Eagles', score: 24, id: '21' },
+    { homeAway: 'home', abbreviation: 'DAL', name: 'Dallas Cowboys', score: 20, id: '6' },
+  ] },
+  events: [],
+  odds: { books: [{ markets: [
+    { key: 'moneyline', label: 'Moneyline', selections: [{ label: 'PHI', odds: -135 }, { label: 'DAL', odds: 115 }] },
+    { key: 'spread', label: 'Spread', selections: [{ label: 'PHI', line: -2.5, odds: -110 }, { label: 'DAL', line: 2.5, odds: -110 }] },
+    { key: 'total', label: 'Total', selections: [{ label: 'Over', line: 46.5, odds: -108 }, { label: 'Under', line: 46.5, odds: -112 }] },
+  ] }] },
+};
+
 function mountLivePreview(root){
   if(!root)return;
   const state={sport:'nfl',game:'',market:'moneyline'};
@@ -128,7 +143,7 @@ function mountLivePreview(root){
     if(!markets.some(item=>item.key===state.market))state.market=markets[0]?.key||'moneyline';
     const market=markets.find(item=>item.key===state.market);
     const delayed=failed||data?.stale;
-    const status=delayed?(game?'Feed delayed':'Feed unavailable'):game?.state==='in'?'In progress':game?.state==='post'?'Final':game?'Upcoming':'Between games';
+    const status=data?.sample?'Sample game':delayed?(game?'Feed delayed':'Feed unavailable'):game?.state==='in'?'In progress':game?.state==='post'?'Final':game?'Upcoming':'Between games';
     const team=side=>game?.teams.find(t=>t.homeAway===side);
     const logo=item=>teamLogo({team:item?.abbreviation,teamId:item?.id,teamLogo:item?.logo,sport:state.sport});
     const mark=(item,size)=>{const src=logo(item);return src?`<img class="oj-team-logo" src="${esc(src)}" width="${size}" height="${size}" alt="" loading="lazy">`:`<span class="oj-team-logo is-text">${esc(item?.abbreviation||'—')}</span>`;};
@@ -139,7 +154,7 @@ function mountLivePreview(root){
     root.innerHTML=`<div class="oj-card oj-live">
       <header class="oj-band">
         <div class="oj-band-top"><span class="oj-league"><img src="/assets/leagues/nfl.png" width="14" height="14" alt="">NFL</span><span class="oj-status ${tone}"><i aria-hidden="true"></i>${esc(status)}</span><button type="button" class="oj-icon-button" data-live-refresh aria-label="Refresh feed" title="Refresh feed">${icon('refresh')}</button></div>
-        ${game?`<div class="oj-band-main"><div><h3>${esc(team('away')?.abbreviation||'Away')} at ${esc(team('home')?.abbreviation||'Home')}</h3><p>${esc(game.status||status)}</p></div></div>`:`<div class="oj-band-main"><div><h3>${delayed?'The feed is unavailable.':'Between games.'}</h3><p>${delayed?'Refresh the public feed or pick another league.':'No games on this date. Pick a league to open its game center.'}</p></div></div>`}
+        ${game?`<div class="oj-band-main"><div><h3>${esc(team('away')?.abbreviation||'Away')} at ${esc(team('home')?.abbreviation||'Home')}</h3><p>${data?.sample?'Example matchup · <a href="/login">Sign in</a> to follow the newest NFL game':esc(game.status||status)}</p></div></div>`:`<div class="oj-band-main"><div><h3>${delayed?'The feed is unavailable.':'Between games.'}</h3><p>${delayed?'Refresh the public feed or pick another league.':'No games on this date. Pick a league to open its game center.'}</p></div></div>`}
       </header>
       ${game?`<div class="oj-body">
         <div class="oj-scoreboard">${['away','home'].map(side=>{const item=team(side);return `<div class="oj-score-row${leader===side?' is-leader':''}">${mark(item,34)}<span class="oj-score-team"><strong>${esc(item?.name||side)}</strong><small>${side==='away'?'Away':'Home'} · ${esc(item?.abbreviation||'')}</small></span><b>${game.state==='pre'?'—':Number.isFinite(item?.score)?item.score:'—'}</b></div>`;}).join('')}</div>
@@ -168,7 +183,7 @@ function mountLivePreview(root){
       if(target&&target!==(next.selected||next.game?.id))next=await readJson(url+'?'+new URLSearchParams({game:target}));
       if(current!==request)return;data=next;state.game=next.selected||next.game?.id||'';
     }
-    catch{if(current!==request)return;data=null;failed=true;}
+    catch{if(current!==request)return;data=SAMPLE_LIVE;failed=false;}
     if(current!==request)return;
     root.setAttribute('aria-busy','false');render(focusSelector);
     schedule();

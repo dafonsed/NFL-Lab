@@ -51,7 +51,7 @@ if (grid && cycle && dialog) {
           <p class="home-plan-billing" data-plan-billing="${plan.id}">${escape(billing)}</p>
           <h4>${escape(heading)}</h4>
           <ul class="home-plan-features">${features.map(feature => `<li class="is-included"><span aria-hidden="true">✓</span>${escape(feature)}</li>`).join('')}</ul>
-          <button class="home-plan-action" type="button" data-plan-select="${plan.id}">${price ? `Choose ${escape(plan.name)}` : `Preview ${escape(plan.name)}`}</button>
+          <button class="home-plan-action" type="button" data-plan-select="${plan.id}" data-track="Plan selected" data-track-label="${plan.id}">${price ? `Choose ${escape(plan.name)}` : `Preview ${escape(plan.name)}`}</button>
         </div>
       </article>`;
     }).join('');

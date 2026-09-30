@@ -41,6 +41,6 @@ Fantasy, prediction and personal bet records still use separate data. The tracke
 
 ## Optional bundled Python scaffold
 
-The source folder is retained for development; it does not need to be started to use the supplied LAN host. Its `run_server.py` listens on `127.0.0.1:8000`. Its quote records persist in the ignored `data/ev-tool-quotes.json` file unless `EV_TOOL_QUOTES_FILE` specifies another path. The bundled scaffold does not implement API key enforcement and is intended only for loopback development; the LAN host requires the supplied key.
+The source folder is retained for development; it does not need to be started to use the supplied LAN host. Its `run_server.py` listens on `127.0.0.1:8000`. Its quote records persist in the ignored `data/ev-tool-quotes.json` file unless `EV_TOOL_QUOTES_FILE` specifies another path. The scaffold requires the same `EV_TOOL_API_KEY` in its own environment (it answers 503 until one is set, and 401 for a wrong or missing `X-API-Key`), only accepts `Content-Type: application/json` writes, and only answers requests addressed to `127.0.0.1` or `localhost` (override with `EV_TOOL_ALLOWED_HOSTS`). It is intended only for loopback development; the LAN host requires the supplied key.
 
 The archive does not provide a working normalized bookmaker feed. Its own `POST /scrape` returns 501. A future source adapter should normalize its output and submit it to `POST /quotes`. Its `requirements.txt` lists optional prototype dependencies as well as FastAPI and Uvicorn; no dependencies were installed during this setup.

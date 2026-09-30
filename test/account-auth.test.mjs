@@ -12,7 +12,7 @@ import { tokenHash } from '../lib/accounts/secure-adapter.mjs';
 const PASSWORD = 'Harbor lilies orbit six planets!';
 const NEXT_PASSWORD = 'Meadow satellites drift through dawn!';
 
-async function fixture(t) {
+async function fixture(t, extraEnv = {}) {
   let handler, activeSystem;
   const server = http.createServer(async (req, res) => {
     try {
@@ -25,7 +25,7 @@ async function fixture(t) {
   });
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   const origin = `http://127.0.0.1:${server.address().port}`, outbox = [];
-  const system = await createAccountSystem({ env: { BETTER_AUTH_URL: origin, BETTER_AUTH_SECRET: randomBytes(32).toString('hex'), ACCOUNT_DB_PATH: ':memory:' }, migrate: true, transport: async message => outbox.push(message) });
+  const system = await createAccountSystem({ env: { BETTER_AUTH_URL: origin, BETTER_AUTH_SECRET: randomBytes(32).toString('hex'), ACCOUNT_DB_PATH: ':memory:', ...extraEnv }, migrate: true, transport: async message => outbox.push(message) });
   activeSystem = system; handler = createAccountHandler(system);
   t.after(async () => { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); await system.close(); });
   function client() {
@@ -43,7 +43,7 @@ async function fixture(t) {
   function messageLink(message) { return message.text.match(/https?:\/\/[^\s]+/)?.[0]; }
   async function register(email = 'customer@example.test', extra = {}) {
     const c = client();
-    const result = await c.request('/api/auth/sign-up/email', { name: 'Research Customer', email, password: PASSWORD, termsAccepted: true, policyVersion: POLICY_VERSION, marketingConsent: false, callbackURL: '/account', ...extra });
+    const result = await c.request('/api/auth/sign-up/email', { name: 'Research Customer', email, password: PASSWORD, ageConfirmed: true, termsAccepted: true, policyVersion: POLICY_VERSION, marketingConsent: false, callbackURL: '/account', ...extra });
     assert.equal(result.status, 200, JSON.stringify(result.body));
     await messages();
     const verification = outbox.findLast(message => message.to === email.toLowerCase().trim() && /verify/i.test(message.subject));
@@ -64,7 +64,7 @@ async function fixture(t) {
 test('registration verifies email once, records consent, and does not leak duplicate accounts', async t => {
   const app = await fixture(t), anonymous = app.client();
   assert.equal((await anonymous.request('/api/auth/sign-up/email', { name: 'Missing consent', email: 'no-consent@example.test', password: PASSWORD })).status, 400);
-  const elevated = await anonymous.request('/api/auth/sign-up/email', { name: 'Injected role', email: 'injected@example.test', password: PASSWORD, termsAccepted: true, policyVersion: POLICY_VERSION, role: 'owner' });
+  const elevated = await anonymous.request('/api/auth/sign-up/email', { name: 'Injected role', email: 'injected@example.test', password: PASSWORD, ageConfirmed: true, termsAccepted: true, policyVersion: POLICY_VERSION, role: 'owner' });
   assert.equal(elevated.status, 200);
   const injection = await app.system.db.selectFrom('user').select('role').where('email', '=', 'injected@example.test').executeTakeFirst();
   assert.equal(injection.role, 'customer');
@@ -73,7 +73,7 @@ test('registration verifies email once, records consent, and does not leak dupli
   assert.ok([400, 401, 403].includes(before.status));
   const first = await client.request(link); assert.ok([200, 302, 303].includes(first.status));
   const replay = await client.request(link); assert.ok(replay.status >= 400 || /error|invalid|expired|used/i.test(replay.headers.get('location') || ''), 'Consumed verification links cannot be reused.');
-  const duplicate = await anonymous.request('/api/auth/sign-up/email', { name: 'Duplicate', email: 'CUSTOMER+ONE@EXAMPLE.TEST', password: PASSWORD, termsAccepted: true, policyVersion: POLICY_VERSION, marketingConsent: false });
+  const duplicate = await anonymous.request('/api/auth/sign-up/email', { name: 'Duplicate', email: 'CUSTOMER+ONE@EXAMPLE.TEST', password: PASSWORD, ageConfirmed: true, termsAccepted: true, policyVersion: POLICY_VERSION, marketingConsent: false });
   assert.equal(duplicate.status, 200);
   const users = await app.system.db.selectFrom('user').selectAll().where('email', '=', 'customer+one@example.test').execute();
   assert.equal(users.length, 1); assert.equal(users[0].role, 'customer'); assert.ok(users[0].emailVerified); assert.ok(users[0].termsAcceptedAt); assert.ok(users[0].policyVersion);
@@ -257,4 +257,91 @@ test('email normalization preserves aliases and password/redirect validation rej
   validatePassword(PASSWORD); validatePassword('多种字符可以组成安全而漫长的密码短语');
   for (const value of ['//attacker.invalid', '/\\attacker.invalid', 'https://attacker.invalid', '/\u0000bad']) assert.equal(safeReturnPath(value), '/account');
   assert.equal(safeReturnPath('/ev/tracker?sport=nfl#history'), '/ev/tracker?sport=nfl#history');
+});
+
+test('repeated sign-in attempts against one email are throttled by the account limiter', async t => {
+  const { client } = await fixture(t);
+  const attacker = client();
+  const results = [];
+  for (let attempt = 0; attempt < 12; attempt++) results.push(await attacker.request('/api/auth/sign-in/email', { email: 'victim@example.test', password: 'wrong password guess ' + attempt }));
+  const limited = results.find(result => result.status === 429 && result.body?.code === 'RATE_LIMITED');
+  assert.ok(limited, `the per-email bucket answers with RATE_LIMITED (saw ${results.map(r => r.status).join(',')})`);
+});
+
+test('sign-up requires the 21+ age confirmation', async t => {
+  const { client } = await fixture(t);
+  const result = await client().request('/api/auth/sign-up/email', { name: 'Underage', email: 'young@example.test', password: PASSWORD, termsAccepted: true, policyVersion: POLICY_VERSION, marketingConsent: false });
+  assert.equal(result.status, 400);
+  assert.equal(result.body?.code, 'AGE_CONFIRMATION_REQUIRED');
+});
+
+test('Google sign-in stays off without credentials and requires consent to create an account', async t => {
+  const off = await fixture(t);
+  assert.equal((await off.client().request('/api/auth/sign-in/social', { provider: 'google' })).status, 404, 'no provider, no route');
+  assert.deepEqual((await off.client().request('/api/account/providers')).body, { providers: [] });
+
+  const on = await fixture(t, { GOOGLE_CLIENT_ID: 'test-client.apps.googleusercontent.com', GOOGLE_CLIENT_SECRET: 'test-secret' });
+  assert.deepEqual((await on.client().request('/api/account/providers')).body, { providers: ['google'] });
+  const noConsent = await on.client().request('/api/auth/sign-in/social', { provider: 'google', requestSignUp: true, callbackURL: '/research' });
+  assert.equal(noConsent.status, 400);
+  assert.equal(noConsent.body?.code, 'AGE_CONFIRMATION_REQUIRED');
+  const signUp = await on.client().request('/api/auth/sign-in/social', { provider: 'google', requestSignUp: true, ageConfirmed: true, termsAccepted: true, policyVersion: POLICY_VERSION, callbackURL: 'https://evil.example/steal' });
+  assert.equal(signUp.status, 200);
+  const target = new URL(signUp.body.url);
+  assert.equal(target.hostname, 'accounts.google.com');
+  assert.equal(target.searchParams.get('client_id'), 'test-client.apps.googleusercontent.com');
+  const returning = await on.client().request('/api/auth/sign-in/social', { provider: 'google' });
+  assert.equal(returning.status, 200, 'returning users need no consent step');
+  assert.equal((await on.client().request('/api/auth/sign-in/social', { provider: 'github' })).status, 400, 'unconfigured providers are refused');
+});
+
+test('alert emails: baseline first, then each new match is emailed once', async t => {
+  const { system, verified, messages, outbox } = await fixture(t);
+  const { runAlertEmails, currentMatches } = await import('../lib/accounts/alert-mailer.mjs');
+  await verified('alerts@example.test');
+  const user = await system.db.selectFrom('user').select(['id']).where('email', '=', 'alerts@example.test').executeTakeFirstOrThrow();
+  const quote = (id, odds) => ({ id, sport: 'NFL', event: 'Bills at Dolphins', market: 'Spread', type: 'spread', line: -3.5, side: 'BUF', book: 'FanDuel', odds, live: false, ts: new Date().toISOString() });
+  const save = async workbench => {
+    const value = JSON.stringify({ storage: { 'sportslab-ev-workbench-v1': JSON.stringify(workbench) } });
+    await system.db.insertInto('accountData').values({ userId: user.id, kind: 'bets', value, version: 1, updatedAt: new Date().toISOString() })
+      .onConflict(c => c.columns(['userId', 'kind']).doUpdateSet({ value })).execute();
+  };
+  const rule = { id: 'r1', kind: 'price', sport: 'NFL', threshold: 100, enabled: true };
+  const base = { alertEmail: true, alerts: [rule], history: [], dfs: [] };
+  await save({ ...base, quotes: [quote('q1', 110)] });
+  assert.equal(currentMatches({ ...base, quotes: [quote('q1', 110)] }).length, 1);
+
+  const before = outbox.length;
+  assert.deepEqual(await runAlertEmails(system), { checked: 1, emailed: 0, baselined: 1 }, 'existing matches are recorded, not emailed');
+  await save({ ...base, quotes: [quote('q1', 110), quote('q2', 125)] });
+  assert.deepEqual(await runAlertEmails(system), { checked: 1, emailed: 1, baselined: 0 });
+  assert.deepEqual(await runAlertEmails(system), { checked: 1, emailed: 0, baselined: 0 }, 'the same match is never sent twice');
+  await messages();
+  const sent = outbox.slice(before).filter(message => /alert/i.test(message.subject));
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].to, 'alerts@example.test');
+
+  await save({ ...base, alertEmail: false, quotes: [quote('q3', 140)] });
+  assert.equal((await runAlertEmails(system)).checked, 0, 'turning email alerts off stops checks');
+});
+
+test('referral links credit new accounts once, never existing or self sign-ups', async t => {
+  const { system, verified, client } = await fixture(t);
+  const referrer = await verified('referrer@example.test');
+  const first = await referrer.client.request('/api/account/referral');
+  assert.equal(first.status, 200);
+  assert.match(first.body.url, /\/r\/[a-z0-9]{8}$/);
+  assert.equal(first.body.signups, 0);
+  const code = first.body.code;
+  assert.equal((await referrer.client.request('/api/account/referral')).body.code, code, 'the code is stable');
+
+  const visitor = client();
+  visitor.jar.set('vo_ref', code);
+  const signup = await visitor.request('/api/auth/sign-up/email', { name: 'Friend', email: 'friend@example.test', password: PASSWORD, ageConfirmed: true, termsAccepted: true, policyVersion: POLICY_VERSION, marketingConsent: false, callbackURL: '/account' });
+  assert.equal(signup.status, 200);
+  const again = client(); again.jar.set('vo_ref', code);
+  await again.request('/api/auth/sign-up/email', { name: 'Referrer again', email: 'referrer@example.test', password: PASSWORD, ageConfirmed: true, termsAccepted: true, policyVersion: POLICY_VERSION, marketingConsent: false, callbackURL: '/account' });
+  assert.equal((await referrer.client.request('/api/account/referral')).body.signups, 1, 'only the new account counts');
+  const credited = await system.db.selectFrom('referralSignup').selectAll().execute();
+  assert.equal(credited.length, 1);
 });
