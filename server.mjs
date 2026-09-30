@@ -108,7 +108,7 @@ export const server = http.createServer(async (req, res) => {
     if (url.pathname === '/admin/login') { res.writeHead(302, { Location: '/login?next=%2Fadmin', 'Cache-Control': 'no-store' }); return res.end(); }
     const trackerRedirect = legacyBetTrackerUrl(url);
     if (trackerRedirect) { res.writeHead(308, { Location: trackerRedirect, 'Cache-Control': 'no-cache' }); return res.end(); }
-    if (url.pathname.startsWith('/api/ev/')) return await handleEvApi(req, res, url, { loadControls: () => readMarketControls(accounts.system.db) });
+    if (url.pathname.startsWith('/api/ev/')) return await handleEvApi(req, res, url, { loadControls: async () => { try { return await readMarketControls(accounts.system.db); } catch { return []; } } });
     if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, { error: 'Method not allowed.' }, 405);
     const helpRequest = resolveHelpCenterRequest(url, { host });
     if (helpRequest) {
