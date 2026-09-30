@@ -1,0 +1,54 @@
+/* About / Contact / Changelog / Status */
+@font-face {font-family:'SL Inter';src:url('/assets/fonts/InterVariable.woff2') format('woff2');font-weight:100 900;font-display:swap}
+:root {color-scheme:dark;--lime:#a3f06b;--ink:#0a200f;--text:#edf2ee;--text2:#b9c3be;--muted:#7e8a86;--faint:#76817d;--line:rgb(255 255 255/.08);--panel:#0e1215}
+* {box-sizing:border-box}
+body.info-page {margin:0;min-height:100dvh;display:grid;grid-template-rows:auto 1fr auto;background:#07090b;color:var(--text);font:16px/1.6 'SL Inter',Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif}
+a {color:var(--lime)}
+.info-header {display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;width:min(1100px,calc(100% - 40px));margin:0 auto;padding:22px 0}
+.info-brand {display:inline-flex;align-items:center;gap:10px;color:var(--text);font-weight:750;font-size:19px;letter-spacing:-.02em;text-decoration:none}
+.info-brand em {color:var(--lime);font-style:normal}
+.info-header nav {display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.info-header nav a {padding:8px 12px;border-radius:999px;color:var(--text2);font-size:14px;font-weight:600;text-decoration:none}
+.info-header nav a:hover, .info-header nav a[aria-current=page] {color:var(--text);background:rgb(255 255 255/.05)}
+.info-header nav .info-cta {margin-left:6px;background:var(--lime);color:var(--ink)}
+.info-header nav .info-cta:hover {background:#c4f79c;color:var(--ink)}
+.info-main {width:min(1100px,calc(100% - 40px));margin:0 auto;padding:40px 0 70px}
+.info-hero {max-width:720px;margin-bottom:40px}
+.info-kicker {display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border:1px solid var(--line);border-radius:999px;color:var(--text2);font-size:12px;font-weight:650;letter-spacing:.09em;text-transform:uppercase}
+.info-kicker::before {content:'';width:6px;height:6px;border-radius:50%;background:var(--lime)}
+.info-hero h1 {margin:18px 0 12px;font-size:clamp(34px,5vw,54px);line-height:1.05;letter-spacing:-.035em}
+.info-hero p {margin:0;color:var(--text2);font-size:18px}
+.info-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.info-grid article {padding:24px;border:1px solid var(--line);border-radius:18px;background:var(--panel)}
+.info-grid h2 {margin:0 0 8px;font-size:18px;letter-spacing:-.01em}
+.info-grid p {margin:0;color:var(--text2)}
+.info-link {display:inline-block;margin-top:14px;font-weight:650;text-decoration:none}
+.info-link:hover {text-decoration:underline}
+.info-note {margin:28px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:14px;background:rgb(255 255 255/.02);color:var(--text2);font-size:15px}
+.info-changelog {display:grid;gap:14px;margin:0;padding:0;list-style:none}
+.info-changelog>li {display:grid;grid-template-columns:170px minmax(0,1fr);gap:24px;padding:24px;border:1px solid var(--line);border-radius:18px;background:var(--panel)}
+.info-changelog time {color:var(--lime);font:600 13px/1.6 ui-monospace,'SF Mono',Menlo,Consolas,monospace}
+.info-changelog h2 {margin:0 0 8px;font-size:19px}
+.info-changelog ul {margin:0;padding-left:20px;color:var(--text2)}
+.info-changelog ul li+li {margin-top:4px}
+.info-status {display:grid;margin:0;padding:0;overflow:hidden;border:1px solid var(--line);border-radius:18px;background:var(--panel);list-style:none}
+.info-status li {display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;padding:18px 22px}
+.info-status li+li {border-top:1px solid var(--line)}
+.info-status small {color:var(--text2);font-size:14px}
+.info-dot {width:10px;height:10px;border-radius:50%;background:var(--faint)}
+.info-dot.is-up {background:var(--lime);box-shadow:0 0 0 4px rgb(163 240 107/.15)}
+.info-dot.is-warn {background:#f7c25a;box-shadow:0 0 0 4px rgb(247 194 90/.15)}
+.info-dot.is-down {background:#ff6f6f;box-shadow:0 0 0 4px rgb(255 111 111/.15)}
+.info-footer {display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;width:min(1100px,calc(100% - 40px));margin:0 auto;padding:22px 0 30px;border-top:1px solid var(--line);color:var(--faint);font-size:13px}
+.info-footer a {margin-left:16px;color:var(--muted);text-decoration:none}
+.info-footer span:first-child a {margin:0}
+.info-footer a:hover {color:var(--text)}
+.info-age {display:inline-grid;place-items:center;height:22px;margin-right:10px;padding:0 7px;border:1px solid rgb(255 255 255/.14);border-radius:6px;color:var(--text2);font-size:11px;font-weight:700}
+@media (max-width:640px) {
+  .info-changelog>li {grid-template-columns:1fr;gap:8px}
+  .info-header nav .info-cta {margin-left:0}
+}
+.info-footer span:last-child>span {margin-left:16px}
+
+/* Keyboard focus baseline: zero specificity (:where), so components with their own focus style keep it. */
+:where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {outline:2px solid #a3f06b;outline-offset:2px}

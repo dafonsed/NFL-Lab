@@ -193,11 +193,12 @@ test('suspended books never appear as current references on price rows', () => {
   assert.match($('.os-book-cell.is-locked').text(),/Suspended/);
 });
 
-test('demo prices are compared but not offered for tracking', () => {
-  const $ = load(createOddsScreen({getQuotes:()=>[quote({demo:true})],brandMark:()=>'',redraw:()=>{},onSport:()=>{}}).render({sport:'MLB',demo:true}));
-  assert.equal($('.os-row [data-detail]').length,1);
-  assert.equal($('.os-row [data-suite-action]').length,0);
-  assert.match($('.os-board-meta').text(),/Demo mode/);
+test('the odds board labels feed and entered prices, never demo data', () => {
+  const feed = load(createOddsScreen({getQuotes:()=>[quote({source:'local-api'})],brandMark:()=>'',redraw:()=>{},onSport:()=>{}}).render({sport:'MLB'}));
+  assert.match(feed('.os-board-meta').text(),/Feed prices/);
+  const entered = load(createOddsScreen({getQuotes:()=>[quote({source:'manual'})],brandMark:()=>'',redraw:()=>{},onSport:()=>{}}).render({sport:'MLB'}));
+  assert.match(entered('.os-board-meta').text(),/Entered prices/);
+  assert.doesNotMatch(entered.text(),/Demo mode|Simulated|Example data/);
 });
 
 test('periods never share an odds comparison and price-less suspensions replace older offers', () => {

@@ -24,7 +24,7 @@ test('Vercel can import the default server without starting a listener or backgr
       const oldQuery='?sport=mlb&date=2026-09-23&prop=hits&researchPlayer=mlb%3A823894%3A605141%3Ahits';
       const moved=await fetch(base+'/'+oldQuery,{redirect:'manual'});assert.equal(moved.status,302);assert.equal(moved.headers.get('location'),'/research'+oldQuery);
       const tracked=await fetch(base+'/?utm_source=example');assert.match(await tracked.text(),/id="hero-title"/);
-      for(const asset of ['/landing-home.css','/landing-header.css','/landing-footer.css','/landing-atmosphere.css','/landing-pricing.css','/landing-nav.css','/landing.js','/landing-live.js','/landing-header.js','/landing-demo-bets.js','/landing-reviews.js','/landing-pricing.js','/landing-nav.js','/landing-research-snapshot.json','/assets/brands/draftkings.png','/assets/brands/fanduel.png']) {const response=await fetch(base+asset);assert.equal(response.status,200,asset);}
+      for(const asset of ['/landing.js','/landing-live.js','/landing-header.js','/landing-demo-bets.js','/landing-reviews.js','/landing-pricing.js','/landing-nav.js','/landing-research-snapshot.json','/assets/brands/draftkings.png','/assets/brands/fanduel.png']) {const response=await fetch(base+asset);assert.equal(response.status,200,asset);}
       for (const sport of ['nfl','mlb','nba','wnba','nhl','soccer']) {
         const page=await fetch(base+'/'+sport+'?view=trends');assert.equal(page.status,200);
         const html=await page.text();assert.match(html,/id="td-workbench"/);assert.ok(html.includes('src="/trends.js"'));

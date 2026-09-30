@@ -8,12 +8,11 @@ const elapsed = value => {
 };
 
 export function toolDataLabel(tool, state, quoteLabel) {
-  if (state.demoPermanent) return 'Demo data';
   const collection = ['fantasy','optimizer','slip','fantasy-alerts'].includes(tool) ? 'dfs' : tool === 'prediction' ? 'contracts' : tool === 'trends' ? 'results' : null;
   if (!collection) return quoteLabel;
   const label = collection === 'dfs' ? 'DFS props' : collection === 'contracts' ? 'contracts' : 'results';
   const records = state[collection] || [];
-  return records.some(record => record.source !== 'example') ? `Entered ${label}` : records.length ? `Example ${label}` : collection === 'dfs' ? 'DFS preview' : `No ${label}`;
+  return records.length ? `Entered ${label}` : `No ${label}`;
 }
 
 function coverage(tool) {
@@ -47,22 +46,6 @@ export function createQuoteFeedControls({ sync, getState, getTool, canRefresh = 
 
   function update() {
     const state = getState();
-    if (state.demoPermanent) {
-      interval = 0;
-      clearTimeout(timer);
-      nextAt = 0;
-      select.value = '0';
-      select.disabled = true;
-      button.disabled = true;
-      button.textContent = 'Demo mode';
-      status.textContent = 'Permanent demo';
-      status.dataset.tone = 'neutral';
-      meta.textContent = `${state.quotes.length} sample prices · ${state.dfs.length} fantasy props · ${state.contracts.length} prediction contracts`;
-      meta.removeAttribute('title');
-      detail.textContent = 'Demo data stays on across reloads. Live examples stay fresh so every tool remains populated.';
-      toolCoverage.textContent = 'All prices, probabilities, payouts and results shown here are illustrative. Demo edits are saved separately from your real workspace.';
-      return;
-    }
     select.disabled = false;
     const quotes = state.quotes.filter(quote => quote.source === 'local-api');
     const stale = quotes.filter(quote => quote.live && (!Number.isFinite(Date.parse(quote.ts)) || Date.now() - Date.parse(quote.ts) > 90_000 || Date.parse(quote.ts) > Date.now() + 5_000)).length;
@@ -93,7 +76,6 @@ export function createQuoteFeedControls({ sync, getState, getTool, canRefresh = 
   }
 
   async function refresh({ automatic = false } = {}) {
-    if (getState().demoPermanent) { update(); return false; }
     if (pending) return false;
     if (automatic && (!interval || blocked)) return false;
     clearTimeout(timer);

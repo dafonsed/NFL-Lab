@@ -1,4 +1,4 @@
-# Sports Lab — independent multi-sport analytics
+# VisualOdds — sports betting research workspace
 
 An independent local NFL research app. It downloads public NFL datasets and calculates its own player profiles. **There are no requests to VENOM, Whop, or the reference app.** It does not reproduce anyone's private calibrated scores.
 
@@ -72,7 +72,7 @@ Double-click **Start-App.cmd**, or run `npm start`, then open **http://127.0.0.1
 
 ### Vercel deployment
 
-The repository supports the existing [hosted NFL Lab](https://nfl-lab-xi.vercel.app/). `server.mjs` exports its HTTP server for Vercel; Vercel owns its listener and invocation lifetime. `vercel.json` includes the frontend assets and allows up to 300 seconds for a cold data load. The initial board may take about 30 seconds while public datasets download.
+The repository supports the existing [hosted deployment](https://nfl-lab-xi.vercel.app/). `server.mjs` exports its HTTP server for Vercel; Vercel owns its listener and invocation lifetime. `vercel.json` includes the frontend assets and allows up to 300 seconds for a cold data load. The initial board may take about 30 seconds while public datasets download.
 
 Hosted requests refresh datasets and lines according to their cache lifetimes; the browser still checks every five minutes. The local version additionally runs background sync. Vercel uses writable temporary storage for downloaded data instead of the deployment's read-only directory. This cache is instance-local and can reset after redeployment or scaling. Saved pregame history on Vercel is therefore best-effort; the public archived listing remains the fallback. Durable multi-instance line history would require shared storage. Signed-in personal notes and saved players use the account database, separately from these public-data caches.
 
@@ -133,7 +133,7 @@ The server rechecks current datasets every 15 minutes while running. Historical-
 
 Samples contain up to five completed offensive appearances strictly before the selected week. Snap-only zero-touch appearances count. Samples can cross seasons and include postseason games. A game must have an `END GAME` record. Current-week results never enter that same week's player sample. Future boards use only games completed today and update as more records arrive. Archived boards are reconstructions from revised datasets, not historical forecasts captured before kickoff; schedule lines can be closing lines.
 
-NFL Lab's own score weights, thresholds and probability methods are in the Metrics tab, `lib/model.mjs`, and `lib/definitions.mjs`. For seasons after 2025, the anytime-TD profile score is converted to a rushing/receiving TD probability by an independent logistic fit to 2024–2025 nflverse outcomes. It is conditional on recorded participation. The older uncalibrated Poisson estimate is retained separately, and the workload forecast remains a different model. See [TD score calibration](docs/nfl-td-calibration.md) for the training split, results and limits. These checks do not establish betting accuracy or reproduce another product's private model.
+VisualOdds' own score weights, thresholds and probability methods are in the Metrics tab, `lib/model.mjs`, and `lib/definitions.mjs`. For seasons after 2025, the anytime-TD profile score is converted to a rushing/receiving TD probability by an independent logistic fit to 2024–2025 nflverse outcomes. It is conditional on recorded participation. The older uncalibrated Poisson estimate is retained separately, and the workload forecast remains a different model. See [TD score calibration](docs/nfl-td-calibration.md) for the training split, results and limits. These checks do not establish betting accuracy or reproduce another product's private model.
 
 Edge tracks game totals/spreads from the first observation saved on this computer. It does not claim opening prices or arbitrage. Player cards separately display public sportsbook totals. No live injury feed is connected; active roster status does not imply a player will suit up. Small samples and missing data are shown explicitly. New-market production baselines are sample averages; model ratings are scores out of 100, not calibrated probabilities of beating the displayed line.
 

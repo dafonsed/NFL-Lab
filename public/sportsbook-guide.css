@@ -1,5 +1,5 @@
 .sportsbook-guide-page{padding-bottom:36px}
-.sg-hero{min-height:275px;margin:36px auto 32px;background:linear-gradient(118deg,#112a31 0%,#101a24 65%,#14202b 100%);border-color:#2b5157}
+.sg-hero{min-height:275px;margin:36px auto 32px;background:radial-gradient(640px 280px at 0% 0%,rgb(163 240 107/.07),transparent 65%),linear-gradient(118deg,#11161a 0%,#0e1215 65%,#0e1215 100%);border-color:rgb(255 255 255/.08)}
 .sg-hero h1{max-width:760px}
 .sg-editorial-intro{max-width:820px;margin:0 auto 52px;padding:0 2px;color:var(--edu-muted)}
 .sg-editorial-intro h2{margin:0 0 10px;color:var(--edu-text);font-size:25px;letter-spacing:-.035em}
@@ -9,14 +9,14 @@
 .sg-directory-section{margin:0 auto 54px}
 .sg-directory-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
 .sg-guide-card{min-width:0;min-height:205px;padding:19px 19px 17px;border:1px solid var(--edu-line);border-radius:8px;background:linear-gradient(145deg,#111c25,#0c1319);display:flex;flex-direction:column;text-decoration:none;transition:border-color .16s ease,transform .16s ease}
-.sg-guide-card:hover{border-color:#527782;color:var(--edu-text);transform:translateY(-2px)}
+.sg-guide-card:hover{border-color:#63716a;color:var(--edu-text);transform:translateY(-2px)}
 .sg-guide-card>span{color:var(--edu-accent);font-size:10px;line-height:1.35;text-transform:uppercase;letter-spacing:.08em;font-weight:720}
 .sg-guide-card strong{margin:10px 0 6px;font-size:19px;line-height:1.2;letter-spacing:-.025em}
 .sg-guide-card small{color:var(--edu-muted);font-size:12px;line-height:1.55}
 .sg-guide-card b{display:flex;justify-content:space-between;gap:8px;margin-top:auto;padding-top:16px;color:var(--edu-accent-strong);font-size:11px;font-weight:650}
 .sg-guide-card i{font-size:15px;font-style:normal}
-.sg-offer-card{margin:24px 0 32px;padding:19px 21px 17px;border:1px solid #35545e;border-radius:8px;background:linear-gradient(120deg,#11232b,#111921)}
-.sg-offer-card>div{display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding-bottom:12px;border-bottom:1px solid #293c45}
+.sg-offer-card{margin:24px 0 32px;padding:19px 21px 17px;border:1px solid #424c51;border-radius:8px;background:linear-gradient(120deg,#0e1215,#111921)}
+.sg-offer-card>div{display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding-bottom:12px;border-bottom:1px solid #32393d}
 .sg-offer-card>div span{color:var(--edu-accent);font-size:10px;text-transform:uppercase;letter-spacing:.12em;font-weight:750}
 .sg-offer-card>div strong{font-size:14px}
 .sg-offer-card p{margin:13px 0;color:#d5e0e4;font-size:14px;line-height:1.7}
@@ -36,7 +36,7 @@
 /* Editorial card dashboards for brand and sportsbook guide libraries */
 .sg-library-heading{max-width:1120px;margin:38px 0 26px}
 .sg-library-heading h1{margin:12px 0;color:var(--edu-text);font-size:clamp(40px,4.8vw,54px);letter-spacing:-.06em;line-height:1.03}
-.sg-library-heading>p{max-width:780px;margin:0;color:#c2cfd6;font-size:16px;line-height:1.65}
+.sg-library-heading>p{max-width:780px;margin:0;color:#c8d0cc;font-size:16px;line-height:1.65}
 .sg-library-heading .sg-library-note{margin-top:12px;color:var(--edu-dim);font-size:12px}
 .sg-editorial-intro{max-width:960px;margin:0 auto 35px}
 .sg-editorial-intro h2{font-size:21px}
@@ -46,12 +46,12 @@
 .sg-category-tabs a:hover{color:var(--edu-accent-strong)}
 .sg-category-tabs a span{color:var(--edu-dim);font-size:10px}
 .sg-library-toolbar{display:flex;align-items:center;gap:15px;padding:18px 0 21px}
-.sg-directory-search{display:flex;align-items:center;gap:10px;width:min(100%,410px);min-height:42px;margin-left:auto;padding:0 11px;border:1px solid #2a404c;border-radius:5px;background:#0c151b;color:var(--edu-muted)}
+.sg-directory-search{display:flex;align-items:center;gap:10px;width:min(100%,410px);min-height:42px;margin-left:auto;padding:0 11px;border:1px solid #353d41;border-radius:5px;background:#0c151b;color:var(--edu-muted)}
 .sg-directory-search:focus-within{outline:2px solid var(--edu-accent-strong);outline-offset:2px}
 .sg-directory-search>span{font-size:19px;line-height:1}
 .sg-directory-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--edu-text);font:13px var(--edu-font)}
 .sg-directory-search input::placeholder{color:var(--edu-dim)}
-.sg-directory-search kbd{padding:2px 5px;border:1px solid #2c414c;border-radius:3px;color:var(--edu-dim);font:10px var(--edu-font)}
+.sg-directory-search kbd{padding:2px 5px;border:1px solid #363e42;border-radius:3px;color:var(--edu-dim);font:10px var(--edu-font)}
 .sg-directory-count{color:var(--edu-dim);font-size:11px}
 .sg-directory-count strong{color:var(--edu-text);font-size:14px}
 .sg-directory-section{margin-bottom:39px}
@@ -60,7 +60,7 @@
 .sg-guide-item[hidden],.sg-directory-section[hidden]{display:none}
 .sg-guide-card{min-height:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;gap:0;transform:none}
 .sg-guide-card:hover{transform:none;border:0;background:transparent;color:inherit;box-shadow:none}
-.sg-guide-art{display:block;width:100%;aspect-ratio:1.62;overflow:hidden;border:1px solid #243b48;border-radius:6px;background-color:#12212b;background-image:url("/assets/longform-editorial-sprite.png");background-repeat:no-repeat;background-size:206% 206%;transition:filter .18s ease,transform .18s ease}
+.sg-guide-art{display:block;width:100%;aspect-ratio:1.62;overflow:hidden;border:1px solid rgb(255 255 255/.08);border-radius:6px;background-color:#0e1215;background-image:url("/assets/longform-editorial-sprite.png");background-repeat:no-repeat;background-size:206% 206%;transition:filter .18s ease,transform .18s ease}
 .sg-guide-card:hover .sg-guide-art{filter:brightness(1.12);transform:translateY(-2px)}
 .sg-guide-copy{display:flex;min-width:0;flex:1;flex-direction:column;align-items:flex-start;padding-top:14px}
 .sg-guide-category{margin-bottom:8px;color:var(--edu-accent-strong);font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
@@ -77,3 +77,13 @@
 @media(max-width:800px){.sg-library-heading{margin:32px 0 24px}.sg-directory-grid{gap:28px 18px}}
 @media(max-width:620px){.sg-library-heading{margin:27px 0 24px}.sg-library-heading h1{font-size:39px}.sg-library-heading>p{font-size:14px}.sg-editorial-intro{margin-bottom:27px}.sg-category-tabs{gap:18px}.sg-library-toolbar{flex-wrap:wrap;gap:11px}.sg-directory-search{order:3;flex-basis:100%;width:100%;margin-left:0}.sg-directory-count{margin-left:auto}.sg-directory-grid{grid-template-columns:1fr;gap:26px}.sg-guide-art{aspect-ratio:1.58}.sg-guide-copy strong{font-size:20px}.sg-directory-section{margin-bottom:31px}}
 @media(prefers-reduced-motion:reduce){.sg-guide-art{transition:none}}
+
+/* Sportsbook directory cards: bordered card with a padded, normal-case body (the kicker rule above
+   targets direct span children, which also matched the copy block). */
+html body .sg-guide-card{overflow:hidden;border:1px solid rgb(255 255 255/.08);border-radius:20px;background:#0e1215;transition:border-color .2s,transform .25s,box-shadow .25s}
+html body .sg-guide-card:hover{border-color:rgb(163 240 107/.35);transform:translateY(-3px);box-shadow:0 18px 40px -22px rgb(0 0 0/.8)}
+html body .sg-guide-card > .sg-guide-art{border:0;border-bottom:1px solid rgb(255 255 255/.06);border-radius:0}
+html body .sg-guide-card > .sg-guide-copy{padding:18px 22px 20px;color:inherit;font-size:inherit;font-weight:inherit;line-height:inherit;letter-spacing:normal;text-transform:none}
+
+/* Guide header: the brand's real app icon. */
+html body .sportsbook-guide-article .sg-brand-logo{display:block;width:64px;height:64px;margin:0 0 18px;border:1px solid rgb(255 255 255/.1);border-radius:16px;object-fit:cover;box-shadow:0 12px 30px -14px rgb(0 0 0/.8)}

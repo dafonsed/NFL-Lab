@@ -16,7 +16,7 @@ const age = value => {
   const seconds = Math.max(0, Math.floor((Date.now() - time) / 1000));
   return seconds < 60 ? `${seconds}s ago` : seconds < 3600 ? `${Math.floor(seconds / 60)}m ago` : seconds < 86400 ? `${Math.floor(seconds / 3600)}h ago` : `${Math.floor(seconds / 86400)}d ago`;
 };
-const sourceLabel = quote => quote.demo || quote.source === 'example' ? 'Example' : !quote.source || quote.source === 'manual' ? 'Entered' : `Source: ${quote.source}`;
+const sourceLabel = quote => !quote.source || quote.source === 'manual' ? 'Entered' : `Source: ${quote.source}`;
 const label = quote => [quote.event, quote.player, quote.market, quote.side, quote.line === '' || quote.line == null ? '' : quote.line, quote.period && quote.period !== 'full' ? quote.period : '', quote.live ? 'Live' : 'Pregame'].filter(value => value !== '').join(' · ');
 const gcd = (a,b) => b ? gcd(b,a % b) : a;
 function price(value, format) {

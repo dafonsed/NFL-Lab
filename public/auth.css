@@ -91,3 +91,9 @@ body.account-page button{cursor:pointer}
   .account-preview{margin:22px 0}
 }
 @media(prefers-reduced-motion:reduce){.account-page :is(a,button,input){transition:none!important}}
+
+/* Local design preview: one-click guest sign-in (only rendered by scripts/design-preview.mjs). */
+.account-guest{display:grid;gap:6px;margin:14px 0 0}
+.account-guest button{width:100%;min-height:46px;border:1px dashed rgb(163 240 107/.5);border-radius:12px;background:rgb(163 240 107/.06);color:#a3f06b;font:inherit;font-weight:700;cursor:pointer}
+.account-guest button:hover{background:rgb(163 240 107/.12)}
+.account-guest small{color:#7e8a86;font-size:12px;text-align:center}

@@ -8,7 +8,7 @@
 html:root body.site-layout:is([data-site-page="research"],[data-site-page="trends"],[data-site-page="performance"],[data-site-page="paper"],[data-site-page="live"]):not(#bp-root):not(#bp-scope) #main {
   --bp-bg:#07090b;--bp-panel:#0b0f12;--bp-panel-2:#10151a;--bp-raised:#13181c;
   --bp-line:#1b2328;--bp-line-2:#262f36;--bp-line-3:#34404a;
-  --bp-text:#edf2ee;--bp-text-2:#b9c3be;--bp-muted:#7e8a86;--bp-faint:#56615d;
+  --bp-text:#edf2ee;--bp-text-2:#b9c3be;--bp-muted:#7e8a86;--bp-faint:#76817d;
   --bp-lime:#a3f06b;--bp-lime-3:#c4f79c;--bp-lime-ink:#0a200f;--bp-cyan:#43c3ff;--bp-red:#ff8f8f;--bp-amber:#f7c25a;
   --bp-lime-wash:rgb(163 240 107/.08);--bp-lime-line:rgb(163 240 107/.28);
   --bp-glass:linear-gradient(180deg,rgb(255 255 255/.03),rgb(255 255 255/.008));

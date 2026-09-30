@@ -534,7 +534,7 @@ html:root body[data-site-page="bets"]:not(#bt-root) #main {
 html:root body[data-site-page="bets"]:not(#bt-root) .tracker-filter-panel .td-choice-menu {border-radius:12px!important}
 
 /* ------------------------------------------------------------ dialogs */
-html:root body[data-site-page="bets"]:not(#bt-root) :is(#bet-dialog,#slip-dialog,#discard-dialog,#delete-dialog) {
+html:root body[data-site-page="bets"]:not(#bt-root) :is(#bet-dialog,#slip-dialog,#discard-dialog,#delete-dialog,#import-dialog,#limits-dialog,#limit-warning-dialog) {
   --bt-dialog-line:rgb(255 255 255/.09);
   box-sizing:border-box;border:1px solid var(--bt-dialog-line)!important;border-radius:22px!important;
   background:radial-gradient(640px 220px at 0% 0%,rgb(163 240 107/.07),transparent 65%),linear-gradient(180deg,rgb(255 255 255/.035),rgb(255 255 255/.01)),#0b0f12!important;
@@ -558,7 +558,7 @@ html:root body[data-site-page="bets"]:not(#bt-root) :is(#bet-dialog,#slip-dialog
   & .danger-button {border:1px solid rgb(255 111 111/.35)!important;background:rgb(255 111 111/.08)!important;color:var(--bt-red)!important}
   & .danger-button:hover:not(:disabled) {background:rgb(255 111 111/.16)!important}
 }
-html:root body[data-site-page="bets"]:not(#bt-root) :is(#discard-dialog,#delete-dialog) {
+html:root body[data-site-page="bets"]:not(#bt-root) :is(#discard-dialog,#delete-dialog,#import-dialog,#limits-dialog,#limit-warning-dialog) {
   width:min(420px,calc(100vw - 32px))!important;padding:24px!important;
   & h2 {margin:0 0 8px!important;font:600 19px/1.25 var(--bt-display)!important;color:var(--bt-text)!important}
   & p {margin:0 0 6px!important;color:var(--bt-text-2)!important;font-size:13.5px!important;line-height:1.5}
@@ -836,3 +836,82 @@ html:root body[data-site-page="bets"]:not(#bt-root):not(#bt-f1):not(#bt-f2) #bet
   & .ticket-selections>summary:hover .ticket-selections-chevron {border-color:rgb(163 240 107/.35);color:var(--bt-lime)}
   & .ticket-selections-body {padding:0 16px 14px!important}
 }
+
+/* Promotions and import */
+html:root body[data-site-page="bets"]:not(#bt-root):not(#bt-f1):not(#bt-f2) #bet-dialog {
+  & .bet-form-grid>label:has([name=boost]) {order:1}
+  & .bet-form-grid>label.bet-check-field {order:1;grid-column:1/-1;display:flex!important;flex-wrap:nowrap!important;align-items:flex-start!important;gap:12px!important;padding:12px 14px;border:1px solid var(--bt-line)!important;border-radius:14px;background:rgb(255 255 255/.015)}
+  & .bet-check-field input[type=checkbox] {flex:none!important;width:18px!important;height:18px!important;margin:2px 0 0!important;accent-color:var(--bt-lime)}
+  & .bet-check-field>span {display:grid;gap:3px;flex:1 1 auto!important}
+  & .bet-check-field strong {color:var(--bt-text);font:650 13.5px/1.2 var(--bt-font)}
+  & .bet-check-field small {color:var(--bt-muted)!important;font:500 12px/1.35 var(--bt-font)!important}
+}
+html:root body[data-site-page="bets"]:not(#bt-root) #import-dialog .import-errors {max-height:160px;margin:10px 0 0;padding:10px 12px 10px 28px;overflow:auto;border:1px solid rgb(255 111 111/.25);border-radius:12px;background:rgb(255 111 111/.06);color:#ffb3b3;font-size:13px;line-height:1.5}
+html:root body[data-site-page="bets"]:not(#bt-root):not(#bt-f1):not(#bt-f2):not(#bt-f3) #bet-dialog .bet-check-field input[type=checkbox] {
+  appearance:auto!important;-webkit-appearance:checkbox!important;box-sizing:border-box!important;width:18px!important;height:18px!important;min-height:0!important;
+  padding:0!important;border:0!important;border-radius:4px!important;background:none!important;box-shadow:none!important;flex:none!important;accent-color:#a3f06b;
+}
+
+/* Betting limits */
+html:root body[data-site-page="bets"]:not(#bt-root):not(#lm-a) {
+  & .bet-limits-status {display:flex;flex-wrap:wrap;gap:10px;margin:0 0 14px}
+  & .bet-limits-status[hidden] {display:none}
+  & .bet-limit {display:grid;gap:6px;flex:1 1 200px;padding:12px 14px;border:1px solid var(--bt-line);border-radius:14px;background:rgb(255 255 255/.015)}
+  & .bet-limit span {color:var(--bt-muted);font:650 11px/1 var(--bt-font);letter-spacing:.08em;text-transform:uppercase}
+  & .bet-limit strong {color:var(--bt-text);font:650 16px/1.1 var(--bt-font)}
+  & .bet-limit strong small {color:var(--bt-muted);font-size:12.5px;font-weight:500}
+  & .bet-limit i {display:block;height:4px;border-radius:4px;background:linear-gradient(90deg,var(--bt-lime) var(--fill),rgb(255 255 255/.08) 0)}
+  & .bet-limit.is-over {border-color:rgb(255 111 111/.35);background:rgb(255 111 111/.05)}
+  & .bet-limit.is-over i {background:linear-gradient(90deg,#ff8f8f var(--fill),rgb(255 255 255/.08) 0)}
+  & .bet-limit.is-break {border-color:rgb(247 194 90/.35);background:rgb(247 194 90/.06)}
+  & .bet-limit.is-break strong {color:#f7c25a}
+  & #limits-dialog {width:min(520px,calc(100vw - 24px))!important}
+  & .limits-form {display:grid;gap:14px;margin-top:6px}
+  & .limits-form label {display:grid;gap:6px;color:var(--bt-text);font:650 13px/1.2 var(--bt-font)}
+  & .limits-form :is(input,select) {height:40px;padding:0 14px;border:1px solid #262c31;border-radius:12px;background:#0b0d0f;color:var(--bt-text);font:500 14px var(--bt-font)}
+  & .limits-form :is(input,select):focus-visible {outline:0;border-color:rgb(163 240 107/.55)}
+  & .limits-form small {color:var(--bt-muted);font:500 12px/1.35 var(--bt-font)}
+  & .limits-help {margin:0;padding:12px 14px;border-radius:12px;background:rgb(255 255 255/.03);color:var(--bt-text-2);font-size:13px;line-height:1.5}
+  & .limits-help a {color:var(--bt-lime);font-weight:600}
+  & .limit-reasons {margin:8px 0 0;padding:12px 14px 12px 30px;border:1px solid rgb(247 194 90/.3);border-radius:12px;background:rgb(247 194 90/.06);color:#f5d99a;font-size:13.5px;line-height:1.5}
+}
+
+/* Advanced tab: analysis (public/tracker-analytics.js) */
+html:root body[data-site-page="bets"]:not(#bt-root):not(#ta-a) {
+  & .ta {grid-column:1/-1;display:grid;gap:14px;margin:0 0 18px}
+  & .ta-head {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  & .ta-head h2 {margin:0;color:var(--bt-text);font:650 17px/1.2 var(--bt-font)}
+  & .ta-controls {display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  & .ta-seg {display:inline-flex;padding:3px;border:1px solid var(--bt-line-2);border-radius:999px}
+  & .ta-seg button {height:30px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:var(--bt-muted);font:600 13px/1 var(--bt-font);cursor:pointer}
+  & .ta-seg button[aria-pressed=true] {background:var(--bt-lime);color:#0a200f}
+  & .ta-controls label {display:inline-flex;align-items:center;gap:8px;color:var(--bt-muted);font:600 12px/1 var(--bt-font)}
+  & .ta-controls input {width:96px;height:32px;padding:0 10px;border:1px solid #262c31;border-radius:10px;background:#0b0d0f;color:var(--bt-text);font:500 13px var(--bt-font)}
+  & .ta-controls input:focus-visible {outline:0;border-color:rgb(163 240 107/.55)}
+  & .ta-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  & .ta-card {display:grid;align-content:start;gap:10px;min-width:0;padding:16px 18px;border:1px solid var(--bt-line);border-radius:16px;background:rgb(255 255 255/.015)}
+  & .ta-card h3 {margin:0;color:var(--bt-muted);font:650 11.5px/1 var(--bt-font);letter-spacing:.08em;text-transform:uppercase}
+  & .ta-line {display:block;width:100%;height:160px}
+  & .ta-line .ta-stroke {fill:none;stroke:var(--bt-lime);stroke-width:2;vector-effect:non-scaling-stroke}
+  & .ta-line .ta-area {fill:rgb(163 240 107/.08)}
+  & .ta-line.is-down .ta-stroke {stroke:#ff8f8f}
+  & .ta-line.is-down .ta-area {fill:rgb(255 111 111/.07)}
+  & .ta-axis {display:flex;justify-content:space-between;color:var(--bt-muted);font:500 11.5px/1 var(--bt-font)}
+  & .ta-clv-bars {position:relative;display:flex;align-items:center;gap:3px;height:140px}
+  & .ta-clv-bars i {position:relative;flex:1;height:100%}
+  & .ta-clv-bars i::before {content:'';position:absolute;left:0;right:0;height:var(--h);border-radius:2px}
+  & .ta-clv-bars i.is-pos::before {bottom:50%;background:linear-gradient(0deg,#6fbf3e,#c8f9a2)}
+  & .ta-clv-bars i.is-neg::before {top:50%;background:linear-gradient(180deg,rgb(224 103 107/.5),rgb(255 143 143/.9))}
+  & .ta-clv-zero {position:absolute;left:0;right:0;top:50%;border-top:1px dashed rgb(255 255 255/.25)}
+  & .ta-note {margin:0;color:var(--bt-text-2);font:500 13px/1.4 var(--bt-font)}
+  & .ta-note .is-pos {color:var(--bt-lime)} & .ta-note .is-neg {color:#ff8f8f}
+  & .ta-table {width:100%;border-collapse:collapse;font:500 13px/1.3 var(--bt-font)}
+  & .ta-table th, & .ta-table td {padding:9px 6px;border-top:1px solid var(--bt-line);text-align:right;color:var(--bt-text-2)}
+  & .ta-table thead th {border-top:0;color:var(--bt-muted);font-size:11px;font-weight:650;letter-spacing:.06em;text-transform:uppercase}
+  & .ta-table th[scope=row], & .ta-table thead th:first-child {text-align:left;color:var(--bt-text);font-weight:600}
+  & .ta-table .is-pos {color:var(--bt-lime)} & .ta-table .is-neg {color:#ff8f8f}
+  & .ta-empty {margin:0;padding:18px 0;color:var(--bt-muted);font:500 13px/1.5 var(--bt-font)}
+}
+@media (max-width:760px) {html:root body[data-site-page="bets"]:not(#bt-root):not(#ta-a) .ta-grid {grid-template-columns:1fr}}
+html:root body[data-site-page="bets"]:not(#bt-root):not(#ta-a):not(#ta-b) .ta-seg button {height:30px!important;min-height:30px!important;padding:0 14px!important;border:0!important;background:transparent!important;color:var(--bt-muted)!important;box-shadow:none!important}
+html:root body[data-site-page="bets"]:not(#bt-root):not(#ta-a):not(#ta-b) .ta-seg button[aria-pressed=true] {background:var(--bt-lime)!important;color:#0a200f!important}

@@ -13,7 +13,7 @@ html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:is(*,
   --sl-bg:#07090b;--sl-rail:#090c0e;--sl-sunken:#0a0d10;
   --sl-panel:#0e1215;--sl-panel-2:#13181c;--sl-panel-3:#192025;--sl-hover:#1b2227;
   --sl-line:#1b2328;--sl-line-2:#262f36;--sl-line-3:#34404a;
-  --sl-text:#edf2ee;--sl-text-2:#b9c3be;--sl-muted:#7e8a86;--sl-faint:#56615d;
+  --sl-text:#edf2ee;--sl-text-2:#b9c3be;--sl-muted:#7e8a86;--sl-faint:#76817d;
   --sl-lime:#a3f06b;--sl-lime-2:#8be04c;--sl-lime-3:#c4f79c;--sl-lime-ink:#0a200f;
   --sl-lime-wash:rgb(163 240 107/.09);--sl-lime-line:rgb(163 240 107/.28);
   --sl-cyan:#43c3ff;--sl-cyan-2:#1ea7ea;--sl-cyan-wash:rgb(67 195 255/.1);--sl-cyan-line:rgb(67 195 255/.3);
@@ -591,7 +591,7 @@ html:root body.site-layout.has-dashboard-sidebar:not(#gs-a):not(#gs-b):not(#gs-c
 
   /* Group overview link sits with the group's pages */
   & .dashboard-group-home { position:relative; display:flex!important; align-items:center; gap:12px; min-height:40px; padding:9px 12px!important; border:1px solid transparent; border-radius:10px; color:var(--sl-muted,#7e8a86)!important; font-size:13.5px; font-weight:500; text-decoration:none!important; transition:background .15s,color .15s }
-  & .dashboard-group-home > .ui-icon { width:19px!important; height:19px!important; flex:0 0 19px; color:var(--sl-faint,#56615d) }
+  & .dashboard-group-home > .ui-icon { width:19px!important; height:19px!important; flex:0 0 19px; color:var(--sl-faint,#76817d) }
   & .dashboard-group-home:hover { background:var(--sl-panel-2,#13181c); color:var(--sl-text,#edf2ee)!important }
   & .dashboard-group-home[aria-current=page] { background:linear-gradient(90deg,rgb(163 240 107/.1),rgb(163 240 107/.03)); border-color:rgb(163 240 107/.2); color:var(--sl-text,#edf2ee)!important; font-weight:600 }
   & .dashboard-group-home[aria-current=page] > .ui-icon { color:#a3f06b }
@@ -668,3 +668,31 @@ html:root body:not(#dm-a):not(#dm-b):not(#dm-c):not(#dm-d):not(#dm-e):not(#dm-f)
 @supports not selector(::-webkit-scrollbar) {
   html:root body #bet-dialog .bet-form-body {scrollbar-width:thin;scrollbar-color:#2a3238 transparent}
 }
+
+/* Sidebar quick-search button (opens the Ctrl/⌘ K palette) */
+html:root body:not(#qs-a):not(#qs-b) .dashboard-search {display:flex;align-items:center;gap:10px;width:calc(100% - 24px);height:40px;margin:4px 12px 10px;padding:0 10px 0 12px;border:1px solid rgb(255 255 255/.09);border-radius:12px;background:rgb(255 255 255/.03);color:#7e8a86;font:500 13.5px/1 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer;transition:border-color .15s,color .15s}
+html:root body:not(#qs-a):not(#qs-b) .dashboard-search:hover {border-color:rgb(163 240 107/.35);color:#edf2ee}
+html:root body:not(#qs-a):not(#qs-b) .dashboard-search svg {flex:none;width:16px;height:16px}
+html:root body:not(#qs-a):not(#qs-b) .dashboard-search span {flex:1;text-align:left}
+html:root body:not(#qs-a):not(#qs-b) .dashboard-search kbd {padding:3px 6px;border:1px solid rgb(255 255 255/.12);border-radius:6px;color:#b9c3be;font:600 10.5px/1 ui-monospace,'SF Mono',Menlo,Consolas,monospace}
+html:root body:not(#qs-a):not(#qs-b) .dashboard-search-row {display:flex;align-items:center;gap:8px;margin:4px 12px 10px}
+html:root body:not(#qs-a):not(#qs-b) .dashboard-search-row .dashboard-search {flex:1;width:auto;margin:0}
+html:root body:not(#qs-a):not(#qs-b) .vo-bell {position:relative;flex:none}
+html:root body:not(#qs-a):not(#qs-b) .vo-bell-button {position:relative;display:grid;place-items:center;width:40px;height:40px;padding:0;border:1px solid rgb(255 255 255/.09);border-radius:12px;background:rgb(255 255 255/.03);color:#b9c3be;cursor:pointer}
+html:root body:not(#qs-a):not(#qs-b) .vo-bell-button:hover, html:root body:not(#qs-a):not(#qs-b) .vo-bell-button[aria-expanded=true] {border-color:rgb(163 240 107/.35);color:#edf2ee}
+html:root body:not(#qs-a):not(#qs-b) .vo-bell-button svg {width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+html:root body:not(#qs-a):not(#qs-b) .vo-bell-count {position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 5px;border:2px solid #07090b;border-radius:999px;background:#a3f06b;color:#0a200f;font:700 10px/14px Inter,ui-sans-serif,sans-serif;text-align:center}
+html:root body:not(#qs-a):not(#qs-b) .vo-bell-count[hidden] {display:none}
+html:root body:not(#qs-a):not(#qs-b) .vo-bell-panel {position:absolute;z-index:60;top:calc(100% + 8px);left:0;width:300px;padding:6px;border:1px solid rgb(255 255 255/.1);border-radius:14px;background:#0e1215;box-shadow:0 24px 60px -20px rgb(0 0 0/.9);font:13px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+html:root body:not(#qs-a):not(#qs-b) .vo-bell-panel[hidden] {display:none}
+html:root body:not(#qs-a):not(#qs-b) .vo-bell-panel header {display:flex;align-items:center;justify-content:space-between;padding:8px 10px}
+html:root body:not(#qs-a):not(#qs-b) .vo-bell-panel header strong {color:#edf2ee;font-size:14px}
+html:root body:not(#qs-a):not(#qs-b) .vo-bell-panel header a {color:#a3f06b;font-weight:600;text-decoration:none}
+html:root body:not(#qs-a):not(#qs-b) .vo-bell-panel ul {margin:0;padding:0;list-style:none}
+html:root body:not(#qs-a):not(#qs-b) .vo-bell-panel li a {display:grid;gap:2px;padding:9px 10px;border-radius:10px;color:#edf2ee;text-decoration:none}
+html:root body:not(#qs-a):not(#qs-b) .vo-bell-panel li a:hover {background:rgb(255 255 255/.04)}
+html:root body:not(#qs-a):not(#qs-b) .vo-bell-panel li small {color:#7e8a86}
+html:root body:not(#qs-a):not(#qs-b) .vo-bell-panel p {margin:0;padding:10px;color:#7e8a86}
+
+/* Keyboard focus baseline: zero specificity (:where), so components with their own focus style keep it. */
+:where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {outline:2px solid #a3f06b;outline-offset:2px}

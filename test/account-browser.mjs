@@ -158,7 +158,7 @@ try {
   // existing real MFA-verified session for the staff UI flow.
   await system.db.updateTable('user').set({ role: 'owner' }).where('email', '=', email).execute();
   const customerEmail = 'staff-target@example.test';
-  const created = await context.request.post(origin + '/api/auth/sign-up/email', { headers: { Origin: origin }, data: { name: 'Staff Review Customer', email: customerEmail, password, termsAccepted: true, policyVersion: POLICY_VERSION, marketingConsent: false } });
+  const created = await context.request.post(origin + '/api/auth/sign-up/email', { headers: { Origin: origin }, data: { name: 'Staff Review Customer', email: customerEmail, password, ageConfirmed: true, termsAccepted: true, policyVersion: POLICY_VERSION, marketingConsent: false } });
   assert.equal(created.status(), 200);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(origin + '/admin/accounts');

@@ -56,7 +56,7 @@ function client() {
 }
 async function verifiedAccount(email, name) {
   const request = client();
-  await request('/api/auth/sign-up/email', { email, name, password, termsAccepted: true, policyVersion: POLICY_VERSION, marketingConsent: false });
+  await request('/api/auth/sign-up/email', { email, name, password, ageConfirmed: true, termsAccepted: true, policyVersion: POLICY_VERSION, marketingConsent: false });
   await system.mail.drain(100);
   const verification = delivered.findLast(mail => mail.to === email && /Verify your/i.test(mail.subject));
   const link = verification?.text.match(/https?:\/\/[^\s]+/)?.[0];

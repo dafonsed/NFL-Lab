@@ -1,4 +1,4 @@
-# EV API handoff for all Sportslab tools
+# EV API handoff for all VisualOdds tools
 
 ## What is already configured
 
@@ -115,7 +115,7 @@ For settlement outside current coverage, supply final scores/stat values, comple
 3. **Delivery:** allowed polling interval, quota/rate limits, `429`/`Retry-After`, max response size and timeout. The app can request at 15/30/60 seconds; choose a rate the host supports. Subsecond delivery needs a stream/delta design and reconnect semantics.
 4. **Consistency:** ID stability, complete-snapshot semantics, removals/suspensions, timestamp timezone, corrections, and whether multi-book prices are captured together.
 5. **Errors/health:** status codes for invalid keys, unavailable upstream data, rate limiting and partial failures. `/status` should identify enabled datasets and the last successful observation for each.
-6. **Hosting:** the current local app must share the API host's network. A public Sportslab deployment needs a reachable authenticated HTTPS service and a deployed server bridge; a private LAN address alone cannot serve it.
+6. **Hosting:** the API can run on any reachable host. Set `EV_TOOL_API_URL` to a local/private address, or to a public IP or domain over HTTPS (plain HTTP to a public host needs `EV_TOOL_API_ALLOW_HTTP=1` and sends the key unencrypted). The VisualOdds server attaches `X-API-Key`; browsers never see it.
 
 ## App work completed independently of the missing datasets
 

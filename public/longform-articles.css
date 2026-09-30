@@ -1,15 +1,15 @@
-/* Shared long-form reading layout: VisualOdds ink, cyan, and editorial paper artwork. */
+/* Shared long-form reading layout: VisualOdds ink, lime, and editorial paper artwork. */
 :root{
   --longform-ink:#000000;
   --longform-panel:#141416;
-  --longform-line:#20313e;
-  --longform-copy:#c5d0d7;
-  --longform-muted:#92a1ab;
-  --longform-cyan:#b4e0e6;
-  --longform-cyan-deep:#76cbd2;
+  --longform-line:#2a3134;
+  --longform-copy:#cbd1ce;
+  --longform-muted:#98a59f;
+  --longform-cyan:#c4f79c;
+  --longform-cyan-deep:#a3f06b;
 }
 html{scroll-padding-top:104px}
-.article-reading-time{color:#a7cbd0;font-weight:600}
+.article-reading-time{color:#b7c0bc;font-weight:600}
 .edu-main>.breadcrumbs{width:min(100%,960px);margin:0 auto}
 .edu-article.has-longform{
   display:block;
@@ -47,8 +47,8 @@ html{scroll-padding-top:104px}
   letter-spacing:-.047em;
   line-height:1.07;
 }
-.edu-article.has-longform>.longform-article-grid>.article-header .article-description{max-width:620px;color:#bdcbd3;font-size:17px;line-height:1.6}
-.edu-article.has-longform>.longform-article-grid>.article-header .article-byline{gap:9px;margin-top:19px;color:#92a1ab;font-size:11px}
+.edu-article.has-longform>.longform-article-grid>.article-header .article-description{max-width:620px;color:#c4ccc8;font-size:17px;line-height:1.6}
+.edu-article.has-longform>.longform-article-grid>.article-header .article-byline{gap:9px;margin-top:19px;color:#98a59f;font-size:11px}
 .edu-article.has-longform>.longform-article-grid>.article-content{display:contents;max-width:none;margin:0;padding:0}
 .edu-article.has-longform>.longform-article-grid>.article-content>.longform-layout{display:contents;width:auto;max-width:none;margin:0}
 .edu-article.has-longform .longform-toc,.bet-article.has-longform .longform-toc{
@@ -64,7 +64,7 @@ html{scroll-padding-top:104px}
   margin:32px 0 0;
   padding:2px 0;
   border:0;
-  border-left:1px solid #263945;
+  border-left:1px solid #30373b;
   border-radius:0;
   background:transparent;
   color:#dce6ec;
@@ -83,12 +83,12 @@ html{scroll-padding-top:104px}
 .longform-toc ol{display:grid;flex:0 1 auto;min-height:0;gap:0;margin:0;padding:0 12px 0 18px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;list-style:none;counter-reset:article-section}
 .longform-toc ol::-webkit-scrollbar{display:none;width:0;height:0}
 .longform-toc li{position:relative;display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;align-items:start;margin:0;padding:0;counter-increment:article-section}
-.longform-toc li::before{content:counter(article-section,decimal-leading-zero);padding-top:9px;color:#6b9ba5;font-size:10px;font-weight:700;line-height:1.5;font-variant-numeric:tabular-nums}
+.longform-toc li::before{content:counter(article-section,decimal-leading-zero);padding-top:9px;color:#809089;font-size:10px;font-weight:700;line-height:1.5;font-variant-numeric:tabular-nums}
 .longform-toc a{
   display:block;
   min-height:40px;
   padding:7px 0;
-  color:#a8b6c0;
+  color:#afb9b4;
   font-size:13px;
   font-weight:700;
   line-height:1.5;
@@ -101,7 +101,7 @@ html{scroll-padding-top:104px}
 .longform-toc a:focus-visible{outline:2px solid var(--longform-cyan);outline-offset:-2px;border-radius:3px}
 .longform-cover,.related-card-art{
   overflow:hidden;
-  background-color:#12212b;
+  background-color:#0e1215;
   background-image:url("/assets/longform-editorial-sprite.png");
   background-repeat:no-repeat;
   background-size:206% 206%;
@@ -111,7 +111,7 @@ html{scroll-padding-top:104px}
   width:100%;
   aspect-ratio:1.78;
   margin:24px 0 28px;
-  border:1px solid #243b48;
+  border:1px solid rgb(255 255 255/.08);
   border-radius:7px;
 }
 .longform-art--odds{background-position:0 0}
@@ -139,14 +139,14 @@ html{scroll-padding-top:104px}
 .edu-article.has-longform .longform-copy h3{margin:23px 0 8px;color:#e4edf1;font-size:18px;line-height:1.35}
 .longform-copy p{margin:0 0 17px}
 .longform-copy li{margin:7px 0}
-.longform-copy table{width:100%;border-collapse:collapse;margin:21px 0;color:#c5d0d7;font-size:14px}
-.longform-copy th,.longform-copy td{padding:11px 12px;border-bottom:1px solid #263945;text-align:left;vertical-align:top}
+.longform-copy table{width:100%;border-collapse:collapse;margin:21px 0;color:#cbd1ce;font-size:14px}
+.longform-copy th,.longform-copy td{padding:11px 12px;border-bottom:1px solid #30373b;text-align:left;vertical-align:top}
 .longform-copy th{color:#e3ecef;font-weight:650}
-.longform-copy details{border-top:1px solid #263945}
-.longform-copy details:last-child{border-bottom:1px solid #263945}
+.longform-copy details{border-top:1px solid #30373b}
+.longform-copy details:last-child{border-bottom:1px solid #30373b}
 .longform-copy summary{padding:13px 0;color:#e5edf0;font-weight:620;cursor:pointer}
 .longform-copy summary:focus-visible{outline:2px solid var(--longform-cyan);outline-offset:3px}
-.longform-copy .editorial-note{color:#a8b6c0}
+.longform-copy .editorial-note{color:#afb9b4}
 .edu-article.has-longform>.related{
   width:100%;
   max-width:none;
@@ -158,14 +158,14 @@ html{scroll-padding-top:104px}
 .edu-article.has-longform>.related ul{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin:0;padding:0;list-style:none}
 .edu-article.has-longform>.related li{min-width:0;margin:0;padding:0}
 .related-card{display:flex;height:100%;flex-direction:column;gap:12px;color:#e9eff1;text-decoration:none}
-.related-card-art{display:block;width:100%;aspect-ratio:1.78;border:1px solid #243b48;border-radius:6px;transition:filter .15s ease}
+.related-card-art{display:block;width:100%;aspect-ratio:1.78;border:1px solid rgb(255 255 255/.08);border-radius:6px;transition:filter .15s ease}
 .related-card:hover .related-card-art,.related-card:focus-visible .related-card-art{filter:brightness(1.12)}
 .related-card:focus-visible{outline:2px solid var(--longform-cyan);outline-offset:4px}
 .related-card-copy{display:flex;min-width:0;flex:1;flex-direction:column;align-items:flex-start}
-.related-card-category{margin-bottom:7px;color:#83cbd4;font-size:10px;font-weight:650;letter-spacing:.06em}
+.related-card-category{margin-bottom:7px;color:#a3f06b;font-size:10px;font-weight:650;letter-spacing:.06em}
 .related-card-copy strong{display:-webkit-box;overflow:hidden;color:#e9eff1;font-size:16px;font-weight:650;line-height:1.34;-webkit-box-orient:vertical;-webkit-line-clamp:2}
-.related-card-excerpt{display:-webkit-box;overflow:hidden;margin-top:7px;color:#98a9b3;font-size:12px;line-height:1.55;-webkit-box-orient:vertical;-webkit-line-clamp:3}
-.related-card-meta{margin-top:auto;padding-top:13px;color:#748592;font-size:10px}
+.related-card-excerpt{display:-webkit-box;overflow:hidden;margin-top:7px;color:#9faca6;font-size:12px;line-height:1.55;-webkit-box-orient:vertical;-webkit-line-clamp:3}
+.related-card-meta{margin-top:auto;padding-top:13px;color:#7a8c84;font-size:10px}
 .edu-article.has-longform>.article-pagination{
   display:flex;
   align-items:center;
@@ -189,23 +189,23 @@ html{scroll-padding-top:104px}
 .market-guide-site .market-article.has-longform .longform-copy p{color:var(--longform-copy)}
 .market-guide-site .market-article.has-longform .longform-copy .article-lede{margin:0 0 25px;padding:0;border:0;border-radius:0;background:transparent;color:#e3ecef;font-size:18px;line-height:1.72;box-shadow:none}
 .market-guide-site .market-article.has-longform .longform-copy section{margin:30px 0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
-.market-guide-site .market-article.has-longform .longform-copy section.market-sources,.market-guide-site .market-article.has-longform .longform-copy section.market-faq{padding-top:21px;border-top:1px solid #263945}
-.market-guide-site .market-article.has-longform .longform-copy .market-faq details{padding:0;border-color:#263945}
+.market-guide-site .market-article.has-longform .longform-copy section.market-sources,.market-guide-site .market-article.has-longform .longform-copy section.market-faq{padding-top:21px;border-top:1px solid #30373b}
+.market-guide-site .market-article.has-longform .longform-copy .market-faq details{padding:0;border-color:#30373b}
 .market-guide-site .market-article.has-longform .longform-copy .market-faq summary{padding:13px 0}
-.market-guide-site .market-article.has-longform .market-status-record{gap:0;margin:19px 0 28px;border:0;border-top:1px solid #263945;border-bottom:1px solid #263945;border-radius:0}
+.market-guide-site .market-article.has-longform .market-status-record{gap:0;margin:19px 0 28px;border:0;border-top:1px solid #30373b;border-bottom:1px solid #30373b;border-radius:0}
 .market-guide-site .market-article.has-longform .market-status-record>div{min-height:0;padding:13px 12px;border:0;border-radius:0;background:transparent;box-shadow:none}
-.market-guide-site .market-article.has-longform .market-status-record>div+div{border-left:1px solid #263945}
+.market-guide-site .market-article.has-longform .market-status-record>div+div{border-left:1px solid #30373b}
 .market-guide-site .market-article.has-longform .market-status-record>div>span{font-size:9px;letter-spacing:.08em}
 .market-guide-site .market-article.has-longform .market-status-record>div>strong:not(.market-state-status){font-size:13px}
 .market-guide-site .market-article.has-longform .market-book-list{grid-template-columns:1fr 1fr}
 .market-guide-site .market-article.has-longform .market-list-caveat{border-radius:3px}
-.market-guide-site .market-article.has-longform .editorial-note{margin:27px 0;padding:14px 0;border:0;border-top:1px solid #263945;border-radius:0;background:transparent}
+.market-guide-site .market-article.has-longform .editorial-note{margin:27px 0;padding:14px 0;border:0;border-top:1px solid #30373b;border-radius:0;background:transparent}
 .market-guide-site .market-article.has-longform>.article-pagination{max-width:none}
-.market-guide-site .market-article-page .breadcrumbs{width:min(100%,960px);margin:0 auto;color:#748592}
-.market-guide-site .market-article-page .breadcrumbs a{color:#a8b6c0}
+.market-guide-site .market-article-page .breadcrumbs{width:min(100%,960px);margin:0 auto;color:#7a8c84}
+.market-guide-site .market-article-page .breadcrumbs a{color:#afb9b4}
 .market-guide-site .market-article-page .breadcrumbs span:last-child{color:#eaf0f4}
-.market-guide-site .edu-header nav a[aria-current=page]{color:#b4e0e6}
-.market-guide-site .edu-header nav .edu-workspace-link{border-color:#335363;background:#10212b;color:#b4e0e6}
+.market-guide-site .edu-header nav a[aria-current=page]{color:#c4f79c}
+.market-guide-site .edu-header nav .edu-workspace-link{border-color:#444e52;background:#0e1215;color:#c4f79c}
 .sportsbook-guide-article.has-longform{max-width:960px}
 .sportsbook-guide-article.has-longform>.longform-article-grid>.article-content{max-width:none}
 .sportsbook-guide-article.has-longform>.article-pagination{max-width:none}
@@ -223,7 +223,7 @@ html{scroll-padding-top:104px}
   .edu-article.has-longform>.longform-article-grid>.article-header{margin:24px 0 18px}
   .edu-article.has-longform>.longform-article-grid>.article-content{display:contents}
   .edu-article.has-longform>.longform-article-grid>.article-content>.longform-layout{display:flex;flex-direction:column;max-width:none}
-  .edu-article.has-longform .longform-toc,.bet-article.has-longform .longform-toc{position:static;order:0;width:100%;max-height:360px;margin:0 0 21px;padding:15px 0;border:0;border-top:1px solid #263945;border-bottom:1px solid #263945}
+  .edu-article.has-longform .longform-toc,.bet-article.has-longform .longform-toc{position:static;order:0;width:100%;max-height:360px;margin:0 0 21px;padding:15px 0;border:0;border-top:1px solid #30373b;border-bottom:1px solid #30373b}
   .longform-toc h2{padding-left:0}
   .longform-toc ol{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:24px;padding-left:0}
   .longform-toc a{min-height:44px;padding-block:8px}
@@ -249,7 +249,7 @@ html{scroll-padding-top:104px}
   .edu-article.has-longform>.article-pagination{align-items:flex-start;flex-direction:column;gap:11px}
   .market-guide-site .market-article.has-longform .market-book-list{grid-template-columns:1fr}
   .market-guide-site .market-article.has-longform .market-status-record{grid-template-columns:1fr}
-  .market-guide-site .market-article.has-longform .market-status-record>div+div{border-top:1px solid #263945;border-left:0}
+  .market-guide-site .market-article.has-longform .market-status-record>div+div{border-top:1px solid #30373b;border-left:0}
   .bet-article-meta{margin-top:24px}
 }
 @media(prefers-reduced-motion:reduce){
@@ -260,10 +260,10 @@ html{scroll-padding-top:104px}
 /* Shared article FAQ panels. Native details retain keyboard and no-script support. */
 #main :is(.bet-faq,.faq,.market-faq):has(>details){
   --faq-panel:var(--bet-panel,var(--edu-surface,#141416));
-  --faq-line:var(--bet-line,var(--edu-line,#20313e));
-  --faq-accent:var(--bet-blue,var(--edu-accent-strong,#b4e0e6));
+  --faq-line:var(--bet-line,var(--edu-line,#2a3134));
+  --faq-accent:var(--bet-blue,var(--edu-accent-strong,#c4f79c));
   --faq-text:var(--bet-text,var(--edu-text,#eaf0f4));
-  --faq-copy:var(--longform-copy,#c5d0d7);
+  --faq-copy:var(--longform-copy,#cbd1ce);
   padding-top:22px;border-top:0;
 }
 #main :is(.bet-faq,.faq,.market-faq):has(>details)>h2{
@@ -274,7 +274,7 @@ html{scroll-padding-top:104px}
   background:var(--faq-panel);transition:background-color .16s ease,border-color .16s ease;
 }
 #main :is(.bet-faq,.faq,.market-faq)>details:last-child{margin-bottom:0}
-#main :is(.bet-faq,.faq,.market-faq)>details:hover{border-color:#3b5669}
+#main :is(.bet-faq,.faq,.market-faq)>details:hover{border-color:#4a555a}
 #main :is(.bet-faq,.faq,.market-faq)>details[open]{
   background:color-mix(in srgb,var(--faq-accent) 4%,var(--faq-panel));
   border-color:color-mix(in srgb,var(--faq-accent) 35%,var(--faq-line));

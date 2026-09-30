@@ -6,21 +6,19 @@ import {load} from 'cheerio';
 import * as core from '../public/ev-core.js';
 import * as views from '../public/ev-secondary-views.js';
 import {wagerCard} from '../public/ev-bet-card.js';
-import {isArbitrageDemo} from '../public/arbitrage-demo.js';
-import {smartMoneyDemoQuotes} from '../public/ev-demo.js';
 import {boardIcon,bookLogo,startLabel,selectionText,renderBetPanel} from '../public/ev-board.js';
 import {leagueMark,teamMark} from '../public/sports-identity.js';
 import {constrainedArb,middleOutcomes} from '../public/ev-advanced-math.js';
 
 const source = await fs.readFile(new URL('../public/ev.js',import.meta.url),'utf8');
 const quote = (id, overrides={}) => ({id,sport:'NBA',event:'Home & Away',market:'Player points',player:'Ada <Example>',
-  type:'prop',line:20.5,side:'Over',book:'DraftKings',odds:120,live:false,source:'example',ts:new Date().toISOString(),...overrides});
+  type:'prop',line:20.5,side:'Over',book:'DraftKings',odds:120,live:false,source:'manual',ts:new Date().toISOString(),...overrides});
 
 function render(name,quotes,extra={},args='') {
   const notice={dataset:{},textContent:''};
-  const context=vm.createContext({...core,...views,wagerCard,isArbitrageDemo,smartMoneyDemoQuotes,boardIcon,bookLogo,startLabel,leagueMark,teamMark,selectionText,renderBetPanel,constrainedArb,middleOutcomes,
+  const context=vm.createContext({...core,...views,wagerCard,boardIcon,bookLogo,startLabel,leagueMark,teamMark,selectionText,renderBetPanel,constrainedArb,middleOutcomes,
     suite:{quoteVisible:()=>true,settings:()=>({}),displayOdds:core.oddsLabel},sharpSort:'liquidity',sportsbookNames:[],
-    EV_DEMO_MODE:false,preserveLiveOrder:false,state:{quotes},quotes:()=>quotes,eligibleQuotes:items=>items,hasApiSnapshot:()=>false,
+    preserveLiveOrder:false,state:{quotes},quotes:()=>quotes,eligibleQuotes:items=>items,hasApiSnapshot:()=>false,
     sportsbookSelected:()=>true,bookAvailable:()=>true,marketType:'',sport:'',bookmaker:'',search:'',
     designFilters:{minEdge:0},stake:100,flatMultiplier:1,bankroll:5000,expandedSharpKey:'',sharpSelectedBook:'',sharpFiltersOpen:false,
     esc:views.toolEsc,fmtLine:value=>views.toolEsc(value),age:()=> 'Just now',$:()=>notice,
@@ -35,7 +33,7 @@ function render(name,quotes,extra={},args='') {
   return { $:load(vm.runInContext(source.slice(start,end)+`\n${name}(${args})`,context)),context,notice,detail };
 }
 
-test('arbitrage rows retain both quote actions, calculated stakes and demo provenance',()=>{
+test('arbitrage rows retain both quote actions and calculated stakes, with no demo framing',()=>{
   const quotes=[quote('first'),quote('hedge',{side:'Under',book:'FanDuel',odds:-105})];
   const before=structuredClone(quotes);
   const {$,notice,detail,context}=render('renderArb',quotes,{},'false');
@@ -56,8 +54,8 @@ test('arbitrage rows retain both quote actions, calculated stakes and demo prove
   assert.equal(row.find('.arb-leg-b .arb-profit strong').text(),core.money(plan.profits[1]));
   assert.match(row.find('.arb-leg-a .arb-leg-link').text(),/Ada <Example> Over 20\.5/);
   assert.equal(row.find('example').length,0,'player text cannot become markup');
-  assert.match($('.ev-arb-demo-note').text(),/1 match/);
-  assert.match(notice.textContent,/simulated/);
+  assert.equal($('.ev-arb-demo-note').length,0,'no simulated-opportunity banner');
+  assert.doesNotMatch(notice.textContent,/simulated|demo/i);
   const open=detail('first|hedge');
   assert.match(vm.runInContext('pairDetails.get("first|hedge")()',context),/^<tr class="evb-detail-row evd-row" id="pair-detail-first\|hedge"><td colspan="4">/,'the panel spans every row cell');
   assert.deepEqual(open('.evd-grid td.is-best').map((_,el)=>open(el).text()).get(),['+120','-105'],'both chosen prices are highlighted');

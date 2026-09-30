@@ -11,7 +11,7 @@ import {icon} from './ui-icons.js';
 import {sportTools, betTrackerUrl, SPORTS} from './navigation.js';
 import {evToolUrl} from './ev-tool-catalog.js';
 import {computeAdvancedEv} from './ev-advanced-math.js';
-import {EV_DEMO_MODE, permanentDemoWorkspace} from './ev-preview.js';
+import {isDemoRecord} from './ev-workspace-clean.js?v=1';
 import {platformAsset, platformLabel} from './platform-catalog.js';
 import {readBets, summarizeBets, betReturns} from './bet-utils.js?v=3';
 
@@ -198,22 +198,21 @@ function evPanel() {
   if (!$('#hd-ev')) return;
   let quotes = [];
   try {
-    const workspace = EV_DEMO_MODE ? permanentDemoWorkspace(null) : JSON.parse(accountStorage.getItem('sportslab-ev-workbench-v1') || 'null');
-    quotes = Array.isArray(workspace?.quotes) ? workspace.quotes : [];
+    const workspace = JSON.parse(accountStorage.getItem('sportslab-ev-workbench-v1') || 'null');
+    quotes = Array.isArray(workspace?.quotes) ? workspace.quotes.filter(quote => !isDemoRecord(quote)) : [];
   } catch { quotes = []; }
   const code = sport === 'soccer' ? 'Soccer' : label;
   const rows = computeAdvancedEv(sport === 'all' ? quotes : quotes.filter(q => (q.league || q.sport) === code || q.sport === code), EV_SETTINGS);
   const summary = evSummary(rows), top = topEvRows(rows, 5);
   setStat('ev', summary.count); setStat('edge', summary.best === null ? null : summary.best * 100);
   booksPanel(rows);
-  $('#hd-ev-badge').textContent = EV_DEMO_MODE ? 'Demo prices' : 'Pregame';
-  $('#hd-ev-badge').classList.toggle('is-demo', EV_DEMO_MODE);
+  $('#hd-ev-badge').textContent = 'Pregame';
   const href = evToolUrl('ev-pre', sport);
   put('#hd-ev', top.length ? `<ul class="hd-list">${top.map(({quote, ev, fair}) => {
     const s = evSelection(quote);
     return `<li><a class="hd-row hd-ev-row" href="${esc(href)}"><span class="hd-ev-value"><strong>+${(ev * 100).toFixed(1)}%</strong><small>EV</small></span><span class="hd-row-main"><strong>${esc(s.title)}</strong><small>${esc(s.detail)} · ${esc(quote.event)}</small></span><span class="hd-row-side"><small class="hd-fair">Fair ${pct(fair, 1)}</small>${oddsPill(quote.odds, quote.book)}</span></a></li>`;
-  }).join('')}</ul><p class="hd-panel-foot">${summary.count} positive ${summary.count === 1 ? 'price' : 'prices'} across ${new Set(rows.filter(r => r.ev > 0 && !r.quote.live).map(r => r.quote.book)).size} books${EV_DEMO_MODE ? ' · illustrative showcase data' : ''}</p>`
-    : empty('No positive EV prices yet', `Add prices for ${label} in the EV workspace to compare books against a no-vig fair line.`, `<a class="hd-cta" href="${esc(href)}">Open Positive EV <span aria-hidden="true">→</span></a>`));
+  }).join('')}</ul><p class="hd-panel-foot">${summary.count} positive ${summary.count === 1 ? 'price' : 'prices'} across ${new Set(rows.filter(r => r.ev > 0 && !r.quote.live).map(r => r.quote.book)).size} books</p>`
+    : empty('No positive EV prices yet', `Positive EV prices for ${label} appear here once the odds feed syncs.`, `<a class="hd-cta" href="${esc(href)}">Open Positive EV <span aria-hidden="true">→</span></a>`));
 }
 
 function booksPanel(rows) {
@@ -376,7 +375,7 @@ function showProfiles(profiles, board) {
     setStat('tracked', rated.length); setStat('hot', rated.filter(r => r.rate >= 0.8).length); setStat('cold', rated.filter(r => r.rate <= 0.2).length);
   }
   picksPanel(profiles); trendsPanel(profiles); edgesPanel(profiles); coldPanel(profiles);
-  if (board?.fetchedAt) $('#home-source').textContent = `${label} board updated ${new Date(board.fetchedAt).toLocaleString([], {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})}. Model estimates are experimental${EV_DEMO_MODE ? '; +EV prices are illustrative showcase data' : ''}.`;
+  if (board?.fetchedAt) $('#home-source').textContent = `${label} board updated ${new Date(board.fetchedAt).toLocaleString([], {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})}. Model estimates are experimental.`;
 }
 function boardFailed(error) {
   const message = error?.message;
@@ -419,11 +418,10 @@ async function loadMain() {
 hero(); quickLinks();
 for (const id of ['#hd-picks', '#hd-trends', '#hd-edges', '#hd-cold', '#hd-games']) put(id, skeleton(id === '#hd-games' ? 4 : 5));
 put('#hd-tracker', skeleton(3));
-evPanel();
 $('#home-dashboard').dataset.hdReady = '';
 await accountReady;
 trackerPanel();
-if (!EV_DEMO_MODE) evPanel();
+evPanel();
 // The +EV dashboard is built from saved prices only; the others need the league board.
 try { if (product !== 'ev') await loadMain(); }
 catch (error) { if (error?.name !== 'AbortError') { boardFailed(error); if ($('#hd-games .hd-skeleton')) put('#hd-games', failed(error.message)); if (stats.games === null) setStat('games', null); } }

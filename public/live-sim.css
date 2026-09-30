@@ -9,7 +9,7 @@
 html:root body:is([data-site-page="live"],[data-site-page="simulation"]):not(#ls-root) #main:not(:has(>.live-directory)) {
   --ls-bg:#07090b;--ls-panel:#0e1215;--ls-panel-2:#13181c;--ls-inset:#0a0d10;--ls-input:#0b0e11;
   --ls-line:#1b2328;--ls-line-2:#262f36;--ls-line-3:#34404a;
-  --ls-text:#edf2ee;--ls-text-2:#b9c3be;--ls-muted:#7e8a86;--ls-faint:#56615d;
+  --ls-text:#edf2ee;--ls-text-2:#b9c3be;--ls-muted:#7e8a86;--ls-faint:#76817d;
   --ls-lime:#a3f06b;--ls-lime-3:#c4f79c;--ls-lime-deep:#5fb52f;--ls-lime-ink:#0a200f;--ls-cyan:#43c3ff;
   --ls-amber:#f7c25a;--ls-red:#ff8f8f;
   --ls-lime-wash:rgb(163 240 107/.09);--ls-lime-line:rgb(163 240 107/.3);

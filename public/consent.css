@@ -1,0 +1,23 @@
+/* Consent banner: a compact dark card, bottom-left, in the VisualOdds palette. */
+.vo-consent {position:fixed;left:16px;bottom:16px;z-index:1000;display:grid;gap:14px;width:min(420px,calc(100vw - 32px));padding:18px 18px 16px;border:1px solid rgb(255 255 255/.1);border-radius:16px;background:#0e1215;color:#b9c3be;box-shadow:0 24px 60px -24px rgb(0 0 0/.9);font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;animation:vo-consent-in .32s cubic-bezier(.2,.7,.2,1) both}
+.vo-consent.is-leaving {animation:vo-consent-out .2s ease both}
+.vo-consent p {margin:0}
+.vo-consent strong {display:block;margin-bottom:4px;color:#edf2ee;font-size:15px;font-weight:650}
+.vo-consent a {color:#a3f06b;text-decoration:none;font-weight:600}
+.vo-consent a:hover {text-decoration:underline}
+.vo-consent-actions {display:flex;flex-wrap:wrap;gap:8px}
+.vo-consent button {flex:1 1 auto;min-height:40px;padding:0 16px;border-radius:999px;font:650 14px/1 inherit;font-family:inherit;cursor:pointer}
+.vo-consent-accept {border:1px solid #a3f06b;background:#a3f06b;color:#0a200f}
+.vo-consent-accept:hover {background:#c4f79c}
+.vo-consent-decline {border:1px solid rgb(255 255 255/.14);background:transparent;color:#edf2ee}
+.vo-consent-decline:hover {border-color:rgb(163 240 107/.45)}
+.vo-consent button:focus-visible {outline:2px solid #a3f06b;outline-offset:2px}
+@keyframes vo-consent-in {from {opacity:0;transform:translateY(12px)}}
+@keyframes vo-consent-out {to {opacity:0;transform:translateY(12px)}}
+@media (prefers-reduced-motion:reduce) {.vo-consent, .vo-consent.is-leaving {animation:none}}
+/* Win over page-level button styles (landing and workspace both restyle buttons globally). */
+html body .vo-consent button {box-shadow:none!important;text-shadow:none!important;letter-spacing:0!important;text-transform:none!important}
+html body .vo-consent .vo-consent-accept {border-color:#a3f06b!important;background:#a3f06b!important;color:#0a200f!important}
+html body .vo-consent .vo-consent-accept:hover {background:#c4f79c!important}
+html body .vo-consent .vo-consent-decline {background:transparent!important;color:#edf2ee!important}
+html body .vo-consent button:focus-visible {outline:2px solid #a3f06b!important;outline-offset:2px!important}

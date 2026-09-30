@@ -1,7 +1,9 @@
 import { accountStorage as localStorage, accountReady, accountSyncState } from './account-sync.js';
 await accountReady;
 import { platformAsset, platformOptions } from './platform-catalog.js';
-import { BET_STORAGE_KEY, STATUSES, validateBet, betReturns, closingLineValue, summarizeBets, readBets, writeBets, betsCsv } from './bet-utils.js?v=3';
+import { readLimits, writeLimits, limitStatus, limitWarnings } from './bet-limits.js?v=1';
+import { renderAnalytics, readDisplay, writeDisplay } from './tracker-analytics.js?v=1';
+import { BET_STORAGE_KEY, STATUSES, validateBet, betReturns, closingLineValue, summarizeBets, readBets, writeBets, betsCsv, parseBetsCsv } from './bet-utils.js?v=4';
 import { migrateLegacyTracker, LEGACY_EV_STORAGE_KEY } from './bet-tracker-migration.js';
 import { betTrackerUrl } from './navigation.js?v=tracker-1';
 import { BetLegEditor } from './bet-editor.js';
@@ -10,14 +12,11 @@ import { icon } from './ui-icons.js';
 import { BetDashboard } from './bet-dashboard-v3.js?v=6';
 import { BetSlipImport } from './bet-slip-import.js';
 import { inlineBetCard as betComparisonCard, bindInlineComparison as bindComparison } from './bet-inline.js?v=card-click-3';
-import { sampleBets } from './bet-sample-data.js?v=3';
-import { EV_DEMO_MODE, EV_DEMO_BETS_STORE, permanentDemoBets } from './ev-preview.js?v=twelve-books-2';
+import { clearLegacyDemoStorage } from './ev-workspace-clean.js?v=1';
 
-const permanentEvDemo = EV_DEMO_MODE && !accountSyncState().userId && location.pathname.startsWith('/ev/');
-const trackerStorage = permanentEvDemo ? {
-  getItem: () => localStorage.getItem(EV_DEMO_BETS_STORE),
-  setItem: (_key, value) => localStorage.setItem(EV_DEMO_BETS_STORE, value)
-} : localStorage;
+// The tracker shows only the member's own tickets; storage that held demo tickets is cleared.
+clearLegacyDemoStorage(window.localStorage, null);
+const trackerStorage = localStorage;
 
 const $ = selector => document.querySelector(selector);
 const form = $('#bet-form');
@@ -41,9 +40,8 @@ const leagueMark = sport => {
 const tagColor = name => [...name].reduce((value,letter)=>value+letter.charCodeAt(0),0)%4;
 const shortDay = date => new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { month:'numeric', day:'numeric' });
 const today = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; };
-let bets = [], editing = null, toastTimer, storageReady = false, sampleMode = null;
-const examples = permanentEvDemo ? permanentDemoBets(sampleBets()) : sampleBets();
-const activeBets = () => sampleMode ? examples : bets;
+let bets = [], editing = null, toastTimer, storageReady = false;
+const activeBets = () => bets;
 let dirty = false, saving = false, returnFocus = null;
 let tracking=false;
 const ticketSignatures = new WeakMap();
@@ -105,24 +103,6 @@ function toast(message) {
 
 function load() {
   try {
-    if (permanentEvDemo) {
-      bets = examples;
-      const saved = new Map(readBets(trackerStorage).map(bet => [bet.id,bet]));
-      bets = examples.map(sample => {
-        const previous = saved.get(sample.id);
-        saved.delete(sample.id);
-        return previous?.date === sample.date ? previous : sample;
-      }).concat([...saved.values()]);
-      writeBets(trackerStorage, bets);
-      sampleMode = false;
-      storageReady = true;
-      $('#storage-error').hidden = true;
-      $('#tracker-migration-notice').hidden = true;
-      $('#add-bet').disabled = false;
-      $('#import-slip').disabled = false;
-      render();
-      return;
-    }
     const notice = $('#tracker-migration-notice');
     try {
       const { migrated, skipped } = migrateLegacyTracker(localStorage);
@@ -134,7 +114,6 @@ function load() {
     }
     notice.hidden = !notice.textContent;
     bets = readBets(trackerStorage);
-    if (sampleMode === null) sampleMode = !bets.length;
     storageReady = true;
     $('#storage-error').hidden = true;
   } catch {
@@ -144,6 +123,11 @@ function load() {
   }
   $('#add-bet').disabled = !storageReady;
   $('#import-slip').disabled = !storageReady;
+  // Deep link from onboarding: /bets?add=1 opens the Add Bet form once, then cleans the URL.
+  if (storageReady && new URLSearchParams(location.search).get('add') === '1') {
+    const clean = new URL(location.href); clean.searchParams.delete('add'); history.replaceState(history.state, '', clean);
+    requestAnimationFrame(() => openForm());
+  }
   render();
 }
 
@@ -161,25 +145,96 @@ function renderInsights(items) {
     ['Leagues', 'sport-filter', bet => [bet.sport], 'league', 'research'],
     ['Platforms', 'book-filter', bet => [bet.book || 'No sportsbook'], 'book', 'picks'],
     ['Markets', 'market-filter', bet => bet.market ? [bet.market] : [], 'market', 'performance'],
-    ['Your tags', 'tag-filter', bet => bet.tags || [], 'tag', 'tag']
+    ['Your tags', 'tag-filter', bet => bet.tags || [], 'tag', 'tag'],
+    ['Sources', 'tool-filter', bet => [bet.tool || 'Manual'], 'tool', 'research']
   ];
-  $('#tracker-insights').innerHTML = sections.map(([title,filter,keys,kind,glyph]) => {
+  $('#tracker-insights').innerHTML = renderAnalytics(items, readDisplay(trackerStorage)) + sections.map(([title,filter,keys,kind,glyph]) => {
     const groups = new Map();
     for (const bet of items) for (const value of keys(bet)) { if (!groups.has(value)) groups.set(value,[]); groups.get(value).push(bet); }
     const rows = [...groups].map(([name,bets]) => ({name,total:summarizeBets(bets)})).sort((a,b) => b.total.profit-a.total.profit);
     const scale = Math.max(...rows.map(({total}) => Math.abs(total.profit)), 0.01);
     const row = ({name,total}) => {
       const active = $('#'+filter).value === name;
-      const mark = kind === 'book' ? sportsbookMark(name) : kind === 'league' ? leagueMark(name) : icon(kind === 'market' ? 'performance' : 'tag');
+      const mark = kind === 'book' ? sportsbookMark(name) : kind === 'league' ? leagueMark(name) : icon(kind === 'market' ? 'performance' : kind === 'tool' ? 'research' : 'tag');
       return `<button type="button" class="tracker-insight-row" data-summary-filter="${filter}" data-summary-value="${esc(name)}" aria-pressed="${active}" aria-label="${active?'Remove filter for':'Filter tickets by'} ${esc(name)}"><span class="tracker-insight-mark ${kind} mark-${tagColor(name)}" aria-hidden="true">${mark}</span><span class="tracker-insight-name"><strong>${esc(name)}</strong><small>${total.won} won <span>·</span> ${total.lost} lost${total.open?' <span>·</span> '+total.open+' open':''}</small><span class="tracker-insight-bar" aria-hidden="true"><i class="${tone(total.profit)}" style="width:${Math.max(total.profit ? 4 : 0, Math.abs(total.profit) / scale * 100).toFixed(1)}%"></i></span></span><strong class="tracker-insight-profit ${tone(total.profit)}">${signedMoney(total.profit)}</strong><span class="tracker-insight-plus" aria-hidden="true">${icon(active?'check':'plus')}</span></button>`;
     };
     const expanded = expandedInsights.has(kind);
-    const collectionName = {tag:'tags',league:'leagues',book:'platforms',market:'markets'}[kind];
+    const collectionName = {tag:'tags',league:'leagues',book:'platforms',market:'markets',tool:'sources'}[kind];
     return `<section class="tracker-insight-section" data-insight-kind="${kind}"><div class="tracker-insight-heading"><span class="bt-icon-tile" aria-hidden="true">${icon(glyph)}</span><h2>${title}<span>${rows.length}</span></h2><span>Net profit</span></div><div class="tracker-insight-card">${rows.length ? rows.slice(0,expanded?rows.length:3).map(row).join('') : '<p class="tracker-insight-empty">Your results will appear here.</p>'}</div>${rows.length>3 ? `<button type="button" class="tracker-insight-toggle" data-insight-toggle="${kind}" aria-expanded="${expanded}">${expanded?'Show fewer '+collectionName:`Show all ${rows.length} ${collectionName}`}${icon('chevron')}</button>` : ''}</section>`;
   }).join('');
 }
 
+// Analysis controls: dollars/units switch, unit size and starting bankroll.
+$('#tracker-insights').addEventListener('click', event => {
+  const button = event.target.closest('[data-ta-units]');
+  if (!button) return;
+  const display = readDisplay(trackerStorage);
+  try { writeDisplay(trackerStorage, { ...display, units: button.dataset.taUnits === 'true' }); } catch { /* storage blocked */ }
+  render();
+});
+$('#tracker-insights').addEventListener('change', event => {
+  const input = event.target.closest('[data-ta-field]');
+  if (!input) return;
+  const display = readDisplay(trackerStorage);
+  try { writeDisplay(trackerStorage, { ...display, [input.dataset.taField]: Number(input.value) || null }); } catch { /* storage blocked */ }
+  render();
+});
+
+// Self-set limits: a status strip above the ledger and a check before new tickets are saved.
+function renderLimits() {
+  const strip = $('#bet-limits-status');
+  if (!strip) return;
+  const limits = readLimits(trackerStorage);
+  // Limits always measure the account's real tickets, even while example tickets are on screen.
+  if (!limits.weeklyStake && !limits.monthlyLoss && !limits.pauseUntil) { strip.hidden = true; strip.innerHTML = ''; return; }
+  const status = limitStatus(bets, limits);
+  const meter = (label, used, cap, over) => `<div class="bet-limit${over ? ' is-over' : ''}"><span>${label}</span><strong>${money(used)} <small>of ${money(cap)}</small></strong><i style="--fill:${Math.min(100, used / cap * 100).toFixed(1)}%"></i></div>`;
+  strip.innerHTML = [
+    status.pauseUntil ? `<div class="bet-limit is-break"><span>Break</span><strong>Until ${new Date(status.pauseUntil).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</strong></div>` : '',
+    status.weeklyStake ? meter('Staked this week', status.weekStake, status.weeklyStake, status.overWeekly) : '',
+    status.monthlyLoss ? meter('Lost this month', status.monthLoss, status.monthlyLoss, status.overMonthly) : '',
+  ].join('');
+  strip.hidden = false;
+}
+const limitsDialog = $('#limits-dialog'), limitsForm = $('#limits-form');
+$('#open-limits').addEventListener('click', () => {
+  const limits = readLimits(trackerStorage);
+  limitsForm.elements.weeklyStake.value = limits.weeklyStake ?? '';
+  limitsForm.elements.monthlyLoss.value = limits.monthlyLoss ?? '';
+  limitsForm.elements.pause.value = limits.pauseUntil && Date.parse(limits.pauseUntil) > Date.now() ? 'keep' : '';
+  limitsForm.elements.pause.querySelector('[value=keep]').hidden = limitsForm.elements.pause.value !== 'keep';
+  limitsDialog.showModal();
+});
+$('#cancel-limits').addEventListener('click', () => limitsDialog.close());
+limitsForm.addEventListener('submit', event => {
+  event.preventDefault();
+  const current = readLimits(trackerStorage), pause = limitsForm.elements.pause.value;
+  const days = Number(pause);
+  try {
+    writeLimits(trackerStorage, {
+      weeklyStake: Number(limitsForm.elements.weeklyStake.value) || null,
+      monthlyLoss: Number(limitsForm.elements.monthlyLoss.value) || null,
+      pauseUntil: pause === 'keep' ? current.pauseUntil : days ? new Date(Date.now() + days * 86_400_000).toISOString() : null,
+    });
+    limitsDialog.close(); renderLimits(); toast('Limits saved.');
+  } catch { toast('Your limits could not be saved. Check that site storage is allowed.'); }
+});
+function confirmLimits(bet) {
+  const reasons = limitWarnings(bets, readLimits(trackerStorage), bet);
+  if (!reasons.length) return Promise.resolve(true);
+  const warning = $('#limit-warning-dialog');
+  $('#limit-warning-reasons').replaceChildren(...reasons.map(text => Object.assign(document.createElement('li'), { textContent: text })));
+  return new Promise(resolve => {
+    const finish = value => { warning.close(); $('#limit-continue').onclick = $('#limit-cancel').onclick = null; resolve(value); };
+    $('#limit-continue').onclick = () => finish(true);
+    $('#limit-cancel').onclick = () => finish(false);
+    warning.addEventListener('cancel', () => finish(false), { once: true });
+    warning.showModal(); $('#limit-cancel').focus();
+  });
+}
+
 function render() {
+  renderLimits();
   if (batchingFilters) return;
   const selectedSport = $('#sport-filter').value.toLowerCase();
   const target = new URL(betTrackerUrl(selectedSport), location.origin);
@@ -199,23 +254,11 @@ function render() {
   const accountState = accountSyncState();
   const storageLabel = $('.tracker-storage>span');
   const storageDetail = $('.tracker-storage>p');
-  storageLabel.textContent = accountState.userId ? 'Account bet records' : 'This page’s demo workspace';
+  storageLabel.textContent = accountState.userId ? 'Account bet records' : 'Saved in this browser';
   storageDetail.textContent = accountState.userId
     ? 'Account changes sync while connected. Export a copy of your tickets whenever you need it.'
-    : 'Demo edits last until this page is reloaded. Export your tickets to keep a copy.';
+    : 'Tickets are saved in this browser. Sign in to sync them to your account, or export a copy.';
   document.body.classList.toggle('tracker-empty', storageReady && !shown.length);
-  document.body.classList.toggle('tracker-sample-mode', !!sampleMode);
-  $('#sample-banner').hidden = !sampleMode && !permanentEvDemo;
-  if (permanentEvDemo) {
-    $('#sample-banner strong').textContent = 'Permanent demo bets';
-    $('#sample-banner span:not(.tracker-sample-dot)').textContent = 'Illustrative tickets and results. Changes stay in the demo workspace.';
-    $('#sample-banner-close').hidden = true;
-    $('#toggle-sample').hidden = true;
-  }
-  $('#toggle-sample').setAttribute('aria-pressed', String(!!sampleMode));
-  $('#toggle-sample').textContent = sampleMode ? 'View my bets' : 'View sample';
-  $('#toggle-sample').setAttribute('aria-label', $('#toggle-sample').textContent);
-  $('#toggle-sample').title = $('#toggle-sample').textContent;
   document.querySelectorAll('[data-range]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.range === dashboard.range)));
   $('#tracker-custom-dates').hidden = dashboard.range !== 'custom';
   $('#tracker-period-caption').textContent = dashboard.view === 'calendar' ? 'Monthly calendar' : ({'1w':'Last 7 days','1m':'Last 30 days','1y':'Last 365 days',all:'All-time performance',custom:'Custom date range'})[dashboard.range];
@@ -227,8 +270,8 @@ function render() {
     return;
   }
   const hasConnectedLegs = bets.some(bet => bet.legs?.some(leg => leg.mode === 'auto'));
-  $('#refresh-lines').hidden = sampleMode || !hasConnectedLegs;
-  $('.tracking-bar').hidden = sampleMode || !hasConnectedLegs;
+  $('#refresh-lines').hidden = !hasConnectedLegs;
+  $('.tracking-bar').hidden = !hasConnectedLegs;
   const calendarFocus=document.activeElement?.getAttribute('data-calendar-day');
   dashboard.render(shown);
   renderInsights(dashboard.periodBets(shown));
@@ -252,7 +295,7 @@ function render() {
   document.querySelectorAll('[data-ticket-count]').forEach(element => { element.textContent = ticketCounts[element.dataset.ticketCount]; });
   const expanded=new Set([...document.querySelectorAll('.bet-ticket details[open]')].map(el=>el.closest('[data-ticket-id]').dataset.ticketId+':'+el.className));
   const focusedEdit=document.activeElement?.dataset.edit;
-  const viewKey = JSON.stringify([sampleMode, dashboard.range, dashboard.view, dashboard.month, dashboard.selectedDay, dashboard.customStart, dashboard.customEnd,
+  const viewKey = JSON.stringify([dashboard.range, dashboard.view, dashboard.month, dashboard.selectedDay, dashboard.customStart, dashboard.customEnd,
     ...['bet-search','sport-filter','status-filter','book-filter','market-filter','tool-filter','tag-filter','ticket-range'].map(id => $('#' + id).value)]);
   if (viewKey !== ticketViewKey) { ticketLimit = ticketPageSize; ticketViewKey = viewKey; }
   const matching = filteredBets();
@@ -266,8 +309,8 @@ function render() {
   const activeFilters = ['book-filter','sport-filter','market-filter','tool-filter','tag-filter'].filter(id=>$('#'+id).value);
   $('#tracker-active-filters').hidden = !activeFilters.length;
   $('#tracker-active-filters').innerHTML = '<span class="tracker-filter-label">Filtered by</span>' + activeFilters.map(id=>`<button type="button" class="tracker-filter-chip" data-remove-filter="${id}" aria-label="Remove ${esc($('#'+id).value)} filter">${esc($('#'+id).value)}${icon('close')}</button>`).join('') + '<button type="button" class="tracker-reset-filters" data-clear-ticket-filters>Clear filters</button>';
-  $('#bet-count').textContent = shown.length ? `${visible.length}${matching.length > visible.length ? ` of ${matching.length}` : ''} ${matching.length === 1 ? 'ticket' : 'tickets'} shown · Newest first${sampleMode ? ' · Sample' : ''}` : 'Your tickets will appear here';
-  $('#export-bets').disabled = sampleMode || !visible.length;
+  $('#bet-count').textContent = shown.length ? `${visible.length}${matching.length > visible.length ? ` of ${matching.length}` : ''} ${matching.length === 1 ? 'ticket' : 'tickets'} shown · Newest first` : 'Your tickets will appear here';
+  $('#export-bets').disabled = !visible.length;
   $('#export-bets').innerHTML = icon('download')+' Export CSV';
   $('#export-bets').setAttribute('aria-label', 'Export visible tickets as CSV');
   if (!visible.length) {
@@ -293,14 +336,14 @@ function render() {
       const book = bet.book || 'No sportsbook';
       const mark = sportsbookMark(bet.book);
       const clv=closingLineValue(bet);
-      return `<article class="bet-ticket" data-ticket-id="${esc(bet.id)}"><details class="bet-ticket-disclosure"><summary class="bet-row"><span class="bet-book-mark">${mark}</span><span class="bet-description"><strong class="bet-selection">${bet.market ? `<span class="bet-market-name">${esc(bet.market)}</span> · ` : ''}${esc(bet.selection)}</strong><small>${bet.status === 'won' || bet.status === 'lost' ? '' : `<span class="bet-status-pill is-${esc(bet.status)}">${esc(STATUSES[bet.status])}</span>`}${bet.event ? `<span class="bet-meta-event">${esc(bet.event)}</span><i aria-hidden="true"></i>` : ''}<span class="bet-meta-league">${leagueMark(bet.sport)}${esc(bet.sport)}</span><i aria-hidden="true"></i><span>${esc(shortDay(bet.date))}</span><i aria-hidden="true"></i><span>${esc(book)}</span></small></span><span class="bet-row-result"><strong class="${bet.status === 'open' ? 'pending' : tone(net)}">${repricing ? '—' : signedMoney(net)}</strong><small><span class="bet-result-note">${bet.status === 'open' ? `To win · ${money(bet.stake)} stake` : `${clv === null ? '—' : `${clv > 0 ? '+' : ''}${clv.toFixed(1)}%`} CLV`}</span><span class="bet-price">${esc(odds)}</span></small></span><span class="bet-row-chevron" aria-hidden="true">${icon('chevron')}</span></summary><div class="bet-ticket-detail ticket-receipt"><dl class="ticket-receipt-grid"><div><dt>Stake</dt><dd>${money(bet.stake)}</dd></div><div><dt>Booked odds <span>${bet.oddsFormat === 'decimal' ? 'Decimal' : 'American'}</span></dt><dd>${esc(odds)}</dd></div><div class="ticket-receipt-return"><dt>${bet.status === 'open' ? 'Potential return' : 'Total returned'}</dt><dd>${repricing ? '—' : money(result.returned ?? result.potentialReturn)}</dd></div><div><dt>Closing line value</dt><dd class="${tone(clv)}">${clv === null ? '—' : `${clv > 0 ? '+' : ''}${clv.toFixed(2)}%`}</dd></div></dl>${bet.notes && !(sampleMode && bet.notes === 'Illustrative sample ticket.') ? `<div class="ticket-receipt-note"><span>Notes</span><p>${esc(bet.notes)}</p></div>` : ''}${legs.length ? `<div class="ticket-tracking"><p class="leg-summary"><strong>${legs.filter(leg => legState(leg) === 'won').length} / ${legs.length} legs hit</strong><span>${esc(bet.settlement === 'auto' ? ticketSettlement(legs).note : 'Ticket result set from sportsbook.')}</span></p><ol class="tracked-legs">${legs.map(legMarkup).join('')}</ol></div>` : ''}<div class="ticket-receipt-footer"><span class="ticket-receipt-source"><span>Source</span><strong>${esc(bet.tool || 'Manual')}</strong></span>${bet.tags?.length ? `<div class="ticket-receipt-tags" aria-label="Ticket tags">${bet.tags.map(tag=>`<span>${esc(tag)}</span>`).join('')}</div>` : ''}${sampleMode ? '<span class="ticket-receipt-sample">Sample ticket</span>' : `<button class="ticket-receipt-edit" type="button" data-edit="${esc(bet.id)}" aria-label="Edit ${esc(bet.selection)}">Edit ticket ${icon('chevron')}</button>`}</div></div></details></article>`;
+      return `<article class="bet-ticket" data-ticket-id="${esc(bet.id)}"><details class="bet-ticket-disclosure"><summary class="bet-row"><span class="bet-book-mark">${mark}</span><span class="bet-description"><strong class="bet-selection">${bet.market ? `<span class="bet-market-name">${esc(bet.market)}</span> · ` : ''}${esc(bet.selection)}</strong><small>${bet.status === 'won' || bet.status === 'lost' ? '' : `<span class="bet-status-pill is-${esc(bet.status)}">${esc(STATUSES[bet.status])}</span>`}${bet.event ? `<span class="bet-meta-event">${esc(bet.event)}</span><i aria-hidden="true"></i>` : ''}<span class="bet-meta-league">${leagueMark(bet.sport)}${esc(bet.sport)}</span><i aria-hidden="true"></i><span>${esc(shortDay(bet.date))}</span><i aria-hidden="true"></i><span>${esc(book)}</span></small></span><span class="bet-row-result"><strong class="${bet.status === 'open' ? 'pending' : tone(net)}">${repricing ? '—' : signedMoney(net)}</strong><small><span class="bet-result-note">${bet.status === 'open' ? `To win · ${money(bet.stake)} stake` : `${clv === null ? '—' : `${clv > 0 ? '+' : ''}${clv.toFixed(1)}%`} CLV`}</span><span class="bet-price">${esc(odds)}</span></small></span><span class="bet-row-chevron" aria-hidden="true">${icon('chevron')}</span></summary><div class="bet-ticket-detail ticket-receipt"><dl class="ticket-receipt-grid"><div><dt>Stake</dt><dd>${money(bet.stake)}</dd></div><div><dt>Booked odds <span>${bet.oddsFormat === 'decimal' ? 'Decimal' : 'American'}</span></dt><dd>${esc(odds)}</dd></div><div class="ticket-receipt-return"><dt>${bet.status === 'open' ? 'Potential return' : 'Total returned'}</dt><dd>${repricing ? '—' : money(result.returned ?? result.potentialReturn)}</dd></div><div><dt>Closing line value</dt><dd class="${tone(clv)}">${clv === null ? '—' : `${clv > 0 ? '+' : ''}${clv.toFixed(2)}%`}</dd></div></dl>${bet.notes ? `<div class="ticket-receipt-note"><span>Notes</span><p>${esc(bet.notes)}</p></div>` : ''}${legs.length ? `<div class="ticket-tracking"><p class="leg-summary"><strong>${legs.filter(leg => legState(leg) === 'won').length} / ${legs.length} legs hit</strong><span>${esc(bet.settlement === 'auto' ? ticketSettlement(legs).note : 'Ticket result set from sportsbook.')}</span></p><ol class="tracked-legs">${legs.map(legMarkup).join('')}</ol></div>` : ''}<div class="ticket-receipt-footer"><span class="ticket-receipt-source"><span>Source</span><strong>${esc(bet.tool || 'Manual')}</strong></span>${bet.tags?.length ? `<div class="ticket-receipt-tags" aria-label="Ticket tags">${bet.tags.map(tag=>`<span>${esc(tag)}</span>`).join('')}</div>` : ''}${`<button class="ticket-receipt-edit" type="button" data-edit="${esc(bet.id)}" aria-label="Edit ${esc(bet.selection)}">Edit ticket ${icon('chevron')}</button>`}</div></div></details></article>`;
     }).join('')}</div>`;
   }).join('')}</div>`;
   // Reuse unchanged tickets during price/result refreshes and filtering. This
   // keeps native disclosures, focus and scroll anchors attached to their nodes.
   const template = document.createElement('template');
   template.innerHTML = ledgerMarkup;
-  const signatures = new Map(visible.map(bet => [bet.id, JSON.stringify([bet, sampleMode])]));
+  const signatures = new Map(visible.map(bet => [bet.id, JSON.stringify(bet)]));
   template.content.querySelectorAll('.bet-ticket').forEach(node => ticketSignatures.set(node, signatures.get(node.dataset.ticketId)));
   template.content.querySelectorAll('.bet-ticket details').forEach(el => { el.open = expanded.has(el.closest('[data-ticket-id]').dataset.ticketId + ':' + el.className); });
   const currentLedger = $('#bet-list .bet-ledger');
@@ -379,13 +422,14 @@ function openForm(id, draft) {
   form.reset();
   field('date').value = today();
   if (!editing && $('#sport-filter').value) field('sport').value = $('#sport-filter').value;
-  if (editing) for (const [key, value] of Object.entries(editing)) { if (field(key)) field(key).value = key === 'tags' ? value.join(', ') : value ?? ''; }
+  field('freeBet').checked = !!editing?.freeBet;
+  if (editing) for (const [key, value] of Object.entries(editing)) { if (!field(key)) continue; if (field(key).type === 'checkbox') field(key).checked = value === true; else field(key).value = key === 'tags' ? value.join(', ') : value ?? ''; }
   field('settlement').value=editing?.settlement||'manual';
   editor.reset(editing?.legs||[],field('sport').value,field('date').value);
   $('#ticket-selections').open=!!(editing?.legs?.length||draft?.legs?.length);
   $('#slip-form-review').hidden=!draft;
   if(draft){
-    for(const [key,value] of Object.entries(draft.fields))if(field(key))field(key).value=value??'';
+    for(const [key,value] of Object.entries(draft.fields))if(field(key)){if(field(key).type==='checkbox')field(key).checked=value===true||value==='on';else field(key).value=value??'';}
     editor.reset(draft.legs.map(leg=>({...leg,id:crypto.randomUUID()})),field('sport').value,field('date').value);
     $('#slip-form-review').innerHTML=`<strong>${icon('paper')} Review your imported ticket</strong><p>Check the stake, combined odds and every selection against your screenshot. Imported selections use manual results until you connect them to a game.</p>${draft.preview?'<details class="imported-slip-source"><summary>View original screenshot</summary><img alt="Original screenshot for checking your ticket" src="'+esc(draft.preview)+'"></details>':''}${draft.issues.length?'<ul>'+draft.issues.map(issue=>'<li>'+esc(issue)+'</li>').join('')+'</ul>':''}`;
     returnFocus=$('#import-slip');
@@ -487,10 +531,10 @@ form.addEventListener('submit', async event => {
   const submit = form.querySelector('[type=submit]');
   try {
     const validated = validateBet({...Object.fromEntries(new FormData(form)),status:field('status').value,legs:editor.values()});
+    if (!editing && !(await confirmLimits(validated))) return;
     saving = true; submit.disabled = true; submit.textContent = 'Saving…'; form.setAttribute('aria-busy','true');
     await new Promise(resolve => requestAnimationFrame(resolve));
     const bet = { ...validated, id: editing?.id || crypto.randomUUID(), updatedAt: new Date().toISOString() };
-    sampleMode = false;
     if(!editing){
       dashboard.month=bet.date.slice(0,7);
       dashboard.selectedDay='';
@@ -513,15 +557,6 @@ form.addEventListener('click', event => { if (event.target.closest('[data-remove
 form.addEventListener('input', updateForm);
 form.addEventListener('change', updateForm);
 $('#add-bet').addEventListener('click', () => openForm());
-function toggleSample(force) {
-  if (permanentEvDemo) return;
-  sampleMode = force ?? !sampleMode;
-  dashboard.selectedDay = '';
-  clearFilters();
-  render();
-}
-$('#toggle-sample').addEventListener('click', () => toggleSample());
-$('#sample-banner-close').addEventListener('click', () => toggleSample(false));
 $('#import-slip').addEventListener('click',()=>slipImport.open());
 $('#add-leg').addEventListener('click',()=>{ dirty = true; editor.add(field('sport').value,field('date').value); $('#leg-editor .leg-editor:last-child input, #leg-editor .leg-editor:last-child select')?.focus(); });
 $('#ticket-settlement').addEventListener('change', () => {
@@ -562,7 +597,7 @@ $('#bet-list').addEventListener('click', event => {
     return;
   }
   const ticket = event.target.closest('.bet-ticket-disclosure>summary');
-  if (ticket && !sampleMode) { event.preventDefault(); return showTicketComparison(ticket.closest('[data-ticket-id]')?.dataset.ticketId, ticket); }
+  if (ticket) { event.preventDefault(); return showTicketComparison(ticket.closest('[data-ticket-id]')?.dataset.ticketId, ticket); }
   const button = event.target.closest('button');
   if (button?.hasAttribute('data-add')) openForm();
   if (button?.hasAttribute('data-clear')) clearFilters();
@@ -634,6 +669,37 @@ document.querySelectorAll('[data-ticket-view]').forEach(button => button.addEven
   $('#status-filter').dispatchEvent(new Event('change', { bubbles: true }));
 }));
 $('#clear-filters').addEventListener('click', () => clearFilters());
+// CSV import: parse and validate locally, show what will be added, then save in one write.
+let pendingImport = [];
+const importDialog = $('#import-dialog');
+$('#import-bets').addEventListener('click', () => $('#import-bets-file').click());
+$('#import-bets-file').addEventListener('change', async event => {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) return;
+  if (file.size > 2_000_000) { toast('That file is larger than 2 MB. Split it and import the parts.'); return; }
+  const { bets: parsed, errors } = parseBetsCsv(await file.text());
+  pendingImport = parsed;
+  $('#import-summary').textContent = parsed.length
+    ? `${parsed.length} ${parsed.length === 1 ? 'ticket is' : 'tickets are'} ready to add from ${file.name}.${errors.length ? ` ${errors.length} ${errors.length === 1 ? 'row was' : 'rows were'} skipped.` : ''}`
+    : `No tickets could be read from ${file.name}.`;
+  const list = $('#import-errors');
+  list.replaceChildren(...errors.slice(0, 6).map(message => Object.assign(document.createElement('li'), { textContent: message })));
+  if (errors.length > 6) list.append(Object.assign(document.createElement('li'), { textContent: `…and ${errors.length - 6} more.` }));
+  list.hidden = !errors.length;
+  $('#confirm-import').hidden = !parsed.length;
+  importDialog.showModal();
+});
+$('#cancel-import').addEventListener('click', () => { pendingImport = []; importDialog.close(); });
+$('#confirm-import').addEventListener('click', () => {
+  const incoming = pendingImport; pendingImport = [];
+  importDialog.close();
+  if (!incoming.length) return;
+  try {
+    mutate(latest => [...latest, ...incoming]);
+    toast(`Imported ${incoming.length} ${incoming.length === 1 ? 'ticket' : 'tickets'}.`);
+  } catch (error) { toast(error.message); }
+});
 $('#export-bets').addEventListener('click', () => {
   const visible = filteredBets();
   const url = URL.createObjectURL(new Blob(['\uFEFF', betsCsv(visible)], { type: 'text/csv;charset=utf-8' }));
@@ -645,7 +711,6 @@ $('#export-bets').addEventListener('click', () => {
   toast(`Exported ${visible.length} ${visible.length === 1 ? 'bet' : 'bets'}.`);
 });
 async function refreshLines({all=false}={}){
-  if (permanentEvDemo) return;
   if(tracking||!storageReady||document.hidden||dialog.open||slipImport.dialog.open)return;
   const candidates=bets.filter(b=>b.legs?.some(l=>l.mode==='auto'&&!l.override&&(all||!['won','lost','push','void'].includes(legState(l))||Date.parse(l.date)>Date.now()-3*86400000)));
   const groups=new Map(candidates.flatMap(b=>b.legs.filter(l=>l.mode==='auto'&&!l.override).map(l=>[gameKey(l),l])));
@@ -679,7 +744,7 @@ async function refreshLines({all=false}={}){
 $('#refresh-lines').addEventListener('click',()=>refreshLines({all:true}));
 setInterval(refreshLines,60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshLines({all:true});});
-window.addEventListener('storage', event => { if ([BET_STORAGE_KEY, LEGACY_EV_STORAGE_KEY, EV_DEMO_BETS_STORE, null].includes(event.key)) load(); });
+window.addEventListener('storage', event => { if ([BET_STORAGE_KEY, LEGACY_EV_STORAGE_KEY, null].includes(event.key)) load(); });
 const requestedSport = new URLSearchParams(location.search).get('sport');
 const sportOption = [...$('#sport-filter').options].find(option => option.value.toLowerCase() === requestedSport?.toLowerCase());
 if (sportOption) $('#sport-filter').value = sportOption.value;

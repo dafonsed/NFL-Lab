@@ -13,7 +13,7 @@ html:root body:is([data-site-page="research"],[data-site-page="live"],[data-site
   --mb-sub:#b9c3be;
   --mb-value:#d3d9dd;
   --mb-muted:#7e8a86;
-  --mb-faint:#56615d;
+  --mb-faint:#76817d;
   --mb-lime:#a3f06b;
   --mb-lime-pale:#c4f79c;
   --mb-lime-soft:rgba(163,240,107,.11);
@@ -270,3 +270,7 @@ html:root body:is([data-site-page="research"],[data-site-page="live"],[data-site
 }
 
 /* Live games and Simulation page rules live in live-sim.css. */
+
+/* MLB game cards: team logo beside the code. */
+.mlb-game .mlb-team-row .team-code{display:inline-flex;align-items:center;gap:8px}
+.mlb-game .mlb-team-row .team-code img{width:26px;height:26px;object-fit:contain}

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0a1d2b">
+  <meta name="theme-color" content="#07090b">
   <meta name="robots" content="noindex,follow">
   <meta name="description" content="VisualOdds EV workspace tool and local API reference.">
   <title>EV Tools &amp; API | VisualOdds Documentation</title>
@@ -25,11 +25,8 @@
     <symbol id="i-external" viewBox="0 0 24 24"><path d="M8 5H5v14h14v-5M12 5h7v7m0-7-9 9"/></symbol>
   </svg>
   <a class="skip-link" href="#content">Jump to Content</a>
+  <!--vo-site-header-->
   <header class="site-header">
-    <div class="header-upper">
-      <a class="header-logo" href="/" aria-label="VisualOdds home"><img src="/favicon.svg" width="42" height="42" alt=""><span>Visual<span>Odds</span></span></a>
-      <div class="header-upper-actions"><a href="/ev">Open EV tools</a><button type="button" class="theme-button" id="theme-toggle" aria-label="Toggle color scheme"><svg><use href="#i-moon"/></svg></button></div>
-    </div>
     <div class="header-lower">
       <nav class="top-navigation" aria-label="Primary navigation"><span class="version">EV tools</span>
         <a href="/"><svg><use href="#i-home"/></svg>Home</a>
@@ -39,6 +36,7 @@
         <a href="/research"><svg><use href="#i-chat"/></svg>Research</a>
         <a href="/odds-api">API Overview</a>
       </nav>
+      <button type="button" class="theme-button" id="theme-toggle" aria-label="Toggle color scheme"><svg><use href="#i-moon"/></svg></button>
       <button type="button" id="search-trigger" class="header-search" aria-label="Search documentation"><svg><use href="#i-search"/></svg><span>Search</span><kbd>CTRL-K</kbd></button>
       <button type="button" id="menu-toggle" class="mobile-menu" aria-controls="docs-sidebar" aria-expanded="false">Menu</button>
     </div>
@@ -109,7 +107,7 @@
             <li><a href="/ev#line-alerts">Movement &amp; price alerts</a> — manage thresholds and review local notifications.</li>
           </ul>
           <h2 id="local-api">EV API routes</h2>
-          <p>VisualOdds connects to the EV Tool server over the local network on port <code>8000</code>. Browser requests use the VisualOdds routes below. The VisualOdds server attaches the required <code>X-API-Key</code> header to every upstream request, including health and status. The key stays in server configuration.</p>
+          <p>VisualOdds connects to your quote API at the address in <code>EV_TOOL_API_URL</code>: a local or private-network server, or a public IP or domain over HTTPS. Browser requests use the VisualOdds routes below. The VisualOdds server attaches the required <code>X-API-Key</code> header to every upstream request, including health and status. The key stays in server configuration.</p>
           <ul>
             <li><code>GET /api/ev/health</code> and <code>GET /api/ev/status</code> — local service health and quote counts.</li>
             <li><code>GET /api/ev/quotes</code> — normalized sportsbook quotes for the workbench.</li>
@@ -119,10 +117,10 @@
             <li><code>POST /api/ev/scrape?url=…</code> — reserved for future use.</li>
           </ul>
           <h2 id="integration">Connect the EV API</h2>
-          <p>Run the VisualOdds Node app on a computer connected to the same WiFi or network as the EV API host. Configure the connection in the project’s ignored <code>.env.local</code> file using these server-only settings. Environment variables override the file when supplied.</p>
-          <pre><code>EV_TOOL_API_URL=http://&lt;server-lan-ip&gt;:8000/
+          <p>Configure the connection in the server environment or the project’s ignored <code>.env.local</code> file using these server-only settings. A public address must use HTTPS; set <code>EV_TOOL_API_ALLOW_HTTP=1</code> only if you accept sending the API key over plain HTTP. Environment variables override the file when supplied.</p>
+          <pre><code>EV_TOOL_API_URL=https://&lt;your-api-domain-or-ip&gt;/
 EV_TOOL_API_KEY=&lt;your-api-key&gt;</code></pre>
-          <p>Open the <a href="/ev">EV workspace</a> and press <strong>Sync API</strong> when the server is available, or enable <strong>Auto-refresh</strong> every 15, 30 or 60 seconds. Auto-refresh starts off on every page load, pauses in background tabs and while editing, and backs off after temporary errors. Choose an interval your server supports. A successful sync replaces the previous API snapshot and example sportsbook quotes, preserves manual prices, and shares the result across comparison, EV, arbitrage, builders, and alerts. The hosted site cannot reach this LAN connection.</p>
+          <p>Open the <a href="/ev">EV workspace</a> and press <strong>Sync API</strong> when the server is available, or enable <strong>Auto-refresh</strong> every 15, 30 or 60 seconds. Auto-refresh starts off on every page load, pauses in background tabs and while editing, and backs off after temporary errors. Choose an interval your server supports. A successful sync replaces the previous API snapshot, preserves manual prices, and shares the result across comparison, EV, arbitrage, builders, and alerts.</p>
           <p>The quote feed panel shows the last successful sync separately from the latest price observation, flags expired live prices, and explains which data the selected tool uses. Saved prices remain available when a request fails. Authentication or invalid-data errors pause automatic retries until you fix the issue and press <strong>Sync API</strong>.</p>
           <p><code>GET /quotes</code> must return a complete current snapshot as a JSON array or an object with a <code>quotes</code> array. Each quote needs a stable ID, a bookmaker, and its real observation time with timezone, in addition to its sport, event, market, side, and odds. Invalid records, duplicate IDs or partial snapshots leave the previous snapshot intact. An empty successful array clears the previous API quotes. A <code>soccer</code> sport is displayed as Soccer, and a <code>1x2</code> market uses three outcomes.</p>
           <p>For example, <code>POST /api/ev/quotes</code> accepts a JSON array like this:</p>
@@ -154,5 +152,6 @@ EV_TOOL_API_KEY=&lt;your-api-key&gt;</code></pre>
     </main>
     <aside class="docs-toc" aria-label="Table of contents"><nav><a class="toc-parent" href="#welcome">EV workspace</a><a href="#workflow">Workspace workflow</a><a href="#data">Quote data contract</a><a href="#markets">Markets</a><a href="#builders">Builders &amp; research</a><a href="#fantasy">Fantasy tools</a><a href="#records">Records &amp; alerts</a><a href="#local-api">EV API routes</a><a href="#integration">Connect the EV API</a><a href="#api-requirements">Data needed for all tools</a></nav></aside>
   </div>
+  <!--vo-site-footer-->
 </body>
 </html>

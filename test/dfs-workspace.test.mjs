@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { breakEven, comparisonPlatforms, selectedComparisonPlatforms, sportsbookOffer, createDfsWorkspace, dfsPreview, DFS_PLATFORMS } from '../public/dfs-workspace.js';
+import { breakEven, comparisonPlatforms, selectedComparisonPlatforms, sportsbookOffer, createDfsWorkspace, DFS_PLATFORMS } from '../public/dfs-workspace.js';
+import { dfsPreview } from './fixtures/dfs-props.mjs';
 import { fantasySlip } from '../public/ev-core.js';
 import { load } from 'cheerio';
 
@@ -35,13 +36,15 @@ test('DFS comparison uses only matching fantasy props and preserves line boundar
   assert.equal(result[1].over,undefined);
 });
 
-test('entering the first prop exits the preview without retaining its NBA filter or sample lines', () => {
+test('with no props the view shows an empty state, never sample lines; the first entered prop replaces it', () => {
   const state = {dfs:[],quotes:[],paytables:{}};
   const view = createDfsWorkspace({getState:()=>state,redraw:()=>{},onSave:()=>{}});
-  assert.match(view.render(), /Design preview/);
+  const empty = view.render();
+  assert.match(empty, /No DFS props yet/);
+  assert.doesNotMatch(empty, /Design preview|Tyrese Maxey|Brandin Podziemski|Example/);
   state.dfs.push({id:'manual-1',sport:'NFL',app:'Underdog Fantasy',player:'Test <Player>',event:'BUF vs MIA',market:'Passing Yards',side:'Over',line:249.5,probability:.55,team:'BUF'});
   const html = view.render();
-  assert.doesNotMatch(html, /Design preview|Tyrese Maxey|Brandin Podziemski/);
+  assert.doesNotMatch(html, /No DFS props yet|Tyrese Maxey|Brandin Podziemski/);
   assert.match(html, /Test &lt;Player&gt;/);
   assert.match(html, /Underdog Fantasy<\/option>/);
   assert.doesNotMatch(html, /No matching props/);

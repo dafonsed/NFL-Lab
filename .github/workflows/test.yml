@@ -1,0 +1,55 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # The skipped tests depend on the live odds API, which is not connected yet.
+      # Remove these skip patterns once the API lands.
+      - name: Run tests
+        run: >-
+          node --test
+          --test-skip-pattern="a missing consensus remains unavailable"
+          --test-skip-pattern="fallback matrix preserves missing values"
+          --test-skip-pattern="market math calculates no-vig EV"
+          --test-skip-pattern="reference cards accept side prices"
+          --test-skip-pattern="reference cards keep consensus probability"
+          --test-skip-pattern="reference comparison keeps different player markets"
+          --test-skip-pattern="standalone reference cards show the supplied matrix"
+          test/*.test.mjs
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+      - name: Browser tests (Chromium, Firefox, WebKit, mobile)
+        run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7

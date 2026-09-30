@@ -1,0 +1,73 @@
+/* Shared public header + footer (lib/site-chrome.mjs) for pages that do not load the homepage
+   stylesheet: Learn library, education, state and sportsbook guides, calculators, API, docs,
+   company pages. Selectors are anchored on .vo-site-header / .vo-site-footer so page styles
+   for generic header/footer/nav elements cannot leak in. */
+@font-face {font-family:'SL Inter';src:url('/assets/fonts/InterVariable.woff2') format('woff2');font-weight:100 900;font-display:swap}
+
+.vo-site-header, .vo-site-footer {
+  --vc-bg:#07090b;--vc-panel:#0e1215;--vc-line:rgb(255 255 255/.08);--vc-line-2:rgb(255 255 255/.14);
+  --vc-text:#edf2ee;--vc-text-2:#b9c3be;--vc-muted:#7e8a86;--vc-faint:#76817d;--vc-lime:#a3f06b;--vc-lime-3:#c4f79c;--vc-ink:#0a200f;
+  --vc-font:'SL Inter',Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  box-sizing:border-box;color:var(--vc-text);font-family:var(--vc-font);text-align:left;
+}
+.vo-site-header *, .vo-site-footer * {box-sizing:border-box}
+html body .vo-site-header a, html body .vo-site-footer a {text-decoration:none}
+
+/* header */
+html body .vo-site-header {position:sticky;top:0;z-index:60;margin:0;padding:0;border:0;border-bottom:1px solid transparent;background:transparent;transition:background-color .25s,border-color .25s}
+html body .vo-site-header.is-scrolled {border-bottom-color:var(--vc-line);background:rgb(7 9 11/.82);backdrop-filter:blur(18px) saturate(1.5)}
+html body .vo-site-header .home-header-inner {position:relative;display:flex;align-items:center;gap:24px;width:min(100% - 48px,1240px);min-height:72px;margin-inline:auto;padding:0}
+html body .vo-site-header .home-brand, html body .vo-site-footer .home-brand {display:inline-flex;align-items:center;gap:10px;flex:none;color:var(--vc-text);font:700 19px/1 var(--vc-font);letter-spacing:-.02em}
+html body .vo-site-header .home-brand img, html body .vo-site-footer .home-brand img {width:34px;height:34px;filter:drop-shadow(0 2px 6px rgb(0 0 0/.45))}
+html body :is(.vo-site-header,.vo-site-footer) .home-brand em {color:var(--vc-lime);font-style:normal}
+html body .vo-site-header .home-nav {display:flex;align-items:center;justify-content:center;gap:4px;flex:1;margin:0;padding:0;border:0;background:none}
+html body .vo-site-header .home-nav a {padding:8px 14px;border-radius:999px;color:var(--vc-text-2);font-size:14.5px;font-weight:500;transition:color .15s,background-color .15s}
+html body .vo-site-header .home-nav a:hover, html body .vo-site-header .home-nav a[aria-current=page] {color:var(--vc-text);background:rgb(255 255 255/.05)}
+html body .vo-site-header .home-nav .home-nav-login {display:none}
+html body .vo-site-header .home-header-end {display:flex;align-items:center;gap:8px;flex:none}
+html body .vo-site-header .home-login {padding:9px 14px;border-radius:999px;color:var(--vc-text-2);font-size:14.5px;font-weight:550}
+html body .vo-site-header .home-login:hover {color:var(--vc-text)}
+html body .vo-site-header .home-menu-toggle {display:none;place-items:center;width:42px;height:42px;padding:0;border:1px solid var(--vc-line-2);border-radius:12px;background:var(--vc-panel);color:var(--vc-text);cursor:pointer}
+html body .vo-site-header .home-menu-toggle svg {width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+
+/* buttons */
+html body :is(.vo-site-header,.vo-site-footer) .home-button {display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:42px;padding:0 20px;border:1px solid var(--vc-lime);border-radius:999px;background:var(--vc-lime);color:var(--vc-ink);font:650 14px/1 var(--vc-font);white-space:nowrap;box-shadow:0 4px 14px -8px rgb(163 240 107/.45),inset 0 1px 0 rgb(255 255 255/.35);transition:background-color .2s,box-shadow .2s,transform .2s}
+html body :is(.vo-site-header,.vo-site-footer) .home-button:hover {background:var(--vc-lime-3);transform:translateY(-1px)}
+html body :is(.vo-site-header,.vo-site-footer) .home-button .ui-icon {width:15px;height:15px}
+html body .vo-site-footer .home-button-ghost {border-color:var(--vc-line-2);background:rgb(255 255 255/.03);color:var(--vc-text);box-shadow:none}
+html body .vo-site-footer .home-button-ghost:hover {background:rgb(255 255 255/.07)}
+
+html body .vo-site-footer {display:block;margin:0;padding:0;border:0;border-top:1px solid rgb(255 255 255/.07);background:#080a0c}
+html body .vo-site-footer [hidden] {display:none}
+:where(.vo-site-header, .vo-site-footer) :where(a, button):focus-visible {outline:2px solid var(--vc-lime);outline-offset:2px}
+
+@media (max-width:1180px) {
+  html body .vo-site-header {background:rgb(7 9 11/.88);backdrop-filter:blur(18px)}
+  html body .vo-site-header .home-header-inner {justify-content:space-between}
+  html body .vo-site-header .home-nav {position:absolute;top:calc(100% + 1px);left:-24px;right:-24px;display:none;flex-direction:column;align-items:stretch;gap:2px;padding:12px 24px 20px;border-bottom:1px solid var(--vc-line);background:rgb(7 9 11/.97);backdrop-filter:blur(18px)}
+  html body .vo-site-header .home-nav[data-open=true] {display:flex}
+  html body .vo-site-header .home-nav a {padding:13px 14px;border-radius:12px;font-size:16px}
+  html body .vo-site-header .home-nav .home-nav-login {display:block}
+  html body .vo-site-header .home-menu-toggle {display:grid}
+  html body .vo-site-header .home-login {display:none}
+}
+@media (max-width:640px) {
+  html body .vo-site-header .home-header-inner {width:calc(100% - 32px);min-height:62px}
+  html body .vo-site-header .home-header-action {min-height:38px;padding:0 14px;font-size:13.5px}
+}
+
+/* API page in-page navigation, under the shared header */
+html body .api-subnav {position:sticky;top:72px;z-index:50;border-bottom:1px solid rgb(255 255 255/.07);background:rgb(7 9 11/.9);backdrop-filter:blur(14px)}
+html body .api-subnav .api-wrap {display:flex;align-items:center;gap:6px;min-height:48px;overflow-x:auto;scrollbar-width:none}
+html body .api-subnav a {flex:none;padding:7px 12px;border-radius:999px;color:#b9c3be;font:550 13.5px/1 'SL Inter',Inter,ui-sans-serif,system-ui,sans-serif;text-decoration:none}
+html body .api-subnav a:hover {color:#edf2ee;background:rgb(255 255 255/.05)}
+html body .api-subnav .api-subnav-cta {margin-left:auto;color:#a3f06b}
+@media (max-width:640px) {html body .api-subnav {top:62px}}
+/* "Cookie settings" only makes sense when analytics is configured; consent.js reveals it then. */
+html:not(.vo-has-analytics) .vo-site-footer [data-consent-settings] {display:none}
+@media (max-width:1180px) {
+  html body .vo-site-header .home-nav[data-open=true] {z-index:70;background:#07090b!important;box-shadow:0 30px 60px -20px rgb(0 0 0/.9)}
+}
+@media (max-width:640px) {
+  html body .vo-site-header .home-nav {left:-16px;right:-16px;padding-inline:16px}
+}

@@ -8,9 +8,9 @@
 html:root {
   --sl-bg:#07090b;--sl-sunken:#0a0d10;--sl-panel:#0e1215;--sl-panel-2:#13181c;--sl-panel-3:#192025;
   --sl-line:#1b2328;--sl-line-2:#262f36;--sl-line-3:#34404a;
-  --sl-text:#edf2ee;--sl-text-2:#b9c3be;--sl-muted:#7e8a86;--sl-faint:#56615d;
+  --sl-text:#edf2ee;--sl-text-2:#b9c3be;--sl-muted:#7e8a86;--sl-faint:#76817d;
   --sl-lime:#a3f06b;--sl-lime-3:#c4f79c;--sl-lime-ink:#0a200f;--sl-lime-wash:rgb(163 240 107/.09);--sl-lime-line:rgb(163 240 107/.28);
-  --sl-cyan:#43c3ff;--sl-red:#ff6f6f;--sl-amber:#f7c25a;
+  --sl-cyan:#a3f06b;--sl-red:#ff6f6f;--sl-amber:#f7c25a;
   --sl-font:'SL Inter',Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
   --sl-display:'SL Display','SL Inter',Inter,ui-sans-serif,system-ui,sans-serif;
 
@@ -19,7 +19,7 @@ html:root {
   --bet-bg:var(--sl-bg);--bet-panel:var(--sl-panel);--bet-panel-soft:var(--sl-panel-2);--bet-control:var(--sl-sunken);--bet-line:var(--sl-line-2);--bet-line-strong:var(--sl-line-3);
   --bet-text:var(--sl-text);--bet-copy:var(--sl-text-2);--bet-muted:var(--sl-muted);--bet-blue:var(--sl-lime);--bet-green:var(--sl-lime);--bet-red:var(--sl-red);--bet-font:var(--sl-font);
   --api-bg:var(--sl-bg);--api-panel:var(--sl-panel);--api-panel-2:var(--sl-panel-2);--api-line:var(--sl-line-2);--api-text:var(--sl-text);--api-muted:var(--sl-text-2);
-  --api-faint:var(--sl-muted);--api-blue:var(--sl-cyan);--api-green:var(--sl-lime);--api-font:var(--sl-font);
+  --api-faint:var(--sl-muted);--api-blue:var(--sl-lime);--api-green:var(--sl-lime);--api-font:var(--sl-font);
   --help-canvas:var(--sl-bg);--help-surface:var(--sl-panel);--help-line:var(--sl-line-2);--help-text:var(--sl-text);--help-muted:var(--sl-text-2);--help-sky:var(--sl-lime);
   --longform-ink:var(--sl-bg);--longform-panel:var(--sl-panel);--longform-line:var(--sl-line-2);--longform-copy:var(--sl-text-2);--longform-muted:var(--sl-muted);
   --longform-cyan:var(--sl-lime-3);--longform-cyan-deep:var(--sl-lime);
@@ -30,7 +30,7 @@ html:root body:is(.betting-pages,.help-page,.market-guide-site,:not([class])) {
   color:var(--sl-text);font-family:var(--sl-font)!important;-webkit-font-smoothing:antialiased;font-feature-settings:'cv11','ss01';
 }
 html:root body ::selection {background:rgb(163 240 107/.3);color:#fff}
-html:root body :is(a,button,input,select,textarea,summary):focus-visible {outline:2px solid var(--sl-cyan)!important;outline-offset:3px}
+html:root body :is(a,button,input,select,textarea,summary):focus-visible {outline:2px solid var(--sl-lime)!important;outline-offset:3px}
 html:root body :is(h1,h2) {font-family:var(--sl-display)!important;font-weight:600!important;letter-spacing:-.03em!important}
 html:root body h3 {font-family:var(--sl-display);letter-spacing:-.01em}
 html:root body :is(.skip-link,.bet-skip,.help-skip,.api-skip) {background:var(--sl-lime)!important;color:var(--sl-lime-ink)!important}
@@ -70,7 +70,7 @@ html:root body :is(.learn-topic-tabs,.sg-category-tabs,.market-category-tabs) :i
 html:root body :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea,.learn-search,.market-search,.sg-directory-search input,.help-search input,.bet-input,.bet-control) {
   background-color:var(--sl-sunken)!important;border-color:var(--sl-line-2)!important;color:var(--sl-text)!important;
 }
-html:root body :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea):focus {border-color:var(--sl-cyan)!important;box-shadow:0 0 0 3px rgb(67 195 255/.16)!important;outline:none}
+html:root body :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea):focus {border-color:var(--sl-lime)!important;box-shadow:0 0 0 3px rgb(163 240 107/.16)!important;outline:none}
 html:root body ::placeholder {color:var(--sl-faint)!important}
 html:root body :is(input[type=checkbox],input[type=radio],input[type=range]) {accent-color:var(--sl-lime)}
 html:root body :is(.catalog-count,.sg-directory-count,.market-result-count) {background:var(--sl-panel-2)!important;border-color:var(--sl-line-2)!important;color:var(--sl-text-2)!important}
@@ -86,7 +86,7 @@ html:root body :is(.learn-card-cta,.bet-card-link,.help-card-arrow,.market-card-
 html:root body :is(.learn-card-description,.learn-card-reading,.learn-card-footer,.sg-guide-meta,.help-card-meta) {color:var(--sl-muted)!important}
 html:root body :is(.learn-card-topic,.learn-card-status) {border-color:var(--sl-line-2)!important;background:var(--sl-panel-2)!important;color:var(--sl-text-2)!important;border-radius:999px!important}
 html:root body .help-collection:nth-child(odd) .help-collection-icon {--help-icon:var(--sl-lime)}
-html:root body .help-collection:nth-child(even) .help-collection-icon {--help-icon:var(--sl-cyan)}
+html:root body .help-collection:nth-child(even) .help-collection-icon {--help-icon:var(--sl-lime)}
 html:root body .help-collection-icon {background:rgb(255 255 255/.03);border-radius:12px;box-shadow:inset 0 0 0 1px var(--sl-line-2)}
 
 /* Buttons */
@@ -108,8 +108,8 @@ html:root body .help-app-link:hover {background:rgb(255 255 255/.07)!important}
 
 /* ---- Help center: glow hero, pill search, calmer dividers ---- */
 html:root body.help-page:not(#hc-a):not(#hc-b) {
-  & .help-header {position:relative;isolation:isolate;border-bottom:1px solid var(--sl-line)!important;background:radial-gradient(760px 320px at 18% -10%,rgb(163 240 107/.11),transparent 65%),radial-gradient(560px 280px at 100% 0%,rgb(67 195 255/.05),transparent 70%),transparent!important}
-  & .help-header::after {content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,rgb(163 240 107/.45) 30%,rgb(67 195 255/.25) 70%,transparent);pointer-events:none}
+  & .help-header {position:relative;isolation:isolate;border-bottom:1px solid var(--sl-line)!important;background:radial-gradient(760px 320px at 18% -10%,rgb(163 240 107/.11),transparent 65%),radial-gradient(560px 280px at 100% 0%,rgb(255 255 255/.03),transparent 70%),transparent!important}
+  & .help-header::after {content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,rgb(163 240 107/.45) 30%,rgb(163 240 107/.12) 70%,transparent);pointer-events:none}
   & .help-app-link {padding:0 18px!important;min-height:40px!important;border:1px solid var(--sl-line-3)!important;background:rgb(255 255 255/.03)!important;color:var(--sl-text)!important;font-size:13px!important}
   & .help-button {padding:0 18px!important;min-height:40px!important}
   & .help-hero h1 {text-shadow:0 0 40px rgb(163 240 107/.14)}

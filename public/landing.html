@@ -7,9 +7,25 @@
   <meta name="description" content="VisualOdds brings odds from 30+ sportsbooks, positive EV and arbitrage finders, player research, live games, simulations and a bet tracker into one transparent sports betting workspace.">
   <title>VisualOdds — Find the edge. Track every result.</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="canonical" href="https://visualodds.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="VisualOdds">
+  <meta property="og:url" content="https://visualodds.com/">
+  <meta property="og:title" content="VisualOdds — Find the edge. Track every result.">
+  <meta property="og:description" content="Compare odds across 30+ sportsbooks, find positive EV and arbitrage, research player trends and track every bet in one workspace.">
+  <meta property="og:image" content="https://visualodds.com/assets/og/visualodds.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="VisualOdds: positive EV and arbitrage cards next to the headline Find the edge. Track every result.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="VisualOdds — Find the edge. Track every result.">
+  <meta name="twitter:description" content="Compare odds across 30+ sportsbooks, find positive EV and arbitrage, research player trends and track every bet in one workspace.">
+  <meta name="twitter:image" content="https://visualodds.com/assets/og/visualodds.png">
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://visualodds.com/#org","name":"VisualOdds","url":"https://visualodds.com/","logo":"https://visualodds.com/favicon.svg"},{"@type":"WebSite","@id":"https://visualodds.com/#site","url":"https://visualodds.com/","name":"VisualOdds","publisher":{"@id":"https://visualodds.com/#org"}},{"@type":"SoftwareApplication","name":"VisualOdds","applicationCategory":"SportsApplication","operatingSystem":"Web","url":"https://visualodds.com/","description":"Compare odds across 30+ sportsbooks, find positive EV and arbitrage, research player trends and track every bet in one workspace."}]}</script>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preload" href="/assets/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/landing-widgets.css?v=19">
+  <link rel="stylesheet" href="/site-footer.css?v=1">
+  <link rel="stylesheet" href="/landing-widgets.css?v=21">
   <link rel="stylesheet" href="/landing-2026.css?v=7">
   <script type="module" src="/landing.js?v=11"></script>
   <script type="module" src="/landing-reviews.js?v=2"></script>
@@ -24,25 +40,7 @@
     <a href="/ev/dashboard"><span class="sl-announce-tag">New</span><span>Positive EV, arbitrage, middles and DFS props now share one market workspace</span><span class="sl-announce-arrow" data-icon="arrow" aria-hidden="true"></span></a>
   </div>
 
-  <header class="home-header">
-    <div class="home-header-inner">
-      <a class="home-brand" href="/" aria-label="VisualOdds home"><img src="/favicon.svg" width="34" height="34" alt=""><span>Visual<em>Odds</em></span></a>
-      <nav class="home-nav" id="home-nav" aria-label="Main navigation">
-        <a href="/#tools">Tools</a>
-        <a href="/#how">How it works</a>
-        <a href="/#plans">Pricing</a>
-        <a href="/#reviews">Reviews</a>
-        <a href="/online-sportsbooks">Sportsbooks</a>
-        <a href="/betting-education">Learn</a>
-        <a class="home-nav-login" href="/login">Log in</a>
-      </nav>
-      <div class="home-header-end">
-        <a class="home-login" href="/login">Log in</a>
-        <a class="home-button home-header-action" href="/research">Get started</a>
-        <button class="home-menu-toggle" type="button" aria-controls="home-nav" aria-expanded="false" aria-label="Open menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
-      </div>
-    </div>
-  </header>
+  <!--vo-site-header-->
 
   <main id="main">
     <section class="home-hero home-section" id="product" aria-labelledby="hero-title">
@@ -53,8 +51,8 @@
           <h1 id="hero-title" class="sl-rise" style="--d:80ms">Find the edge.<br><span class="sl-gradient-text">Track every result.</span></h1>
           <p class="home-lede sl-rise" style="--d:160ms">Odds from 30+ books, positive EV and arbitrage finders, player history, live games and your bet record — in one fast workspace that shows the source behind every number.</p>
           <div class="home-actions sl-rise" style="--d:240ms">
-            <a class="home-button" href="/research">Start researching <span data-icon="arrow" aria-hidden="true"></span></a>
-            <a class="home-button home-button-ghost" href="/ev/dashboard?demo=1">Explore the +EV tools</a>
+            <a class="home-button" href="/research" data-track="CTA" data-track-label="hero">Start researching <span data-icon="arrow" aria-hidden="true"></span></a>
+            <a class="home-button home-button-ghost" href="/ev/dashboard">Explore the +EV tools</a>
           </div>
           <ul class="sl-proof sl-rise" style="--d:320ms" aria-label="Highlights">
             <li><span class="sl-check" aria-hidden="true"></span>6 leagues</li>
@@ -91,10 +89,10 @@
               <section class="sl-mock oj-mock" id="mock-ev" role="tabpanel" aria-labelledby="mock-tab-ev">
                 <header class="oj-feed-head"><p><i class="lx-dot is-live" aria-hidden="true"></i><strong>Positive EV feed</strong> · prices above the no-vig fair line</p><span>Showing 3 of 24</span></header>
                 <div class="oj-feed" data-feed>
-                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">5.8%</span><span class="oj-chip">~$5.80 / $100</span><span class="oj-when">Sun 1:00 PM</span></div><span class="oj-league">NFL</span><h4>J. Cook Over 64.5</h4><p>Rushing yards · Bills at Dolphins</p></div><div class="oj-split"><div><span class="oj-side-label">FanDuel price</span><span class="oj-row"><strong>$14.33</strong><span class="oj-price is-hot"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>+102</b></span></span></div><div><span class="oj-side-label">Fair price</span><span class="oj-row"><strong>52.4%</strong><span class="oj-price"><b>−110</b></span></span></div></div></article>
-                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">5.0%</span><span class="oj-chip">~$5.00 / $100</span><span class="oj-when">Today 7:10 PM</span></div><span class="oj-league">MLB</span><h4>A. Judge to hit a home run</h4><p>Home runs · Yankees at Red Sox</p></div><div class="oj-split"><div><span class="oj-side-label">BetMGM price</span><span class="oj-row"><strong>$3.91</strong><span class="oj-price is-hot"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>+320</b></span></span></div><div><span class="oj-side-label">Fair price</span><span class="oj-row"><strong>25.0%</strong><span class="oj-price"><b>+300</b></span></span></div></div></article>
-                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">4.2%</span><span class="oj-chip">~$4.20 / $100</span><span class="oj-when">Today 8:00 PM</span></div><span class="oj-league">WNBA</span><h4>A. Wilson Over 24.5</h4><p>Points · Aces vs Liberty</p></div><div class="oj-split"><div><span class="oj-side-label">DraftKings price</span><span class="oj-row"><strong>$11.32</strong><span class="oj-price is-hot"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>−108</b></span></span></div><div><span class="oj-side-label">Fair price</span><span class="oj-row"><strong>54.1%</strong><span class="oj-price"><b>−118</b></span></span></div></div></article>
-                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">3.6%</span><span class="oj-chip">~$3.60 / $100</span><span class="oj-when">Sun 4:25 PM</span></div><span class="oj-league">NFL</span><h4>Under 45.5 total points</h4><p>Game total · Chiefs vs Chargers</p></div><div class="oj-split"><div><span class="oj-side-label">Caesars price</span><span class="oj-row"><strong>$9.28</strong><span class="oj-price is-hot"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>−104</b></span></span></div><div><span class="oj-side-label">Fair price</span><span class="oj-row"><strong>52.8%</strong><span class="oj-price"><b>−112</b></span></span></div></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">5.8%</span><span class="oj-chip">~$5.80 / $100</span><span class="oj-when">Sun 1:00 PM</span></div><span class="oj-league"><img src="/assets/leagues/nfl.png" width="14" height="14" alt="">NFL</span><h4>J. Cook Over 64.5</h4><p>Rushing yards · Bills at Dolphins</p></div><div class="oj-split"><div><span class="oj-side-label">FanDuel price</span><span class="oj-row"><strong>$14.33</strong><span class="oj-price is-hot"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>+102</b></span></span></div><div><span class="oj-side-label">Fair price</span><span class="oj-row"><strong>52.4%</strong><span class="oj-price"><b>−110</b></span></span></div></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">5.0%</span><span class="oj-chip">~$5.00 / $100</span><span class="oj-when">Today 7:10 PM</span></div><span class="oj-league"><img src="/assets/leagues/mlb.png" width="14" height="14" alt="">MLB</span><h4>A. Judge to hit a home run</h4><p>Home runs · Yankees at Red Sox</p></div><div class="oj-split"><div><span class="oj-side-label">BetMGM price</span><span class="oj-row"><strong>$3.91</strong><span class="oj-price is-hot"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>+320</b></span></span></div><div><span class="oj-side-label">Fair price</span><span class="oj-row"><strong>25.0%</strong><span class="oj-price"><b>+300</b></span></span></div></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">4.2%</span><span class="oj-chip">~$4.20 / $100</span><span class="oj-when">Today 8:00 PM</span></div><span class="oj-league"><img src="/assets/leagues/wnba.png" width="14" height="14" alt="">WNBA</span><h4>A. Wilson Over 24.5</h4><p>Points · Aces vs Liberty</p></div><div class="oj-split"><div><span class="oj-side-label">DraftKings price</span><span class="oj-row"><strong>$11.32</strong><span class="oj-price is-hot"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>−108</b></span></span></div><div><span class="oj-side-label">Fair price</span><span class="oj-row"><strong>54.1%</strong><span class="oj-price"><b>−118</b></span></span></div></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">3.6%</span><span class="oj-chip">~$3.60 / $100</span><span class="oj-when">Sun 4:25 PM</span></div><span class="oj-league"><img src="/assets/leagues/nfl.png" width="14" height="14" alt="">NFL</span><h4>Under 45.5 total points</h4><p>Game total · Chiefs vs Chargers</p></div><div class="oj-split"><div><span class="oj-side-label">Caesars price</span><span class="oj-row"><strong>$9.28</strong><span class="oj-price is-hot"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>−104</b></span></span></div><div><span class="oj-side-label">Fair price</span><span class="oj-row"><strong>52.8%</strong><span class="oj-price"><b>−112</b></span></span></div></div></article>
                 </div>
                 <p class="oj-feed-note">Stake is a ¼ Kelly bet on a $1,000 bankroll. Fair price removes the books' margin.</p>
               </section>
@@ -102,10 +100,10 @@
               <section class="sl-mock oj-mock" id="mock-arb" role="tabpanel" aria-labelledby="mock-tab-arb" hidden>
                 <header class="oj-feed-head"><p><i class="lx-dot is-live" aria-hidden="true"></i><strong>Arbitrage feed</strong> · both sides priced to profit</p><span>Stakes for $100 total</span></header>
                 <div class="oj-feed" data-feed>
-                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">2.1%</span><span class="oj-chip">~$2.11</span><span class="oj-when">Today 7:00 PM</span></div><span class="oj-league">NHL</span><h4>Rangers at Devils</h4><p>Moneyline</p></div><div class="oj-split"><div><span class="oj-side-label">Rangers</span><span class="oj-row"><strong>$45.38</strong><span class="oj-price is-hot"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>+125</b></span></span></div><div><span class="oj-side-label">Devils</span><span class="oj-row"><strong>$54.62</strong><span class="oj-price is-hot"><img src="/assets/brands/bet365.png" alt="bet365" width="22" height="22"><b>−115</b></span></span></div></div></article>
-                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">1.9%</span><span class="oj-chip">~$1.92</span><span class="oj-when">Sun 8:20 PM</span></div><span class="oj-league">NFL</span><h4>Eagles at Cowboys</h4><p>Game total 47.5</p></div><div class="oj-split"><div><span class="oj-side-label">Over 47.5</span><span class="oj-row"><strong>$48.53</strong><span class="oj-price is-hot"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>+110</b></span></span></div><div><span class="oj-side-label">Under 47.5</span><span class="oj-row"><strong>$51.47</strong><span class="oj-price is-hot"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>−102</b></span></span></div></div></article>
-                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">1.5%</span><span class="oj-chip">~$1.48</span><span class="oj-when">Today 9:40 PM</span></div><span class="oj-league">MLB</span><h4>Dodgers vs Padres</h4><p>Moneyline</p></div><div class="oj-split"><div><span class="oj-side-label">Dodgers</span><span class="oj-row"><strong>$57.36</strong><span class="oj-price is-hot"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>−130</b></span></span></div><div><span class="oj-side-label">Padres</span><span class="oj-row"><strong>$42.64</strong><span class="oj-price is-hot"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>+138</b></span></span></div></div></article>
-                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">1.2%</span><span class="oj-chip">~$1.23</span><span class="oj-when">Today 7:30 PM</span></div><span class="oj-league">WNBA</span><h4>C. Clark assists</h4><p>Over / Under 7.5 · Lynx vs Fever</p></div><div class="oj-split"><div><span class="oj-side-label">Over 7.5</span><span class="oj-row"><strong>$49.38</strong><span class="oj-price is-hot"><img src="/assets/brands/bet365.png" alt="bet365" width="22" height="22"><b>+105</b></span></span></div><div><span class="oj-side-label">Under 7.5</span><span class="oj-row"><strong>$50.62</strong><span class="oj-price is-hot"><img src="/assets/brands/fanatics.png" alt="Fanatics" width="22" height="22"><b>+100</b></span></span></div></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">2.1%</span><span class="oj-chip">~$2.11</span><span class="oj-when">Today 7:00 PM</span></div><span class="oj-league"><img src="/assets/leagues/nhl.png" width="14" height="14" alt="">NHL</span><h4>Rangers at Devils</h4><p>Moneyline</p></div><div class="oj-split"><div><span class="oj-side-label">Rangers</span><span class="oj-row"><strong>$45.38</strong><span class="oj-price is-hot"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>+125</b></span></span></div><div><span class="oj-side-label">Devils</span><span class="oj-row"><strong>$54.62</strong><span class="oj-price is-hot"><img src="/assets/brands/bet365.png" alt="bet365" width="22" height="22"><b>−115</b></span></span></div></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">1.9%</span><span class="oj-chip">~$1.92</span><span class="oj-when">Sun 8:20 PM</span></div><span class="oj-league"><img src="/assets/leagues/nfl.png" width="14" height="14" alt="">NFL</span><h4>Eagles at Cowboys</h4><p>Game total 47.5</p></div><div class="oj-split"><div><span class="oj-side-label">Over 47.5</span><span class="oj-row"><strong>$48.53</strong><span class="oj-price is-hot"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>+110</b></span></span></div><div><span class="oj-side-label">Under 47.5</span><span class="oj-row"><strong>$51.47</strong><span class="oj-price is-hot"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>−102</b></span></span></div></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">1.5%</span><span class="oj-chip">~$1.48</span><span class="oj-when">Today 9:40 PM</span></div><span class="oj-league"><img src="/assets/leagues/mlb.png" width="14" height="14" alt="">MLB</span><h4>Dodgers vs Padres</h4><p>Moneyline</p></div><div class="oj-split"><div><span class="oj-side-label">Dodgers</span><span class="oj-row"><strong>$57.36</strong><span class="oj-price is-hot"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>−130</b></span></span></div><div><span class="oj-side-label">Padres</span><span class="oj-row"><strong>$42.64</strong><span class="oj-price is-hot"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>+138</b></span></span></div></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">1.2%</span><span class="oj-chip">~$1.23</span><span class="oj-when">Today 7:30 PM</span></div><span class="oj-league"><img src="/assets/leagues/wnba.png" width="14" height="14" alt="">WNBA</span><h4>C. Clark assists</h4><p>Over / Under 7.5 · Lynx vs Fever</p></div><div class="oj-split"><div><span class="oj-side-label">Over 7.5</span><span class="oj-row"><strong>$49.38</strong><span class="oj-price is-hot"><img src="/assets/brands/bet365.png" alt="bet365" width="22" height="22"><b>+105</b></span></span></div><div><span class="oj-side-label">Under 7.5</span><span class="oj-row"><strong>$50.62</strong><span class="oj-price is-hot"><img src="/assets/brands/fanatics.png" alt="Fanatics" width="22" height="22"><b>+100</b></span></span></div></div></article>
                 </div>
                 <p class="oj-feed-note">One side wins, one side loses, and the return is the same either way.</p>
               </section>
@@ -113,10 +111,10 @@
               <section class="sl-mock oj-mock" id="mock-odds" role="tabpanel" aria-labelledby="mock-tab-odds" hidden>
                 <header class="oj-feed-head"><p><i class="lx-dot is-live" aria-hidden="true"></i><strong>Line shopping</strong> · Bills at Dolphins, six books</p><span>Per $100 bet</span></header>
                 <div class="oj-feed" data-feed>
-                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">−105</span><span class="oj-chip">Best</span><span class="oj-when">+$8.28 vs worst</span></div><span class="oj-league">NFL · Point spread</span><h4>BUF −3.5</h4><p>Bills at Dolphins</p></div><div class="oj-books"><span class="oj-price"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>−110</b></span><span class="oj-price"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>−108</b></span><span class="oj-price"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>−112</b></span><span class="oj-price"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>−110</b></span><span class="oj-price is-hot"><img src="/assets/brands/bet365.png" alt="bet365" width="22" height="22"><b>−105</b></span><span class="oj-price is-cold"><img src="/assets/brands/fanatics.png" alt="Fanatics" width="22" height="22"><b>−115</b></span></div></article>
-                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">+158</span><span class="oj-chip">Best</span><span class="oj-when">+$13.00 vs worst</span></div><span class="oj-league">NFL · Moneyline</span><h4>MIA to win</h4><p>Bills at Dolphins</p></div><div class="oj-books"><span class="oj-price"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>+152</b></span><span class="oj-price is-hot"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>+158</b></span><span class="oj-price is-cold"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>+145</b></span><span class="oj-price"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>+150</b></span><span class="oj-price"><img src="/assets/brands/bet365.png" alt="bet365" width="22" height="22"><b>+148</b></span><span class="oj-price"><img src="/assets/brands/fanatics.png" alt="Fanatics" width="22" height="22"><b>+155</b></span></div></article>
-                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">−104</span><span class="oj-chip">Best</span><span class="oj-when">+$6.86 vs worst</span></div><span class="oj-league">NFL · Game total</span><h4>Over 47.5</h4><p>Bills at Dolphins</p></div><div class="oj-books"><span class="oj-price is-cold"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>−112</b></span><span class="oj-price is-hot"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>−104</b></span><span class="oj-price"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>−110</b></span><span class="oj-price"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>−108</b></span><span class="oj-price"><img src="/assets/brands/bet365.png" alt="bet365" width="22" height="22"><b>−110</b></span><span class="oj-price is-cold"><img src="/assets/brands/fanatics.png" alt="Fanatics" width="22" height="22"><b>−112</b></span></div></article>
-                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">−102</span><span class="oj-chip">Best</span><span class="oj-when">+$11.08 vs worst</span></div><span class="oj-league">NFL · Point spread</span><h4>MIA +3.5</h4><p>Bills at Dolphins</p></div><div class="oj-books"><span class="oj-price"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>−110</b></span><span class="oj-price"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>−112</b></span><span class="oj-price"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>−108</b></span><span class="oj-price"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>−110</b></span><span class="oj-price is-cold"><img src="/assets/brands/bet365.png" alt="bet365" width="22" height="22"><b>−115</b></span><span class="oj-price is-hot"><img src="/assets/brands/fanatics.png" alt="Fanatics" width="22" height="22"><b>−102</b></span></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">−105</span><span class="oj-chip">Best</span><span class="oj-when">+$8.28 vs worst</span></div><span class="oj-league"><img src="/assets/leagues/nfl.png" width="14" height="14" alt="">NFL · Point spread</span><h4>BUF −3.5</h4><p>Bills at Dolphins</p></div><div class="oj-books"><span class="oj-price"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>−110</b></span><span class="oj-price"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>−108</b></span><span class="oj-price"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>−112</b></span><span class="oj-price"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>−110</b></span><span class="oj-price is-hot"><img src="/assets/brands/bet365.png" alt="bet365" width="22" height="22"><b>−105</b></span><span class="oj-price is-cold"><img src="/assets/brands/fanatics.png" alt="Fanatics" width="22" height="22"><b>−115</b></span></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">+158</span><span class="oj-chip">Best</span><span class="oj-when">+$13.00 vs worst</span></div><span class="oj-league"><img src="/assets/leagues/nfl.png" width="14" height="14" alt="">NFL · Moneyline</span><h4>MIA to win</h4><p>Bills at Dolphins</p></div><div class="oj-books"><span class="oj-price"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>+152</b></span><span class="oj-price is-hot"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>+158</b></span><span class="oj-price is-cold"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>+145</b></span><span class="oj-price"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>+150</b></span><span class="oj-price"><img src="/assets/brands/bet365.png" alt="bet365" width="22" height="22"><b>+148</b></span><span class="oj-price"><img src="/assets/brands/fanatics.png" alt="Fanatics" width="22" height="22"><b>+155</b></span></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">−104</span><span class="oj-chip">Best</span><span class="oj-when">+$6.86 vs worst</span></div><span class="oj-league"><img src="/assets/leagues/nfl.png" width="14" height="14" alt="">NFL · Game total</span><h4>Over 47.5</h4><p>Bills at Dolphins</p></div><div class="oj-books"><span class="oj-price is-cold"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>−112</b></span><span class="oj-price is-hot"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>−104</b></span><span class="oj-price"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>−110</b></span><span class="oj-price"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>−108</b></span><span class="oj-price"><img src="/assets/brands/bet365.png" alt="bet365" width="22" height="22"><b>−110</b></span><span class="oj-price is-cold"><img src="/assets/brands/fanatics.png" alt="Fanatics" width="22" height="22"><b>−112</b></span></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">−102</span><span class="oj-chip">Best</span><span class="oj-when">+$11.08 vs worst</span></div><span class="oj-league"><img src="/assets/leagues/nfl.png" width="14" height="14" alt="">NFL · Point spread</span><h4>MIA +3.5</h4><p>Bills at Dolphins</p></div><div class="oj-books"><span class="oj-price"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>−110</b></span><span class="oj-price"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>−112</b></span><span class="oj-price"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>−108</b></span><span class="oj-price"><img src="/assets/brands/caesars.png" alt="Caesars" width="22" height="22"><b>−110</b></span><span class="oj-price is-cold"><img src="/assets/brands/bet365.png" alt="bet365" width="22" height="22"><b>−115</b></span><span class="oj-price is-hot"><img src="/assets/brands/fanatics.png" alt="Fanatics" width="22" height="22"><b>−102</b></span></div></article>
                 </div>
                 <p class="oj-feed-note">Green is the best price for the bet, red is the worst. Same bet, different payout.</p>
               </section>
@@ -124,10 +122,10 @@
               <section class="sl-mock oj-mock" id="mock-props" role="tabpanel" aria-labelledby="mock-tab-props" hidden>
                 <header class="oj-feed-head"><p><i class="lx-dot is-live" aria-hidden="true"></i><strong>Player trends</strong> · last 10 games against today's line</p><span>Receiving yards</span></header>
                 <div class="oj-feed" data-feed>
-                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">7/10</span><span class="oj-chip">L10 over</span><span class="oj-when">CIN vs PIT</span></div><span class="oj-league">NFL · WR</span><h4>Ja'Marr Chase</h4><p>Over 74.5 receiving yards</p></div><div class="oj-trend"><span class="oj-bars" aria-hidden="true" style="--line:52%"><i class="up" style="--h:64%"></i><i style="--h:40%"></i><i class="up" style="--h:88%"></i><i class="up" style="--h:72%"></i><i style="--h:30%"></i><i class="up" style="--h:95%"></i><i class="up" style="--h:68%"></i><i class="up" style="--h:77%"></i><i style="--h:45%"></i><i class="up" style="--h:82%"></i></span><span class="oj-row"><span class="oj-side-label">Proj. <strong>82.1</strong></span><span class="oj-price"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>−114</b></span></span></div></article>
-                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">6/10</span><span class="oj-chip">L10 over</span><span class="oj-when">MIN vs GB</span></div><span class="oj-league">NFL · WR</span><h4>Justin Jefferson</h4><p>Over 81.5 receiving yards</p></div><div class="oj-trend"><span class="oj-bars" aria-hidden="true" style="--line:60%"><i class="up" style="--h:92%"></i><i style="--h:56%"></i><i class="up" style="--h:85%"></i><i style="--h:50%"></i><i class="up" style="--h:97%"></i><i style="--h:58%"></i><i class="up" style="--h:88%"></i><i style="--h:44%"></i><i class="up" style="--h:90%"></i><i class="up" style="--h:83%"></i></span><span class="oj-row"><span class="oj-side-label">Proj. <strong>88.3</strong></span><span class="oj-price"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>−112</b></span></span></div></article>
-                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">6/10</span><span class="oj-chip">L10 over</span><span class="oj-when">LAR vs SF</span></div><span class="oj-league">NFL · WR</span><h4>Puka Nacua</h4><p>Over 68.5 receiving yards</p></div><div class="oj-trend"><span class="oj-bars" aria-hidden="true" style="--line:50%"><i class="up" style="--h:58%"></i><i class="up" style="--h:70%"></i><i style="--h:35%"></i><i class="up" style="--h:62%"></i><i style="--h:44%"></i><i class="up" style="--h:80%"></i><i style="--h:41%"></i><i class="up" style="--h:66%"></i><i class="up" style="--h:74%"></i><i style="--h:46%"></i></span><span class="oj-row"><span class="oj-side-label">Proj. <strong>71.4</strong></span><span class="oj-price"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>−110</b></span></span></div></article>
-                  <article class="oj-card is-cold"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">3/10</span><span class="oj-chip">L10 over</span><span class="oj-when">KC vs LAC</span></div><span class="oj-league">NFL · TE</span><h4>Travis Kelce</h4><p>Over 52.5 receiving yards</p></div><div class="oj-trend"><span class="oj-bars" aria-hidden="true" style="--line:50%"><i style="--h:40%"></i><i class="up" style="--h:55%"></i><i style="--h:33%"></i><i style="--h:46%"></i><i class="up" style="--h:60%"></i><i style="--h:28%"></i><i style="--h:44%"></i><i class="up" style="--h:57%"></i><i style="--h:37%"></i><i style="--h:49%"></i></span><span class="oj-row"><span class="oj-side-label">Proj. <strong>47.9</strong></span><span class="oj-price"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>+105</b></span></span></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">7/10</span><span class="oj-chip">L10 over</span><span class="oj-when">CIN vs PIT</span></div><span class="oj-league"><img src="/assets/leagues/nfl.png" width="14" height="14" alt="">NFL · WR</span><h4>Ja'Marr Chase</h4><p>Over 74.5 receiving yards</p></div><div class="oj-trend"><span class="oj-bars" aria-hidden="true" style="--line:52%"><i class="up" style="--h:64%"></i><i style="--h:40%"></i><i class="up" style="--h:88%"></i><i class="up" style="--h:72%"></i><i style="--h:30%"></i><i class="up" style="--h:95%"></i><i class="up" style="--h:68%"></i><i class="up" style="--h:77%"></i><i style="--h:45%"></i><i class="up" style="--h:82%"></i></span><span class="oj-row"><span class="oj-side-label">Proj. <strong>82.1</strong></span><span class="oj-price"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>−114</b></span></span></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">6/10</span><span class="oj-chip">L10 over</span><span class="oj-when">MIN vs GB</span></div><span class="oj-league"><img src="/assets/leagues/nfl.png" width="14" height="14" alt="">NFL · WR</span><h4>Justin Jefferson</h4><p>Over 81.5 receiving yards</p></div><div class="oj-trend"><span class="oj-bars" aria-hidden="true" style="--line:60%"><i class="up" style="--h:92%"></i><i style="--h:56%"></i><i class="up" style="--h:85%"></i><i style="--h:50%"></i><i class="up" style="--h:97%"></i><i style="--h:58%"></i><i class="up" style="--h:88%"></i><i style="--h:44%"></i><i class="up" style="--h:90%"></i><i class="up" style="--h:83%"></i></span><span class="oj-row"><span class="oj-side-label">Proj. <strong>88.3</strong></span><span class="oj-price"><img src="/assets/brands/fanduel.png" alt="FanDuel" width="22" height="22"><b>−112</b></span></span></div></article>
+                  <article class="oj-card"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">6/10</span><span class="oj-chip">L10 over</span><span class="oj-when">LAR vs SF</span></div><span class="oj-league"><img src="/assets/leagues/nfl.png" width="14" height="14" alt="">NFL · WR</span><h4>Puka Nacua</h4><p>Over 68.5 receiving yards</p></div><div class="oj-trend"><span class="oj-bars" aria-hidden="true" style="--line:50%"><i class="up" style="--h:58%"></i><i class="up" style="--h:70%"></i><i style="--h:35%"></i><i class="up" style="--h:62%"></i><i style="--h:44%"></i><i class="up" style="--h:80%"></i><i style="--h:41%"></i><i class="up" style="--h:66%"></i><i class="up" style="--h:74%"></i><i style="--h:46%"></i></span><span class="oj-row"><span class="oj-side-label">Proj. <strong>71.4</strong></span><span class="oj-price"><img src="/assets/brands/draftkings.png" alt="DraftKings" width="22" height="22"><b>−110</b></span></span></div></article>
+                  <article class="oj-card is-cold"><div class="oj-band"><div class="oj-band-top"><span class="oj-pct">3/10</span><span class="oj-chip">L10 over</span><span class="oj-when">KC vs LAC</span></div><span class="oj-league"><img src="/assets/leagues/nfl.png" width="14" height="14" alt="">NFL · TE</span><h4>Travis Kelce</h4><p>Over 52.5 receiving yards</p></div><div class="oj-trend"><span class="oj-bars" aria-hidden="true" style="--line:50%"><i style="--h:40%"></i><i class="up" style="--h:55%"></i><i style="--h:33%"></i><i style="--h:46%"></i><i class="up" style="--h:60%"></i><i style="--h:28%"></i><i style="--h:44%"></i><i class="up" style="--h:57%"></i><i style="--h:37%"></i><i style="--h:49%"></i></span><span class="oj-row"><span class="oj-side-label">Proj. <strong>47.9</strong></span><span class="oj-price"><img src="/assets/brands/betmgm.png" alt="BetMGM" width="22" height="22"><b>+105</b></span></span></div></article>
                 </div>
                 <p class="oj-feed-note">Green bars cleared the line, red bars fell short. Dashed line is today's number.</p>
               </section>
@@ -221,7 +219,7 @@
           <p>Whether you're checking one prop or scanning the whole market, every tool shares the same data, filters and bet slip.</p>
         </header>
         <div class="sl-tool-grid">
-          <a class="sl-tool is-feature" href="/ev?demo=1#ev-pre" data-reveal>
+          <a class="sl-tool is-feature" href="/ev#ev-pre" data-reveal>
             <span class="sl-tool-icon"><svg viewBox="0 0 24 24"><path d="M3 17h4l3-10 4 13 3-8h4"/><path d="M3 4h18"/></svg></span>
             <span class="sl-tool-tag">Positive EV</span>
             <h3>Bet where the price beats fair value</h3>
@@ -229,13 +227,13 @@
             <span class="sl-tool-cta">Open Positive EV <span data-icon="arrow" aria-hidden="true"></span></span>
             <span class="sl-tool-visual" aria-hidden="true"><span><b>+5.8%</b><small>J. Cook O 64.5</small></span><span><b>+5.0%</b><small>A. Judge HR</small></span><span><b>+4.2%</b><small>A. Wilson O 24.5</small></span></span>
           </a>
-          <a class="sl-tool" href="/ev?demo=1#arb-pre" data-reveal>
+          <a class="sl-tool" href="/ev#arb-pre" data-reveal>
             <span class="sl-tool-icon"><svg viewBox="0 0 24 24"><path d="M7 7h11l-3-3m3 13H6l3 3"/></svg></span>
             <span class="sl-tool-tag">Arbitrage</span>
             <h3>Both sides, priced to profit</h3>
             <p>Find markets where opposite sides at different books add up to a guaranteed return, with stakes calculated for you.</p>
           </a>
-          <a class="sl-tool" href="/ev?demo=1#odds" data-reveal>
+          <a class="sl-tool" href="/ev#odds" data-reveal>
             <span class="sl-tool-icon"><svg viewBox="0 0 24 24"><path d="M4 19V9m5 10V4m6 15v-7m5 7V7"/></svg></span>
             <span class="sl-tool-tag">Odds screen</span>
             <h3>Every book on one row</h3>
@@ -247,13 +245,13 @@
             <h3>The line next to the history</h3>
             <p>Last 5, 10 and 20 games against the current line, with projections and a box score behind every bar.</p>
           </a>
-          <a class="sl-tool" href="/ev?demo=1#fantasy" data-reveal>
+          <a class="sl-tool" href="/ev#fantasy" data-reveal>
             <span class="sl-tool-icon"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
             <span class="sl-tool-tag">DFS props</span>
             <h3>Pick'em slips with an edge</h3>
             <p>Compare PrizePicks, Underdog and more against sharp sportsbook prices before you build a slip.</p>
           </a>
-          <a class="sl-tool" href="/ev?demo=1#sharp" data-reveal>
+          <a class="sl-tool" href="/ev#sharp" data-reveal>
             <span class="sl-tool-icon"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-9Z"/><path d="M16 3.9A9 9 0 0 1 20.1 8H16Z"/></svg></span>
             <span class="sl-tool-tag">Smart money</span>
             <h3>Follow the market's movement</h3>
@@ -303,7 +301,7 @@
             <li>Move between game markets and player props.</li>
             <li>Jump straight into EV and arbitrage.</li>
           </ul>
-          <a class="home-feature-link" href="/ev?demo=1#odds"><span>Explore the odds screen</span><span class="home-feature-arrow" data-icon="arrow" aria-hidden="true"></span></a>
+          <a class="home-feature-link" href="/ev#odds"><span>Explore the odds screen</span><span class="home-feature-arrow" data-icon="arrow" aria-hidden="true"></span></a>
         </div>
         <div id="home-market-panel" class="home-product-preview" data-play aria-label="Example odds comparison" aria-live="polite" data-reveal><p class="home-loading">Loading example prices…</p></div>
       </div>
@@ -338,7 +336,7 @@
             <span class="sl-step-num">01</span>
             <h3>Compare the market</h3>
             <p>Prices from many books are lined up for the same selection. Removing each book's margin gives a fair, no-vig estimate.</p>
-            <div class="sl-step-visual" aria-hidden="true"><span>FanDuel <b>+102</b></span><span>DraftKings <b>−105</b></span><span class="is-fair">Fair <b>−110</b></span></div>
+            <div class="sl-step-visual" aria-hidden="true"><span><img src="/assets/brands/fanduel.png" alt="" width="18" height="18">FanDuel <b>+102</b></span><span><img src="/assets/brands/draftkings.png" alt="" width="18" height="18">DraftKings <b>−105</b></span><span class="is-fair">Fair <b>−110</b></span></div>
           </li>
           <li data-reveal data-play>
             <span class="sl-step-num">02</span>
@@ -482,74 +480,13 @@
         <h2 id="cta-title">Start with the<br><span class="sl-gradient-text">whole picture.</span></h2>
         <p>Open the research workspace in seconds. No sportsbook account needed.</p>
         <div class="home-actions">
-          <a class="home-button" href="/research">Get started <span data-icon="arrow" aria-hidden="true"></span></a>
+          <a class="home-button" href="/research" data-track="CTA" data-track-label="final">Get started <span data-icon="arrow" aria-hidden="true"></span></a>
           <a class="home-button home-button-ghost" href="/register">Create a free account</a>
         </div>
       </div>
     </section>
   </main>
 
-  <footer class="home-footer">
-    <div class="home-wide home-footer-top">
-      <div class="home-footer-brand">
-        <a class="home-brand" href="/" aria-label="VisualOdds home"><img src="/favicon.svg" width="34" height="34" alt=""><span>Visual<em>Odds</em></span></a>
-        <p>Sports research with the source in view.</p>
-      </div>
-      <div class="home-footer-actions">
-        <a class="home-button home-footer-cta" href="/research">Open the workspace <span data-icon="arrow" aria-hidden="true"></span></a>
-        <a class="home-button home-button-ghost home-footer-cta" href="/help">Help center</a>
-      </div>
-    </div>
-    <div class="home-wide home-footer-grid">
-      <nav class="home-footer-column" aria-labelledby="footer-research-title">
-        <h2 id="footer-research-title">Sports research</h2>
-        <a href="/research?sport=nfl">NFL research</a>
-        <a href="/research?sport=nba">NBA research</a>
-        <a href="/research?sport=wnba">WNBA research</a>
-        <a href="/research?sport=mlb">MLB research</a>
-        <a href="/research?sport=nhl">NHL research</a>
-        <a href="/research?sport=soccer">Soccer research</a>
-      </nav>
-      <nav class="home-footer-column" aria-labelledby="footer-tools-title">
-        <h2 id="footer-tools-title">VisualOdds tools</h2>
-        <a href="/research">Player research</a>
-        <a href="/live">Live game center</a>
-        <a href="/simulation">Game simulation</a>
-        <a href="/ev">EV workbench</a>
-        <a href="/ev/tracker">My picks</a>
-        <a href="/#bet-tracker">Bet tracker</a>
-      </nav>
-      <nav class="home-footer-column" aria-labelledby="footer-live-title">
-        <h2 id="footer-live-title">Live games</h2>
-        <a href="/nfl/live">NFL games</a>
-        <a href="/nba/live">NBA games</a>
-        <a href="/wnba/live">WNBA games</a>
-        <a href="/mlb/live">MLB games</a>
-      </nav>
-      <nav class="home-footer-column" aria-labelledby="footer-models-title">
-        <h2 id="footer-models-title">Simulation models</h2>
-        <a href="/nfl/simulation">NFL simulation</a>
-        <a href="/nba/simulation">NBA simulation</a>
-        <a href="/wnba/simulation">WNBA simulation</a>
-        <a href="/mlb/simulation">MLB simulation</a>
-        <a href="/nhl/simulation">NHL simulation</a>
-        <a href="/soccer/simulation">Soccer simulation</a>
-      </nav>
-      <nav class="home-footer-column" aria-labelledby="footer-guides-title">
-        <h2 id="footer-guides-title">Guides and tools</h2>
-        <a href="/help">Help center</a>
-        <a href="/sportsbooks">Sportsbooks</a>
-        <a href="/online-sports-betting">Betting by state</a>
-        <a href="/betting-education">Betting education</a>
-        <a href="/betting-calculators">Calculators</a>
-        <a href="/betting-tools">Betting tools</a>
-        <a href="/odds-api">Odds API guide</a>
-      </nav>
-    </div>
-    <div class="home-wide home-footer-bottom">
-      <p class="home-footer-legal"><span class="home-footer-age">21+</span>Public feeds may lag. VisualOdds does not place bets. Gambling problem? Call <a href="tel:18004262537">1-800-GAMBLER</a>.</p>
-      <p class="home-footer-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><span>© 2026 VisualOdds</span></p>
-    </div>
-  </footer>
+  <!--vo-site-footer-->
 </body>
 </html>

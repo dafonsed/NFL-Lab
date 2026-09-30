@@ -24,3 +24,7 @@ reports/*.jsonl
 reports/marketing/
 reports/simulation-boundary/
 reports/simulation-deep/
+
+# Playwright output
+test-results/
+playwright-report/
