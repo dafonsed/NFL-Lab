@@ -5,7 +5,8 @@
       "name": "sportslab",
       "runtimeExecutable": "node",
       "runtimeArgs": [
-        "server.mjs"
+        "--env-file-if-exists=.env.local",
+        "scripts/design-preview.mjs"
       ],
       "env": {
         "PORT": "3101"
