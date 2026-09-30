@@ -188,9 +188,10 @@ test('expired verification and recovery links cannot change account state', asyn
   assert.ok((await registration.client.request('/api/auth/reset-password', { token, newPassword: NEXT_PASSWORD })).status >= 400);
 });
 
-test('real route policy denies free paid access, customer admin access and administrators without MFA', async t => {
+test('real route policy keeps tools public but denies customer admin access and administrators without MFA', async t => {
   const app = await fixture(t), account = await app.verified();
-  assert.equal((await account.client.request('/api/ev/quotes')).status, 403);
+  assert.ok(![401, 403].includes((await account.client.request('/api/ev/quotes')).status), 'Tools no longer require a plan.');
+  assert.ok(![401, 403].includes((await account.client.request('/api/ev/quotes', {}, { method: 'POST' })).status), 'The EV API is public.');
   assert.equal((await account.client.request('/api/admin/accounts')).status, 403);
   const user = (await account.client.request('/api/auth/get-session')).body.user;
   await app.system.db.updateTable('user').set({ role: 'owner' }).where('id', '=', user.id).execute();
