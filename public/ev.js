@@ -10,8 +10,8 @@ await accountReady;
 import { secondaryShell, toolHero, accentTitle, toolPanel, toolEmpty, toolStats, toolNote, toolReceipt, toolBoard, boardTicket, boardButton, boardIconButton, boardToggle } from './ev-secondary-views.js?v=5';
 import { SECONDARY_TOOLS } from './ev-tool-catalog.js';
 import { emptyWorkspace, purgeDemoData, clearLegacyDemoStorage } from './ev-workspace-clean.js?v=1';
-import { createQuoteFeedControls, toolDataLabel } from './ev-feed.js?v=6';
-import { loadFeed, knownSport } from './ev-feed-normalize.js?v=2';
+import { createQuoteFeedControls, toolDataLabel } from './ev-feed.js?v=7';
+import { loadFeed, knownSport } from './ev-feed-normalize.js?v=3';
 import { readQuoteCache, createThrottledCacheWriter } from './ev-quote-cache.js?v=1';
 import { START_WINDOWS, MIN_ODDS, MIN_EV, MIN_WIN_CHANCE, TOOL_FILTERS, TOOL_FILTER_DEFAULTS, activeFilterCount, startsWithin, oddsWithin, quoteMatches, readToolFilters, saveToolFilters, toolFilterBar } from './ev-filters.js?v=2';
 import { SITE_PLATFORMS, SPORTSBOOK_PLATFORMS, PREDICTION_PLATFORMS, EXCHANGE_PLATFORMS, canonicalPlatform, platformAsset, platformLabel, platformOptions, isContestPlatform } from './platform-catalog.js';
@@ -22,7 +22,7 @@ import { comparisonAnnotations } from './bet-comparison.js?v=4';
 import { inlineBetCard as betComparisonCard, bindInlineComparison as bindComparison } from './bet-inline.js?v=card-click-3';
 import { openArbCalculator } from './arb-calculator.js?v=2';
 import { openLineHistory, buildLineSeries } from './line-history.js?v=1';
-import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform } from './dfs-workspace.js?v=10-rows';
+import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, isStandardPaytable } from './dfs-workspace.js?v=11-feed';
 import { createOddsScreen } from './odds-screen.js?v=9';
 
 import {readSportsbookState, saveSportsbookState, sportsbookAvailable, availableSportsbookQuotes, STATE_CHANGE_EVENT} from './sportsbook-availability.js';
@@ -90,13 +90,15 @@ function normalize(data) {
   return data;
 }
 let state = load();
-const quoteCacheWriter = createThrottledCacheWriter(() => ({ quotes: state.quotes.filter(q => q.source === 'local-api'), history: state.history.filter(item => item.source === 'local-api'), apiSyncedAt: state.apiSyncedAt }));
+const quoteCacheWriter = createThrottledCacheWriter(() => ({ quotes: state.quotes.filter(q => q.source === 'local-api'), dfs: state.dfs.filter(item => item.source === 'local-api'), history: state.history.filter(item => item.source === 'local-api'), apiSyncedAt: state.apiSyncedAt }));
 // Show the last cached prices while the first sync runs, unless that sync has already finished.
 void readQuoteCache().then(cache => {
-  if (!cache || (state.apiSyncedAt && Date.parse(state.apiSyncedAt) >= Date.parse(cache.apiSyncedAt || 0))) return;
+  // A cache older than 15 minutes holds prices the books may no longer offer; wait for the sync.
+  if (!cache || Date.now() - Date.parse(cache.apiSyncedAt || 0) > 15 * 60_000 || (state.apiSyncedAt && Date.parse(state.apiSyncedAt) >= Date.parse(cache.apiSyncedAt || 0))) return;
   state.quotes = [...state.quotes.filter(q => q.source !== 'local-api'), ...cache.quotes.filter(q => q?.source === 'local-api')];
   const ids = new Set(state.quotes.map(q => q.id));
   state.history = cache.history.filter(item => ids.has(item.quoteId));
+  if (Array.isArray(cache.dfs)) state.dfs = [...state.dfs.filter(item => item.source !== 'local-api'), ...cache.dfs];
   state.apiSyncedAt = cache.apiSyncedAt;
   if (QUOTE_TOOLS.has(active)) render(); else feedControls?.update();
 });
@@ -156,7 +158,9 @@ window.addEventListener('pagehide',saveBuilderSession);
 let promoInput = { stake: 100, promoOdds: 150, hedgeOdds: -130, kind: 'bonus', boost: 0 };
 let trendA = '', trendB = '', traderName = '', predictionPlatform = '';
 let editing = null;
-const dfsWorkspace = createDfsWorkspace({getState:()=>({...state,quotes:eligibleQuotes(state.quotes)}),redraw:()=>render(),onSave:slip=>{state.slips.push(slip);commit();},onConfigure:picks=>{fantasyIds=picks.map(item=>item.id);fantasyApp=picks[0].app;setTool('slip');}});
+// Published standard payouts fill in until the member saves their own table for an app and size.
+const paytables = () => withStandardPaytables(state.paytables);
+const dfsWorkspace = createDfsWorkspace({getState:()=>({...state,quotes:eligibleQuotes(state.quotes),paytables:paytables()}),redraw:()=>render(),onSave:slip=>{state.slips.push(slip);commit();},onConfigure:picks=>{fantasyIds=picks.map(item=>item.id);fantasyApp=picks[0].app;setTool('slip');}});
 const oddsScreen = createOddsScreen({storage:localStorage,defaultFormat:getAccountPreferences().oddsFormat,getQuotes:()=>eligibleQuotes(oddsQuotes()),getSportsbookState:()=>sportsbookState,onAllSportsbooks:()=>{const saved=saveSportsbookState('');document.dispatchEvent(new CustomEvent(STATE_CHANGE_EVENT,{detail:{state:'',saved}}));},brandMark,redraw:()=>render(),onSport:value=>{sport=value;history.replaceState(history.state,'',`${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}#odds`);}});
 const suite = createEvSuite({
   getState:()=>state, save:persist, redraw:render, navigate:key=>setTool(key==='tracker'&&!accountSyncState().userId?'ledger':key), getTool:()=>active,
@@ -198,9 +202,9 @@ function persist() {
     // API quotes, their price history and the sync time are re-fetched every few seconds, so they
     // stay in this browser (IndexedDB, throttled). Saving them to the account would exceed its size
     // limit (blocking tracked-bet saves in the same document) and upload on every refresh.
-    const { quotes, history, apiSyncedAt, ...account } = state;
+    const { quotes, history, apiSyncedAt, dfs, ...account } = state;
     quoteCacheWriter.schedule();
-    localStorage.setItem(STORE, JSON.stringify({ ...account, quotes: [], history: [] }));
+    localStorage.setItem(STORE, JSON.stringify({ ...account, dfs: dfs.filter(item => item.source !== 'local-api'), quotes: [], history: [] }));
     if(state.suite) writeSuiteState(state.suite);
     const apiCount = state.quotes.filter(q => q.source === 'local-api').length;
     $('#ev-notice').textContent = state.apiSyncedAt || apiCount ? `${apiCount} API quotes saved. Use Sync API or auto-refresh to update prices.` : 'Waiting for the quote API. Prices appear here once it syncs.';
@@ -214,6 +218,9 @@ function snapshotQuote(q) { state.history.push({ id: uid(), quoteId: q.id, sport
 // Tools that show feed prices. Other tabs hold the member's own records and forms, so a quote
 // sync must not rebuild them (it would wipe what they are typing).
 const QUOTE_TOOLS = new Set(['odds','ev-pre','ev-live','arb-pre','arb-live','middles','holds','promo','parlay','sharp','line-alerts']);
+// DFS tools re-render only when the feed's pick'em lines or hit chances change.
+const DFS_TOOLS = new Set(['fantasy','optimizer','slip','fantasy-alerts']);
+const dfsRevision = () => state.dfs.filter(item => item.source === 'local-api').map(item => [item.id, item.line, item.probability].join('|')).join('\n');
 let lastSkipped = 0;
 // The snapshot is downloaded and cleaned in a worker so the page stays responsive; browsers
 // without module workers run the same loadFeed in the page.
@@ -224,7 +231,7 @@ function fetchFeed() {
   if (feedWorker !== false && typeof Worker === 'function') {
     try {
       if (!feedWorker) {
-        feedWorker = new Worker('/ev-feed-worker.js?v=2', { type: 'module' });
+        feedWorker = new Worker('/ev-feed-worker.js?v=3', { type: 'module' });
         feedWorker.onmessage = ({ data }) => { pendingFeed.get(data.id)?.(data); pendingFeed.delete(data.id); };
         feedWorker.onerror = () => { feedWorker = false; for (const resolve of pendingFeed.values()) resolve({ ok: false, kind: 'worker' }); pendingFeed.clear(); };
       }
@@ -257,6 +264,8 @@ async function syncLocalApi() {
   }
   // Bad or mislabeled records were skipped and counted; one bad record never blocks the snapshot.
   const { quotes: kept, skipped } = result, records = { length: result.total };
+  const previousDfs = dfsRevision();
+  if (Array.isArray(result.dfs)) state.dfs = [...state.dfs.filter(item => item.source !== 'local-api'), ...result.dfs];
   const feed = new Map(kept.map(quote => [quote.id, quote]));
   if (state !== workspace) throw invalid('The workspace changed during sync. Try again after your import.');
   const existing = new Map(state.quotes.filter(quote => quote.source === 'local-api').map(quote => [quote.id, quote]));
@@ -270,17 +279,17 @@ async function syncLocalApi() {
   const apiHistory = state.history.filter(item => item.source === 'local-api').slice(-5_000);
   state.history = [...state.history.filter(item => item.source !== 'local-api'), ...apiHistory];
   state.apiSyncedAt = now();
-  lastSkipped = records.length - kept.length - skipped.duplicate;
+  lastSkipped = records.length - kept.length - skipped.duplicate - skipped.stale;
   evaluateAlerts();
   // Alert-center watches run on every price update, not only when "Refresh saved records" is on.
   if (state.suite?.watchRules?.length) suite.evaluateWatches();
   const saved = persist();
   // Rebuild only a quote tab, and only when prices actually changed, keeping scroll and menus.
-  if (QUOTE_TOOLS.has(active) && quoteRevision(state.quotes) !== displayedQuoteRevision) {
+  if (DFS_TOOLS.has(active) ? dfsRevision() !== previousDfs : QUOTE_TOOLS.has(active) && quoteRevision(state.quotes) !== displayedQuoteRevision) {
     if (active === 'odds' && !suite.hasView(active)) oddsScreen.refresh();
     else renderKeepingView();
   }
-  return { count: feed.size, saved, skipped: lastSkipped };
+  return { count: feed.size, saved, skipped: lastSkipped, expired: skipped.stale };
 }
 // Re-render after a price sync without moving the reader: sideways scroll positions and open
 // menus inside the view come back as they were.
@@ -631,7 +640,7 @@ function renderEvExpanded(quote, fair, ev, asCard = false) {
   </article>${asCard ? '' : '</td></tr>'}`;
 }
 
-const EV_SANITY_LIMIT = .25;
+const EV_SANITY_LIMIT = .25, EV_SINGLE_BOOK_LIMIT = .10;
 function renderEv(live) {
   // Fair odds use every book in the market; the Starts window only narrows the result rows
   // (filtering first would drop books that don't report a start time from the consensus).
@@ -641,9 +650,11 @@ function renderEv(live) {
   const { evMinOdds, minEv, minProb } = toolFilters;
   // Without a saved maximum, EV above 25% is treated as a feed error (a mislabeled or stale price),
   // the way arbitrage above 15% is. Real edges are almost always a few percent.
-  const evCap = settings.maxEvPercent === '' || settings.maxEvPercent == null ? EV_SANITY_LIMIT : Infinity;
-  const hiddenAsErrors = all.filter(row => row.ev > evCap).length;
-  const rows = all.filter(({quote:q,ev,fair}) => ev > 0 && ev <= evCap && oddsWithin(q.odds, evMinOdds, evMaxOdds === 'all' ? '' : evMaxOdds)
+  const defaultCaps = settings.maxEvPercent === '' || settings.maxEvPercent == null;
+  // One soft book disagreeing by 10%+ is far more often a stale or mislabeled price than value.
+  const capFor = row => !defaultCaps ? Infinity : (row.consensus?.books?.length || 0) <= 1 ? EV_SINGLE_BOOK_LIMIT : EV_SANITY_LIMIT;
+  const hiddenAsErrors = all.filter(row => row.ev > capFor(row)).length;
+  const rows = all.filter(row => row.ev <= capFor(row)).filter(({quote:q,ev,fair}) => ev > 0 && oddsWithin(q.odds, evMinOdds, evMaxOdds === 'all' ? '' : evMaxOdds)
     && (!minEv || ev * 100 >= Number(minEv)) && (!minProb || fair * 100 >= Number(minProb))
     && sportsbookSelected(q.book) && (!marketType || q.type === marketType) && (!search || [q.displayEvent,q.event,q.market,q.book,q.selection,q.sport,q.player].some(value => filterText(value))));
   const startOf = q => { const start = Date.parse(q.startTime); return Number.isFinite(start) ? start : Infinity; };
@@ -662,7 +673,7 @@ function renderEv(live) {
   const books = new Set(rows.map(row => row.quote.book)).size;
   const summary = `<div class="evb-summary"><p><strong>${rows.length} positive ${rows.length === 1 ? 'selection' : 'selections'}</strong> from ${pool.filter(q => Boolean(q.live) === live).length} prices checked</p>${rows.length ? `<dl><div><dt>Top edge</dt><dd class="is-positive">${(Math.max(...rows.map(row => row.ev)) * 100).toFixed(2)}%</dd></div><div><dt>Books</dt><dd>${books}</dd></div><div><dt>Bankroll</dt><dd>${money(bankroll)}</dd></div></dl>` : ''}</div>`;
   const more = rows.length > evVisibleCount ? `<button type="button" class="ev-parlay-more" data-ev-more>Show ${Math.min(40,rows.length-evVisibleCount)} more selections · ${Math.min(evVisibleCount,rows.length)} of ${rows.length} shown</button>` : '';
-  return `<div class="ev-stack ev-positive-screen evb-board"><div class="wager-results-bar evb-results-bar">${summary}</div>${rows.length ? renderEvBoard(evBoardContext(shown, live)) + more : empty(emptyTitle,emptyBody)}<p class="ev-caption ev-method-note">Fair probability uses your saved reference-book, weighting and no-vig settings; by default Pinnacle counts three times as much as other books. Recommended stakes use your bankroll and Kelly multiplier. Open a row to compare every book. ${live ? 'Live entries expire after 90 seconds.' : ''}${hiddenAsErrors ? ` ${hiddenAsErrors} ${hiddenAsErrors === 1 ? 'price' : 'prices'} above 25% EV ${hiddenAsErrors === 1 ? 'is' : 'are'} hidden as likely feed errors; set a maximum EV in Pricing &amp; filters to change this.` : ''} Confirm price, limits and freshness independently.</p></div>`;
+  return `<div class="ev-stack ev-positive-screen evb-board"><div class="wager-results-bar evb-results-bar">${summary}</div>${rows.length ? renderEvBoard(evBoardContext(shown, live)) + more : empty(emptyTitle,emptyBody)}<p class="ev-caption ev-method-note">Fair probability uses your saved reference-book, weighting and no-vig settings; by default Pinnacle counts three times as much as other books. Recommended stakes use your bankroll and Kelly multiplier. Open a row to compare every book. ${live ? 'Live entries expire after 90 seconds.' : ''}${hiddenAsErrors ? ` ${hiddenAsErrors} ${hiddenAsErrors === 1 ? 'price' : 'prices'} above 25% EV (10% when only one book sets the fair price) ${hiddenAsErrors === 1 ? 'is' : 'are'} hidden as likely feed errors; set a maximum EV in Pricing &amp; filters to change this.` : ''} Confirm price, limits and freshness independently.</p></div>`;
 }
 
 function evBoardContext(rows, live) {
@@ -1140,7 +1151,7 @@ function renderMiddles() {
 }
 
 function renderHolds() {
-  const rows = [false,true].flatMap(mode=>holdRows(eligibleQuotes(quotes()).filter(q => sportsbookSelected(q.book)),mode)).filter(row=>!toolFilters.maxHold || row.hold*100 <= Number(toolFilters.maxHold)).sort((a,b)=>a.hold-b.hold);
+  const rows = [false,true].flatMap(mode=>holdRows(eligibleQuotes(quotes()).filter(q => sportsbookSelected(q.book)),mode)).filter(row=>1/(1+row.hold)-1 <= ARB_SANITY_LIMIT && (!toolFilters.maxHold || row.hold*100 <= Number(toolFilters.maxHold))).sort((a,b)=>a.hold-b.hold);
   const empty = filteredEmpty(toolEmpty('No two-sided markets yet','Holds appear here once the quote API returns both sides of a market across books.',action('Add prices','quote'),'performance'));
   return `<div class="tool-stack evb-board pair-board hold-board">${renderHoldBoard(rows, pairContext(), empty)}</div>`;
 }
@@ -1154,7 +1165,7 @@ function renderPromo() {
   const result = toolReceipt('Hedge stake',outcome?money(outcome.hedge):'—', [['Promotion wins',outcome?money(outcome.ifPromoWins):'—'],['Hedge wins',outcome?money(outcome.ifHedgeWins):'—'],[promoInput.kind==='bonus'?'Bonus conversion':'Cash stake',outcome?(promoInput.kind==='bonus'?percent(outcome.conversion):money(promoInput.stake)):'—']],outcome?'Calculated from the prices entered. Check promotion terms and settlement rules before using this plan.':'Enter a positive stake and valid American odds to calculate both outcomes.');
   const bonus = promoInput.kind === 'bonus';
   const pick = q => [q.player,q.side,q.line!==''&&q.line!=null?String(q.line):''].filter(Boolean).join(' ');
-  const plans = paired.map(({q,opposite})=>({q,opposite,plan:promoConversion({...promoInput,boost:bonus?0:promoInput.boost,promoOdds:q.odds,hedgeOdds:opposite.odds})})).filter(x=>x.plan).map(x=>({...x,locked:Math.min(x.plan.ifPromoWins,x.plan.ifHedgeWins)})).sort((a,b)=>b.locked-a.locked).slice(0,12);
+  const plans = paired.filter(({q,opposite})=>1/(implied(q.odds)+implied(opposite.odds))-1 <= ARB_SANITY_LIMIT).map(({q,opposite})=>({q,opposite,plan:promoConversion({...promoInput,boost:bonus?0:promoInput.boost,promoOdds:q.odds,hedgeOdds:opposite.odds})})).filter(x=>x.plan).map(x=>({...x,locked:Math.min(x.plan.ifPromoWins,x.plan.ifHedgeWins)})).sort((a,b)=>b.locked-a.locked).slice(0,12);
   const prices = plans.length ? toolBoard({layout:'cards',variant:'promo',
     label:'Saved promotion and hedge pairs',
     summary:{text:`<strong>${plans.length} hedge ${plans.length===1?'pair':'pairs'}</strong> from saved prices`,pills:[[bonus?'Best conversion':'Best locked profit',bonus?percent(plans[0].plan.conversion):money(plans[0].locked),plans[0].locked>0],[bonus?'Bonus value':'Cash stake',money(promoInput.stake)]]},
@@ -1317,11 +1328,12 @@ function renderFantasy() {
 }
 
 function renderOptimizer() {
-  const rows = dfs().filter(x=>!isContestPlatform(x.app));
-  const combos = [];
+  // Picks without a hit chance (no matching sportsbook market yet) can't be ranked.
+  const rows = dfs().filter(x=>!isContestPlatform(x.app) && x.probability != null && Number.isFinite(Number(x.probability)));
+  const combos = [], tables = paytables();
   for(let i=0;i<rows.length;i++) for(let j=i+1;j<rows.length;j++) {
     if(rows[i].app!==rows[j].app||rows[i].player===rows[j].player)continue;
-    const rules=state.paytables[rows[i].app]?.['2'];
+    const rules=tables[rows[i].app]?.['2'];
     if(!Array.isArray(rules)||rules.length!==3)continue;
     const result=fantasySlip([rows[i],rows[j]],rules);
     if(result)combos.push({a:rows[i],b:rows[j],...result});
@@ -1339,12 +1351,12 @@ function renderOptimizer() {
       market:'2-pick entry',
       bet:{book:x.a.app,title:x.a.player+' + '+x.b.player,lines:[leg(x.a),leg(x.b),x.a.app]},
       picks:[x.a,x.b].map(p=>({player:p.player,side:p.side,line:p.line,market:p.market,chance:percent(p.probability)})),
-      odds:{value:Number(state.paytables[x.a.app]['2'][2])+'×',sub:'Full-hit payout'},
+      odds:{value:Number(tables[x.a.app]['2'][2])+'×',sub:isStandardPaytable(state.paytables,x.a.app,2)?'Standard payout':'Full-hit payout'},
       prob:{value:percent(x.dist[2]),sub:'Estimated'},
       actions:boardButton('Build slip',`data-optimize="${esc(x.a.id)},${esc(x.b.id)}" aria-label="Build a slip with ${esc(x.a.player)} and ${esc(x.b.player)}"`)
     }))
-  }):toolPanel('Ranked combinations','Your strongest estimated edge first. Open a combination to build the slip.',toolEmpty('Find your first combination','Add two player props from the same app and save its two-pick payout rule.',action('Add DFS prop','dfs')+button('Set payout rules','data-tool="slip"'),'settings'));
-  return `<div class="tool-stack">${ranking}${toolNote('Rankings use your entered hit rates and exact-hit payout tables. Picks are treated as independent; platform limits, fees and contest standings are not modeled.')}</div>`;
+  }):toolPanel('Ranked combinations','Your strongest estimated edge first. Open a combination to build the slip.',toolEmpty(state.dfs.length?'Find your first combination':'No DFS lines in the quote feed yet',state.dfs.length?'Combinations need two picks from the same app with a hit chance.':'Combinations appear when the quote feed sends PrizePicks, Underdog or other pick\'em lines. You can also add a prop by hand.',action('Add DFS prop','dfs')+button('Set payout rules','data-tool="slip"'),'settings'));
+  return `<div class="tool-stack">${ranking}${toolNote('Hit chances come from no-vig sportsbook odds at the same line (or your own entries). Payouts are each app\'s published standard payouts unless you saved your own; confirm them in the app. Picks are treated as independent; platform limits, fees and contest standings are not modeled.')}</div>`;
 }
 
 function renderSlip() {
@@ -1354,7 +1366,8 @@ function renderSlip() {
   const available=state.dfs.filter(x=>x.app===fantasyApp);
   fantasyIds=fantasyIds.filter(id=>available.some(x=>x.id===id));
   const selected=fantasyIds.map(id=>available.find(x=>x.id===id)).filter(Boolean);
-  const rules=state.paytables[fantasyApp]?.[String(selected.length)]||[];
+  const rules=paytables()[fantasyApp]?.[String(selected.length)]||[];
+  const standardRules=isStandardPaytable(state.paytables,fantasyApp,selected.length);
   const result=selected.length>=2&&rules.length===selected.length+1?fantasySlip(selected,rules,Number(fantasyStake)):null;
   const controls=`<div class="tool-form-grid"><label>Fantasy app<select id="ev-fantasy-app">${apps.length?apps.map(app=>`<option value="${esc(app)}" ${app===fantasyApp?'selected':''}>${esc(app)}</option>`).join(''):'<option value="">Add a prop to choose a platform</option>'}</select></label><label>Entry amount ($)<input id="ev-fantasy-stake" type="number" min="0.01" step="0.01" value="${esc(fantasyStake)}"></label></div>`;
   const choices=options.length?toolBoard({layout:'cards',variant:'slip',
@@ -1374,11 +1387,11 @@ function renderSlip() {
           sides:picks.map(p=>{const inSlip=fantasyIds.includes(p.id),name=`${p.player} ${p.side} ${String(p.line??'—')}`;
             return {side:p.side,value:percent(p.probability),rate:Number(p.probability),attrs:`data-fantasy="${esc(p.id)}" aria-pressed="${inSlip}" aria-label="${inSlip?'Remove':'Add'} ${esc(name)}"`};})},
         bet:{book:x.app,title:label},
-        actions:'<span class="evc-slip-note">Estimated hit rates</span>'+boardIconButton('edit',`Edit ${label}`,`data-edit="dfs" data-id="${esc(x.id)}"`)+boardToggle(`Compare ${label}`,`data-open-dfs="${esc(x.id)}"`)};
+        actions:(x.source==='local-api'?'<span class="evc-slip-note">Hit chance from sportsbook odds</span>':'<span class="evc-slip-note">Estimated hit rates</span>'+boardIconButton('edit',`Edit ${label}`,`data-edit="dfs" data-id="${esc(x.id)}"`))+boardToggle(`Compare ${label}`,`data-open-dfs="${esc(x.id)}"`)};
     })
-  }):available.length?toolEmpty('No picks match your filters','Try a different sport or search. Your selected picks stay in the ticket.',button('Clear filters','data-tool-clear'),'search'):toolEmpty('Add your first player prop','Enter a player, line, and estimated hit rate to start a slip.',action('Add DFS prop','dfs'),'picks');
+  }):available.length?toolEmpty('No picks match your filters','Try a different sport or search. Your selected picks stay in the ticket.',button('Clear filters','data-tool-clear'),'search'):toolEmpty('No DFS lines in the quote feed yet','Picks appear when the quote feed sends PrizePicks, Underdog or other pick\'em lines. You can also add a prop by hand.',action('Add DFS prop','dfs'),'picks');
   const picked=selected.length?boardTicket(selected.map(x=>({book:x.app,title:x.player,sub:`${x.side} ${String(x.line??'—')} ${x.market} · ${percent(x.probability)}`,action:button('Remove',`data-fantasy="${esc(x.id)}"`)}))):toolEmpty('Choose your picks','Select at least two picks from the same app.','','picks');
-  const payout=selected.length>=2?toolPanel('Payout rules','Total return multiplier for each number of correct picks, including the returned stake.',`<div class="tool-form-grid">${Array.from({length:selected.length+1},(_,hits)=>`<label>${hits} of ${selected.length} hits<input data-pay-hits="${hits}" type="number" min="0" step="0.01" value="${Number(rules[hits]||0)}"></label>`).join('')}</div><div class="ev-card-footer">${button('Save payout rules','id="ev-save-paytable"')}</div>${result?`<div class="ev-chip-row">${result.dist.map((p,i)=>`<span class="ev-chip">${i} hits · ${percent(p)} · ${Number(rules[i]||0)}×</span>`).join('')}</div>`:''}`):'';
+  const payout=selected.length>=2?toolPanel('Payout rules',standardRules?`${esc(fantasyApp)}'s published standard payout for a ${selected.length}-pick entry is filled in. Confirm it in the app: promotions, your state and special picks can change it. Edit and save to use your own.`:'Total return multiplier for each number of correct picks, including the returned stake.',`<div class="tool-form-grid">${Array.from({length:selected.length+1},(_,hits)=>`<label>${hits} of ${selected.length} hits<input data-pay-hits="${hits}" type="number" min="0" step="0.01" value="${Number(rules[hits]||0)}"></label>`).join('')}</div><div class="ev-card-footer">${button('Save payout rules','id="ev-save-paytable"')}</div>${result?`<div class="ev-chip-row">${result.dist.map((p,i)=>`<span class="ev-chip">${i} hits · ${percent(p)} · ${Number(rules[i]||0)}×</span>`).join('')}</div>`:''}`):'';
   return `<div class="tool-stack"><div class="tool-two-column evt-builder"><div class="tool-stack">${toolPanel('Build your entry','Use the payout rules for your chosen platform.',controls)}${options.length?choices:toolPanel('Available picks','Compare your entered player lines and estimates.',choices)}${payout}</div><div class="tool-stack">${toolPanel('Your picks',selected.length+' selected',picked)}${toolReceipt('Expected return',result?money(result.payout*fantasyStake):'—',[['Entry amount',money(fantasyStake)],['Expected profit',result?money(result.expectedProfit):'—'],['Expected value',result?signed(result.ev):'—']],selected.length<2?'Select at least two picks to start the calculation.':result?'Calculated from the saved rules and your estimated hit rates.':'Save the payout rules for this entry size to calculate a return.')}</div></div>${toolNote('Picks are treated as independent. Pushes, ties, correlations, and platform settlement exceptions require adjustments to the payout rules.')}</div>`;
 }
 

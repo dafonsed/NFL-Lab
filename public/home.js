@@ -26,7 +26,7 @@ const zone = sport === 'mlb' ? 'America/New_York' : 'America/Phoenix';
 const today = new Intl.DateTimeFormat('en-CA', {timeZone:zone, year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date());
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const tools = new Set(sport === 'all' ? [] : sportTools(sport).map(t => t.key));
-const EV_SETTINGS = {minSharpBooks:1, maxVigPercent:20, devigMethod:'multiplicative', bookRules:[], liveMaxAgeSeconds:90, pregameMaxAgeSeconds:86400, minEvPercent:0};
+const EV_SETTINGS = {minSharpBooks:1, maxVigPercent:20, devigMethod:'multiplicative', bookRules:[], liveMaxAgeSeconds:90, pregameMaxAgeSeconds:900, minEvPercent:0};
 const stats = {games:null, props:null, ev:null, edge:null};
 let slateDate = today;
 

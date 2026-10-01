@@ -2,8 +2,9 @@
 // wrong, while `selection_name` names the real pick ("Over 44.5", "Dallas Cowboys +3.0"), so sides
 // and spread lines are rebuilt from the selection. Records that can't be trusted are skipped and
 // counted instead of failing the whole snapshot. Pure functions: the page and the tests share them.
-import { decimal, marketKey } from './ev-core.js?v=3';
-import { canonicalPlatform } from './platform-catalog.js';
+import { decimal, implied, marketKey } from './ev-core.js?v=3';
+import { canonicalPlatform, isFantasyPlatform } from './platform-catalog.js';
+import { DEFAULT_SHARP_WEIGHTS } from './ev-advanced-math.js';
 import { matchedEventKey, dropInconsistentListings } from './ev-event-match.js?v=3';
 
 const MAJOR = { NFL: 'NFL', MLB: 'MLB', NBA: 'NBA', WNBA: 'WNBA', NHL: 'NHL', SOCCER: 'Soccer' };
@@ -55,7 +56,10 @@ export function matchParticipant(name, participants) {
 
 // A selection for a different bet: a bare yes/no/tie, a total, or a pair ("A/B", "Cowboys / Tie")
 // inside a singles event. Whole-word checks only: "NO Saints" is New Orleans, not a "No" bet.
-const otherMarket = (selection, event) => /^(yes|no|tie|draw)$/i.test(selection.trim()) || /^(over|under)\b/i.test(selection) || (selection.includes('/') && !String(event).includes('/'));
+// Set or correct-score picks ("Kate Fakih 2:1", "Team 2-0") and handicap bands ("Team 11+") are other
+// markets too, even when the name matches a player.
+const otherMarket = (selection, event) => /^(yes|no|tie|draw)$/i.test(selection.trim()) || /^(over|under)\b/i.test(selection) || (selection.includes('/') && !String(event).includes('/'))
+  || /\b\d+\s*[:-]\s*\d+\b/.test(selection) || /\s\d+\+$/.test(selection.trim());
 const signedTail = /^(.*?)\s*([+-]\d+(?:\.\d+)?)$/;
 
 /**
@@ -82,6 +86,11 @@ export function repairSelection({ type, side, line, selection, event }) {
     if (!matched) return participants ? null : { type, side: rawSide, line, selection: sel, verified: false };
     return { type, side: matched, line: '', selection: sel, verified: true };
   }
+  if (type === 'prop' || type === 'alternate' && /^(over|under)\b/i.test(sel)) {
+    const match = /\b(over|under)\b\s*([+-]?\d+(?:\.\d+)?)?/i.exec(sel);
+    if (!match) return { type, side: rawSide, line, selection: '', verified: false };
+    return { type, side: match[1].toLowerCase(), line: match[2] != null ? Math.abs(Number(match[2])) : line, selection: match[1][0].toUpperCase() + match[1].slice(1).toLowerCase(), verified: true };
+  }
   if (type === 'spread') {
     const tail = signedTail.exec(sel), name = tail ? tail[1] : sel;
     if (otherMarket(name, event)) return null;
@@ -102,7 +111,9 @@ const text = (raw, key) => typeof raw?.[key] === 'string' ? raw[key].trim() : ''
 export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
   const id = text(raw, 'id') || (Number.isSafeInteger(raw?.id) ? String(raw.id) : '');
   const odds = Number(raw?.odds), timestamp = text(raw, 'ts'), observed = Date.parse(timestamp);
-  if (!id || !text(raw, 'sport') || !text(raw, 'event') || !text(raw, 'market') || !text(raw, 'side') || !text(raw, 'book') || !Number.isFinite(decimal(odds)) || !Number.isFinite(observed) || !/(?:Z|[+-]\d{2}:\d{2})$/i.test(timestamp)) return { skip: 'invalid' };
+  // Pick'em apps (PrizePicks, Underdog ...) post a line, not a price, so their records may omit odds.
+  const fantasy = isFantasyPlatform(text(raw, 'book')) && Boolean(text(raw, 'player') || text(raw, 'player_name'));
+  if (!id || !text(raw, 'sport') || !text(raw, 'event') || !text(raw, 'market') || !text(raw, 'side') || !text(raw, 'book') || (!fantasy && !Number.isFinite(decimal(odds))) || !Number.isFinite(observed) || !/(?:Z|[+-]\d{2}:\d{2})$/i.test(timestamp)) return { skip: 'invalid' };
   if (raw.live != null && typeof raw.live !== 'boolean' || raw.exchange != null && typeof raw.exchange !== 'boolean') return { skip: 'invalid' };
   if (raw.line != null && typeof raw.line !== 'number' && typeof raw.line !== 'string') return { skip: 'invalid' };
   let line = raw.line == null || raw.line === '' ? '' : Number(raw.line);
@@ -124,10 +135,12 @@ export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
   return {
     id: `local-api:${id}`, sport, event, market: text(raw, 'market'), displayMarket: MARKET_NAMES[type] || text(raw, 'market'),
     eventId, marketId: matched ? `${type}|${eventId}` : text(raw, 'marketId') || `${type}|${eventId}`,
-    playerId: text(raw, 'playerId'), player: text(raw, 'player'), period: text(raw, 'period') || 'full', league: text(raw, 'league') || SOCCER_LEAGUES[text(raw, 'sport').toLowerCase()] || '',
+    playerId: text(raw, 'playerId') || text(raw, 'player_id'), player: text(raw, 'player') || text(raw, 'player_name'), period: text(raw, 'period') || 'full', league: text(raw, 'league') || SOCCER_LEAGUES[text(raw, 'sport').toLowerCase()] || '',
     startTime: Number.isFinite(start) ? new Date(start).toISOString() : '',
     type, line, side: repaired.side, selection: repaired.selection, sideVerified: repaired.verified,
-    book: canonicalPlatform(text(raw, 'book')), odds, outcomes, live: raw.live === true, exchange: raw.exchange === true,
+    book: canonicalPlatform(text(raw, 'book')), odds: Number.isFinite(decimal(odds)) ? odds : null, outcomes,
+    ...(Number(raw.probability) >= 0 && Number(raw.probability) <= 1 && raw.probability !== '' && raw.probability != null ? { probability: Number(raw.probability) } : {}),
+    ...(text(raw, 'team') ? { team: text(raw, 'team') } : {}), live: raw.live === true, exchange: raw.exchange === true,
     liquidity: Number.isFinite(liquidity) ? Math.max(0, liquidity) : 0,
     // Feed times use the server's clock; shift them onto this device's clock.
     ts: new Date(observed - clockOffsetMs).toISOString(), source: 'local-api',
@@ -197,13 +210,29 @@ export function markAlternateLines(quotes) {
 
 const wholeMinute = ts => { const date = new Date(ts); return date.getUTCSeconds() === 0 && date.getUTCMilliseconds() === 0; };
 
+// The quote API keeps every record it has ever scraped: when a price changes it adds a new record
+// with a new id, and a market a book stops offering keeps its last price forever. Books rescrape
+// every few minutes, so a pregame price not seen for 15 minutes is no longer offered.
+export const FEED_MAX_AGE_MS = 15 * 60_000;
+
+// Stable ids: the API's ids change on every scrape, which would close open rows, drop parlay legs
+// and restart line history each time. One selection (book, market, line, side) keeps one id.
+function stableId(text) {
+  let a = 0x811c9dc5, b = 0x01000193 ^ 0x5bd1e995;
+  for (let i = 0; i < text.length; i++) { const c = text.charCodeAt(i); a = Math.imul(a ^ c, 16777619); b = Math.imul(b ^ c, 2246822519); }
+  return (a >>> 0).toString(36) + (b >>> 0).toString(36);
+}
+const selectionKey = quote => JSON.stringify([quote.book, marketKey(quote), quote.side]);
+// Known observation times beat unknown ones; then the newest price wins.
+const fresher = (a, b) => Boolean(a.ageUnknown) !== Boolean(b.ageUnknown) ? !a.ageUnknown : Date.parse(a.ts) > Date.parse(b.ts);
+
 /**
- * Full snapshot → { quotes, skipped: { invalid, mislabeled, duplicate, started, inconsistent } }.
+ * Full snapshot → { quotes, dfs, skipped: { invalid, mislabeled, duplicate, stale, started, inconsistent } }.
  * Some books send the game start as `ts`; for those, `ts` becomes the start time, the price's age
  * is unknown, and games that already started are dropped from pregame.
  */
 export function normalizeFeed(records, { syncedAt = new Date().toISOString(), clockOffsetMs = 0 } = {}) {
-  const skipped = { invalid: 0, mislabeled: 0, duplicate: 0, started: 0, inconsistent: 0 };
+  const skipped = { invalid: 0, mislabeled: 0, duplicate: 0, stale: 0, started: 0, inconsistent: 0 };
   const now = Date.parse(syncedAt);
   let quotes = [];
   for (const raw of Array.isArray(records) ? records : []) {
@@ -228,40 +257,94 @@ export function normalizeFeed(records, { syncedAt = new Date().toISOString(), cl
   quotes = quotes.filter(quote => {
     if (!quote.startTime && startOf.has(quote.eventId)) quote.startTime = startOf.get(quote.eventId);
     if (!quote.live && quote.startTime && Date.parse(quote.startTime) <= now) { skipped.started += 1; return false; }
+    // Pregame prices the API hasn't refreshed in 15 minutes are markets the book no longer offers.
+    if (!quote.live && !quote.ageUnknown && now - Date.parse(quote.ts) > FEED_MAX_AGE_MS) { skipped.stale += 1; return false; }
     return true;
   });
-  // Duplicate ids and duplicate listings (one book listing a game twice) keep the newest price.
+  // Pick'em lines (a DFS app plus a player) are not sportsbook prices; they become DFS picks.
+  const picks = quotes.filter(quote => quote.player && isFantasyPlatform(quote.book));
+  quotes = quotes.filter(quote => !(quote.player && isFantasyPlatform(quote.book)));
+  // Older copies of one selection (the API keeps them with new ids), and one book listing a game
+  // twice, keep only the freshest price. This runs before the listing check so a stale copy can't
+  // pair with a current one.
   const newest = (list, keyOf) => {
     const kept = new Map();
     for (const quote of list) {
       const key = keyOf(quote), prior = kept.get(key);
       if (!prior) kept.set(key, quote);
-      else { skipped.duplicate += 1; if (Date.parse(quote.ts) > Date.parse(prior.ts)) kept.set(key, quote); }
+      else { skipped.duplicate += 1; if (fresher(quote, prior)) kept.set(key, quote); }
     }
     return [...kept.values()];
   };
-  quotes = newest(quotes, quote => quote.id);
+  quotes = newest(newest(quotes, quote => quote.id), selectionKey);
   const checked = dropInconsistentListings(quotes, marketKey);
   skipped.inconsistent += checked.dropped;
-  quotes = newest(checked.kept, quote => JSON.stringify([quote.book, marketKey(quote), quote.side]));
+  quotes = checked.kept;
+  for (const quote of quotes) { quote.feedId = quote.id; quote.id = `local-api:${stableId(selectionKey(quote))}`; }
   markPriceFamilies(quotes);
   markAlternateLines(quotes);
   // One name per team and game: the fullest any book uses ("Dallas Cowboys", not "DAL Cowboys"),
   // from both event names and verified selections, so every row and book says the same thing.
   const teamNames = new Map();
   const offer = (eventId, side, name) => { const key = `${eventId}|${side}`; if (name && name.length > (teamNames.get(key) || '').length) teamNames.set(key, name); };
-  for (const quote of quotes) {
+  for (const quote of [...quotes, ...picks]) {
     const teams = participantsOf(quote.event);
     if (teams) { offer(quote.eventId, 'away', teams.away); offer(quote.eventId, 'home', teams.home); }
     if (quote.sideVerified && ['home', 'away'].includes(quote.side)) offer(quote.eventId, quote.side, quote.selection);
   }
+  // Every app's DFS picks and every book's quotes for one game share this display name.
+  const names = new Map();
+  const displayName = item => { const away = teamNames.get(`${item.eventId}|away`), home = teamNames.get(`${item.eventId}|home`); return away && home ? `${away} @ ${home}` : item.event; };
+  for (const item of [...quotes, ...picks]) if (!names.has(item.eventId)) names.set(item.eventId, displayName(item));
   for (const quote of quotes) {
     const away = teamNames.get(`${quote.eventId}|away`), home = teamNames.get(`${quote.eventId}|home`);
-    quote.displayEvent = away && home ? `${away} @ ${home}` : quote.event;
+    quote.displayEvent = names.get(quote.eventId);
     if (['home', 'away'].includes(quote.side) && away && home && (!quote.selection || matchParticipant(quote.selection, { away, home }) === quote.side)) quote.selection = quote.side === 'away' ? away : home;
     if (!quote.selection) quote.selection = { over: 'Over', under: 'Under', draw: 'Draw' }[quote.side] || quote.side;
   }
-  return { quotes, skipped };
+  return { quotes, dfs: dfsPicks(picks, quotes, names), skipped };
+}
+
+const propName = value => String(value ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+// "Player Points", "Points", "Pts" and "points (incl. OT)" for one player compare as one market.
+const PROP_WORDS = { pass: 'passing', rush: 'rushing', rec: 'receiving', yds: 'yards', yd: 'yards', td: 'touchdowns', tds: 'touchdowns', pts: 'points', reb: 'rebounds', rebs: 'rebounds', ast: 'assists', asts: 'assists', stl: 'steals', blk: 'blocks', '3pm': 'threes', '3pt': 'threes', so: 'strikeouts', ks: 'strikeouts', att: 'attempts', comp: 'completions', cmp: 'completions', sog: 'shots on goal' };
+const propMarket = (market, player) => propName(market).replace(propName(player), '').replace(/\b(player|total|o u|over under|incl ot)\b/g, ' ')
+  .split(/\s+/).filter(Boolean).map(word => PROP_WORDS[word] || word).join(' ');
+const propKey = (eventId, player, market, line) => JSON.stringify([eventId, propName(player), propMarket(market, player), Number(line)]);
+
+/**
+ * DFS picks in the shape the DFS tools use. A pick's hit chance is the no-vig sportsbook probability
+ * for the same player, market and line (Pinnacle weighted, mirrored books once), unless the feed
+ * sends its own `probability`. Without a matching sportsbook market it stays empty.
+ */
+export function dfsPicks(picks, quotes, names = new Map()) {
+  const markets = new Map();
+  for (const quote of quotes) {
+    if (!quote.player || !['over', 'under'].includes(quote.side) || !Number.isFinite(implied(quote.odds))) continue;
+    const key = propKey(quote.eventId, quote.player, quote.market, quote.line);
+    if (!markets.has(key)) markets.set(key, new Map());
+    const books = markets.get(key), family = quote.priceFamily || quote.book;
+    books.set(family, { ...books.get(family), book: quote.book, [quote.side]: implied(quote.odds) });
+  }
+  const latest = new Map();
+  for (const pick of picks) {
+    const key = JSON.stringify([pick.book, propKey(pick.eventId, pick.player, pick.market, pick.line), pick.side]);
+    const prior = latest.get(key);
+    if (!prior || fresher(pick, prior)) latest.set(key, { ...pick, id: `local-api:${stableId(key)}` });
+  }
+  return [...latest.values()].map(pick => {
+    const books = [...(markets.get(propKey(pick.eventId, pick.player, pick.market, pick.line))?.values() || [])].filter(book => book.over > 0 && book.under > 0);
+    const weight = book => DEFAULT_SHARP_WEIGHTS[String(book.book).toLowerCase()] || 1;
+    const total = books.reduce((sum, book) => sum + weight(book), 0);
+    const over = total ? books.reduce((sum, book) => sum + weight(book) * book.over / (book.over + book.under), 0) / total : NaN;
+    const probability = Number.isFinite(pick.probability) ? pick.probability : Number.isFinite(over) ? (pick.side === 'over' ? over : 1 - over) : null;
+    return {
+      id: pick.id, app: pick.book, sport: pick.sport, league: pick.league, event: names.get(pick.eventId) || pick.event, eventId: pick.eventId,
+      player: pick.player, ...(pick.team ? { team: pick.team } : {}), market: pick.market, line: pick.line, side: pick.side === 'under' ? 'Under' : 'Over',
+      probability, probabilityBooks: Number.isFinite(pick.probability) ? ['feed'] : books.map(book => book.book),
+      ts: pick.ts, startTime: pick.startTime, live: pick.live, source: 'local-api',
+    };
+  });
 }
 
 /**
@@ -280,8 +363,8 @@ export async function loadFeed(url, syncedAt = new Date().toISOString()) {
     const records = Array.isArray(payload) ? payload : payload?.quotes;
     if (!Array.isArray(records)) return { ok: false, kind: 'shape' };
     if (payload?.complete === false || payload?.partial === true || payload?.next_cursor) return { ok: false, kind: 'partial' };
-    const { quotes, skipped } = normalizeFeed(records, { syncedAt, clockOffsetMs: Math.abs(offset) > 5_000 ? offset : 0 });
-    return { ok: true, quotes, skipped, total: records.length };
+    const { quotes, dfs, skipped } = normalizeFeed(records, { syncedAt, clockOffsetMs: Math.abs(offset) > 5_000 ? offset : 0 });
+    return { ok: true, quotes, dfs, skipped, total: records.length };
   } catch (error) {
     return { ok: false, kind: error?.name === 'TimeoutError' ? 'timeout' : 'network', message: String(error?.message || '') };
   }

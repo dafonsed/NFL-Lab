@@ -6,7 +6,8 @@ import { fantasySlip } from '../public/ev-core.js';
 import { load } from 'cheerio';
 
 // Quotes must stay inside the pregame freshness window, so fixtures are relative to now.
-const earlier = new Date(Date.now() - 3_600_000).toISOString(), later = new Date(Date.now() - 1_800_000).toISOString();
+// Both within the 15-minute pregame freshness window; `later` is the newer observation.
+const earlier = new Date(Date.now() - 600_000).toISOString(), later = new Date(Date.now() - 300_000).toISOString();
 
 test('DFS break-even includes partial-win payouts and rejects missing rules', () => {
   assert.equal(breakEven(null), null);
@@ -40,11 +41,11 @@ test('with no props the view shows an empty state, never sample lines; the first
   const state = {dfs:[],quotes:[],paytables:{}};
   const view = createDfsWorkspace({getState:()=>state,redraw:()=>{},onSave:()=>{}});
   const empty = view.render();
-  assert.match(empty, /No DFS props yet/);
+  assert.match(empty, /No DFS lines in the quote feed yet/);
   assert.doesNotMatch(empty, /Design preview|Tyrese Maxey|Brandin Podziemski|Example/);
   state.dfs.push({id:'manual-1',sport:'NFL',app:'Underdog Fantasy',player:'Test <Player>',event:'BUF vs MIA',market:'Passing Yards',side:'Over',line:249.5,probability:.55,team:'BUF'});
   const html = view.render();
-  assert.doesNotMatch(html, /No DFS props yet|Tyrese Maxey|Brandin Podziemski/);
+  assert.doesNotMatch(html, /No DFS lines in the quote feed yet|Tyrese Maxey|Brandin Podziemski/);
   assert.match(html, /Test &lt;Player&gt;/);
   assert.match(html, /Underdog Fantasy<\/option>/);
   assert.doesNotMatch(html, /No matching props/);
