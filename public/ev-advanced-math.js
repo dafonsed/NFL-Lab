@@ -75,7 +75,9 @@ export function quoteAvailable(quote, settings = {}, now = Date.now()) {
   if (thresholdMarket(quote) && !Number.isFinite(lineNumber(quote))) return false;
   if (valuePresent(quote.outcomes) && (!Number.isInteger(number(quote.outcomes)) || number(quote.outcomes) < 2 || number(quote.outcomes) > 64)) return false;
   const observed = timestamp(quote.ts), ageSetting = live(quote) ? settings.liveMaxAgeSeconds : settings.pregameMaxAgeSeconds;
-  const maximumAge = ageSetting == null ? live(quote) ? 90 : 86400 : number(ageSetting);
+  // Defaults: live 90 s, pregame 15 min. Feed books rescrape every few minutes, so an older pregame
+  // price is one the book has stopped offering.
+  const maximumAge = ageSetting == null ? live(quote) ? 90 : 900 : number(ageSetting);
   if (!Number.isFinite(observed) || !(maximumAge > 0) || observed > now || now - observed > maximumAge * 1000) return false;
   for (const field of ['expiresAt', 'expiry', 'expiryTime']) if (valuePresent(quote[field])) {
     const expires = timestamp(quote[field]);

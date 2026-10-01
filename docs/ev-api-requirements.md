@@ -12,6 +12,7 @@ A check of the production `GET /quotes` response (18,729 quotes, 689 events, 13 
 
 | Problem | Example from the feed | Effect | Fix in the feed |
 | --- | --- | --- | --- |
+| **Old prices are never removed** | 1 Oct 22:12 UTC: 17,000 of 30,000 records were over 15 minutes old (Fanatics: 17,948 over an hour old while its newest record was 1 minute old). Fanatics `Broncos @ 49ers` `Under 48.5` at `+140` was last seen at 15:21; Fanatics' current price is `-140`. When a price changes, some selections get a new record next to the old one (3,200+ selections had copies hours apart, e.g. a moneyline at `-245` from 15:21 and `-275` from 22:10). | Dead and outdated prices show as live +EV and arbitrage. | `/quotes` must be the **current** snapshot: update a selection's record in place (same `id`), and remove it as soon as the book stops offering it. The site now ignores prices older than 15 minutes, but the feed should never send them. |
 | **Event names differ by book** | DraftKings `CIN Bengals @ MIA Dolphins`; Fanatics `Cowboys @ Texans` and `Dallas Cowboys @ Houston Texans`; theScore Bet `Steelers @ Browns`. `eventId` is just the lowercased name. | Prices for the same game never meet: only 16 of 83 NFL games had more than one book. | Send one canonical `eventId` per game shared by every book (for example a provider game ID), and one consistent `event` name. |
 | **`side` disagrees with `selection_name`** | 8,573 of 8,603 totals have `side: "home"` while `selection_name` is `Over 44.5` / `Under 58.5`. Fanatics spread `side: "home", line: -3` has `selection_name: "Dallas Cowboys +3.0"` (Dallas is away). Kambi soccer (BetRivers, Desert Diamond, Bally Bet) `home` = selection `2`, `away` = `X` (draw). Kambi MLB moneylines are swapped (Bally `CHI White Sox @ HOU Astros` home = Chicago). FanDuel totals `side: "home"`, selection `Under`. | Wrong team shown and fake EV/arbitrage (for example 3,000%+ EV on Fanatics Titans @ Ravens `+4000`). | `side` must be the priced selection: `over`/`under` for totals, `home`/`away` matching the team in `selection_name` for spreads and moneylines, with the line signed from that team's view. `selection_name` is already right on 99% of quotes; make `side` agree with it. |
 | **Other markets filed as moneyline** | Fanatics moneylines with selection `Dallas Cowboys / Tie`, `No`, `Under 2.5`; a tennis doubles price (`Schlagenhauf, Noah/Stroemberg, Isac`) inside the singles match `Mensik @ Bublik`. Soccer 1X2 sent as a two-way moneyline. | De-vigging mixes different bets; fake arbitrage. | Send 1X2 as `type: "1x2"` with home/draw/away; double chance, yes/no and doubles as their own markets and events. |
@@ -22,7 +23,7 @@ A check of the production `GET /quotes` response (18,729 quotes, 689 events, 13 
 | **`ts` means different things** | Bally Bet, BetRivers, Desert Diamond and theScore Bet send the game start (for example `2026-10-02T00:15:00+00:00` on 30 September); DraftKings, Fanatics and FanDuel send when the price was seen. | Freshness checks and the Starts filter can't be trusted. | `ts` = when the price was observed. Put the game start in `startTime`. |
 | **Wrong sport labels** | Central American soccer clubs as `americanfootball`; European basketball clubs (`KK Bosna Sarajevo @ Lietkabelis`) as `nba`; college football and MLS games as `nfl`; plus `other` and `unknown`. | Games appear under the wrong sport and match the wrong markets. | Send a correct `sport` and a `league` (`NFL`, `NCAAF`, `NBA`, `EuroLeague`, `MLS` ...). |
 | **No exchange liquidity** | 4 exchange quotes (Novig, ProphetX, Kalshi, Polymarket), none with `liquidity`. | Smart Money has nothing to rank. | Send `exchange: true` and numeric available `liquidity` in dollars for exchange prices. |
-| **No DFS platforms** | No PrizePicks, Underdog, Sleeper or other DFS lines. | The DFS tools have nothing to show. | See section 2 below. |
+| **No DFS lines or player props** | No PrizePicks, Underdog or Sleeper lines, and no sportsbook player props (0 records with `player`). | The DFS tools have nothing to show. | Send pick'em lines and sportsbook player props in `/quotes` (section 2). |
 | **No live quotes** | `live: false` on every quote. | Live +EV and Live Arbitrage are always empty. | Send in-play prices with `live: true`, updated every 1–5 s. |
 | **No sharp reference book** | No Pinnacle, Circa or liquid exchange prices. | Fair odds come from one or two soft books, so EV is unreliable. OddsJam-style tools anchor fair odds on sharp books. | Add Pinnacle (a scraper exists in `integrations/ev_tool/pinnacle_odds_scraper.py`) or another sharp source. |
 | **No deep links, start times or props** | No `betUrl`/`eventUrl`, no `startTime`, no player props. | Every Bet button is a dead end; rows say "Start time not entered"; prop tools are empty. | Per-quote `betUrl`/`eventUrl`, `startTime` on every quote, player props with `player`/`playerId`. |
@@ -42,7 +43,8 @@ All of this is in `public/ev-feed-normalize.js` (run in a background worker, `pu
 - **Start times:** books whose `ts` values are whole-minute game starts (Bally Bet, BetRivers, Desert Diamond, theScore Bet) have them moved to `startTime`. Their price age shows as unknown. A start time from any book applies to the whole game. Pregame prices on games that have already started are dropped.
 - **Mirrored books:** books that post the same price on 70% or more of 30+ shared markets are one reference in the fair odds. In the live feed that is BetRivers, Desert Diamond and Bally Bet (Kambi).
 - **Main vs alternate lines:** for each book, the spread/total line priced closest to even money is the main line. Its others show under Alternate lines on the Odds Screen, and they still compare across books.
-- **Sanity limits:** by default, EV above 25%, arbitrage above 15% and middles costing more than 8% are hidden. Each can be changed.
+- **Expired prices:** pregame prices not refreshed for 15 minutes are ignored, and older copies of a selection give way to the newest. Each selection gets a site id that stays the same across scrapes.
+- **Sanity limits:** by default, EV above 25% (10% when one book sets the fair price), arbitrage above 15%, holds and promo pairs priced like a 15%+ arbitrage, and middles costing more than 8% are hidden. Each EV, arbitrage and middle limit can be changed.
 
 On 30 September 2026 this kept about 14,000 of 23,000 quotes. It skipped roughly 6,000 duplicates, 2,500 records filed under the wrong game or market, and a few hundred prices on started games. The feed panel shows the skipped count on each update.
 
@@ -105,26 +107,47 @@ This is an illustrative schema, not current market data. Also return the other o
 - True stake constraints need max/min stake and exchange fee/commission information. The current calculators do not enforce book limits or execute wagers.
 - Send accurate `ts` values, even when prices do not move. Do not replace the observation timestamp with the time an HTTP response is delivered.
 
-## 2. DFS data and payouts
+## 2. DFS (pick'em) lines and player props
 
-Proposed routes: `GET /dfs/props` and `GET /dfs/payouts`.
+The DFS tools read pick'em lines from the same `GET /quotes` snapshot as everything else; no separate route is needed. Send two kinds of records:
+
+**1. Pick'em lines**: one record per app, player, market, line and side. `book` is the app (`PrizePicks`, `Underdog`, `Sleeper`, `Betr`, `Dabble`, `ParlayPlay` ...). `odds` may be omitted, because pick'em apps post a line, not a price.
 
 ```json
-{
-  "dfs": [{
-    "id": "platform:event:player:market:line:side",
-    "sport": "NBA", "event": "Example Away vs Example Home",
-    "player": "Example Player", "market": "Points",
-    "line": 24.5, "side": "Over", "app": "PrizePicks",
-    "probability": 0.54, "ts": "2026-09-25T18:00:00Z"
-  }],
-  "paytables": { "PrizePicks": { "2": [0, 0, 3] } }
-}
+{ "id": "pp:buf-mia:josh-allen:passing-yards:262.5:over", "book": "PrizePicks",
+  "sport": "nfl", "event": "Bills @ Dolphins", "startTime": "2026-10-04T17:00:00Z",
+  "type": "prop", "player": "Josh Allen", "team": "BUF", "market": "Passing Yards",
+  "line": 262.5, "side": "over", "selection_name": "Josh Allen Over 262.5",
+  "live": false, "ts": "2026-10-01T15:02:11Z" }
 ```
 
-Payout values are **illustrative**, not official current rules. Each array index is the exact hit count; the value is total return including stake. Supply actual rules by app, entry size and entry type (power/flex), plus boosts, reduced-payout picks, DNP/void/push handling and same-game restrictions. Distinct entry types need a confirmed schema and adapter; the basic workspace format stores payout arrays by app and size.
+Send both `over` and `under` when the app offers both.
 
-Supply probabilities from a documented model or a complete matching sportsbook market. A DFS line alone does not provide a hit probability. Include probability source, model/version and observation time so uncertainty and freshness can be shown. Player/event IDs must match other feeds for sportsbook comparisons.
+**2. Sportsbook player props**: the same shape, with a sportsbook `book` and real American `odds`, for both sides. The site computes each pick's hit chance from these: the no-vig probability at the **same player, market and line**, with Pinnacle weighted 3× and mirrored books (Kambi) counted once.
+
+```json
+{ "id": "dk:buf-mia:josh-allen:passing-yards:262.5:over", "book": "DraftKings",
+  "sport": "nfl", "event": "BUF Bills @ MIA Dolphins", "type": "prop", "player": "Josh Allen",
+  "market": "Passing Yards", "line": 262.5, "side": "over", "odds": -120,
+  "selection_name": "Josh Allen Over 262.5", "live": false, "ts": "2026-10-01T15:02:09Z" }
+```
+
+Rules that make the matching work:
+
+- **Same player name and line** across apps and books. Market names may differ in common ways ("Pass Yds", "Passing Yards" and "Player Passing Yards" are treated as one). Keep the rest consistent, or send a shared `marketId`.
+- **Event names** follow the "Away @ Home" convention used for game lines. Games are matched across books the same way.
+- **`type: "prop"`**, `player`, numeric `line`, and `side` `over`/`under` on every prop.
+- **`ts`** is when the line was seen; **`startTime`** is the game start. Lines on started games are dropped.
+- **Optional `probability`** (0–1) on a pick'em record overrides the sportsbook-based hit chance, for example from your own model. Say where it comes from.
+
+Without matching sportsbook props, the picks still show, but with "—" for hit chance, and the optimizer can't rank them.
+
+**Payouts.** The site starts from each app's published standard payouts:
+
+- **PrizePicks Power Play:** 2-pick 3×, 3-pick 6×, 4-pick 10×, 5-pick 20×, 6-pick 37.5×. Source: prizepicks.com/resources/prizepicks-payouts, updated 9 Sep 2026.
+- **Underdog Standard:** 2–8 picks 3.5×, 6.5×, 12×, 20×, 35×, 65×, 120×. Source: Underdog help center.
+
+Members can edit and save their own. Sleeper and other apps price per pick, so a pick's multiplier (`multiplier`, total return per $1) would be needed to support them. Flex, Demon/Goblin and reduced-payout picks are not modeled.
 
 ## 3. Prediction contracts, depth and personal records
 

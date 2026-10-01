@@ -19,7 +19,7 @@ export const EV_SUITE_TOOLS = [
   ['Workspace','connections','Coverage & account','Data health, account preferences, issue reports, and connection readiness.']
 ];
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const defaults = { minSharpBooks:1,maxVigPercent:20,devigMethod:'multiplicative',bookRules:[],liquidityWeighting:false,allowProjection:false,liveMaxAgeSeconds:90,pregameMaxAgeSeconds:86400,minEvPercent:0,maxEvPercent:null,minArbPercent:0,maxArbPercent:null,minOdds:null,maxOdds:null,minLiquidity:0,minAvailableStake:0,league:'',market:'',side:'',gameStatus:'',region:'',oddsFormat:'american',cardTap:'expand',hideTaken:false,showHidden:false,arbMode:'arbs',autoRefresh:0 };
+const defaults = { minSharpBooks:1,maxVigPercent:20,devigMethod:'multiplicative',bookRules:[],liquidityWeighting:false,allowProjection:false,liveMaxAgeSeconds:90,pregameMaxAgeSeconds:900,minEvPercent:0,maxEvPercent:null,minArbPercent:0,maxArbPercent:null,minOdds:null,maxOdds:null,minLiquidity:0,minAvailableStake:0,league:'',market:'',side:'',gameStatus:'',region:'',oddsFormat:'american',cardTap:'expand',hideTaken:false,showHidden:false,arbMode:'arbs',autoRefresh:0 };
 const num = value => value === '' || value == null ? null : Number.isFinite(Number(value)) ? Number(value) : null;
 const id = () => crypto.randomUUID();
 const label = q => [q.player || q.event,q.market,q.side,q.line].filter(x=>x!==''&&x!=null).join(' · ');
@@ -47,7 +47,9 @@ export function createEvSuite(host) {
     for(const key of ['presets','watchRules','alertLog','reports','builderIds'])if(!Array.isArray(s[key]))s[key]=[];
     return s;
   }
-  const settings = () => ({...defaults,...root().settings});
+  // Pregame prices expire after 15 minutes (the feed rescrapes every few). A saved value equal to the
+  // old 24-hour default is treated as unset, so it moves to the new default.
+  const settings = () => { const saved = {...root().settings}; if (Number(saved.pregameMaxAgeSeconds) === 86400) delete saved.pregameMaxAgeSeconds; return {...defaults,...saved}; };
   function save(redraw=true) {host.setBuilderIds?.([...root().builderIds]);if(host.save()===false)throw Error('Changes remain in this open workspace, but could not be saved. Export your records before leaving.');if(redraw)host.redraw();}
   const operations=createEvOperations({getState:host.getState,save:()=>save(false),redraw:host.redraw,navigate:host.navigate});
   const markets=createEvMarketViews({getState:host.getState,save:()=>save(false),redraw:host.redraw,navigate:host.navigate,getSettings:settings});
