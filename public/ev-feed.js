@@ -29,11 +29,11 @@ function coverage(tool) {
   return 'Uses shared sportsbook quotes. EV and comparison tools need complete matching outcomes across books.';
 }
 
-export function createQuoteFeedControls({ sync, getState, getTool, canRefresh = () => true, storage }) {
+export function createQuoteFeedControls({ sync, getState, getTool, canRefresh = () => true, hasLive = () => true, storage }) {
   const panel = document.createElement('section');
   panel.className = 'ev-feed';
   panel.setAttribute('aria-label', 'Quote feed');
-  panel.innerHTML = `<div class="ev-feed-row"><div class="ev-feed-summary"><strong>Quote feed</strong><span data-feed-status role="status" aria-live="polite"></span></div><label class="ev-feed-refresh">Auto-refresh<select aria-label="Quote auto-refresh interval"><option value="0">Off</option><option value="3000" hidden>Every 3 seconds (live)</option><option value="10000">Every 10 seconds</option><option value="15000">Every 15 seconds</option><option value="30000">Every 30 seconds</option><option value="60000">Every 60 seconds</option></select></label><a href="/docs#api-requirements">Feed requirements</a></div><p class="ev-feed-meta" data-feed-meta></p><p class="ev-feed-detail" data-feed-detail></p><p class="ev-feed-coverage" data-feed-coverage></p>`;
+  panel.innerHTML = `<div class="ev-feed-row"><div class="ev-feed-summary"><strong>Quote feed</strong><span data-feed-status role="status" aria-live="polite"></span></div><label class="ev-feed-refresh">Auto-refresh<select aria-label="Quote auto-refresh interval"><option value="0">Off</option><option value="3000" hidden>Every 3 seconds (live)</option><option value="10000">Every 10 seconds</option><option value="15000">Every 15 seconds</option><option value="30000">Every 30 seconds</option><option value="60000">Every 60 seconds</option></select></label><a href="/docs#api-requirements">About the data</a></div><p class="ev-feed-meta" data-feed-meta></p><p class="ev-feed-detail" data-feed-detail></p><p class="ev-feed-coverage" data-feed-coverage></p>`;
   document.querySelector('.ev-header').after(panel);
   const button = document.querySelector('#ev-sync-api');
   const select = panel.querySelector('select');
@@ -41,12 +41,14 @@ export function createQuoteFeedControls({ sync, getState, getTool, canRefresh = 
   const meta = panel.querySelector('[data-feed-meta]');
   const detail = panel.querySelector('[data-feed-detail]');
   const toolCoverage = panel.querySelector('[data-feed-coverage]');
-  let chosen = DEFAULT_REFRESH_MS, interval = 0, failures = 0, timer = null, pending = false, nextAt = 0, retryNotBefore = 0, error = '', blocked = false, warning = '';
+  let chosen = DEFAULT_REFRESH_MS, interval = 0, failures = 0, timer = null, pending = false, nextAt = 0, retryNotBefore = 0, error = '', blocked = false, warning = '', skipped = 0;
   // Persist the user's chosen cadence, not an in-flight request or failure state.
   const preferenceKey = 'sportslab-quote-refresh-ms';
   // Auto-refresh every 10 seconds unless the viewer has chosen a cadence (including Off).
   try { storage ??= window.localStorage; const raw = storage.getItem(preferenceKey), saved = Number(raw); if (raw !== null) chosen = waitOptions.includes(saved) ? saved : 0; } catch { /* Session controls still work without storage. */ }
-  const live = () => LIVE_TOOLS.has(getTool());
+  // The 3-second cadence only applies while the feed actually has in-play prices; polling a
+  // multi-MB snapshot that fast for an empty live board only costs data and battery.
+  const live = () => LIVE_TOOLS.has(getTool()) && hasLive();
   const effective = () => live() ? LIVE_REFRESH_MS : chosen;
   interval = effective();
   const savePreference = () => { try { storage.setItem(preferenceKey, String(chosen)); } catch { /* Do not block a local control. */ } };
@@ -61,7 +63,7 @@ export function createQuoteFeedControls({ sync, getState, getTool, canRefresh = 
     const quotes = state.quotes.filter(quote => quote.source === 'local-api');
     const stale = quotes.filter(quote => quote.live && (!Number.isFinite(Date.parse(quote.ts)) || Date.now() - Date.parse(quote.ts) > 90_000 || Date.parse(quote.ts) > Date.now() + 5_000)).length;
     const newest = quotes.reduce((latest, quote) => Date.parse(quote.ts) > Date.parse(latest || '1970-01-01') ? quote.ts : latest, '');
-    let label = pending ? 'Syncing…' : error ? 'Refresh failed' : state.apiSyncedAt ? 'Snapshot available' : 'Not checked';
+    let label = pending ? 'Updating…' : error ? 'Refresh failed' : state.apiSyncedAt ? 'Up to date' : 'Not checked';
     if (!pending && error && navigator.onLine === false) label = 'Connection unavailable';
     else if (!pending && blocked && interval) label = 'Auto-refresh paused';
     else if (!pending && interval && document.hidden) label = 'Paused in background';
@@ -69,12 +71,12 @@ export function createQuoteFeedControls({ sync, getState, getTool, canRefresh = 
     status.textContent = label;
     status.dataset.tone = error || stale ? 'warning' : pending ? 'busy' : 'neutral';
     button.disabled = pending;
-    button.textContent = pending ? 'Syncing…' : 'Sync API';
-    const syncAt = state.apiSyncedAt ? `Last sync ${elapsed(state.apiSyncedAt)}` : 'No successful sync yet';
-    meta.textContent = `${quotes.length} API quotes · ${syncAt}${newest ? ` · Newest price observed ${elapsed(newest)}` : ''}${stale ? ` · ${stale} expired live quotes excluded from live calculations` : ''}`;
-    meta.title = `Last successful sync: ${clockTime(state.apiSyncedAt)}. Latest price observation: ${clockTime(newest)}.`;
+    button.textContent = pending ? 'Updating…' : 'Refresh prices';
+    const syncAt = state.apiSyncedAt ? `Updated ${elapsed(state.apiSyncedAt)}` : 'Not updated yet';
+    meta.textContent = `${quotes.length.toLocaleString()} prices · ${syncAt}${newest ? ` · Newest price seen ${elapsed(newest)}` : ''}${stale ? ` · ${stale} expired live prices excluded` : ''}${skipped ? ` · ${skipped.toLocaleString()} unusable feed prices hidden` : ''}`;
+    meta.title = `Last update: ${clockTime(state.apiSyncedAt)}. Latest price observation: ${clockTime(newest)}.${skipped ? ` ${skipped} feed prices were hidden because their team or side could not be confirmed (for example a price filed under the wrong game, or both teams priced as underdogs at one book).` : ''}`;
     const retry = interval && nextAt && !document.hidden && !blocked ? ` Next attempt in ${Math.max(0, Math.ceil((nextAt - Date.now()) / 1000))}s.` : '';
-    detail.textContent = error ? `${error}${blocked ? ' Fix the issue, then press Sync API to retry.' : retry}` : warning || (interval ? 'Auto-refresh runs while this tab is visible. Your saved prices remain available if a request fails.' : 'Press Sync API once, or enable auto-refresh when your feed is ready.');
+    detail.textContent = error ? `${error}${blocked ? ' Press Refresh prices to try again.' : retry}` : warning || (interval ? 'Prices refresh automatically while this tab is visible. The last prices stay on screen if a refresh fails.' : 'Auto-refresh is off. Press Refresh prices to update.');
     toolCoverage.textContent = coverage(getTool());
   }
 
@@ -109,6 +111,7 @@ export function createQuoteFeedControls({ sync, getState, getTool, canRefresh = 
       retryNotBefore = 0;
       success = true;
       if (result?.saved === false) warning = 'Prices updated in memory, but browser storage is unavailable. Export your workspace before leaving.';
+      skipped = Number(result?.skipped) || 0;
     } catch (reason) {
       failures++;
       blocked = reason.retryable === false;

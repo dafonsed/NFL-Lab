@@ -20,7 +20,9 @@ export const MORE_TOOL_GROUPS = Object.freeze([
 ]);
 export const MORE_TOOLS = Object.freeze(MORE_TOOL_GROUPS.flatMap(group => group.tools.map(tool => Object.freeze({...tool,group:group.label}))));
 export const SECONDARY_TOOLS = Object.freeze(MORE_TOOLS.filter(tool => !['ev-live','arb-live'].includes(tool.key)));
+// Major leagues plus the other sports the quote feed carries (see public/ev-feed-normalize.js).
+const EV_SPORT_CODES = new Set(['nfl','mlb','nba','wnba','nhl','soccer','tennis','mma','boxing','snooker','darts','golf','cricket','rugby','ncaaf','ncaab','other']);
 export function evToolUrl(key, sport = 'all') {
-  const code = ['nfl','mlb','nba','wnba','nhl','soccer'].includes(String(sport).toLowerCase()) ? String(sport).toLowerCase() : 'all';
+  const code = EV_SPORT_CODES.has(String(sport ?? '').toLowerCase()) ? String(sport).toLowerCase() : 'all';
   return key === 'tracker' ? '/ev/tracker' + (code === 'all' ? '' : '?sport='+code) : `/ev?sport=${code}#${key}`;
 }

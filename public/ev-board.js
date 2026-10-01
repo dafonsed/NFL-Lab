@@ -32,7 +32,7 @@ export const bookLogo = (name, size = 28) => {
 
 export function startLabel(quote) {
   const at = Date.parse(quote.startTime);
-  if (!Number.isFinite(at)) return quote.live ? 'Live now' : quote.displayTime || 'Start time not entered';
+  if (!Number.isFinite(at)) return quote.live ? 'Live now' : quote.displayTime || 'Start time TBD';
   const date = new Date(at), today = new Date();
   const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
   const time = date.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
@@ -41,7 +41,10 @@ export function startLabel(quote) {
 }
 
 const lineText = quote => quote.line === '' || quote.line == null ? '' : ` ${quote.type === 'spread' && Number(quote.line) > 0 ? '+' : ''}${quote.line}`;
-export const selectionText = quote => `${quote.player ? quote.player + ' ' : ''}${quote.side}${lineText(quote)}`;
+// Feed quotes carry `selection` (team, Over/Under, Draw); `side` is the internal home/away/over key.
+export const selectionText = quote => `${quote.player ? quote.player + ' ' : ''}${quote.selection || quote.side}${lineText(quote)}`;
+// The Bet button only appears when the feed supplied a link for this price.
+export const hasBetLink = quote => Boolean(quote.betUrl || quote.eventUrl || quote.prefillUrl || (quote.links && Object.keys(quote.links).length));
 
 const sortHeader = (label, key, sort, extra = '') => `<th scope="col" ${extra} aria-sort="${sort === key ? 'descending' : 'none'}"><button type="button" data-sort="${key}" class="evb-sort${sort === key ? ' is-active' : ''}">${label}<span aria-hidden="true">${sort === key ? '↓' : '↕'}</span></button></th>`;
 
@@ -49,7 +52,8 @@ const sortHeader = (label, key, sort, extra = '') => `<th scope="col" ${extra} a
 export function renderEvBoard(ctx) {
   const { rows, sort, openId, oddsLabel } = ctx;
   const maxEv = Math.max(...rows.map(row => row.ev).filter(Number.isFinite), 0.0001);
-  const body = rows.map(({quote:q, fair, ev}) => {
+  const body = rows.map(({quote:q, fair, ev, consensus}) => {
+    const fairBooks = [...new Set((consensus?.books || []).map(book => book.book))];
     const open = openId === q.id, flags = ctx.flags(q.id), stake = ctx.stake(fair, q.odds);
     const width = Math.max(6, Math.min(100, ev / maxEv * 100));
     const tier = ev >= .05 ? 'high' : ev >= .02 ? 'mid' : 'low';
@@ -62,10 +66,10 @@ export function renderEvBoard(ctx) {
       <td class="evb-market"><span>${esc(market)}</span>${q.live ? '<small class="evb-live-dot">Live</small>' : ''}</td>
       <td class="evb-bet"><span class="evb-book-logo">${bookLogo(q.book, 30)}</span><span><strong>${esc(selectionText(q))}</strong><small class="evb-bet-market">${esc(market)}</small><small>${esc(q.book)}${Number(q.liquidity) > 0 ? ` · ${money(Number(q.liquidity))} avail.` : ''}</small></span></td>
       <td class="evb-odds"><span class="evb-price">${esc(oddsLabel(q.odds))}</span><small>Fair ${esc(fairOdds)}</small></td>
-      <td class="evb-prob"><strong>${Number.isFinite(fair) ? percent(fair) : '—'}</strong><small>No-vig</small></td>
+      <td class="evb-prob"${fairBooks.length ? ` title="Fair price from ${esc(fairBooks.join(', '))}"` : ''}><strong>${Number.isFinite(fair) ? percent(fair) : '—'}</strong><small>${fairBooks.length ? `Fair from ${fairBooks.length} ${fairBooks.length === 1 ? 'book' : 'books'}` : 'No-vig'}</small></td>
       <td class="evb-stake"><strong>${money(stake)}</strong><small>${esc(ctx.kellyLabel)}</small></td>
       <td class="evb-actions"><div>
-        <button type="button" class="evb-link" data-suite-action="link" data-id="${esc(q.id)}" aria-label="Open ${esc(q.book)} bet link">Bet${boardIcon('link', 13)}</button>
+        ${hasBetLink(q) ? `<button type="button" class="evb-link" data-suite-action="link" data-id="${esc(q.id)}" aria-label="Open ${esc(q.book)} bet link">Bet${boardIcon('link', 13)}</button>` : ''}
         <button type="button" class="evb-icon" data-suite-action="track" data-id="${esc(q.id)}" data-tool="${ctx.live ? 'ev-live' : 'ev-pre'}" aria-label="Track this bet" title="Track bet">${boardIcon('track')}</button>
         ${q.live ? '' : `<button type="button" class="evb-icon" data-parlay="${esc(q.id)}" aria-label="Add to parlay" title="Add to parlay">${boardIcon('parlay')}</button>`}
         <button type="button" class="evb-icon evb-toggle" data-evb-toggle="${esc(q.id)}" aria-expanded="${open}" aria-controls="evb-detail-${esc(q.id)}" aria-label="${open ? 'Hide' : 'Compare'} prices for ${esc(selectionText(q))}" title="Compare books">${boardIcon('chevron')}</button>

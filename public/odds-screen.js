@@ -1,5 +1,5 @@
 import { decimal, fresh, oddsLabel, probabilityToAmerican } from './ev-core.js?v=2';
-import { boardIcon, bookLogo } from './ev-board.js?v=4';
+import { boardIcon, bookLogo } from './ev-board.js?v=5';
 import { leagueMark, teamLogo } from './sports-identity.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -9,7 +9,7 @@ const searchIcon = svg('<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4
 const layers = svg('<path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5m-18 5 9 5 9-5"/>');
 const settingsIcon = svg('<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="var(--os-panel)"/><circle cx="15" cy="17" r="3" fill="var(--os-panel)"/>');
 const expandIcon = svg('<path d="M14 4h6v6M20 4l-6 6M10 20H4v-6m0 6 6-6"/>');
-const normalizedLine = q => q.line === '' || q.line == null ? '' : (q.type === 'spread' || q.type === 'alternate' && !/^(over|under)$/i.test(q.side)) ? Math.abs(Number(q.line)) : Number.isFinite(Number(q.line)) ? Number(q.line) : q.line;
+const normalizedLine = q => q.line === '' || q.line == null ? '' : q.type === 'spread' && ['home','away'].includes(q.side) ? (q.side === 'away' ? -Number(q.line) : Number(q.line)) : (q.type === 'spread' || q.type === 'alternate' && !/^(over|under)$/i.test(q.side)) ? Math.abs(Number(q.line)) : Number.isFinite(Number(q.line)) ? Number(q.line) : q.line;
 const unavailablePrice = quote => Boolean(quote.suspended) || ['suspended','closed','unavailable'].includes(String(quote.status || '').toLowerCase());
 // One availability check per quote per render pass (same timestamp): the rules are costly on a full slate.
 const currentCache = new WeakMap();
@@ -25,11 +25,12 @@ const trendIcon = svg('<path d="m3 16 5.5-5.5 4 4L21 6"/><path d="M15 6h6v6"/>')
 const lockIcon = svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>');
 const MAIN_TYPES = new Set(['moneyline','three-way','spread','total']);
 const typeRank = q => ({moneyline:0,'three-way':0,spread:1,total:2,prop:3,alternate:4})[q.type] ?? 5;
-const isMain = q => MAIN_TYPES.has(q.type) && !q.player;
+const isMain = q => MAIN_TYPES.has(q.type) && !q.player && !q.alt;
 const isProp = q => !isMain(q) && q.type !== 'alternate' && (q.type === 'prop' || Boolean(q.player));
 // Market tabs: grouped views first, then each market by name. Group values share the market filter.
 const ALL_MARKETS = 'group:all';
-const MARKET_GROUPS = [['group:main','Main markets',isMain],['group:props','Player props',isProp],['group:alt','Alternate lines',q => q.type === 'alternate']];
+const isAlternate = q => q.type === 'alternate' || Boolean(q.alt);
+const MARKET_GROUPS = [['group:main','Main markets',isMain],['group:props','Player props',isProp],['group:alt','Alternate lines',isAlternate]];
 const matchesMarket = (q, value) => {
   if (!value || value === ALL_MARKETS) return true;
   const group = MARKET_GROUPS.find(([key]) => key === value);
@@ -67,8 +68,9 @@ export function buildOddsBoard(records, books, now = Date.now()) {
   const events = new Map();
   for (const q of records) {
     if (!q.event || !q.market || !q.side || !books.includes(q.book) || q.depthOnly || (!Number.isFinite(decimal(q.odds)) && !unavailablePrice(q))) continue;
-    const eventKey = JSON.stringify([q.sport, q.event, Boolean(q.live)]);
-    const marketKey = JSON.stringify([q.type, q.market, q.player || '', normalizedLine(q), q.period || 'full']);
+    // Books name one game differently; feed quotes share an eventId across books.
+    const eventKey = JSON.stringify([q.sport, q.eventId || q.event, Boolean(q.live)]);
+    const marketKey = JSON.stringify([q.type, marketName(q).toLowerCase(), q.player || '', normalizedLine(q), q.period || 'full']);
     if (!events.has(eventKey)) events.set(eventKey, { key:eventKey, first:q, markets:new Map() });
     const event = events.get(eventKey);
     if (!event.markets.has(marketKey)) event.markets.set(marketKey, { key:eventKey + marketKey, first:q, latest:new Map() });
@@ -81,7 +83,7 @@ export function buildOddsBoard(records, books, now = Date.now()) {
     const quotes = [...market.latest.values()];
     // Over/Yes first; team sides follow the event's away @ home order, then alphabetical (Draw last).
     const order = String(market.first.displayEvent || market.first.event || '');
-    const position = side => { const index = order.indexOf(side); return index < 0 ? Infinity : index; };
+    const position = side => { const fixed = {away:0, home:1, draw:2}[side]; if (fixed != null) return fixed; const index = order.indexOf(side); return index < 0 ? Infinity : index; };
     const sides = [...new Set(quotes.map(q => q.side))].sort((a,b) => /^(over|yes)$/i.test(a) ? -1 : /^(over|yes)$/i.test(b) ? 1 : (position(a) - position(b)) || a.localeCompare(b));
     return {...market, sides:sides.map(side => {
       const prices = quotes.filter(q => q.side === side);
@@ -92,9 +94,13 @@ export function buildOddsBoard(records, books, now = Date.now()) {
   })}));
 }
 
-export function createOddsScreen({ getQuotes, brandMark, onSport, redraw, storage, defaultFormat = 'decimal', getSportsbookState = () => '', onAllSportsbooks = () => {} }) {
+export function createOddsScreen({ getQuotes, brandMark, onSport, redraw, storage, defaultFormat = 'american', getSportsbookState = () => '', onAllSportsbooks = () => {} }) {
   // marketFilter: null = default tab (Main markets when present), '' = All markets, else a group or market name.
-  let eventFilter = '', marketFilter = null, query = '', format = defaultFormat === 'american' ? 'american' : 'decimal', expanded = false;
+  // American odds unless the viewer chose decimal, matching every other +EV tab.
+  let eventFilter = '', marketFilter = null, query = '', format = defaultFormat === 'decimal' ? 'decimal' : 'american', expanded = false;
+  // A full slate is thousands of rows; show games in pages.
+  const EVENT_PAGE = 25;
+  let eventLimit = EVENT_PAGE;
   let settingsOpen = false, hiddenBooks = new Set();
   let bookOrder = [];
   let visibleBookOrder = [];
@@ -143,7 +149,9 @@ export function createOddsScreen({ getQuotes, brandMark, onSport, redraw, storag
     const leagueQuotes = all.filter(q => !sport || !q.sport || q.sport === sport);
     // Refresh compares only the displayed league, so other sports never force a redraw.
     renderNow = Date.now();lastSport = sport;lastDataSignature = dataSignature(leagueQuotes, renderNow);
-    const events = [...new Set(leagueQuotes.map(q => q.event))].sort();
+    const eventNames = new Map();
+    for (const q of leagueQuotes) { const key = q.eventId || q.event; if (!eventNames.has(key)) eventNames.set(key, q.displayEvent || q.event); }
+    const events = [...eventNames.keys()].sort((a,b) => eventNames.get(a).localeCompare(eventNames.get(b)));
     const markets = [...new Set(leagueQuotes.map(marketName))].filter(Boolean).sort();
     if (!events.includes(eventFilter)) eventFilter = '';
     const leagueGroups = MARKET_GROUPS.filter(([,,test]) => leagueQuotes.some(test));
@@ -151,28 +159,30 @@ export function createOddsScreen({ getQuotes, brandMark, onSport, redraw, storag
     const market = marketFilter ?? (leagueGroups.some(([key]) => key === 'group:main') ? 'group:main' : ALL_MARKETS);
     // Tabs list the market groups present for the selected league and event.
     const scopeNames = new Map();
-    for (const q of leagueQuotes) if ((!eventFilter || q.event === eventFilter) && marketName(q) && !scopeNames.has(marketName(q))) scopeNames.set(marketName(q), q);
+    for (const q of leagueQuotes) if ((!eventFilter || (q.eventId || q.event) === eventFilter) && marketName(q) && !scopeNames.has(marketName(q))) scopeNames.set(marketName(q), q);
     const scoped = [...scopeNames.values()], names = test => [...scopeNames].filter(([,q]) => test(q)).sort(([a,x],[b,y]) => typeRank(x) - typeRank(y) || a.localeCompare(b)).map(([name]) => [name,name]);
     const tabs = [[ALL_MARKETS,'All markets'],
       ...(scoped.some(isMain) ? [['group:main','Main markets'],...names(isMain)] : []),
       ...(scoped.some(isProp) ? [['group:props','Player props'],...names(isProp)] : []),
-      ...(scoped.some(q => q.type === 'alternate') ? [['group:alt','Alternate lines']] : []),
-      ...names(q => !isMain(q) && !isProp(q) && q.type !== 'alternate')];
+      // Alternate lines share market names with main lines, so check every quote, not one per name.
+      ...(leagueQuotes.some(q => (!eventFilter || (q.eventId || q.event) === eventFilter) && isAlternate(q)) ? [['group:alt','Alternate lines']] : []),
+      ...names(q => !isMain(q) && !isProp(q) && !isAlternate(q))];
     const presentBooks = [...new Set(leagueQuotes.map(q => q.book).filter(Boolean))];
     bookOrder = [...bookOrder,...presentBooks.filter(book => !bookOrder.includes(book))];
     const availableBooks = bookOrder.filter(book => presentBooks.includes(book));
     visibleBookOrder = availableBooks;
     const stateFilter = getSportsbookState();
     const allBooksSelected = !stateFilter && availableBooks.every(book => !hiddenBooks.has(book));
-    const filtered = leagueQuotes.filter(q => (!eventFilter || q.event === eventFilter) && matchesMarket(q, market) && (!query || [q.player,q.event,q.market,q.book,q.sport,q.league].some(value => String(value || '').toLowerCase().includes(query.toLowerCase().trim()))));
+    const filtered = leagueQuotes.filter(q => (!eventFilter || (q.eventId || q.event) === eventFilter) && matchesMarket(q, market) && (!query || [q.player,q.displayEvent,q.event,q.selection,q.market,q.book,q.sport,q.league].some(value => String(value || '').toLowerCase().includes(query.toLowerCase().trim()))));
     const present = new Set(filtered.map(q => q.book));
     const books = availableBooks.filter(book => present.has(book) && !hiddenBooks.has(book));
-    const groups = buildOddsBoard(filtered, books, renderNow);
+    const allGroups = buildOddsBoard(filtered, books, renderNow), groups = allGroups.slice(0, eventLimit);
     // A full slate stays available without mounting thousands of offscreen rows: large demo
     // views (all markets, props) open the first game only; main-market slates open every game.
-    const heavy = groups.reduce((n,event) => n + event.markets.reduce((sum,m) => sum + m.sides.length,0),0) > 160;
+    // Alternate-line ladders reach 150+ rows per game, so large views open with the first game only.
+    const heavy = groups.reduce((n,event) => n + event.markets.reduce((sum,m) => sum + m.sides.length,0),0) > 400;
     groups.forEach((event,index) => {
-      if (!event.first.demo || initializedEvents.has(event.key)) return;
+      if (initializedEvents.has(event.key)) return;
       initializedEvents.add(event.key);
       if (index > 0 && !eventFilter && heavy) collapsed.add(event.key);
     });
@@ -188,9 +198,9 @@ export function createOddsScreen({ getQuotes, brandMark, onSport, redraw, storag
       const marketCount = `${event.markets.length} ${event.markets.length === 1 ? 'market' : 'markets'}`;
       const league = !sport && q.sport ? `<span class="os-league" title="${esc(q.sport)}">${leagueMark(sportKey) || ''}</span>` : '';
       const heading = `<th scope="rowgroup" class="os-c-time"><div class="os-event-heading"><button type="button" class="os-toggle" data-os-toggle="${esc(event.key)}" aria-expanded="${!isCollapsed}" aria-label="${isCollapsed ? 'Expand' : 'Collapse'} ${esc(q.event)}" title="${isCollapsed ? 'Show' : 'Hide'} ${esc(marketCount)}">${chevron}</button><span class="os-when">${q.live ? '<span class="os-live-pill">Live</span>' : `<strong>${esc(kickoff(q))}</strong>`}<small title="${esc(q.event)}">${league}${esc(q.displayEvent || q.event)}</small><span class="os-event-count">${esc(marketCount)}</span></span></div></th>`;
-      if (isCollapsed) return `<tbody class="os-event-group is-collapsed"><tr class="os-row is-game-start">${heading}<td class="os-collapsed-cell" colspan="${columns - 1}"><button type="button" class="os-collapsed-summary" data-os-toggle="${esc(event.key)}" tabindex="-1"><strong>${esc(q.event)}</strong><span>${esc(marketCount)} · Show prices</span></button></td></tr></tbody>`;
+      if (isCollapsed) return `<tbody class="os-event-group is-collapsed"><tr class="os-row is-game-start">${heading}<td class="os-collapsed-cell" colspan="${columns - 1}"><button type="button" class="os-collapsed-summary" data-os-toggle="${esc(event.key)}" tabindex="-1"><strong>${esc(q.displayEvent || q.event)}</strong><span>${esc(marketCount)} · Show prices</span></button></td></tr></tbody>`;
       let rowIndex = 0;
-      const markets = [...event.markets].sort((a,b) => typeRank(a.first) - typeRank(b.first)).map(market => {
+      const markets = [...event.markets].sort((a,b) => typeRank(a.first) - typeRank(b.first) || (Number(normalizedLine(a.first)) || 0) - (Number(normalizedLine(b.first)) || 0)).map(market => {
         const q = market.first;
         const marketLabel = [marketName(q),q.period && q.period !== 'full' ? q.displayPeriod || q.period : ''].filter(Boolean).join(' · ');
         const sides = market.sides.map(row => {
@@ -199,7 +209,8 @@ export function createOddsScreen({ getQuotes, brandMark, onSport, redraw, storag
           return {...row, current, reference, key:JSON.stringify([market.key,row.side]),
             worstDecimal:worst != null && worst < row.bestDecimal ? worst : null,
             implied:current.length ? current.reduce((sum,quote) => sum + 1 / decimal(quote.odds),0) / current.length : NaN,
-            selection:[q.player,row.side,reference ? lineLabel({...reference,side:row.side}) : ''].filter(Boolean).join(' ')};
+            name:reference?.selection || row.side,
+            selection:[q.player,reference?.selection || row.side,reference ? lineLabel({...reference,side:row.side}) : ''].filter(Boolean).join(' ')};
         });
         // Consensus no-vig fair value from the average implied probability of every side.
         const impliedTotal = sides.reduce((sum,row) => sum + row.implied,0);
@@ -213,7 +224,7 @@ export function createOddsScreen({ getQuotes, brandMark, onSport, redraw, storag
           const averageTitle = `Average of ${row.current.length} current ${row.current.length === 1 ? 'price' : 'prices'} at this line${Number.isFinite(row.fair) ? ` · no-vig fair ${price(1 / row.fair)}` : ''}`;
           const tools = `${best && !best.demo ? `<button type="button" class="os-icon" data-suite-action="track" data-id="${esc(best.id)}" aria-label="Track ${esc(row.selection)} at ${esc(best.book)}" title="Track best price">${boardIcon('track',14)}</button>` : ''}${row.reference ? `<button type="button" class="os-icon" data-line-history="${esc(row.reference.id)}" aria-label="Line history for ${esc(row.selection)}" title="Line history">${trendIcon}</button>` : ''}`;
           return `<tr class="os-row${index === 0 ? ' is-game-start' : ''}${sideIndex === 0 && index > 0 ? ' is-market-start' : ''}${best ? '' : ' is-stale'}" data-os-row="${esc(row.key)}">${time}
-            <td class="os-selection"${open}><div class="os-sel">${sideMark(q,row.side)}<span class="os-sel-copy">${best ? `<button type="button" class="os-sel-name" data-detail="${esc(best.id)}" aria-expanded="false" aria-label="Compare prices and analysis for ${esc(row.selection)}">${esc(row.selection)}</button>` : `<strong>${esc(row.selection)}</strong>`}<small>${esc(marketLabel)}${q.live ? ' · <em>Live</em>' : ''}</small></span><span class="os-row-tools">${tools}</span></div></td>
+            <td class="os-selection"${open}><div class="os-sel">${sideMark({...q,displayEvent:q.displayEvent || q.event},row.name)}<span class="os-sel-copy">${best ? `<button type="button" class="os-sel-name" data-detail="${esc(best.id)}" aria-expanded="false" aria-label="Compare prices and analysis for ${esc(row.selection)}">${esc(row.selection)}</button>` : `<strong>${esc(row.selection)}</strong>`}<small>${esc(marketLabel)}${q.live ? ' · <em>Live</em>' : ''}</small></span><span class="os-row-tools">${tools}</span></div></td>
             <td class="os-best-cell"${open}>${best ? `<span class="os-best"><strong>${price(row.bestDecimal)}</strong><span class="os-best-logo" title="${esc(best.book)}">${bookLogo(best.book,18)}</span></span><span class="os-sr"> at ${esc(best.book)}</span>` : '<strong>—</strong><span class="os-sr">No current price</span>'}</td>
             <td class="os-average"${open} title="${esc(averageTitle)}"><strong>${price(row.average)}</strong></td>
             ${books.map(book => bookCell(byBook.get(book), row, row.reference?.line)).join('')}
@@ -230,7 +241,7 @@ export function createOddsScreen({ getQuotes, brandMark, onSport, redraw, storag
       <div class="os-toolbar">
         <div class="os-filterbar" role="search" aria-label="Filter odds">
           ${select('sport','League',[['','All leagues'],...sports.map(v => [v,v])],sport)}
-          ${select('event','Event',[['','All events'],...events.map(v => [v,v])],eventFilter)}
+          ${select('event','Event',[['','All events'],...events.map(v => [v,eventNames.get(v)])],eventFilter)}
           ${select('market','Market',[[ALL_MARKETS,'All markets'],...leagueGroups.map(([key,label]) => [key,label]),...markets.map(v => [v,v])],market)}
           <label class="os-field os-search">${searchIcon}<span>Player</span><input id="os-search" type="search" aria-label="Search players, teams, leagues or markets" placeholder="Player, team or market" value="${esc(query)}" autocomplete="off"></label>
         </div>
@@ -239,10 +250,10 @@ export function createOddsScreen({ getQuotes, brandMark, onSport, redraw, storag
         </div><button type="button" class="os-round" data-os-action="expand" aria-pressed="${expanded}" aria-label="${expanded ? 'Exit expanded view' : 'Expand odds screen'}">${expandIcon}</button></div>
       </div>
       ${tabs.length > 2 ? `<div class="os-tabs-wrap"><button type="button" class="os-tabs-scroll" data-os-scroll="-1" aria-label="Scroll market groups left" tabindex="-1" disabled>${chevron}</button><div class="os-tabs" role="toolbar" aria-label="Market groups">${tabs.map(([value,label]) => `<button type="button" class="os-tab" data-os-tab="${esc(value)}" aria-pressed="${value === market}">${esc(label)}</button>`).join('')}</div><button type="button" class="os-tabs-scroll" data-os-scroll="1" aria-label="Scroll market groups right" tabindex="-1">${chevron}</button></div>` : ''}
-      <div class="os-board-meta"><p><span class="os-status-dot"></span><strong>${fromFeed ? 'Feed prices' : 'Entered prices'}</strong><span class="os-meta-separator">·</span>${groups.length} ${groups.length === 1 ? 'event' : 'events'}<span class="os-meta-separator">·</span>${count} ${count === 1 ? 'market' : 'markets'}<span class="os-meta-separator">·</span>${books.length} ${books.length === 1 ? 'book' : 'books'}${newest ? `<span class="os-meta-separator">·</span><span>Updated <span data-os-age="${esc(newest.id)}">${observedAge(newest.ts)}</span></span>` : ''}</p><div class="os-board-actions">${groups.length ? `<button type="button" data-os-action="rows" class="os-rows" aria-label="${lastGroups.every(key => collapsed.has(key)) ? 'Expand all events' : 'Collapse all events'}">${lastGroups.every(key => collapsed.has(key)) ? 'Expand all' : 'Collapse all'} ${chevron}</button>` : ''}<button type="button" data-os-action="reset" class="os-reset">Reset filters</button></div></div>
+      <div class="os-board-meta"><p><span class="os-status-dot"></span><strong>${fromFeed ? 'Feed prices' : 'Entered prices'}</strong><span class="os-meta-separator">·</span>${allGroups.length} ${allGroups.length === 1 ? 'event' : 'events'}<span class="os-meta-separator">·</span>${count} ${count === 1 ? 'market' : 'markets'}<span class="os-meta-separator">·</span>${books.length} ${books.length === 1 ? 'book' : 'books'}${newest ? `<span class="os-meta-separator">·</span><span>Updated <span data-os-age="${esc(newest.id)}">${observedAge(newest.ts)}</span></span>` : ''}</p><div class="os-board-actions">${groups.length ? `<button type="button" data-os-action="rows" class="os-rows" aria-label="${lastGroups.every(key => collapsed.has(key)) ? 'Expand all events' : 'Collapse all events'}">${lastGroups.every(key => collapsed.has(key)) ? 'Expand all' : 'Collapse all'} ${chevron}</button>` : ''}<button type="button" data-os-action="reset" class="os-reset">Reset filters</button></div></div>
       </div>
-      ${groups.length ? `<div class="os-grid-wrap" tabindex="0" role="region" aria-label="Odds grid. Scroll horizontally to see every sportsbook."><table class="os-grid" style="--os-books:${books.length}" aria-label="Sportsbook prices by game"><thead><tr><th scope="col" class="os-c-time">Time</th><th scope="col" class="os-selection">Team / selection</th><th scope="col" class="os-best-cell">Best odds</th><th scope="col" class="os-average" title="Average of current prices at the same line">Avg odds</th>${books.map(book => `<th scope="col" class="os-book-head" title="${esc(book)}"><span class="os-book-logo">${bookLogo(book,26)}</span><span class="os-sr">${esc(book)}</span></th>`).join('')}</tr></thead>${rows}</table></div>` : `<div class="os-empty"><div>${layers}</div><h2>${all.length ? 'No matching prices' : 'Waiting for prices'}</h2><p>${all.length ? 'Try a different market, league or player, or show more sportsbook columns in settings.' : 'The odds board fills in once the quote API syncs.'}</p>${all.length ? '<button type="button" data-os-action="reset">Clear filters</button>' : ''}</div>`}
-      <p class="os-footnote">The best price in each row is outlined in lime and the lowest is tinted red; the average uses current books at the same line (hover it for the consensus no-vig fair price). Prices at different lines are compared separately. Click a row or price for the full comparison. ${filtered.some(q => q.live && !fresh(q)) ? 'Faded live prices are stale and excluded from best and average. ' : ''}No live odds feed is connected.</p>
+      ${groups.length ? `<div class="os-grid-wrap" tabindex="0" role="region" aria-label="Odds grid. Scroll horizontally to see every sportsbook."><table class="os-grid" style="--os-books:${books.length}" aria-label="Sportsbook prices by game"><thead><tr><th scope="col" class="os-c-time">Time</th><th scope="col" class="os-selection">Team / selection</th><th scope="col" class="os-best-cell">Best odds</th><th scope="col" class="os-average" title="Average of current prices at the same line">Avg odds</th>${books.map(book => `<th scope="col" class="os-book-head" title="${esc(book)}"><span class="os-book-logo">${bookLogo(book,26)}</span><span class="os-sr">${esc(book)}</span></th>`).join('')}</tr></thead>${rows}</table></div>${allGroups.length > groups.length ? `<button type="button" class="os-more" data-os-action="more">Show ${Math.min(EVENT_PAGE, allGroups.length - groups.length)} more games · ${allGroups.length - groups.length} not shown</button>` : ''}` : `<div class="os-empty"><div>${layers}</div><h2>${all.length ? 'No matching prices' : 'Waiting for prices'}</h2><p>${all.length ? 'Try a different market, league or player, or show more sportsbook columns in settings.' : 'The odds board fills in once the quote API syncs.'}</p>${all.length ? '<button type="button" data-os-action="reset">Clear filters</button>' : ''}</div>`}
+      <p class="os-footnote">The best price in each row is outlined in lime and the lowest is tinted red; the average uses current books at the same line (hover it for the consensus no-vig fair price). Prices at different lines are compared separately. Click a row or price for the full comparison. ${filtered.some(q => q.live && !fresh(q)) ? 'Faded live prices are stale and excluded from best and average. ' : ''}${filtered.some(q => q.live) ? '' : 'The feed has no live prices right now.'}</p>
     </section>`;
   }
   function restore(selector) { document.querySelector(selector)?.focus({preventScroll:true}); }
@@ -277,8 +288,9 @@ export function createOddsScreen({ getQuotes, brandMark, onSport, redraw, storag
     if (action === 'settings') settingsOpen = !settingsOpen;
     if (action === 'all-books') {hiddenBooks.clear();onAllSportsbooks();}
     if (action === 'expand') expanded = !expanded;
+    if (action === 'more') { eventLimit += EVENT_PAGE; redrawKeeping(); return true; }
     if (action === 'rows') {const close = !lastGroups.every(key => collapsed.has(key));lastGroups.forEach(key => close ? collapsed.add(key) : collapsed.delete(key));}
-    if (action === 'reset') {eventFilter = '';marketFilter = null;query = '';hiddenBooks.clear();collapsed.clear();initializedEvents.clear();}
+    if (action === 'reset') {eventFilter = '';marketFilter = null;query = '';hiddenBooks.clear();collapsed.clear();initializedEvents.clear();eventLimit = EVENT_PAGE;}
     save();redrawKeeping(action === 'reset');restore(`[data-os-action="${action}"]`);return true;
   }
   function change(event) {
@@ -289,6 +301,7 @@ export function createOddsScreen({ getQuotes, brandMark, onSport, redraw, storag
     }
     const key = target.dataset.osFilter;
     if (!key) return false;
+    if (key !== 'format') eventLimit = EVENT_PAGE;
     if (key === 'sport') {eventFilter = '';marketFilter = null;query = '';collapsed.clear();initializedEvents.clear();onSport(target.value);}
     if (key === 'event') {eventFilter = target.value;collapsed.clear();initializedEvents.clear();}
     if (key === 'market') {marketFilter = target.value;collapsed.clear();initializedEvents.clear();}
@@ -298,7 +311,7 @@ export function createOddsScreen({ getQuotes, brandMark, onSport, redraw, storag
   function input(event) {
     if (event.target.id !== 'os-search') return false;
     const position = event.target.selectionStart;
-    query = event.target.value;collapsed.clear();initializedEvents.clear();save();redraw();
+    query = event.target.value;collapsed.clear();initializedEvents.clear();eventLimit = EVENT_PAGE;save();redraw();
     const field = document.querySelector('#os-search');field?.focus();field?.setSelectionRange(position,position);return true;
   }
   function keydown(event) {

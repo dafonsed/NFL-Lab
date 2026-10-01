@@ -77,6 +77,9 @@ function cachedPage(req, key, render) {
 // Rendered editorial illustrations (/art/<key>.svg), by key.
 const artCache = new Map();
 const allowApiRequest = createIpLimiter({ max: 240, windowMs: 60_000 });
+// The public quote feed: 3-second live polling is 20 requests a minute per tab, so 120 allows a
+// few open tabs while stopping a runaway client from hammering the upstream API.
+const allowEvRequest = createIpLimiter({ max: 120, windowMs: 60_000 });
 const allowRefresh = createRefreshGate({ windowMs: 60_000 });
 function json(res, data, status = 200) { return sendPublicResponse(res.req, res, JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } }); }
 export const server = http.createServer(async (req, res) => {
@@ -108,6 +111,7 @@ export const server = http.createServer(async (req, res) => {
     if (url.pathname === '/admin/login') { res.writeHead(302, { Location: '/login?next=%2Fadmin', 'Cache-Control': 'no-store' }); return res.end(); }
     const trackerRedirect = legacyBetTrackerUrl(url);
     if (trackerRedirect) { res.writeHead(308, { Location: trackerRedirect, 'Cache-Control': 'no-cache' }); return res.end(); }
+    if (url.pathname.startsWith('/api/ev/') && !allowEvRequest(clientIp(req))) { res.setHeader('Retry-After', '30'); return json(res, { error: 'Too many price requests. Prices resume shortly.', code: 'RATE_LIMITED', retryable: true }, 429); }
     if (url.pathname.startsWith('/api/ev/')) return await handleEvApi(req, res, url, { loadControls: async () => { try { return await readMarketControls(accounts.system.db); } catch { return []; } } });
     if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, { error: 'Method not allowed.' }, 405);
     const helpRequest = resolveHelpCenterRequest(url, { host });
@@ -269,7 +273,7 @@ export const server = http.createServer(async (req, res) => {
     for (const file of ['help.css', 'help.js', 'help-search.js']) names['/' + file] = file;
     for (const file of ['ev.js', 'ev-core.js', 'ev-workspace-clean.js', 'ev-feed.js', 'ev-feed.css', 'ev-bet-card.js', 'ev-bet-cards.css', 'dfs-workspace.js', 'dfs-workspace.css', 'odds-screen.js', 'odds-screen.css', 'ev.css', 'ev.html']) names['/' + file] = file;
     for (const file of ['ev-suite.js', 'ev-suite.css', 'ev-suite-storage.js', 'ev-advanced-math.js', 'ev-operations.js', 'ev-operations.css', 'ev-market-views.js', 'ev-market-views.css', 'ev-ledger.js', 'ev-ledger.css', 'ev-fantasy-lab.js', 'ev-fantasy-lab.css', 'ev.webmanifest', 'ev-sw.js', 'ev-app-icon.svg']) names['/' + file] = file;
-    for (const file of ['platform-catalog.js', 'ev-tool-catalog.js', 'ev-more-menu.js', 'ev-secondary-views.js', 'ev-more-tools.css', 'ev-filters.js']) names['/' + file] = file;
+    for (const file of ['platform-catalog.js', 'ev-tool-catalog.js', 'ev-more-menu.js', 'ev-secondary-views.js', 'ev-more-tools.css', 'ev-filters.js', 'ev-event-match.js', 'ev-feed-normalize.js', 'ev-quote-cache.js', 'ev-feed-worker.js']) names['/' + file] = file;
     for (const file of ['research-filters.css', 'research-details.css', 'tool-dropdowns.css', 'arb-calculator.js', 'arb-calculator.css', 'bet-comparison.js', 'bet-comparison.css', 'bet-dashboard-v2.js', 'bet-dashboard-v3.js', 'bet-history.js', 'bet-inline.js', 'bet-inline.css',   'bet-tracker-reference.css', 'ev-arb-reference.css', 'ev-book-picker.css', 'ev-filter-polish.css',  'sites-redesign.css', 'smart-money.css']) names['/' + file] = file;
     if (/^\/ev-icons\/(date|leagues|markets|odds|sports)\.svg$/.test(pagePath)) names[pagePath] = pagePath.slice(1);
     if (['/product-switcher.js','/product-switcher.css'].includes(pagePath)) names[pagePath] = pagePath.slice(1);

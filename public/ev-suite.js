@@ -251,5 +251,5 @@ export function createEvSuite(host) {
   window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;renderControls();});
   if('serviceWorker' in navigator)navigator.serviceWorker.register('/ev-sw.js',{scope:'/ev'}).catch(()=>{});
   function heroStats(tool){const r=root(),cfg=settings();if(tool==='alerts')return [['Saved watches',r.watchRules.length],['Enabled',r.watchRules.filter(x=>x.enabled).length,true],['Unread alerts',r.alertLog.filter(a=>!a.read).length]];if(tool==='settings')return [['Saved views',r.presets.length],['No-vig method',String(cfg.devigMethod).replace(/^./,c=>c.toUpperCase()),true],['Reference books',`${cfg.minSharpBooks}+`]];return [];}
-  return {hasView,render,mount,heroStats,handleEvent,settings,quoteVisible,displayOdds,controls,trackQuote:(q,tool)=>openTracking([q],{tool}),startRefresh,exportWorkspace,validateImport,importLedger,probability:q=>consensusPrice(q,host.getState().quotes,settings()).probability};
+  return {hasView,render,mount,heroStats,handleEvent,settings,quoteVisible,displayOdds,controls,evaluateWatches,trackQuote:(q,tool)=>openTracking([q],{tool}),startRefresh,exportWorkspace,validateImport,importLedger,probability:q=>consensusPrice(q,host.getState().quotes,settings()).probability};
 }

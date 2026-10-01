@@ -104,19 +104,21 @@ export function middleRows(quotes, mode, settings = {}) {
     families.get(key).push(q);
   }
   const found = [];
+  // Scores are whole numbers, so a window like 45 to 45.5 has no score where both bets win.
+  const reachable = (low, high) => Math.floor(low) + 1 < high;
   for (const rows of families.values()) {
     const overs = rows.filter(q => q.side.toLowerCase() === 'over');
     const unders = rows.filter(q => q.side.toLowerCase() === 'under');
     for (const over of overs) for (const under of unders) {
-      if (Number(over.line) >= Number(under.line) || over.book === under.book) continue;
+      if (Number(over.line) >= Number(under.line) || over.book === under.book || !reachable(Number(over.line), Number(under.line))) continue;
       found.push({ over, under, kind:'total', window:`Total ${over.line} to ${under.line}`, width: Number(under.line) - Number(over.line), cost: 1 - 1 / (implied(over.odds) + implied(under.odds)) });
     }
     const spreadSides = [...new Set(rows.filter(q => q.type === 'spread' || q.type === 'alternate' && !['over','under'].includes(q.side.toLowerCase())).map(q => q.side))];
     if (spreadSides.length !== 2) continue;
     for (const over of rows.filter(q => q.side === spreadSides[0])) for (const under of rows.filter(q => q.side === spreadSides[1])) {
       const low = -Number(over.line), high = Number(under.line);
-      if (!Number.isFinite(low) || !Number.isFinite(high) || low >= high || over.book === under.book) continue;
-      found.push({ over, under, kind:'spread', window:`${spreadSides[0]} margin ${low} to ${high}`, width:high-low, cost:1-1/(implied(over.odds)+implied(under.odds)) });
+      if (!Number.isFinite(low) || !Number.isFinite(high) || low >= high || over.book === under.book || !reachable(low, high)) continue;
+      found.push({ over, under, kind:'spread', window:`${over.selection || spreadSides[0]} margin ${low} to ${high}`, width:high-low, cost:1-1/(implied(over.odds)+implied(under.odds)) });
     }
   }
   return found.sort((a, b) => b.width - a.width || a.cost - b.cost);
