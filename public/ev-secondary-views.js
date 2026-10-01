@@ -1,6 +1,6 @@
 import {SECONDARY_TOOLS, MORE_TOOL_GROUPS} from './ev-tool-catalog.js';
 import {icon} from './ui-icons.js';
-import {boardIcon, bookLogo, startLabel} from './ev-board.js?v=4';
+import {boardIcon, bookLogo, startLabel} from './ev-board.js?v=5';
 import {leagueMark} from './sports-identity.js';
 export const toolEsc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const purposes = {
@@ -25,7 +25,7 @@ export function toolHero({title = '', description = '', group = '', symbol = 're
   const counters = Array.isArray(stats) ? (stats.length ? `<dl class="tool-hero-stats">${stats.map(([label, value, accent]) => `<div${accent ? ' class="is-accent"' : ''}><dt>${toolEsc(label)}</dt><dd>${toolEsc(value)}</dd></div>`).join('')}</dl>` : '') : stats;
   return `<header class="tool-heading tool-hero"><div class="tool-hero-copy">${group ? `<span class="tool-kicker">${toolEsc(group)}</span>` : ''}<div class="tool-title-row"><span class="tool-hero-icon" aria-hidden="true">${icon(symbol)}</span><h1>${accentTitle(title)}</h1>${dataLabel ? `<span class="tool-data-label">${toolEsc(dataLabel)}</span>` : ''}</div><p>${description}</p></div><div class="tool-heading-actions">${actions}</div>${counters}</header>`;
 }
-export function secondaryShell(key, content, {actions='',sport='',search='',dataLabel='',filters=''} = {}) {
+export function secondaryShell(key, content, {actions='',sport='',sports=['NFL','MLB','NBA','WNBA','NHL','Soccer'],search='',dataLabel='',filters=''} = {}) {
   const tool = SECONDARY_TOOLS.find(item=>item.key===key);
   if (!tool) return content;
   const related = MORE_TOOL_GROUPS.find(group=>group.label===tool.group).tools.filter(item=>!['ev-live','arb-live'].includes(item.key));
@@ -37,7 +37,7 @@ export function secondaryShell(key, content, {actions='',sport='',search='',data
   if (!board) content = String(content).replace(/<dl class="tool-stats">[\s\S]*?<\/dl>/, match => { stats = match.replace('class="tool-stats"', 'class="tool-hero-stats"'); return ''; });
   const heading = toolHero({title:tool.label,description:purposes[key],group:tool.group,symbol:tool.icon,dataLabel,actions,stats});
   return `<div class="tool-workspace es-2026${board ? ' is-board' : ''}" data-tool-workspace="${key}">${heading}
-    <div class="tool-context"><nav class="tool-related" aria-label="Related tools">${related.map(item=>`<button type="button" data-tool="${item.key}" ${key===item.key?'aria-current="page"':''}>${icon(item.icon)}${item.label}</button>`).join('')}</nav><div class="tool-filters"><label><span class="tool-sr">Tool sport</span><select aria-label="Tool sport" data-tool-sport><option value="">All sports</option>${['NFL','MLB','NBA','WNBA','NHL','Soccer'].map(name=>`<option ${sport===name?'selected':''}>${name}</option>`).join('')}</select></label><label class="tool-search">${icon('search')}<input type="search" data-tool-search aria-label="Search this tool" placeholder="Search teams, players, markets" value="${toolEsc(search)}"></label></div></div>${filters}
+    <div class="tool-context"><nav class="tool-related" aria-label="Related tools">${related.map(item=>`<button type="button" data-tool="${item.key}" ${key===item.key?'aria-current="page"':''}>${icon(item.icon)}${item.label}</button>`).join('')}</nav><div class="tool-filters"><label><span class="tool-sr">Tool sport</span><select aria-label="Tool sport" data-tool-sport><option value="">All sports</option>${sports.map(name=>`<option ${sport===name?'selected':''}>${toolEsc(name)}</option>`).join('')}</select></label><label class="tool-search">${icon('search')}<input type="search" data-tool-search aria-label="Search this tool" placeholder="Search teams, players, markets" value="${toolEsc(search)}"></label></div></div>${filters}
     <div class="tool-content">${content}</div></div>`;
 }
 export function toolPanel(title, subtitle, body, {actions='',className=''}={}) {

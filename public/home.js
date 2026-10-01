@@ -12,6 +12,7 @@ import {sportTools, betTrackerUrl, SPORTS} from './navigation.js';
 import {evToolUrl} from './ev-tool-catalog.js';
 import {computeAdvancedEv} from './ev-advanced-math.js';
 import {isDemoRecord} from './ev-workspace-clean.js?v=1';
+import {readQuoteCache} from './ev-quote-cache.js?v=1';
 import {platformAsset, platformLabel} from './platform-catalog.js';
 import {readBets, summarizeBets, betReturns} from './bet-utils.js?v=3';
 
@@ -194,16 +195,13 @@ function count(key, value) {
 }
 
 // ---------------------------------------------------------------- +EV preview
-function evPanel() {
+async function evPanel() {
   if (!$('#hd-ev')) return;
-  let quotes = [];
-  try {
-    // The +EV page keeps API quotes in this browser cache (see public/ev.js QUOTE_CACHE).
-    const cache = JSON.parse(window.localStorage.getItem('sportslab-ev-quote-cache-v1') || 'null');
-    const workspace = cache ? null : JSON.parse(accountStorage.getItem('sportslab-ev-workbench-v1') || 'null');
-    const saved = cache?.quotes ?? workspace?.quotes;
-    quotes = Array.isArray(saved) ? saved.filter(quote => quote?.source === 'local-api' && !isDemoRecord(quote)) : [];
-  } catch { quotes = []; }
+  // The +EV page caches feed quotes in IndexedDB (public/ev-quote-cache.js). Prices older than
+  // 15 minutes are not shown as current value.
+  const cache = await readQuoteCache();
+  const fresh = cache && Date.now() - Date.parse(cache.apiSyncedAt || 0) < 15 * 60_000;
+  const quotes = fresh ? cache.quotes.filter(quote => quote?.source === 'local-api' && !isDemoRecord(quote)) : [];
   const code = sport === 'soccer' ? 'Soccer' : label;
   const rows = computeAdvancedEv(sport === 'all' ? quotes : quotes.filter(q => (q.league || q.sport) === code || q.sport === code), EV_SETTINGS);
   const summary = evSummary(rows), top = topEvRows(rows, 5);
@@ -424,7 +422,7 @@ put('#hd-tracker', skeleton(3));
 $('#home-dashboard').dataset.hdReady = '';
 await accountReady;
 trackerPanel();
-evPanel();
+void evPanel();
 // The +EV dashboard is built from saved prices only; the others need the league board.
 try { if (product !== 'ev') await loadMain(); }
 catch (error) { if (error?.name !== 'AbortError') { boardFailed(error); if ($('#hd-games .hd-skeleton')) put('#hd-games', failed(error.message)); if (stats.games === null) setStat('games', null); } }

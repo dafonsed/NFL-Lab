@@ -22,7 +22,9 @@ const today = () => { const time = new Date(); return new Date(time.getTime() - 
 const clone = value => JSON.parse(JSON.stringify(value));
 const selectedKey = quote => `${marketIdentity(quote)}|${String(quote.side || '').trim().toLowerCase()}`;
 const eventKey = quote => JSON.stringify([quote.sport, quote.league || quote.sport, quote.eventId || quote.event]);
-const quoteLabel = quote => [quote.player, quote.market, quote.side, quote.line === '' || quote.line == null ? '' : quote.line].filter(value => value !== '').join(' · ');
+// "Dallas Cowboys +3 · Spread · Dallas Cowboys @ Houston Texans": team and game, not the feed's home/away key.
+const signedLine = quote => quote.line === '' || quote.line == null ? '' : `${quote.type === 'spread' && Number(quote.line) > 0 ? '+' : ''}${quote.line}`;
+const quoteLabel = quote => [[quote.player, quote.selection || quote.side, signedLine(quote)].filter(Boolean).join(' '), quote.displayMarket || quote.market, quote.displayEvent || quote.event].filter(Boolean).join(' · ');
 const sourceLabel = quote => quote?.source === 'manual' || !quote?.source ? 'Entered' : String(quote.source);
 const button = (label, action, id = '') => `<button type="button" data-evl-action="${action}" data-evl-id="${esc(id)}">${esc(label)}</button>`;
 const input = (name, label, value = '', type = 'text', extra = '') => `<label class="evl-field"><span>${esc(label)}</span><input name="${name}" type="${type}" value="${esc(value)}" ${extra}></label>`;
@@ -38,7 +40,7 @@ function manualLeg(quote, index = 0, result = 'open') {
   const canonicalSide = ['over','under','home','away','draw','at_least','exactly'].includes(side) ? side : ['home','away'].includes(quote.homeAway) ? quote.homeAway : 'home';
   return { id:uid(),mode:'manual',entry:'game',sport:SPORTS.includes(quote.sport)?quote.sport:'Other',league:quote.league||'',
     date:String(quote.startTime||quote.date||'').slice(0,10),gameId:'',market,marketLabel:String(quote.market||market),
-    subjectId:'',subject:quote.player||quote.side||'',matchup:quote.event||'',label:quoteLabel(quote).slice(0,240)||`Selection ${index+1}`,
+    subjectId:'',subject:quote.player||quote.selection||quote.side||'',matchup:quote.displayEvent||quote.event||'',label:quoteLabel(quote).slice(0,240)||`Selection ${index+1}`,
     side:canonicalSide,line:moneyline?null:numeric(quote.line),override:({win:'won',loss:'lost'})[result]||result,observation:null };
 }
 

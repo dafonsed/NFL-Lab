@@ -125,6 +125,10 @@ export function prepareIdentityImages(root) {
   }
 }
 
+// League logos exist only for these; other sports (tennis, MMA ...) get no image instead of a broken one.
+const LEAGUE_LOGOS = new Set(['nfl','nba','mlb','nhl','wnba','premier']);
 export function leagueMark(sport) {
-  return `<span class="league-mark" data-league="${esc(sport)}" aria-hidden="true">${sport==='soccer'?icon('soccer'):`<img src="/assets/leagues/${esc(sport)}.png" width="32" height="32" alt="" decoding="async">`}</span>`;
+  const key = String(sport ?? '').toLowerCase();
+  if (key !== 'soccer' && !LEAGUE_LOGOS.has(key)) return '';
+  return `<span class="league-mark" data-league="${esc(key)}" aria-hidden="true">${key==='soccer'?icon('soccer'):`<img src="/assets/leagues/${esc(key)}.png" width="32" height="32" alt="" decoding="async">`}</span>`;
 }

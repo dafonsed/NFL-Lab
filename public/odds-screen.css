@@ -256,3 +256,7 @@ body.ev-page[data-ev-screen="odds"] #main #ev-view .os-grid>tbody>tr.is-game-sta
 @media (max-width:860px){
   body.ev-page[data-ev-screen="odds"] #main #ev-view .os-grid>tbody>tr>.os-c-time{position:relative}
 }
+
+/* Odds screen pages games 25 at a time. */
+.os-more{display:block;width:100%;margin:10px 0 0;padding:12px 16px;border:1px solid var(--os-line,#2a3036);border-radius:12px;background:transparent;color:inherit;font-weight:600;cursor:pointer}
+.os-more:hover{border-color:rgb(163 240 107/.5)}

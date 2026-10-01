@@ -15,7 +15,7 @@ export const SITE_PLATFORMS = Object.freeze([
   platform('Hard Rock Bet','Hard Rock Bet','sportsbook','hardrock',['Hard Rock']),
   platform('theScore Bet','theScore Bet','sportsbook','thescore',['ESPN BET','theScore','theScore Bet (formerly ESPN BET)']),
   platform('Bally Bet','Bally Bet','sportsbook','bally',['Bally']),
-  platform('Desert Diamond Sports','Desert Diamond Sports','sportsbook','desertdiamond'),
+  platform('Desert Diamond Sports','Desert Diamond Sports','sportsbook','desertdiamond',['Desert Diamond']),
   platform('DraftKings Fantasy','DraftKings Fantasy','fantasy','draftkings',['DraftKings DFS']),
   platform('FanDuel Fantasy','FanDuel Fantasy','fantasy','fanduel',['FanDuel DFS']),
   platform('PrizePicks','PrizePicks','fantasy','prizepicks'),

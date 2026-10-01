@@ -10,17 +10,20 @@ export const MIN_WIN_CHANCE = [['', 'Any'], ['20', '20%'], ['35', '35%'], ['50',
 export const MAX_HOLD = [['', 'Any'], ['1', '1%'], ['2', '2%'], ['3', '3%'], ['5', '5%']];
 export const MIN_WINDOW = [['', 'Any'], ['1', '1 pt'], ['2', '2 pts'], ['3', '3 pts']];
 export const LEG_EV = [['', 'Any'], ['0', 'Positive'], ['1', '1%'], ['2', '2%']];
+// Combined margin of the two middle legs. Alternate-line ladders create thousands of very
+// expensive middles, so the default hides pairs costing more than 8%.
+export const MAX_COST = [['', 'Any'], ['3', '3%'], ['5', '5%'], ['8', '8%'], ['15', '15%']];
 
 // Per-tool controls for the tools that use the shared filter bar. Keys map to TOOL_FILTER_DEFAULTS.
 export const TOOL_FILTERS = {
-  middles: ['league', 'market', 'period', 'when', 'minWidth'],
+  middles: ['league', 'market', 'period', 'when', 'minWidth', 'maxCost'],
   holds: ['league', 'market', 'period', 'when', 'maxHold'],
   parlay: ['league', 'market', 'when', 'book', 'legEv', 'maxOdds'],
   promo: ['book', 'market', 'when', 'minOdds'],
 };
 export const TOOL_FILTER_DEFAULTS = Object.freeze({
   league: '', market: '', period: 'all', when: 'all', book: '',
-  minOdds: '', maxOdds: '', minEv: '', minProb: '', maxHold: '', minWidth: '', legEv: '',
+  minOdds: '', maxOdds: '', minEv: '', minProb: '', maxHold: '', minWidth: '', legEv: '', maxCost: '8',
   // Positive EV keeps its own shortest-price choice so it doesn't change the Promo filter.
   evMinOdds: '',
 });
@@ -110,6 +113,7 @@ export function toolFilterBar(tool, filters, quotes = []) {
     maxHold: () => select('maxHold', 'Max hold', MAX_HOLD, filters.maxHold, 'Combined margin of the best price on each side.'),
     minWidth: () => select('minWidth', 'Min window', MIN_WINDOW, filters.minWidth, 'Points between the two lines where both bets win.'),
     legEv: () => select('legEv', 'Leg EV', LEG_EV, filters.legEv),
+    maxCost: () => select('maxCost', 'Max cost', MAX_COST, filters.maxCost, 'Combined margin of both bets. Lower means cheaper to try for the middle.'),
   };
   const count = activeFilterCount(filters, keys);
   return `<div class="tool-filter-bar" role="group" aria-label="Filters">${keys.map(key => controls[key]()).join('')}${count ? `<button type="button" class="tool-filter-clear" data-tool-filter-clear>Clear ${count} ${count === 1 ? 'filter' : 'filters'}</button>` : ''}</div>`;

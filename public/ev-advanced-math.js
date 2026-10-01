@@ -116,6 +116,9 @@ function matchesScope(rule, quote) {
   return ['sport', 'league', 'market'].every(field => !valuePresent(rule[field]) || name(rule[field]) === name(field === 'league' ? quote.league || quote.sport : quote[field]));
 }
 
+// Without saved reference-book rules, sharp books count more: their prices move first and carry
+// the least margin, which is what fair-odds tools anchor on.
+export const DEFAULT_SHARP_WEIGHTS = Object.freeze({ pinnacle: 3, circa: 3, 'circa sports': 3 });
 function referenceRules(quote, quotes, settings) {
   const configured = Array.isArray(settings.bookRules) && settings.bookRules.length ? settings.bookRules : null;
   const rules = new Map();
@@ -125,7 +128,7 @@ function referenceRules(quote, quotes, settings) {
       .sort((a, b) => a.specificity - b.specificity || a.order - b.order);
     for (const rule of selected) rules.set(name(rule.book), { ...rule, weight: rule.weight == null ? 1 : number(rule.weight) });
   } else {
-    for (const row of quotes) if (name(row?.book)) rules.set(name(row.book), { book: row.book, enabled: true, required: false, weight: 1 });
+    for (const row of quotes) if (name(row?.book)) rules.set(name(row.book), { book: row.book, enabled: true, required: false, weight: DEFAULT_SHARP_WEIGHTS[name(row.book)] || 1 });
   }
   // The offered book is never used to manufacture its own reference price.
   if (!rules.get(name(quote.book))?.required) rules.delete(name(quote.book));
@@ -174,7 +177,7 @@ function completeBook(quote, rows, rule, settings) {
   if (settings.liquidityWeighting && exchange && (!(liquidity > 0) || !(unit > 0))) return null;
   // Exchange weight is proportional to the least liquid side, in $1,000 units.
   const weight = rule.weight * (settings.liquidityWeighting && exchange ? liquidity / unit : 1);
-  return { book: rule.book, probability: fair[sides.indexOf(selection(quote))], weight, configuredWeight: rule.weight,
+  return { book: rule.book, family: records[0].priceFamily || rule.book, probability: fair[sides.indexOf(selection(quote))], weight, configuredWeight: rule.weight,
     vigPercent, liquidity, exchange, quoteIds: records.map(record => record.id).filter(valuePresent), sides, probabilities: fair };
 }
 
@@ -212,7 +215,19 @@ export function consensusPrice(quote, allQuotes, settings = {}, index = null) {
     : allQuotes.filter(row => quoteAvailable(row, settings, now) && name(row.book) !== book && marketIdentity(row) === identity);
   const rules = referenceRules(quote, rows, settings);
   const books = [...rules.values()].map(rule => completeBook(quote, rows, rule, settings)).filter(Boolean);
-  return combine(books, rules, settings);
+  return combine(onePerFamily(books), rules, settings);
+}
+
+// Books that mirror one odds platform (priceFamily) count as a single reference, averaged.
+function onePerFamily(books) {
+  const families = new Map();
+  for (const book of books) { const key = name(book.family || book.book); if (!families.has(key)) families.set(key, []); families.get(key).push(book); }
+  return [...families.values()].map(group => group.length === 1 ? group[0] : {
+    ...group[0], book: group.map(book => book.book).join(' / '), mirrors: group.slice(1).map(book => book.book),
+    probability: group.reduce((sum, book) => sum + book.probability, 0) / group.length,
+    probabilities: group[0].probabilities.map((_, index) => group.reduce((sum, book) => sum + book.probabilities[index], 0) / group.length),
+    weight: Math.max(...group.map(book => book.weight)), quoteIds: group.flatMap(book => book.quoteIds),
+  });
 }
 
 // `familyIndex` is an optional marketIndex built without lines.

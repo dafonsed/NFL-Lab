@@ -21,7 +21,9 @@ function render(name,extra={}) {
     qName:q=>q.player+' '+q.side+' '+q.line,origin:()=>'<span class="ev-status">Manual</span>',
     table:(head,rows)=>`<table><thead><tr>${head.map(text=>`<th>${views.toolEsc(text)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`,
     button:(label,attrs='')=>`<button type="button" ${attrs}>${label}</button>`,action:()=>'',
-    toolFilters:{...TOOL_FILTER_DEFAULTS},oddsWithin,filteredEmpty:fallback=>fallback,...extra});
+    toolFilters:{...TOOL_FILTER_DEFAULTS},oddsWithin,filteredEmpty:fallback=>fallback,sportsbookSelected:()=>true,sport:'',...extra});
+  // Parlay computes fair odds from every quote for the sport (quoteSource), not only the listed ones.
+  context.quoteSource ??= () => context.state?.quotes ?? context.quotes?.() ?? [];
   const $=load(vm.runInContext(source.slice(start,end)+`\n${name}()`,context));
   assert.equal($('.wager-card button button').length,0,'actions are separate controls');
   return {$,context};

@@ -26,7 +26,7 @@ function render(name,quotes,extra={},args='') {
     localStorage:{getItem:()=> '1000'},filterText:()=>true,
     brandMark:book=>`<span class="ev-brand-fallback">${views.toolEsc(book)}</span>`,
     button:(label,attrs='')=>`<button type="button" ${attrs}>${label}</button>`,action:()=>'',
-    toolFilters:{...TOOL_FILTER_DEFAULTS},oddsWithin,filteredEmpty:fallback=>fallback,...extra});
+    toolFilters:{...TOOL_FILTER_DEFAULTS},oddsWithin,filteredEmpty:fallback=>fallback,feedSports:()=>['NFL','MLB','NBA','WNBA','NHL','Soccer'],...extra});
   const start=source.indexOf(`function ${name}(`),end=source.indexOf('\nfunction ',start+1);
   assert.ok(start>=0&&end>start,`${name} is available`);
   // Arbitrage, Middles and Low holds share the paired-board helpers declared just above renderArb.

@@ -2,9 +2,51 @@
 
 ## What is already configured
 
-The LAN endpoint and key are stored in the ignored root `.env.local`. The local Sportslab Node server forwards the documented health, status, quotes, matches and reserved scrape routes, attaching `X-API-Key` to every request. Credentials do not belong in browser code or examples.
+The endpoint and key (`EV_TOOL_API_URL`, `EV_TOOL_API_KEY`, `EV_TOOL_API_ALLOW_HTTP`) are set in the Vercel project environment. The VisualOdds server forwards the documented health, status, quotes, matches and reserved scrape routes, attaching `X-API-Key` to every request. Credentials do not belong in browser code or examples.
 
-The quote workspace has manual sync and opt-in auto-refresh (15, 30 or 60 seconds). Auto-refresh starts off on every page load, pauses in background tabs and while editing, and backs off after transient failures. Configuration, authentication and invalid-payload errors pause retries until a manual retry. No requests or runtime tests were made during setup.
+The +EV page syncs quotes when it opens and auto-refreshes every 10 seconds by default (viewers can pick 15, 30, 60 seconds or Off). Live tools always refresh every 3 seconds. Refresh pauses in background tabs and while editing, and backs off after transient failures. Configuration, authentication and invalid-payload errors pause retries until a manual retry. Sportsbook prices come only from this API; there is no manual price entry or import.
+
+## Live feed audit (30 September 2026)
+
+A check of the production `GET /quotes` response (18,729 quotes, 689 events, 13 books) found the problems below. Until they are fixed at the source, most of the feed cannot be compared across books, so Arbitrage, Positive EV, Middles and Low holds show far fewer results than the data should support.
+
+| Problem | Example from the feed | Effect | Fix in the feed |
+| --- | --- | --- | --- |
+| **Event names differ by book** | DraftKings `CIN Bengals @ MIA Dolphins`; Fanatics `Cowboys @ Texans` and `Dallas Cowboys @ Houston Texans`; theScore Bet `Steelers @ Browns`. `eventId` is just the lowercased name. | Prices for the same game never meet: only 16 of 83 NFL games had more than one book. | Send one canonical `eventId` per game shared by every book (for example a provider game ID), and one consistent `event` name. |
+| **`side` disagrees with `selection_name`** | 8,573 of 8,603 totals have `side: "home"` while `selection_name` is `Over 44.5` / `Under 58.5`. Fanatics spread `side: "home", line: -3` has `selection_name: "Dallas Cowboys +3.0"` (Dallas is away). Kambi soccer (BetRivers, Desert Diamond, Bally Bet) `home` = selection `2`, `away` = `X` (draw). Kambi MLB moneylines are swapped (Bally `CHI White Sox @ HOU Astros` home = Chicago). FanDuel totals `side: "home"`, selection `Under`. | Wrong team shown and fake EV/arbitrage (for example 3,000%+ EV on Fanatics Titans @ Ravens `+4000`). | `side` must be the priced selection: `over`/`under` for totals, `home`/`away` matching the team in `selection_name` for spreads and moneylines, with the line signed from that team's view. `selection_name` is already right on 99% of quotes; make `side` agree with it. |
+| **Other markets filed as moneyline** | Fanatics moneylines with selection `Dallas Cowboys / Tie`, `No`, `Under 2.5`; a tennis doubles price (`Schlagenhauf, Noah/Stroemberg, Isac`) inside the singles match `Mensik @ Bublik`. Soccer 1X2 sent as a two-way moneyline. | De-vigging mixes different bets; fake arbitrage. | Send 1X2 as `type: "1x2"` with home/draw/away; double chance, yes/no and doubles as their own markets and events. |
+| **Alternate lines with no opposite side** | Fanatics Steelers @ Browns: 80 spread lines, all `side: "home"`, none `away`. | Can't pair the two sides of each line. | Send both sides of every line with `type: "alternate"`. |
+| **Started games stay in the feed** | Matches that started at 03:05 were still listed 19 hours later; none disappeared over an 11-minute window. | Old prices on finished games count as current. | Remove started events from pregame, or send `status: "suspended"`/`"closed"`. |
+| **Stale prices** | 40% of quotes were 30–60 minutes old; only 3.7% under a minute. | EV and arbitrage built on prices that have moved. | Scrape main markets every few seconds pregame and 1–5 s live; report per-book last-success times on `/status`. |
+| **Games listed twice by one book** | Fanatics lists `Steelers @ Browns` and `Pittsburgh Steelers @ Cleveland Browns`, sometimes at different prices. | Duplicate or conflicting prices from one book. | One listing per game per book. |
+| **`ts` means different things** | Bally Bet, BetRivers, Desert Diamond and theScore Bet send the game start (for example `2026-10-02T00:15:00+00:00` on 30 September); DraftKings, Fanatics and FanDuel send when the price was seen. | Freshness checks and the Starts filter can't be trusted. | `ts` = when the price was observed. Put the game start in `startTime`. |
+| **Wrong sport labels** | Central American soccer clubs as `americanfootball`; European basketball clubs (`KK Bosna Sarajevo @ Lietkabelis`) as `nba`; college football and MLS games as `nfl`; plus `other` and `unknown`. | Games appear under the wrong sport and match the wrong markets. | Send a correct `sport` and a `league` (`NFL`, `NCAAF`, `NBA`, `EuroLeague`, `MLS` ...). |
+| **No exchange liquidity** | 4 exchange quotes (Novig, ProphetX, Kalshi, Polymarket), none with `liquidity`. | Smart Money has nothing to rank. | Send `exchange: true` and numeric available `liquidity` in dollars for exchange prices. |
+| **No DFS platforms** | No PrizePicks, Underdog, Sleeper or other DFS lines. | The DFS tools have nothing to show. | See section 2 below. |
+| **No live quotes** | `live: false` on every quote. | Live +EV and Live Arbitrage are always empty. | Send in-play prices with `live: true`, updated every 1–5 s. |
+| **No sharp reference book** | No Pinnacle, Circa or liquid exchange prices. | Fair odds come from one or two soft books, so EV is unreliable. OddsJam-style tools anchor fair odds on sharp books. | Add Pinnacle (a scraper exists in `integrations/ev_tool/pinnacle_odds_scraper.py`) or another sharp source. |
+| **No deep links, start times or props** | No `betUrl`/`eventUrl`, no `startTime`, no player props. | Every Bet button is a dead end; rows say "Start time not entered"; prop tools are empty. | Per-quote `betUrl`/`eventUrl`, `startTime` on every quote, player props with `player`/`playerId`. |
+| **Full 7 MB snapshot on every request** | 18.8k quotes, 7.08 MB (765 KB compressed) per poll; an 11-second change is about 20 KB compressed. | 235–586 MB per hour per open tab; slow on mobile. | Return `version` and `generated_at`; support `GET /quotes?since=<version>` deltas (or SSE) and `ETag`/`304`. |
+| **One key for reads and writes** | The site uses one key for GET and for POST/DELETE/scrape. | A leaked or misused site key can write quotes and trigger scrapes. | Issue a read-only key for the site's quote reads. |
+
+### What the site does meanwhile
+
+These are workarounds, not replacements for fixing the feed:
+
+All of this is in `public/ev-feed-normalize.js` (run in a background worker, `public/ev-feed-worker.js`) and `public/ev-event-match.js`.
+
+- **Sides rebuilt from `selection_name`:** totals become over/under, and spreads and moneylines take the named team, with the line from that team's view. When a spread's selection has no line and names the other team, it is skipped. So are records whose selection is a different bet: another game's team, "/ Tie", Yes/No, or a doubles pair inside a singles match. Soccer `1`/`X`/`2` selections become a three-way market. Quotes without a `selection_name` (theScore Bet, BetMGM, exchanges) keep the feed's `side`.
+- **Team-name matching (NFL, NBA, NHL, WNBA):** games are matched by team nickname, so `CIN Bengals`, `Bengals` and `Cincinnati Bengals` line up, and each game and team shows the fullest name any book uses. MLB is excluded because the same teams play on back-to-back days and the feed's times can't tell those games apart.
+- **Skipping impossible listings:** a book's two-way listing whose own sides can't be real (both underdogs, or a margin over 25%) is skipped. So are one-sided spread/total ladders whose side couldn't be confirmed.
+- **Duplicates:** one book listing a game twice, or repeating a quote id, keeps the newest price.
+- **Start times:** books whose `ts` values are whole-minute game starts (Bally Bet, BetRivers, Desert Diamond, theScore Bet) have them moved to `startTime`. Their price age shows as unknown. A start time from any book applies to the whole game. Pregame prices on games that have already started are dropped.
+- **Mirrored books:** books that post the same price on 70% or more of 30+ shared markets are one reference in the fair odds. In the live feed that is BetRivers, Desert Diamond and Bally Bet (Kambi).
+- **Main vs alternate lines:** for each book, the spread/total line priced closest to even money is the main line. Its others show under Alternate lines on the Odds Screen, and they still compare across books.
+- **Sanity limits:** by default, EV above 25%, arbitrage above 15% and middles costing more than 8% are hidden. Each can be changed.
+
+On 30 September 2026 this kept about 14,000 of 23,000 quotes. It skipped roughly 6,000 duplicates, 2,500 records filed under the wrong game or market, and a few hundred prices on started games. The feed panel shows the skipped count on each update.
+
+**Also check:** `Betr Picks` appeared in the feed as a book on NFL moneylines. Betr Picks is a pick'em (DFS) app. If its prices aren't real sportsbook odds, they shouldn't be sent as sportsbook quotes, because they feed the fair odds.
 
 Only the supplied quote routes are connected to this LAN API. **The additional route names below are proposals, not claims that your server implements them.** A single snapshot endpoint could carry several datasets instead; actual response examples or an OpenAPI document are needed before wiring their adapters.
 

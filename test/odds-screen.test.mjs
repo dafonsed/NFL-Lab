@@ -83,7 +83,10 @@ test('All sportsbooks clears a one-book state filter, restores hidden columns an
 
 test('grid rows keep both sides and show every sportsbook price in its own column', () => {
   const records = [quote(),quote({id:'b',book:'FanDuel',odds:100}),quote({id:'under-dk',side:'Under',odds:-110}),quote({id:'under-fd',side:'Under',book:'FanDuel',odds:-120})];
-  const screen = createOddsScreen({getQuotes:()=>records,brandMark:book=>`<span>${book}</span>`,redraw:()=>{},onSport:()=>{}});
+  // American is the default, matching every other +EV tab; this test checks decimal cells.
+  const american = createOddsScreen({getQuotes:()=>records,brandMark:book=>`<span>${book}</span>`,redraw:()=>{},onSport:()=>{}});
+  assert.equal(load(american.render({sport:'MLB'}))('tbody tr.os-row').first().find('.os-best-cell strong').text(),'+110');
+  const screen = createOddsScreen({getQuotes:()=>records,brandMark:book=>`<span>${book}</span>`,redraw:()=>{},onSport:()=>{},defaultFormat:'decimal'});
   const $ = load(screen.render({sport:'MLB'}));
   assert.equal($('tbody tr.os-row').length,2);
   assert.deepEqual($('thead .os-book-head').toArray().map(cell => $(cell).attr('title')),['DraftKings','FanDuel']);
