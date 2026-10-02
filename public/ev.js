@@ -11,7 +11,7 @@ import { secondaryShell, toolHero, accentTitle, toolPanel, toolEmpty, toolStats,
 import { SECONDARY_TOOLS } from './ev-tool-catalog.js';
 import { emptyWorkspace, purgeDemoData, clearLegacyDemoStorage } from './ev-workspace-clean.js?v=1';
 import { createQuoteFeedControls, toolDataLabel } from './ev-feed.js?v=7';
-import { loadFeed, loadDfsFeed, dfsPicks, payoutTables, knownSport } from './ev-feed-normalize.js?v=7';
+import { loadFeed, loadDfsFeed, dfsPicks, payoutTables, knownSport } from './ev-feed-normalize.js?v=8';
 import { readQuoteCache, createThrottledCacheWriter } from './ev-quote-cache.js?v=1';
 import { START_WINDOWS, MIN_ODDS, MIN_EV, MIN_WIN_CHANCE, TOOL_FILTERS, TOOL_FILTER_DEFAULTS, activeFilterCount, startsWithin, oddsWithin, quoteMatches, readToolFilters, saveToolFilters, toolFilterBar } from './ev-filters.js?v=2';
 import { SITE_PLATFORMS, SPORTSBOOK_PLATFORMS, PREDICTION_PLATFORMS, EXCHANGE_PLATFORMS, canonicalPlatform, platformAsset, platformLabel, platformOptions, isContestPlatform } from './platform-catalog.js';
@@ -224,11 +224,13 @@ const DFS_TOOLS = new Set(['fantasy','optimizer','slip','fantasy-alerts']);
 const dfsRevision = () => state.dfs.filter(item => item.source === 'local-api').map(item => [item.id, item.line, item.probability].join('|')).join('\n');
 // Feed DFS lines come from two requests on different clocks: pick'em lines inside the quote snapshot
 // (every 10 s) and GET /site/dfs/props (every minute). Each refresh replaces only its own list, so a
-// quote sync never wipes the props.
+// quote sync never wipes the props. A line in both is shown once, from the quote snapshot, which
+// carries its event and start time.
 let quoteFeedDfs = [], propsFeedDfs = [];
+const dfsLineKey = item => [item.app, String(item.player).trim().toLowerCase(), String(item.market).trim().toLowerCase(), Number(item.line), item.side].join('|');
 function applyFeedDfs() {
-  const ids = new Set(propsFeedDfs.map(item => item.id));
-  state.dfs = [...state.dfs.filter(item => item.source !== 'local-api'), ...propsFeedDfs, ...quoteFeedDfs.filter(item => !ids.has(item.id))];
+  const lines = new Set(quoteFeedDfs.map(dfsLineKey));
+  state.dfs = [...state.dfs.filter(item => item.source !== 'local-api'), ...quoteFeedDfs, ...propsFeedDfs.filter(item => !lines.has(dfsLineKey(item)))];
 }
 let lastSkipped = 0;
 // The snapshot is downloaded and cleaned in a worker so the page stays responsive; browsers
@@ -241,7 +243,7 @@ function fetchFeed(kind = 'quotes', apps = []) {
   if (feedWorker !== false && typeof Worker === 'function') {
     try {
       if (!feedWorker) {
-        feedWorker = new Worker('/ev-feed-worker.js?v=7', { type: 'module' });
+        feedWorker = new Worker('/ev-feed-worker.js?v=8', { type: 'module' });
         feedWorker.onmessage = ({ data }) => { pendingFeed.get(data.id)?.(data); pendingFeed.delete(data.id); };
         feedWorker.onerror = () => { feedWorker = false; for (const resolve of pendingFeed.values()) resolve({ ok: false, kind: 'worker' }); pendingFeed.clear(); };
       }
@@ -249,7 +251,7 @@ function fetchFeed(kind = 'quotes', apps = []) {
       return new Promise(resolve => {
         pendingFeed.set(id, resolve);
         feedWorker.postMessage({ id, kind, url, syncedAt, apps, method });
-        setTimeout(() => { if (pendingFeed.delete(id)) resolve({ ok: false, kind: 'timeout' }); }, 40_000);
+        setTimeout(() => { if (pendingFeed.delete(id)) resolve({ ok: false, kind: 'timeout' }); }, 60_000);
       }).then(result => result.kind === 'worker' ? inline() : result);
     } catch { feedWorker = false; }
   }

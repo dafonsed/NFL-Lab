@@ -205,10 +205,11 @@ test('raw two-sided odds → implied → devig → fair probability, with the me
   const b = fairFromAmerican([-150, 125]);
   assert.deepEqual(b.implied.map(pct), [60, 44.44]);
   assert.deepEqual(b.fair.map(pct), [57.45, 42.55]);
-  // PrizePicks 6-pick Flex (6/6 25×, 5/6 2×, 4/6 0.4×) breaks even at 54.21%; the edge is fair minus that.
-  const flex6 = breakEven([0, 0, 0, 0, 0.4, 2, 25]);
-  assert.equal(pct(flex6), 54.21);
-  assert.equal(pct(b.fair[0] - flex6), 3.24);
+  // A 2-pick Power slip at 3× breaks even at √(1/3) = 57.74%; the edge is fair minus that.
+  const power2 = breakEven([0, 0, 3]);
+  assert.equal(pct(power2), 57.74);
+  assert.equal(pct(b.fair[0] - power2), -0.29, '57.45% fair does not clear a 2-pick Power slip');
+  assert.equal(pct(fairFromAmerican([-170, 140]).fair[0] - power2), 2.44, '60.18% fair does');
   assert.deepEqual([...DEVIG_METHODS], ['multiplicative', 'additive', 'power', 'probit']);
   for (const method of DEVIG_METHODS) {
     const [over, under] = fairFromAmerican([-150, 125], method).fair;
@@ -238,4 +239,25 @@ test('DFS fair probability devigs each book\'s Over/Under prices with the chosen
   }
   const [alone] = dfsPicks([pick('over')], [], new Map());
   assert.equal(alone.probability, null, 'without sportsbook prices there is no fair probability, whatever the API sends');
+});
+
+test('Fanatics props read the stat from propMarket and repair a selection sent as the player', async () => {
+  const { normalizeRecord } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date().toISOString();
+  const yards = normalizeRecord({ id: 'f1', sport: 'nfl', event: 'Commanders @ Colts', market: 'prop', propMarket: 'Receiving Yards', player: 'Rachaad White', line: 20.5, side: 'over', book: 'Fanatics', odds: 240, ts, type: 'prop', selection_name: 'Rachaad White Over 20.5 Receiving Yards' });
+  assert.deepEqual([yards.player, yards.market, yards.side, yards.line], ['Rachaad White', 'Receiving Yards', 'over', 20.5]);
+  const points = normalizeRecord({ id: 'f2', sport: 'nba', event: 'Dallas Wings @ Golden State Valkyries', market: 'Awak Kuier - Points', side: 'yes', book: 'Fanatics', odds: -130, ts, type: 'prop', player: 'Over 6.5', selection_name: 'Over 6.5' });
+  assert.deepEqual([points.player, points.market, points.side, points.line], ['Awak Kuier', 'Points', 'over', 6.5]);
+});
+
+test('a sportsbook Over/Under pair with no margin is not devigged into a fair probability', async () => {
+  const { dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const { fairFromAmerican } = await import('../public/ev-advanced-math.js');
+  const ts = new Date().toISOString();
+  const book = (book, side, odds) => ({ book, side, odds, player: 'Rachaad White', market: 'Receiving Yards', line: 20.5, eventId: 'NFL:colts @ commanders', ts });
+  // +240 / -238 implies 29.4% + 70.4% = 99.8%: the Under is the Over mirrored, not a market.
+  const quotes = [book('Fanatics', 'over', 240), book('Fanatics', 'under', -238), book('DraftKings', 'over', -140), book('DraftKings', 'under', 118)];
+  const [pick] = dfsPicks([{ book: 'PrizePicks', player: 'Rachaad White', market: 'Receiving Yards', line: 20.5, side: 'over', eventId: 'NFL:colts @ commanders', ts }], quotes);
+  assert.deepEqual(pick.probabilityBooks, ['DraftKings']);
+  assert.ok(Math.abs(pick.probability - fairFromAmerican([-140, 118]).fair[0]) < 1e-12);
 });
