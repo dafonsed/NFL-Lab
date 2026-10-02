@@ -279,3 +279,15 @@ test('a pick prices against the same player, stat and line when the books name t
   const priced2 = dfsPicks([pick(), { ...pick('NBA:dal @ min'), line: 13.5 }], [quote('over', 100), quote('under', -130)]);
   assert.ok(priced2.every(item => item.probability === null));
 });
+
+test('PrizePicks line type is read from oddsType or odds_type; unflagged PrizePicks lines are standard', async () => {
+  const { normalizeRecord, normalizeDfsRecords, dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date().toISOString();
+  const quote = extra => normalizeRecord({ id: 'pp', sport: 'nfl', event: 'IND @ WAS', market: 'Receiving Yards', side: 'over', book: 'PrizePicks', ts, type: 'prop', line: 63.5, player: 'Josh Downs', selection_name: 'Josh Downs Over 63.5', ...extra });
+  assert.equal(quote({ oddsType: 'Goblin' }).oddsType, 'goblin');
+  assert.equal(quote({}).oddsType, undefined);
+  const { picks } = normalizeDfsRecords([{ id: 'd1', sport: 'nfl', event: 'IND @ WAS', player: 'Josh Downs', market: 'Receiving Yards', line: 80.5, side: 'higher', app: 'PrizePicks', odds_type: 'demon', ts }], { syncedAt: ts });
+  assert.equal(picks[0].oddsType, 'demon');
+  const [standard] = dfsPicks([{ ...quote({}), book: 'PrizePicks' }], []);
+  assert.equal(standard.oddsType, 'standard');
+});

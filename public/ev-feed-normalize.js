@@ -106,6 +106,10 @@ export function repairSelection({ type, side, line, selection, event }) {
 }
 
 const text = (raw, key) => typeof raw?.[key] === 'string' ? raw[key].trim() : '';
+// PrizePicks line type. Goblin and demon picks change the entry payout (and are More only); a line
+// without a type is standard.
+const ODDS_TYPES = new Set(['standard', 'goblin', 'demon']);
+const oddsType = raw => { const value = (text(raw, 'oddsType') || text(raw, 'odds_type')).toLowerCase(); return ODDS_TYPES.has(value) ? value : ''; };
 
 // Player and stat as the books send them. Fanatics files Over/Under player props as market "prop"
 // with the stat in propMarket, and milestone props as market "Awak Kuier - Points" with the
@@ -151,7 +155,7 @@ export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
     startTime: Number.isFinite(start) ? new Date(start).toISOString() : '',
     type, line, side: repaired.side, selection: repaired.selection, sideVerified: repaired.verified,
     book: canonicalPlatform(text(raw, 'book')), odds: Number.isFinite(decimal(odds)) ? odds : null, outcomes,
-    ...(text(raw, 'team') ? { team: text(raw, 'team') } : {}), live: raw.live === true, exchange: raw.exchange === true,
+    ...(text(raw, 'team') ? { team: text(raw, 'team') } : {}), ...(oddsType(raw) ? { oddsType: oddsType(raw) } : {}), live: raw.live === true, exchange: raw.exchange === true,
     liquidity: Number.isFinite(liquidity) ? Math.max(0, liquidity) : 0,
     // Feed times use the server's clock; shift them onto this device's clock.
     ts: new Date(observed - clockOffsetMs).toISOString(), source: 'local-api',
@@ -372,6 +376,7 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
     return {
       id: pick.id, app: pick.book, sport: pick.sport, league: pick.league, event: names.get(pick.eventId) || pick.event, eventId: pick.eventId,
       player: pick.player, ...(pick.team ? { team: pick.team } : {}), market: pick.market, line: pick.line, side: pick.side === 'under' ? 'Under' : 'Over',
+      ...(pick.oddsType ? { oddsType: pick.oddsType } : pick.book === 'PrizePicks' ? { oddsType: 'standard' } : {}),
       probability, probabilityBooks: books.map(book => book.book), probabilityMethod: method,
       ts: pick.ts, startTime: pick.startTime, live: pick.live, source: 'local-api',
     };
@@ -454,7 +459,7 @@ export function normalizeDfsRecords(records, { syncedAt = new Date().toISOString
       id: text(raw, 'id'), book: app, sport, league: text(raw, 'league') || SOCCER_LEAGUES[text(raw, 'sport').toLowerCase()] || '',
       event, eventId: matched ? `${sport}:${matched}` : event ? `${sport}:${event.toLowerCase()}` : `${sport}:${propName(player)}`,
       player, market, line, side, ts: new Date(ts).toISOString(), startTime: text(raw, 'startTime') || '', live: raw.live === true,
-      ...(text(raw, 'team') ? { team: text(raw, 'team') } : {}),
+      ...(text(raw, 'team') ? { team: text(raw, 'team') } : {}), ...(oddsType(raw) ? { oddsType: oddsType(raw) } : {}),
     });
   }
   return { picks: relabelDfsSports(picks), skipped };

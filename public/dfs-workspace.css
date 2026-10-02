@@ -240,3 +240,7 @@ body.ev-page[data-ev-screen="fantasy"] .dfs-workspace :is(.dfs-prop-list,.dfs-sl
 .dfs-more:hover{border-color:rgb(163 240 107/.5)}
 /* Why hit chances are blank (no sportsbook odds on the same player prop). */
 .dfs-feed-note{margin:0 0 12px;padding:10px 14px;border:1px solid rgb(255 255 255/.12);border-radius:12px;color:var(--evb-muted,var(--muted));font-size:12px;line-height:1.5}
+/* PrizePicks goblin and demon lines: payout differs from the standard table. */
+.dfs-odds-type{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.02em;vertical-align:middle;border:1px solid currentColor}
+.dfs-odds-type[data-odds-type="goblin"]{color:#7ee0a1}
+.dfs-odds-type[data-odds-type="demon"]{color:#ff8f8f}
