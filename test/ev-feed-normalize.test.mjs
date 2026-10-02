@@ -306,3 +306,35 @@ test('a standard pick\'em line sent as More is also listed as Less at the same l
   // A Less line the feed already sends is not doubled.
   assert.equal(dfsPicks([pick('standard', 15.5), { ...pick('standard', 15.5), side: 'under' }], quotes).length, 2);
 });
+
+test('player props show their stat as the market and in the bet; margin bands and round props are not moneylines', async () => {
+  const { normalizeRecord } = await import('../public/ev-feed-normalize.js');
+  const { selectionText } = await import('../public/ev-board.js');
+  const ts = new Date().toISOString();
+  const fanatics = extra => normalizeRecord({ id: 'f', sport: 'nfl', event: 'Patriots @ Bills', book: 'Fanatics', odds: 110, ts, type: 'prop', ...extra });
+  const yards = fanatics({ market: 'prop', propMarket: 'Receiving Yards', player: 'Dawson Knox', line: 10.5, side: 'under', selection_name: 'Dawson Knox Under 10.5 Receiving Yards' });
+  assert.equal(yards.displayMarket, 'Receiving Yards');
+  assert.equal(selectionText(yards), 'Dawson Knox Under 10.5 Receiving Yards');
+  const scorer = fanatics({ market: 'Anytime Touchdown Scorer', player: 'Dawson Knox', side: 'yes', selection_name: 'Dawson Knox' });
+  assert.equal(selectionText(scorer), 'Dawson Knox Anytime Touchdown Scorer');
+  const milestone = fanatics({ market: 'Dawson Knox - ALT Longest Reception', player: '20+', side: 'yes', selection_name: '20+' });
+  assert.equal(selectionText(milestone), 'Dawson Knox 20+ ALT Longest Reception');
+  const moneyline = selection => normalizeRecord({ id: 'm', sport: 'ncaaf', event: 'Pittsburgh Panthers @ Virginia Tech Hokies', market: 'moneyline', type: 'moneyline', side: 'away', book: 'Fanatics', odds: 550, ts, selection_name: selection });
+  assert.equal(moneyline('Pittsburgh Panthers (13+)').skip, 'mislabeled', 'a winning-margin band is not a moneyline');
+  assert.equal(moneyline('Pittsburgh Panthers in Rd 9').skip, 'mislabeled');
+  assert.equal(moneyline('Pittsburgh Panthers').skip, undefined);
+});
+
+test('a sportsbook market with no margin is never a fair-price reference; an exchange can be', async () => {
+  const { consensusPrice } = await import('../public/ev-advanced-math.js');
+  const now = Date.now(), ts = new Date(now).toISOString();
+  const row = (id, book, side, odds, extra = {}) => ({ id, book, side, odds, ts, sport: 'NFL', event: 'Patriots @ Bills', eventId: 'NFL:patriots @ bills', market: 'Receiving Yards', type: 'prop', player: 'Dawson Knox', line: 10, ...extra });
+  const offered = row('o', 'Fanatics', 'under', 110);
+  // DraftKings' Under is its Over mirrored (-112 / +112 = 100.00%): no margin, not a market.
+  const mirrored = [offered, row('a', 'DraftKings', 'over', -112), row('b', 'DraftKings', 'under', 112)];
+  assert.ok(Number.isNaN(consensusPrice(offered, mirrored, { now }).probability));
+  const priced = [offered, row('a', 'DraftKings', 'over', -112), row('b', 'DraftKings', 'under', -108)];
+  assert.ok(consensusPrice(offered, priced, { now }).probability > 0.4);
+  const exchange = [offered, row('a', 'Novig', 'over', -110, { exchange: true }), row('b', 'Novig', 'under', 110, { exchange: true })];
+  assert.ok(consensusPrice(offered, exchange, { now }).probability > 0.4, 'an exchange can price at zero margin');
+});

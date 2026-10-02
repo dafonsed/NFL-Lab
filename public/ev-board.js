@@ -42,7 +42,13 @@ export function startLabel(quote) {
 
 const lineText = quote => quote.line === '' || quote.line == null ? '' : ` ${quote.type === 'spread' && Number(quote.line) > 0 ? '+' : ''}${quote.line}`;
 // Feed quotes carry `selection` (team, Over/Under, Draw); `side` is the internal home/away/over key.
-export const selectionText = quote => `${quote.player ? quote.player + ' ' : ''}${quote.selection || quote.side}${lineText(quote)}`;
+const propStat = quote => quote.player && quote.displayMarket && !/^player prop$/i.test(quote.displayMarket) && quote.displayMarket !== quote.player ? quote.displayMarket : '';
+export const selectionText = quote => {
+  const stat = propStat(quote), pick = String(quote.selection || quote.side);
+  // Yes/no props read as the bet: "Darren Waller Last Touchdown Scorer", "... Last Touchdown Scorer: No".
+  if (stat && /^(yes|no)$/i.test(pick)) return `${quote.player} ${stat}${/^no$/i.test(pick) ? ': No' : ''}`;
+  return `${quote.player ? quote.player + ' ' : ''}${pick}${lineText(quote)}${stat ? ' ' + stat : ''}`;
+};
 // The Bet button only appears when the feed supplied a link for this price.
 export const hasBetLink = quote => Boolean(quote.betUrl || quote.eventUrl || quote.prefillUrl || (quote.links && Object.keys(quote.links).length));
 

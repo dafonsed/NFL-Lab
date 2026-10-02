@@ -178,6 +178,8 @@ function matchesScope(rule, quote) {
 // Without saved reference-book rules, sharp books count more: their prices move first and carry
 // the least margin, which is what fair-odds tools anchor on.
 // Matches the quote API's /books list, which marks Pinnacle, Betfair and Circa as sharp benchmarks.
+/** Smallest margin (%) a sportsbook market needs before it is devigged into a fair price. */
+export const MIN_BOOK_VIG_PERCENT = 0.5;
 export const DEFAULT_SHARP_WEIGHTS = Object.freeze({ pinnacle: 3, betfair: 3, 'betfair exchange': 3, circa: 3, 'circa sports': 3 });
 function referenceRules(quote, quotes, settings) {
   const configured = Array.isArray(settings.bookRules) && settings.bookRules.length ? settings.bookRules : null;
@@ -226,6 +228,9 @@ function completeBook(quote, rows, rule, settings) {
   if (records.some(row => !row)) return null;
   const raw = records.map(row => 1 / effectiveDecimal(row));
   const vigPercent = (raw.reduce((total, probability) => total + probability, 0) - 1) * 100;
+  // A sportsbook market with no margin isn't a priced two-sided market: the feed built one side from
+  // the other (DraftKings and Fanatics milestone props, Oct 2026). Exchanges can legitimately sit at 0%.
+  if (!records.some(record => record.exchange === true) && vigPercent <= MIN_BOOK_VIG_PERCENT) return null;
   const maximumVig = valuePresent(settings.maxVigPercent) ? number(settings.maxVigPercent) : Infinity;
   if (!Number.isFinite(vigPercent) || !(maximumVig >= 0) || vigPercent > maximumVig) return null;
   const fair = devig(raw, settings.devigMethod || 'multiplicative');
