@@ -155,8 +155,9 @@ export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
   return {
     id: `local-api:${id}`, sport, event, market, displayMarket: type === 'prop' && market && market.toLowerCase() !== 'prop' ? market : MARKET_NAMES[type] || market,
     // A player prop's market is its stat: one player's Rebounds 8.5 and Assists 8.5 at a book are two
-    // markets, not two copies of one.
-    eventId, marketId: type === 'prop' ? `prop|${eventId}|${propName(market)}` : matched ? `${type}|${eventId}` : text(raw, 'marketId') || `${type}|${eventId}`,
+    // markets, not two copies of one. Milestones carry no line, so the threshold ("5+", "10+") is
+    // part of the market too.
+    eventId, marketId: type === 'prop' ? `prop|${eventId}|${propName(market)}${milestone ? `|${milestone}` : ''}` : matched ? `${type}|${eventId}` : text(raw, 'marketId') || `${type}|${eventId}`,
     playerId: text(raw, 'playerId') || text(raw, 'player_id'), player, period: text(raw, 'period') || 'full', league: text(raw, 'league') || SOCCER_LEAGUES[text(raw, 'sport').toLowerCase()] || '',
     startTime: Number.isFinite(start) ? new Date(start).toISOString() : '',
     // Pick'em apps say higher/lower or more/less for Over/Under.
