@@ -370,8 +370,9 @@ export async function loadFeed(url, syncedAt = new Date().toISOString()) {
   }
 }
 
-// Entries that aren't player props: contest lobbies ("Main", "Snake Draft"), rosters.
-const DFS_NON_PROPS = new Set(['roster', 'salary cap', 'salary_cap', 'contest', 'lobby']);
+// Entries that aren't player props: contest lobbies ("Main", "Snake Draft"), rosters, salary-cap
+// prices (DraftKings Pick6 rows such as "Aaron Rodgers salary 14700").
+const DFS_NON_PROPS = new Set(['roster', 'salary', 'salary cap', 'salary_cap', 'contest', 'lobby']);
 const DFS_SIDES = { higher: 'over', more: 'over', over: 'over', lower: 'under', less: 'under', under: 'under' };
 // Season-long entries list the season where the player goes ("2026-2027 Season").
 const SEASON_LABEL = /^\d{4}(-\d{2,4})? season$/i;
@@ -450,14 +451,32 @@ export function payoutTables(records) {
   return tables;
 }
 
-/** Fetches and normalizes the DFS props; runs in the feed worker. Never throws. */
-export async function loadDfsFeed(url, syncedAt = new Date().toISOString()) {
-  try {
-    const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(30_000) });
+/**
+ * Fetches and normalizes the DFS props; runs in the feed worker. Never throws. The unfiltered
+ * request leaves some apps out (DraftKings Pick6 only comes back with ?app=), so each app named in
+ * `apps` that is missing from it is requested on its own.
+ */
+export async function loadDfsFeed(url, syncedAt = new Date().toISOString(), apps = []) {
+  const read = async target => {
+    const response = await fetch(target, { cache: 'no-store', signal: AbortSignal.timeout(30_000) });
     if (!response.ok) return { ok: false, kind: 'http', status: response.status };
     const payload = await response.json();
     const records = Array.isArray(payload) ? payload : payload?.props || payload?.dfs;
-    if (!Array.isArray(records)) return { ok: false, kind: 'shape' };
+    return Array.isArray(records) ? { ok: true, records } : { ok: false, kind: 'shape' };
+  };
+  try {
+    const base = await read(url);
+    if (!base.ok) return base;
+    const present = new Set(base.records.map(raw => canonicalPlatform(text(raw, 'app') || text(raw, 'book'))));
+    const missing = [...new Set(apps)].filter(app => app && !present.has(canonicalPlatform(app)));
+    const extra = await Promise.all(missing.map(app => read(`${url}${url.includes('?') ? '&' : '?'}app=${encodeURIComponent(app)}`).catch(() => ({ ok: false }))));
+    const seen = new Set(), records = [];
+    for (const raw of [base.records, ...extra.filter(result => result.ok).map(result => result.records)].flat()) {
+      const id = text(raw, 'id');
+      if (id && seen.has(id)) continue;
+      if (id) seen.add(id);
+      records.push(raw);
+    }
     const { picks, skipped } = normalizeDfsRecords(records, { syncedAt });
     return { ok: true, picks, dfs: dfsPicks(picks, []), skipped, total: records.length };
   } catch (error) {
