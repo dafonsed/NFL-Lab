@@ -331,10 +331,18 @@ const propKey = (eventId, player, market, line) => JSON.stringify([eventId, prop
  * a two-sided sportsbook market the fair probability stays empty.
  */
 export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplicative' } = {}) {
-  const markets = new Map();
+  // Books name one game differently (PrizePicks "DAL @ GSV", Fanatics "Dallas Wings @ Golden State
+  // Valkyries"). A pick whose event finds no market falls back to the same sport, player, stat and
+  // line, but only when that player has the stat in exactly one game at the books and in one game
+  // among the picks; a player listed in two games is never guessed.
+  const playerStat = (sport, player, market) => JSON.stringify([sport, propName(player), propMarket(market, player)]);
+  const gamesOf = (map, key, eventId) => { if (!map.has(key)) map.set(key, new Set()); map.get(key).add(eventId); };
+  const markets = new Map(), bookGames = new Map(), pickGames = new Map();
+  for (const pick of picks) gamesOf(pickGames, playerStat(pick.sport, pick.player, pick.market), pick.eventId);
   for (const quote of quotes) {
     if (!quote.player || !['over', 'under'].includes(quote.side) || !Number.isFinite(implied(quote.odds))) continue;
     const key = propKey(quote.eventId, quote.player, quote.market, quote.line);
+    gamesOf(bookGames, playerStat(quote.sport, quote.player, quote.market), quote.eventId);
     if (!markets.has(key)) markets.set(key, new Map());
     const books = markets.get(key), family = quote.priceFamily || quote.book;
     books.set(family, { ...books.get(family), book: quote.book, exchange: quote.exchange === true, [quote.side]: implied(quote.odds) });
@@ -345,8 +353,14 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
     const prior = latest.get(key);
     if (!prior || fresher(pick, prior)) latest.set(key, { ...pick, id: `local-api:${stableId(key)}` });
   }
+  const marketFor = pick => {
+    const exact = markets.get(propKey(pick.eventId, pick.player, pick.market, pick.line));
+    if (exact) return exact;
+    const key = playerStat(pick.sport, pick.player, pick.market), games = bookGames.get(key);
+    return games?.size === 1 && pickGames.get(key)?.size === 1 ? markets.get(propKey([...games][0], pick.player, pick.market, pick.line)) : undefined;
+  };
   return [...latest.values()].map(pick => {
-    const books = [...(markets.get(propKey(pick.eventId, pick.player, pick.market, pick.line))?.values() || [])]
+    const books = [...(marketFor(pick)?.values() || [])]
       // A sportsbook pair whose implied probabilities sum to 100.5% or less has no margin to remove:
       // the feed built the Under from the Over (874 of 876 Fanatics prop pairs on 2 Oct 2026).
       .filter(book => book.exchange || book.over + book.under > 1.005)
