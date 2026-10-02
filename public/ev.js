@@ -11,7 +11,7 @@ import { secondaryShell, toolHero, accentTitle, toolPanel, toolEmpty, toolStats,
 import { SECONDARY_TOOLS } from './ev-tool-catalog.js';
 import { emptyWorkspace, purgeDemoData, clearLegacyDemoStorage } from './ev-workspace-clean.js?v=1';
 import { createQuoteFeedControls, toolDataLabel } from './ev-feed.js?v=7';
-import { loadFeed, loadDfsFeed, dfsPicks, payoutTables, knownSport } from './ev-feed-normalize.js?v=5';
+import { loadFeed, loadDfsFeed, dfsPicks, payoutTables, knownSport } from './ev-feed-normalize.js?v=6';
 import { readQuoteCache, createThrottledCacheWriter } from './ev-quote-cache.js?v=1';
 import { START_WINDOWS, MIN_ODDS, MIN_EV, MIN_WIN_CHANCE, TOOL_FILTERS, TOOL_FILTER_DEFAULTS, activeFilterCount, startsWithin, oddsWithin, quoteMatches, readToolFilters, saveToolFilters, toolFilterBar } from './ev-filters.js?v=2';
 import { SITE_PLATFORMS, SPORTSBOOK_PLATFORMS, PREDICTION_PLATFORMS, EXCHANGE_PLATFORMS, canonicalPlatform, platformAsset, platformLabel, platformOptions, isContestPlatform } from './platform-catalog.js';
@@ -22,7 +22,7 @@ import { comparisonAnnotations } from './bet-comparison.js?v=4';
 import { inlineBetCard as betComparisonCard, bindInlineComparison as bindComparison } from './bet-inline.js?v=card-click-3';
 import { openArbCalculator } from './arb-calculator.js?v=2';
 import { openLineHistory, buildLineSeries } from './line-history.js?v=1';
-import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource } from './dfs-workspace.js?v=13-api';
+import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource } from './dfs-workspace.js?v=14-apps';
 import { createOddsScreen } from './odds-screen.js?v=9';
 
 import {readSportsbookState, saveSportsbookState, sportsbookAvailable, availableSportsbookQuotes, STATE_CHANGE_EVENT} from './sportsbook-availability.js';
@@ -161,7 +161,7 @@ let trendA = '', trendB = '', traderName = '', predictionPlatform = '';
 let editing = null;
 // Published standard payouts fill in until the member saves their own table for an app and size.
 const paytables = () => withStandardPaytables(state.paytables, apiPaytables);
-const dfsWorkspace = createDfsWorkspace({getState:()=>({...state,quotes:eligibleQuotes(state.quotes),paytables:paytables(),dfsLoading:dfsLoading&&!dfsLoaded}),redraw:()=>render(),onSave:slip=>{state.slips.push(slip);commit();},onConfigure:picks=>{fantasyIds=picks.map(item=>item.id);fantasyApp=picks[0].app;setTool('slip');}});
+const dfsWorkspace = createDfsWorkspace({getState:()=>({...state,quotes:eligibleQuotes(state.quotes),paytables:paytables(),payoutSource:(app,size)=>paytableSource(state.paytables,app,size,apiPaytables),dfsLoading:dfsLoading&&!dfsLoaded}),redraw:()=>render(),onSave:slip=>{state.slips.push(slip);commit();},onConfigure:picks=>{fantasyIds=picks.map(item=>item.id);fantasyApp=picks[0].app;setTool('slip');}});
 const oddsScreen = createOddsScreen({storage:localStorage,defaultFormat:getAccountPreferences().oddsFormat,getQuotes:()=>eligibleQuotes(oddsQuotes()),getSportsbookState:()=>sportsbookState,onAllSportsbooks:()=>{const saved=saveSportsbookState('');document.dispatchEvent(new CustomEvent(STATE_CHANGE_EVENT,{detail:{state:'',saved}}));},brandMark,redraw:()=>render(),onSport:value=>{sport=value;history.replaceState(history.state,'',`${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}#odds`);}});
 const suite = createEvSuite({
   getState:()=>state, save:persist, redraw:render, navigate:key=>setTool(key==='tracker'&&!accountSyncState().userId?'ledger':key), getTool:()=>active,
@@ -235,20 +235,20 @@ let lastSkipped = 0;
 // without module workers run the same loadFeed in the page.
 let feedWorker = null, feedRequest = 0;
 const pendingFeed = new Map();
-function fetchFeed(kind = 'quotes') {
+function fetchFeed(kind = 'quotes', apps = []) {
   const url = kind === 'dfs' ? '/api/ev/site/dfs/props' : '/api/ev/quotes', syncedAt = now();
-  const inline = () => kind === 'dfs' ? loadDfsFeed(url, syncedAt) : loadFeed(url, syncedAt);
+  const inline = () => kind === 'dfs' ? loadDfsFeed(url, syncedAt, apps) : loadFeed(url, syncedAt);
   if (feedWorker !== false && typeof Worker === 'function') {
     try {
       if (!feedWorker) {
-        feedWorker = new Worker('/ev-feed-worker.js?v=5', { type: 'module' });
+        feedWorker = new Worker('/ev-feed-worker.js?v=6', { type: 'module' });
         feedWorker.onmessage = ({ data }) => { pendingFeed.get(data.id)?.(data); pendingFeed.delete(data.id); };
         feedWorker.onerror = () => { feedWorker = false; for (const resolve of pendingFeed.values()) resolve({ ok: false, kind: 'worker' }); pendingFeed.clear(); };
       }
       const id = ++feedRequest;
       return new Promise(resolve => {
         pendingFeed.set(id, resolve);
-        feedWorker.postMessage({ id, kind, url, syncedAt });
+        feedWorker.postMessage({ id, kind, url, syncedAt, apps });
         setTimeout(() => { if (pendingFeed.delete(id)) resolve({ ok: false, kind: 'timeout' }); }, 40_000);
       }).then(result => result.kind === 'worker' ? inline() : result);
     } catch { feedWorker = false; }
@@ -257,23 +257,27 @@ function fetchFeed(kind = 'quotes') {
 }
 // DFS props (GET /site/dfs/props, about 30k lines) load while a DFS tool is open and refresh every
 // minute; hit chances are priced against the sportsbook quotes already on the page. Payout tables
-// (GET /site/dfs/payouts) load once.
-let dfsSyncedAt = 0, dfsLoading = false, dfsLoaded = false, apiPaytables = {}, payoutsLoaded = false;
+// (GET /site/dfs/payouts) load once and name the apps the props are requested for.
+let dfsSyncedAt = 0, dfsLoading = false, dfsLoaded = false, apiPaytables = {}, payouts = null;
+function loadPayouts() {
+  payouts ||= fetch('/api/ev/site/dfs/payouts', { cache: 'no-store', signal: AbortSignal.timeout(15_000) })
+    .then(response => { if (!response.ok) throw Error(`payouts ${response.status}`); return response.json(); })
+    .then(records => {
+      const tables = payoutTables(records);
+      if (Object.keys(tables).length) { apiPaytables = tables; if (DFS_TOOLS.has(active)) render(); }
+      return (Array.isArray(records) ? records : []).map(entry => entry?.app).filter(app => typeof app === 'string' && app);
+    })
+    .catch(() => { payouts = null; return []; });
+  return payouts;
+}
 function ensureDfsFeed() {
   if (!DFS_TOOLS.has(active)) return;
-  if (!payoutsLoaded) {
-    payoutsLoaded = true;
-    void fetch('/api/ev/site/dfs/payouts', { cache: 'no-store', signal: AbortSignal.timeout(15_000) })
-      .then(response => response.ok ? response.json() : null)
-      .then(records => { const tables = payoutTables(records); if (Object.keys(tables).length) { apiPaytables = tables; if (DFS_TOOLS.has(active)) render(); } })
-      .catch(() => { payoutsLoaded = false; });
-  }
   // The first load runs even in a background tab so the lines are ready when it is opened; refreshes
   // wait for the tab to be visible.
-  if (dfsLoading || (dfsLoaded && (Date.now() - dfsSyncedAt < 60_000 || document.hidden))) return;
+  if (dfsLoading || (dfsLoaded && (Date.now() - dfsSyncedAt < 60_000 || document.hidden))) { void loadPayouts(); return; }
   dfsLoading = true;
   let changed = false;
-  void fetchFeed('dfs').then(result => {
+  void loadPayouts().then(apps => fetchFeed('dfs', apps)).then(result => {
     if (!result.ok) return;
     const previous = dfsRevision();
     // The worker already built the picks; re-price here only when the page has sportsbook player props.

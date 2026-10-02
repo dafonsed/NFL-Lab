@@ -176,3 +176,19 @@ test('DFS lines filed under NBA move to the sport their markets belong to; seaso
   assert.equal(sportOf('Bruno Fernandes', 'Shots On Goal'), 'Soccer', 'only lines filed under basketball are relabeled');
   assert.equal(skipped.notProps, 1);
 });
+
+test('DFS props are also requested per app for apps the unfiltered response leaves out', async t => {
+  const { loadDfsFeed } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date().toISOString(), originalFetch = globalThis.fetch, urls = [];
+  t.after(() => { globalThis.fetch = originalFetch; });
+  const prop = (id, app, market = 'Points') => ({ id, app, sport: 'nba', event: '', player: `P ${id}`, market, line: 10.5, side: 'higher', ts });
+  globalThis.fetch = async url => {
+    urls.push(url);
+    const app = new URL(url, 'https://x.test').searchParams.get('app');
+    const body = !app ? [prop('a', 'PrizePicks'), prop('b', 'Sleeper', 'roster')] : app === 'Underdog' ? [prop('c', 'Underdog'), prop('a', 'PrizePicks')] : [];
+    return new Response(JSON.stringify(body), { status: 200 });
+  };
+  const result = await loadDfsFeed('/api/ev/site/dfs/props', ts, ['PrizePicks', 'Underdog', 'Sleeper', 'Betr']);
+  assert.deepEqual(urls, ['/api/ev/site/dfs/props', '/api/ev/site/dfs/props?app=Underdog', '/api/ev/site/dfs/props?app=Betr'], 'apps already in the unfiltered response are not requested again');
+  assert.deepEqual(result.picks.map(pick => pick.book).sort(), ['PrizePicks', 'Underdog Fantasy'], 'duplicates by id are dropped and roster rows skipped');
+});

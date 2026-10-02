@@ -230,3 +230,30 @@ test('mobile slip review retains selections and rejects invalid entry values', t
   assert.equal(slips[0].stake,12.5);
   assert.equal(slips[0].picks.length,3);
 });
+
+test('All apps lists every app, keeps a slip to one app and shows the slip payout and break-even', t => {
+  const originalDocument=globalThis.document, originalCSS=globalThis.CSS;
+  globalThis.document={querySelector:()=>null};globalThis.CSS={escape:value=>value};
+  t.after(()=>{if(originalDocument===undefined)delete globalThis.document;else globalThis.document=originalDocument;if(originalCSS===undefined)delete globalThis.CSS;else globalThis.CSS=originalCSS;});
+  const base={event:'',market:'Points',line:20.5,side:'Over',source:'local-api'};
+  const state={dfs:[{...base,id:'pp1',app:'PrizePicks',player:'A One',sport:'NBA'},{...base,id:'pp2',app:'PrizePicks',player:'B Two',sport:'Tennis'},{...base,id:'ud1',app:'Underdog Fantasy',player:'C Three',sport:'NBA'}],
+    quotes:[],paytables:{PrizePicks:{3:[0,0,0,5]}},payoutSource:()=>'api'};
+  const view=createDfsWorkspace({getState:()=>state,redraw:()=>{}});
+  let $=load(view.render());
+  assert.equal($('#dfs-platform option:selected').text(),'All apps');
+  assert.equal($('.dfs-prop').length,3,'every app\'s lines are listed');
+  assert.match($('.dfs-results-toolbar p').text(),/3 props from all apps/);
+  assert.deepEqual($('#dfs-sport option').map((_,o)=>$(o).text()).get(),['All sports','NBA','Tennis'],'sports come from the feed');
+  assert.equal($('.dfs-slip-trigger strong').text(),'3 Pick · 5× · BE 58.48%','the slip type shows its payout and break-even');
+  assert.match($('.dfs-feed-note').text(),/game lines only/,'a missing hit chance is explained');
+  assert.equal($('.dfs-prop .dfs-pick-cell small').first().text(),'PrizePicks','each row names its app');
+  const pick=id=>view.click({target:{closest:()=>({dataset:{dfsPick:id},hasAttribute:()=>false})}});
+  pick('pp1'); pick('ud1');
+  $=load(view.render());
+  assert.equal($('.dfs-slip-pick').length,1,'a slip holds one app\'s picks');
+  assert.match($('.dfs-feedback').text(),/This slip is for PrizePicks/);
+  view.change({target:{id:'dfs-platform',dataset:{},value:'Underdog Fantasy'}});
+  $=load(view.render());
+  assert.equal($('.dfs-prop').length,1);
+  assert.equal($('.dfs-slip-pick').length,0,'switching apps starts a new slip');
+});
