@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { breakEven, comparisonPlatforms, selectedComparisonPlatforms, sportsbookOffer, createDfsWorkspace, DFS_PLATFORMS } from '../public/dfs-workspace.js';
+import { isContestPlatform } from '../public/platform-catalog.js';
+// The rail lists pick'em apps; salary-cap contest apps never post pick'em lines.
+const PICKEM = DFS_PLATFORMS.filter(app => !isContestPlatform(app));
 import { dfsPreview } from './fixtures/dfs-props.mjs';
 import { fantasySlip } from '../public/ev-core.js';
 import { load } from 'cheerio';
@@ -100,20 +103,20 @@ test('DFS comparison allows any number of platforms even with saved props from o
   };
   const compared = html => load(html)('.evd-grid thead th[title]').map((_,th)=>th.attribs.title).get();
   const html = view.render({initialSport:'NFL'});
-  assert.equal([...html.matchAll(/data-dfs-compare-platform=/g)].length,DFS_PLATFORMS.length);
+  assert.equal([...html.matchAll(/data-dfs-compare-platform=/g)].length,PICKEM.length);
   const bar = load(html)('.dfs-platform-bar');
-  assert.equal(bar.find('.dfs-platform-rail button.dfs-platform-logo[aria-pressed="true"]').length,DFS_PLATFORMS.length,'every platform starts selected as a round logo toggle');
-  assert.equal(bar.find('.dfs-book-count').text(),`${DFS_PLATFORMS.length}/${DFS_PLATFORMS.length}`);
+  assert.equal(bar.find('.dfs-platform-rail button.dfs-platform-logo[aria-pressed="true"]').length,PICKEM.length,'every platform starts selected as a round logo toggle');
+  assert.equal(bar.find('.dfs-book-count').text(),`${PICKEM.length}/${PICKEM.length}`);
   assert.equal(bar.find('[data-dfs-all-platforms]').attr('aria-pressed'),'true');
   assert.doesNotMatch(html,/data-dfs-platform-menu/,'the platform rail has no collapse toggle');
   click({dfsExpand:prop.id});
-  assert.deepEqual(compared(view.render()),DFS_PLATFORMS);
+  assert.deepEqual(compared(view.render()),PICKEM);
 
   for (const app of DFS_PLATFORMS.slice(2)) click({dfsComparePlatform:app});
   assert.deepEqual(compared(view.render()),DFS_PLATFORMS.slice(0,2));
   const narrowed = load(view.render())('.dfs-platform-bar');
-  assert.equal(narrowed.find(`[data-dfs-compare-platform="${DFS_PLATFORMS[2]}"]`).attr('aria-pressed'),'false');
-  assert.equal(narrowed.find('.dfs-book-count').text(),`2/${DFS_PLATFORMS.length}`);
+  assert.equal(narrowed.find(`[data-dfs-compare-platform="${PICKEM[2]}"]`).attr('aria-pressed'),'false');
+  assert.equal(narrowed.find('.dfs-book-count').text(),`2/${PICKEM.length}`);
   assert.equal(narrowed.find('[data-dfs-all-platforms]').attr('aria-pressed'),'false');
   click({dfsComparePlatform:'Sleeper Picks'});
   assert.deepEqual(compared(view.render()),['PrizePicks','Underdog Fantasy','Sleeper Picks']);
@@ -122,11 +125,11 @@ test('DFS comparison allows any number of platforms even with saved props from o
   assert.equal(grid.find('tbody tr').first().children().eq(sleeper).hasClass('is-missing'),true,'Sleeper Picks Over is unavailable');
 
   view.change({target:{id:'dfs-sport',value:'MLB',dataset:{}}});
-  assert.equal([...view.render().matchAll(/data-dfs-compare-platform=/g)].length,DFS_PLATFORMS.length);
+  assert.equal([...view.render().matchAll(/data-dfs-compare-platform=/g)].length,PICKEM.length);
   view.change({target:{id:'dfs-sport',value:'NFL',dataset:{}}});
   assert.deepEqual(compared(view.render()),['PrizePicks','Underdog Fantasy','Sleeper Picks']);
   click({},['data-dfs-all-platforms']);
-  assert.deepEqual(compared(view.render()),DFS_PLATFORMS);
+  assert.deepEqual(compared(view.render()),PICKEM);
 });
 
 test('main DFS odds use the best current recorded sportsbook quote for the exact selection', () => {
@@ -169,7 +172,7 @@ test('DFS rows show the book logo and offered odds, while fair value stays in th
   const $ = load(html);
   assert.match(html,/src="\/assets\/brands\/fanduel.png" alt="FanDuel"/);
   assert.equal($('.dfs-prop.evb-row .dfs-offer strong').text(),'249.5 · -115');
-  assert.equal($('.dfs-prop.evb-row .dfs-offer small').text(),'Sharp · FanDuel');
+  assert.equal($('.dfs-prop.evb-row .dfs-offer small').text(),'FanDuel · best of 2 books','the best Over among every book with this exact line');
   assert.equal($('.dfs-prop.evb-row .dfs-prob').text(),'60.00%');
   assert.equal($('.dfs-prop .dfs-market-title').text(),'Player Passing Yards');
   assert.equal($('.dfs-prop .dfs-pick-cell').attr('title'),'DFS line at PrizePicks');
@@ -341,4 +344,24 @@ test('goblin and demon payout multipliers from the feed set the leg break-even a
   state.dfs=state.dfs.map(item=>item.id==='g'?{...item,payoutMultiplier:undefined}:item);
   $=load(view.render());
   assert.match($('[data-dfs-row="g"] .dfs-vs-be').text(),/Payout varies/);
+});
+
+test('the comparison lists every sportsbook with the exact prop, including one-sided books and other game names', t => {
+  const originalDocument=globalThis.document, originalCSS=globalThis.CSS;
+  globalThis.document={querySelector:()=>null};globalThis.CSS={escape:value=>value};
+  t.after(()=>{if(originalDocument===undefined)delete globalThis.document;else globalThis.document=originalDocument;if(originalCSS===undefined)delete globalThis.CSS;else globalThis.CSS=originalCSS;});
+  // The feed matched three books to this PrizePicks line: FanDuel both sides, DraftKings and Fanatics Over only.
+  const pick={id:'p',app:'PrizePicks',sport:'NFL',event:'NYJ @ CHI',player:'Luther Burden III',market:'Receptions',line:4.5,side:'Under',source:'local-api',oddsType:'standard',probability:.5458,probabilityBooks:['FanDuel'],
+    probabilitySources:[{book:'FanDuel',over:110,under:-140}],bookLines:[{book:'FanDuel',over:110,under:-140},{book:'DraftKings',over:105},{book:'Fanatics',over:100}]};
+  const state={dfs:[pick],quotes:[],paytables:{PrizePicks:{3:[0,0,0,6]}}};
+  const view=createDfsWorkspace({getState:()=>state,redraw:()=>{}});
+  view.render();
+  view.click({target:{closest:()=>({dataset:{dfsExpand:'p'},hasAttribute:()=>false})}});
+  const $=load(view.render());
+  const heads=$('.evd-grid thead th[title]').map((_,th)=>th.attribs.title).get();
+  assert.deepEqual(heads.filter(name=>['FanDuel','DraftKings','Fanatics'].includes(name)).sort(),['DraftKings','FanDuel','Fanatics']);
+  assert.match($('.evd-note').text(),/fair probability devigs FanDuel \(both sides priced\)/);
+  assert.equal($('.dfs-prop .dfs-offer small').text(),'FanDuel','only FanDuel prices the Under');
+  assert.ok(!heads.includes('FanDuel Fantasy') && !heads.includes('DraftKings Fantasy'),'contest apps are not comparison columns');
+  assert.equal($('[data-dfs-compare-platform="FanDuel Fantasy"]').length,0,'the rail lists pick\'em apps only');
 });
