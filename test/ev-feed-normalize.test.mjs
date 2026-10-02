@@ -291,3 +291,18 @@ test('PrizePicks line type is read from oddsType or odds_type; unflagged PrizePi
   const [standard] = dfsPicks([{ ...quote({}), book: 'PrizePicks' }], []);
   assert.equal(standard.oddsType, 'standard');
 });
+
+test('a standard pick\'em line sent as More is also listed as Less at the same line; goblins and demons are More only', async () => {
+  const { dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const { fairFromAmerican } = await import('../public/ev-advanced-math.js');
+  const ts = new Date().toISOString();
+  const pick = (oddsType, line) => ({ book: 'PrizePicks', sport: 'NBA', player: 'Paige Bueckers', market: 'Points', line, side: 'over', eventId: 'NBA:dal @ gsv', ts, oddsType });
+  const quotes = [['over', -110], ['under', -120]].map(([side, odds]) => ({ book: 'Fanatics', side, odds, sport: 'NBA', player: 'Paige Bueckers', market: 'Points', line: 15.5, eventId: 'NBA:dal @ gsv', ts }));
+  const rows = dfsPicks([pick('standard', 15.5), pick('goblin', 10.5), pick('demon', 22.5)], quotes);
+  assert.deepEqual(rows.map(row => [row.line, row.side, row.oddsType]), [[15.5, 'Over', 'standard'], [15.5, 'Under', 'standard'], [10.5, 'Over', 'goblin'], [22.5, 'Over', 'demon']]);
+  const [over, under] = rows, fair = fairFromAmerican([-110, -120]).fair;
+  assert.ok(Math.abs(over.probability - fair[0]) < 1e-12 && Math.abs(under.probability - fair[1]) < 1e-12, 'Less is priced from the same devigged market');
+  assert.notEqual(over.id, under.id);
+  // A Less line the feed already sends is not doubled.
+  assert.equal(dfsPicks([pick('standard', 15.5), { ...pick('standard', 15.5), side: 'under' }], quotes).length, 2);
+});
