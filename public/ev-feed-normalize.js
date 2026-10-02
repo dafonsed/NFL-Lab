@@ -349,7 +349,7 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
     gamesOf(bookGames, playerStat(quote.sport, quote.player, quote.market), quote.eventId);
     if (!markets.has(key)) markets.set(key, new Map());
     const books = markets.get(key), family = quote.priceFamily || quote.book;
-    books.set(family, { ...books.get(family), book: quote.book, exchange: quote.exchange === true, [quote.side]: implied(quote.odds) });
+    books.set(family, { ...books.get(family), book: quote.book, exchange: quote.exchange === true, [quote.side]: implied(quote.odds), [`${quote.side}Odds`]: Number(quote.odds) });
   }
   // A pick'em line can be played either way at the same number: a standard line the feed sends as
   // More only is also listed as Less. Goblin and demon lines are More only.
@@ -383,6 +383,7 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
       player: pick.player, ...(pick.team ? { team: pick.team } : {}), market: pick.market, line: pick.line, side: pick.side === 'under' ? 'Under' : 'Over',
       ...(pick.oddsType ? { oddsType: pick.oddsType } : pick.book === 'PrizePicks' ? { oddsType: 'standard' } : {}),
       probability, probabilityBooks: books.map(book => book.book), probabilityMethod: method,
+      ...(books.length ? { probabilitySources: books.map(book => ({ book: book.book, over: book.overOdds, under: book.underOdds })) } : {}),
       ts: pick.ts, startTime: pick.startTime, live: pick.live, source: 'local-api',
     };
   });

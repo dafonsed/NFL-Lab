@@ -75,7 +75,7 @@ export function comparisonPlatforms(item, props = []) {
     if (!['Over','Under'].includes(q.side) || q.line == null || q.line === '' || !Number.isFinite(Number(q.line))) continue;
     const app = appName(q.app);
     const key = JSON.stringify([app,Number(q.line)]);
-    const row = pairs.get(key) || {app,line:Number(q.line)};
+    const row = pairs.get(key) || {app,line:Number(q.line),...(q.oddsType ? {oddsType:q.oddsType} : {})};
     const side = q.side.toLowerCase();
     if (!row[side] || (Date.parse(q.ts) || 0) >= (Date.parse(row[side].ts) || 0)) row[side] = {line:Number(q.line),probability:validProbability(q.probability) ? Number(q.probability) : null,ts:q.ts};
     pairs.set(key,row);
@@ -83,11 +83,17 @@ export function comparisonPlatforms(item, props = []) {
   return [...pairs.values()];
 }
 
+// One column per app. PrizePicks also posts goblin and demon alternates for the same player and stat,
+// so each app shows the selected line if it has it, else its standard line nearest the selected one
+// (any line when it has no standard one).
 export function selectedComparisonPlatforms(item, props, names) {
-  const lines = comparisonPlatforms(item, props);
-  return names.filter(isDfsPlatform).flatMap(app => {
+  const lines = comparisonPlatforms(item, props), target = Number(item.line);
+  const nearest = rows => rows.reduce((best, row) => Math.abs(row.line - target) < Math.abs(best.line - target) ? row : best);
+  return names.filter(isDfsPlatform).map(app => {
     const matches = lines.filter(row => row.app === app);
-    return matches.length ? matches : [{app}];
+    if (!matches.length) return {app};
+    const standard = matches.filter(row => !row.oddsType || row.oddsType === 'standard');
+    return matches.find(row => row.line === target) || nearest(standard.length ? standard : matches);
   });
 }
 
@@ -196,7 +202,13 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure}) {
   const COLUMNS = 5;
   // Expanded row: the shared bet panel with sportsbook prices, then each selected DFS platform's line.
   function comparison(item, threshold) {
-    const offers = Object.fromEntries(['Over','Under'].map(side => [side, sportsbookOffers({...item,side},quotes())]));
+    const found = Object.fromEntries(['Over','Under'].map(side => [side, sportsbookOffers({...item,side},quotes())]));
+    // Otherwise the Over/Under prices this pick's fair probability was devigged from (the books can
+    // name the game differently from the DFS app).
+    const sources = Array.isArray(item.probabilitySources) ? item.probabilitySources : [];
+    const offers = found.Over.length || found.Under.length || !sources.length ? found
+      : Object.fromEntries(['Over','Under'].map(side => [side, sources.filter(source => Number.isFinite(decimal(source[side.toLowerCase()])))
+        .map(source => ({book:source.book, odds:Number(source[side.toLowerCase()])})).sort((a,b) => decimal(b.odds) - decimal(a.odds))]));
     const books = [...new Set([...(offers[item.side] || []), ...offers.Over, ...offers.Under].map(offer => offer.book))];
     // With sportsbook prices, only DFS platforms that post this prop follow them; otherwise every selected platform shows.
     const platforms = selectedComparisonPlatforms(item,allRows(),chosenPlatforms()).filter(p => !books.length || p.over || p.under);
@@ -210,16 +222,16 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure}) {
     const rows = ['Over','Under'].map(side => {
       const key = side.toLowerCase(), list = offers[side], top = best(key);
       const bookCells = books.map(book => { const offer = list.find(entry => entry.book === book); return {value:offer ? oddsLabel(offer.odds) : '—', best:offer === list[0] && Boolean(offer)}; });
-      const dfsCells = platforms.map(p => ({value:p[key] ? String(p[key].line) : '—', sub:validProbability(p[key]?.probability) ? `${percent(p[key].probability)} est.` : '', best:!list.length && top?.differs && Number(p[key]?.line) === top.line}));
+      const dfsCells = platforms.map(p => ({value:p[key] ? String(p[key].line) : '—', sub:validProbability(p[key]?.probability) ? `${percent(p[key].probability)} fair` : '', best:!list.length && top?.differs && Number(p[key]?.line) === top.line}));
       return {label:`${item.player} ${side} ${item.line}`, selected:side === item.side, average:averagePrice(list),
         best:list[0] ? {book:list[0].book, value:oddsLabel(list[0].odds)} : top ? {book:top.app, value:String(top.line)} : null, cells:[...bookCells, ...dfsCells]};
     });
     const valid = validProbability(item.probability), fair = valid ? probabilityToAmerican(Number(item.probability)) : NaN;
     const edge = edgeFor(item, threshold), type = chosenType();
-    const facts = [`Est. ${percent(item.probability)}`, Number.isFinite(fair) ? `Fair ${oddsLabel(fair)}` : '',
+    const facts = [`Fair ${percent(item.probability)}`, Number.isFinite(fair) ? `Fair odds ${oddsLabel(fair)}` : '',
       threshold == null ? 'Payout rules needed for break-even' : `Break-even ${percent(threshold)} (${type.size} Pick${type.kind ? ' '+type.kind : ''})`,
       Number.isFinite(edge) ? `Edge ${signed(edge)}` : ''].filter(Boolean).map(esc).join(' · ');
-    const legend = !books.length && !platforms.length ? 'Select a DFS platform above to compare lines.' : `${books.length ? 'Sportsbook columns show American odds. ' : 'No sportsbook price recorded for this line. '}${platforms.length ? 'DFS columns show each platform’s line and entered estimate.' : ''}`;
+    const legend = !books.length && !platforms.length ? 'Select a DFS platform above to compare lines.' : `${books.length ? 'Sportsbook columns show the American odds devigged into the fair probability. ' : 'No two-sided sportsbook market for this line. '}${platforms.length ? 'DFS columns show each app’s line and its fair probability.' : ''}`;
     const picked = selected.has(item.id), id = esc(item.id);
     return renderBetPanel({ id:panelId(item), colspan:COLUMNS, label:`Price comparison for ${label(item)}`, boosts:[],
       tools:[
