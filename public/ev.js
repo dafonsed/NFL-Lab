@@ -11,7 +11,7 @@ import { secondaryShell, toolHero, accentTitle, toolPanel, toolEmpty, toolStats,
 import { SECONDARY_TOOLS } from './ev-tool-catalog.js';
 import { emptyWorkspace, purgeDemoData, clearLegacyDemoStorage } from './ev-workspace-clean.js?v=1';
 import { createQuoteFeedControls, toolDataLabel } from './ev-feed.js?v=7';
-import { loadAndPrice, createDfsPricer, payoutTables, knownSport } from './ev-feed-normalize.js?v=15';
+import { loadAndPrice, createDfsPricer, payoutTables, knownSport } from './ev-feed-normalize.js?v=16';
 import { readQuoteCache, createThrottledCacheWriter } from './ev-quote-cache.js?v=1';
 import { START_WINDOWS, MIN_ODDS, MIN_EV, MIN_WIN_CHANCE, TOOL_FILTERS, TOOL_FILTER_DEFAULTS, activeFilterCount, startsWithin, oddsWithin, quoteMatches, readToolFilters, saveToolFilters, toolFilterBar } from './ev-filters.js?v=2';
 import { SITE_PLATFORMS, SPORTSBOOK_PLATFORMS, PREDICTION_PLATFORMS, EXCHANGE_PLATFORMS, canonicalPlatform, platformAsset, platformLabel, platformOptions, isContestPlatform } from './platform-catalog.js';
@@ -22,7 +22,7 @@ import { comparisonAnnotations } from './bet-comparison.js?v=4';
 import { inlineBetCard as betComparisonCard, bindInlineComparison as bindComparison } from './bet-inline.js?v=card-click-3';
 import { openArbCalculator } from './arb-calculator.js?v=2';
 import { openLineHistory, buildLineSeries } from './line-history.js?v=1';
-import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource, breakEven, standardPayout } from './dfs-workspace.js?v=20-audit';
+import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource, breakEven, payoutFactor, payoutKnown } from './dfs-workspace.js?v=21-multipliers';
 import { createOddsScreen } from './odds-screen.js?v=9';
 
 import {readSportsbookState, saveSportsbookState, sportsbookAvailable, availableSportsbookQuotes, STATE_CHANGE_EVENT} from './sportsbook-availability.js';
@@ -238,7 +238,7 @@ function fetchFeed(kind = 'quotes', apps = []) {
   if (feedWorker !== false && typeof Worker === 'function') {
     try {
       if (!feedWorker) {
-        feedWorker = new Worker('/ev-feed-worker.js?v=15', { type: 'module' });
+        feedWorker = new Worker('/ev-feed-worker.js?v=16', { type: 'module' });
         feedWorker.onmessage = ({ data }) => { pendingFeed.get(data.id)?.(data); pendingFeed.delete(data.id); };
         feedWorker.onerror = () => { feedWorker = false; for (const resolve of pendingFeed.values()) resolve({ ok: false, kind: 'worker' }); pendingFeed.clear(); };
       }
@@ -1412,10 +1412,11 @@ function renderOptimizer() {
   const breakEvens = new Map(Object.entries(tables).map(([app, sizes]) => [app, breakEven(sizes?.['2'])]));
   const byApp = new Map();
   for (const x of dfs()) {
-    // Goblin and demon picks pay differently by an amount the feed doesn't include.
-    if (isContestPlatform(x.app) || !standardPayout(x) || x.probability == null || !Number.isFinite(Number(x.probability))) continue;
-    // No 2-pick table, no break-even: the leg can't qualify (p - null would read as p).
-    const be = breakEvens.get(x.app);
+    // Goblin and demon picks need the feed's payout multiplier.
+    if (isContestPlatform(x.app) || !payoutKnown(x) || x.probability == null || !Number.isFinite(Number(x.probability))) continue;
+    // No 2-pick table, no break-even: the leg can't qualify (p - null would read as p). A goblin or
+    // demon's break-even is the standard one divided by its payout factor.
+    const be = breakEvens.get(x.app) / payoutFactor(x);
     if (!Number.isFinite(be)) continue;
     const edge = Number(x.probability) - be;
     if (!(edge > 0)) continue;
@@ -1428,8 +1429,9 @@ function renderOptimizer() {
     if(rows[i].app!==rows[j].app||rows[i].player===rows[j].player)continue;
     const rules=tables[rows[i].app]?.['2'];
     if(!Array.isArray(rules)||rules.length!==3)continue;
-    const result=fantasySlip([rows[i],rows[j]],rules);
-    if(result)combos.push({a:rows[i],b:rows[j],...result});
+    const factor=payoutFactor(rows[i])*payoutFactor(rows[j]);
+    const result=fantasySlip([rows[i],rows[j]],rules.map(value=>Number(value)*factor));
+    if(result)combos.push({a:rows[i],b:rows[j],factor,...result});
   }
   combos.sort((a,b)=>b.ev-a.ev);
   const leg = x => `${x.player} ${x.side} ${String(x.line??'—')} ${x.market} · ${percent(x.probability)}`;
@@ -1444,7 +1446,7 @@ function renderOptimizer() {
       market:'2-pick entry',
       bet:{book:x.a.app,title:x.a.player+' + '+x.b.player,lines:[leg(x.a),leg(x.b),x.a.app]},
       picks:[x.a,x.b].map(p=>({player:p.player,side:p.side,line:p.line,market:p.market,chance:percent(p.probability)})),
-      odds:{value:Number(tables[x.a.app]['2'][2])+'×',sub:'Full-hit payout'},
+      odds:{value:Math.round(Number(tables[x.a.app]['2'][2])*x.factor*100)/100+'×',sub:x.factor===1?'Full-hit payout':'Full-hit payout · goblin/demon adjusted'},
       prob:{value:percent(x.dist[2]),sub:'Estimated'},
       actions:boardButton('Build slip',`data-optimize="${esc(x.a.id)},${esc(x.b.id)}" aria-label="Build a slip with ${esc(x.a.player)} and ${esc(x.b.player)}"`)
     }))
@@ -1461,7 +1463,9 @@ function renderSlip() {
   const selected=fantasyIds.map(id=>available.find(x=>x.id===id)).filter(Boolean);
   const rules=paytables()[fantasyApp]?.[String(selected.length)]||[];
   const rulesSource=paytableSource(state.paytables,fantasyApp,selected.length,apiPaytables);
-  const result=selected.length>=2&&rules.length===selected.length+1&&selected.every(standardPayout)?fantasySlip(selected,rules,Number(fantasyStake)):null;
+  // Goblin and demon picks scale the payout by their multiplier from the feed.
+  const slipScale=selected.reduce((product,x)=>product*payoutFactor(x),1);
+  const result=selected.length>=2&&rules.length===selected.length+1&&Number.isFinite(slipScale)?fantasySlip(selected,rules.map(value=>Number(value)*slipScale),Number(fantasyStake)):null;
   const controls=`<div class="tool-form-grid"><label>Fantasy app<select id="ev-fantasy-app">${apps.length?apps.map(app=>`<option value="${esc(app)}" ${app===fantasyApp?'selected':''}>${esc(app)}</option>`).join(''):'<option value="">Add a prop to choose a platform</option>'}</select></label><label>Entry amount ($)<input id="ev-fantasy-stake" type="number" min="0.01" step="0.01" value="${esc(fantasyStake)}"></label></div>`;
   // One card per player line: its Over and Under picks become the two side buttons. Grouped in one
   // pass (the feed has ~30k lines), lines with a fair probability first, shown 40 cards at a time.

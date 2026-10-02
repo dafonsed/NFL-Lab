@@ -112,6 +112,9 @@ const text = (raw, key) => typeof raw?.[key] === 'string' ? raw[key].trim() : ''
 // without a type is standard.
 const ODDS_TYPES = new Set(['standard', 'goblin', 'demon']);
 const oddsType = raw => { const value = (text(raw, 'oddsType') || text(raw, 'odds_type')).toLowerCase(); return ODDS_TYPES.has(value) ? value : ''; };
+// The payout factor a goblin or demon pick applies to the entry (goblin 0.7, demon 1.55, ...).
+const payoutMultiplier = raw => { const value = Number(raw?.payoutMultiplier ?? raw?.payout_multiplier); return value > 0 && value < 100 ? value : null; };
+const lineType = raw => ({ ...(oddsType(raw) ? { oddsType: oddsType(raw) } : {}), ...(payoutMultiplier(raw) ? { payoutMultiplier: payoutMultiplier(raw) } : {}) });
 
 // Player and stat as the books send them. Fanatics files Over/Under player props as market "prop"
 // with the stat in propMarket, and milestone props as market "Awak Kuier - Points" with the
@@ -132,7 +135,8 @@ export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
   const odds = Number(raw?.odds), timestamp = text(raw, 'ts'), observed = Date.parse(timestamp);
   // Pick'em apps (PrizePicks, Underdog ...) post a line, not a price, so their records may omit odds.
   const fantasy = isFantasyPlatform(text(raw, 'book')) && Boolean(text(raw, 'player') || text(raw, 'player_name'));
-  if (!id || !text(raw, 'sport') || !text(raw, 'event') || !text(raw, 'market') || !text(raw, 'side') || !text(raw, 'book') || (!fantasy && !Number.isFinite(decimal(odds))) || !Number.isFinite(observed) || !/(?:Z|[+-]\d{2}:\d{2})$/i.test(timestamp)) return { skip: 'invalid' };
+  // A record without a sport is kept (as Other): the feed sends some college props with none.
+  if (!id || !text(raw, 'event') || !text(raw, 'market') || !text(raw, 'side') || !text(raw, 'book') || (!fantasy && !Number.isFinite(decimal(odds))) || !Number.isFinite(observed) || !/(?:Z|[+-]\d{2}:\d{2})$/i.test(timestamp)) return { skip: 'invalid' };
   if (raw.live != null && typeof raw.live !== 'boolean' || raw.exchange != null && typeof raw.exchange !== 'boolean') return { skip: 'invalid' };
   if (raw.line != null && typeof raw.line !== 'number' && typeof raw.line !== 'string') return { skip: 'invalid' };
   let line = raw.line == null || raw.line === '' ? '' : Number(raw.line);
@@ -146,7 +150,7 @@ export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
   ({ type, line } = repaired);
   if (repaired.outcomes) outcomes = repaired.outcomes;
   if (['spread', 'total', 'alternate'].includes(type) && line === '') return { skip: 'invalid' };
-  const sport = sportName(text(raw, 'sport'));
+  const sport = sportName(text(raw, 'sport')) || 'Other';
   const matched = matchedEventKey(sport, event);
   const eventId = matched ? `${sport}:${matched}` : text(raw, 'eventId') || `${sport}:${event.toLowerCase()}`;
   const liquidity = Number(raw.liquidity);
@@ -163,7 +167,7 @@ export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
     // Pick'em apps say higher/lower or more/less for Over/Under.
     type, line, side: (fantasy && DFS_SIDES[repaired.side]) || repaired.side, selection: milestone || repaired.selection, sideVerified: repaired.verified,
     book: canonicalPlatform(text(raw, 'book')), odds: Number.isFinite(decimal(odds)) ? odds : null, outcomes,
-    ...(text(raw, 'team') ? { team: text(raw, 'team') } : {}), ...(oddsType(raw) ? { oddsType: oddsType(raw) } : {}), live: raw.live === true, exchange: raw.exchange === true,
+    ...(text(raw, 'team') ? { team: text(raw, 'team') } : {}), ...lineType(raw), live: raw.live === true, exchange: raw.exchange === true,
     liquidity: Number.isFinite(liquidity) ? Math.max(0, liquidity) : 0,
     // Feed times use the server's clock; shift them onto this device's clock.
     ts: new Date(observed - clockOffsetMs).toISOString(), source: 'local-api',
@@ -350,14 +354,17 @@ const pickSide = side => DFS_SIDES[String(side ?? '').toLowerCase()] || '';
 export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplicative' } = {}) {
   // Sportsbook prices per player prop. Each book keeps its own Over and Under (books that mirror one
   // platform are averaged after devigging, so one book's Over is never paired with another's Under).
-  const playerStat = (sport, player, market) => JSON.stringify([sport, propName(player), propMarket(market, player)]);
+  // The feed's sport labels disagree across books (FanDuel files NFL props as NCAAF or soccer), so the
+  // fallback matches on player and stat alone; one game per player and stat, and the start-time
+  // check, keep it from crossing games.
+  const playerStat = (player, market) => JSON.stringify([propName(player), propMarket(market, player)]);
   const add = (map, key, value) => { if (!map.has(key)) map.set(key, new Set()); map.get(key).add(value); };
   const markets = new Map(), bookGames = new Map(), gameStart = new Map();
   for (const quote of quotes) {
     const side = pickSide(quote.side);
     if (!quote.player || !side || quote.live || String(quote.period || 'full').toLowerCase() !== 'full' || !Number.isFinite(implied(quote.odds))) continue;
     const key = propKey(quote.eventId, quote.player, quote.market, quote.line);
-    add(bookGames, playerStat(quote.sport, quote.player, quote.market), quote.eventId);
+    add(bookGames, playerStat(quote.player, quote.market), quote.eventId);
     const start = Date.parse(quote.startTime);
     if (Number.isFinite(start) && !gameStart.has(quote.eventId)) gameStart.set(quote.eventId, start);
     if (!markets.has(key)) markets.set(key, new Map());
@@ -371,11 +378,11 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
   // line, but only when the player has the stat in one game at the books and in one game on that
   // DFS app, starting near the pick's game; a player listed in two games is never guessed.
   const appGames = new Map();
-  for (const pick of picks) add(appGames, JSON.stringify([pick.book, playerStat(pick.matchSport || pick.sport, pick.player, pick.market)]), pick.eventId);
+  for (const pick of picks) add(appGames, JSON.stringify([pick.book, playerStat(pick.player, pick.market)]), pick.eventId);
   const marketFor = pick => {
     const exact = markets.get(propKey(pick.eventId, pick.player, pick.market, pick.line));
     if (exact) return exact;
-    const stat = playerStat(pick.matchSport || pick.sport, pick.player, pick.market), games = bookGames.get(stat);
+    const stat = playerStat(pick.player, pick.market), games = bookGames.get(stat);
     if (games?.size !== 1 || appGames.get(JSON.stringify([pick.book, stat]))?.size !== 1) return undefined;
     const [game] = games, start = gameStart.get(game), pickStart = Date.parse(pick.startTime);
     if (Number.isFinite(start) && Number.isFinite(pickStart) && Math.abs(start - pickStart) > SAME_GAME_MS) return undefined;
@@ -415,6 +422,7 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
       id: pick.id, app: pick.book, sport: pick.sport, ...(pick.matchSport ? { matchSport: pick.matchSport } : {}), league: pick.league, event: names.get(pick.eventId) || pick.event, eventId: pick.eventId,
       player: pick.player, ...(pick.team ? { team: pick.team } : {}), market: pick.market, line: pick.line, side: pick.side === 'under' ? 'Under' : 'Over',
       ...(pick.oddsType ? { oddsType: pick.oddsType } : pick.book === 'PrizePicks' ? { oddsType: 'standard' } : {}),
+      ...(pick.payoutMultiplier ? { payoutMultiplier: pick.payoutMultiplier } : {}),
       probability, probabilityBooks: books.map(book => book.book), probabilityMethod: method,
       ...(books.length ? { probabilitySources: books.map(book => ({ book: book.book, over: book.overOdds, under: book.underOdds })) } : {}),
       ts: pick.ts, startTime: pick.startTime, live: pick.live, source: 'local-api',
@@ -438,7 +446,8 @@ export function createDfsPricer() {
       const key = lineKey(pick), prior = lines.get(key);
       if (!prior) lines.set(key, pick);
       // A goblin or demon flag from either feed sticks: those lines don't pay the standard table.
-      else if (['goblin', 'demon'].includes(pick.oddsType) && !['goblin', 'demon'].includes(prior.oddsType)) lines.set(key, { ...prior, oddsType: pick.oddsType });
+      else if (['goblin', 'demon'].includes(pick.oddsType) && !['goblin', 'demon'].includes(prior.oddsType)) lines.set(key, { ...prior, oddsType: pick.oddsType, ...(pick.payoutMultiplier ? { payoutMultiplier: pick.payoutMultiplier } : {}) });
+      else if (pick.payoutMultiplier && !prior.payoutMultiplier) lines.set(key, { ...prior, payoutMultiplier: pick.payoutMultiplier });
     }
     return [...lines.values()];
   };
@@ -450,7 +459,7 @@ export function createDfsPricer() {
       const priced = dfsPicks(merged(), quotes, names, { method });
       let hash = 0x811c9dc5;
       for (const pick of priced) {
-        const text = `${pick.id}|${pick.line}|${pick.probability}|${pick.oddsType || ''}|${pick.startTime || ''}|${pick.event || ''};`;
+        const text = `${pick.id}|${pick.line}|${pick.probability}|${pick.oddsType || ''}|${pick.payoutMultiplier || ''}|${pick.startTime || ''}|${pick.event || ''};`;
         for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
       }
       const fingerprint = `${priced.length}:${hash >>> 0}`;
@@ -566,7 +575,7 @@ export function normalizeDfsRecords(records, { syncedAt = new Date().toISOString
       id: text(raw, 'id'), book: app, sport, league: text(raw, 'league') || SOCCER_LEAGUES[text(raw, 'sport').toLowerCase()] || '',
       event, eventId: matched ? `${sport}:${matched}` : event ? `${sport}:${event.toLowerCase()}` : `${sport}:${propName(player)}`,
       player, market, line, side, ts: new Date(ts).toISOString(), startTime: Number.isFinite(start) ? new Date(start).toISOString() : '', live: raw.live === true,
-      ...(text(raw, 'team') ? { team: text(raw, 'team') } : {}), ...(oddsType(raw) ? { oddsType: oddsType(raw) } : {}),
+      ...(text(raw, 'team') ? { team: text(raw, 'team') } : {}), ...lineType(raw),
     });
   }
   return { picks: relabelDfsSports(picks), skipped };
