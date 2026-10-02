@@ -196,6 +196,8 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure}) {
   const heat = edge => !Number.isFinite(edge) ? 'none' : edge >= .01 ? 'high' : edge > -.01 ? 'near' : 'low';
   const quotes = () => getState().quotes || [];
   const averagePrice = offers => {
+    // One book: its own price (an even-money +100 shouldn't come back from 50% as -100).
+    if (offers.length === 1 && Number.isFinite(decimal(offers[0].odds))) return oddsLabel(offers[0].odds);
     const values = offers.map(offer => decimal(offer.odds)).filter(Number.isFinite);
     return values.length ? oddsLabel(probabilityToAmerican(values.length / values.reduce((sum,value) => sum+value,0))) : '—';
   };
