@@ -1,8 +1,9 @@
-// Downloads, parses and cleans the quote snapshot off the main thread. The snapshot is several MB
-// and cleaning it takes hundreds of milliseconds on a phone; doing that in the page froze scrolling
-// and typing on every refresh. The page receives ready-to-use quotes (see syncLocalApi in ev.js).
-import { loadFeed } from './ev-feed-normalize.js?v=3';
+// Downloads, parses and cleans the quote snapshot (and, for the DFS tools, the DFS props) off the
+// main thread. Both are several MB; doing that in the page froze scrolling and typing on every
+// refresh. The page receives ready-to-use records (see fetchFeed in ev.js).
+import { loadFeed, loadDfsFeed } from './ev-feed-normalize.js?v=4';
 
 self.onmessage = async ({ data }) => {
-  self.postMessage({ id: data.id, ...(await loadFeed(data.url, data.syncedAt)) });
+  const result = data.kind === 'dfs' ? await loadDfsFeed(data.url, data.syncedAt) : await loadFeed(data.url, data.syncedAt);
+  self.postMessage({ id: data.id, ...result });
 };

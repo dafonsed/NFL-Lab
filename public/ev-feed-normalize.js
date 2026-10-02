@@ -369,3 +369,76 @@ export async function loadFeed(url, syncedAt = new Date().toISOString()) {
     return { ok: false, kind: error?.name === 'TimeoutError' ? 'timeout' : 'network', message: String(error?.message || '') };
   }
 }
+
+// Entries that aren't player props: contest lobbies ("Main", "Snake Draft"), rosters.
+const DFS_NON_PROPS = new Set(['roster', 'salary cap', 'salary_cap', 'contest', 'lobby']);
+const DFS_SIDES = { higher: 'over', more: 'over', over: 'over', lower: 'under', less: 'under', under: 'under' };
+
+/**
+ * The quote API's DFS props (GET /site/dfs/props) → pick records for dfsPicks(). Contest and
+ * roster entries are skipped. A probability repeated across most of an app's props (the feed
+ * sends 0.6667 for every PrizePicks line) is a placeholder, not an estimate, so it is ignored and
+ * the hit chance comes from sportsbook props at the same line instead.
+ */
+export function normalizeDfsRecords(records, { syncedAt = new Date().toISOString() } = {}) {
+  const now = Date.parse(syncedAt), list = Array.isArray(records) ? records : [];
+  const skipped = { invalid: 0, notProps: 0, stale: 0 };
+  const counts = new Map();
+  for (const raw of list) {
+    const app = canonicalPlatform(text(raw, 'app') || text(raw, 'book')), value = Number(raw?.probability);
+    if (!Number.isFinite(value)) continue;
+    const appCounts = counts.get(app) || new Map(); appCounts.set(value, (appCounts.get(value) || 0) + 1); counts.set(app, appCounts);
+  }
+  const placeholders = new Map([...counts].map(([app, values]) => {
+    const total = [...values.values()].reduce((sum, count) => sum + count, 0), [value, count] = [...values].sort((a, b) => b[1] - a[1])[0];
+    return [app, total >= 20 && count / total >= 0.5 ? value : NaN];
+  }));
+  const picks = [];
+  for (const raw of list) {
+    const app = canonicalPlatform(text(raw, 'app') || text(raw, 'book')), player = text(raw, 'player') || text(raw, 'player_name');
+    const market = text(raw, 'market'), side = DFS_SIDES[text(raw, 'side').toLowerCase()], line = Number(raw?.line), ts = Date.parse(text(raw, 'ts'));
+    if (!app || !player || !market || !side || !Number.isFinite(line) || !Number.isFinite(ts)) { skipped.invalid += 1; continue; }
+    if (DFS_NON_PROPS.has(market.toLowerCase()) || line <= 0) { skipped.notProps += 1; continue; }
+    if (now - ts > FEED_MAX_AGE_MS) { skipped.stale += 1; continue; }
+    const sport = sportName(text(raw, 'sport')), event = text(raw, 'event');
+    const matched = matchedEventKey(sport, event), probability = Number(raw.probability);
+    picks.push({
+      id: text(raw, 'id'), book: app, sport, league: text(raw, 'league') || SOCCER_LEAGUES[text(raw, 'sport').toLowerCase()] || '',
+      event, eventId: matched ? `${sport}:${matched}` : event ? `${sport}:${event.toLowerCase()}` : `${sport}:${propName(player)}`,
+      player, market, line, side, ts: new Date(ts).toISOString(), startTime: text(raw, 'startTime') || '', live: raw.live === true,
+      ...(Number.isFinite(probability) && probability >= 0 && probability <= 1 && probability !== placeholders.get(app) ? { probability } : {}),
+      ...(text(raw, 'team') ? { team: text(raw, 'team') } : {}),
+    });
+  }
+  return { picks, skipped };
+}
+
+/** The quote API's payout tables (GET /site/dfs/payouts) → { app: { size: [return by hits] } } (power play: all picks must hit). */
+export function payoutTables(records) {
+  const tables = {};
+  for (const entry of Array.isArray(records) ? records : []) {
+    const app = canonicalPlatform(text(entry, 'app'));
+    if (!app || !entry.payouts || typeof entry.payouts !== 'object') continue;
+    for (const [size, kinds] of Object.entries(entry.payouts)) {
+      const picks = Number(size), multiplier = Number(kinds?.power?.multiplier);
+      if (!Number.isInteger(picks) || picks < 2 || picks > 10 || !(multiplier > 1)) continue;
+      (tables[app] ||= {})[String(picks)] = [...Array(picks).fill(0), multiplier];
+    }
+  }
+  return tables;
+}
+
+/** Fetches and normalizes the DFS props; runs in the feed worker. Never throws. */
+export async function loadDfsFeed(url, syncedAt = new Date().toISOString()) {
+  try {
+    const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(30_000) });
+    if (!response.ok) return { ok: false, kind: 'http', status: response.status };
+    const payload = await response.json();
+    const records = Array.isArray(payload) ? payload : payload?.props || payload?.dfs;
+    if (!Array.isArray(records)) return { ok: false, kind: 'shape' };
+    const { picks, skipped } = normalizeDfsRecords(records, { syncedAt });
+    return { ok: true, picks, dfs: dfsPicks(picks, []), skipped, total: records.length };
+  } catch (error) {
+    return { ok: false, kind: error?.name === 'TimeoutError' ? 'timeout' : 'network' };
+  }
+}

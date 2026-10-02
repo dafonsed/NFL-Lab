@@ -120,7 +120,8 @@ function matchesScope(rule, quote) {
 
 // Without saved reference-book rules, sharp books count more: their prices move first and carry
 // the least margin, which is what fair-odds tools anchor on.
-export const DEFAULT_SHARP_WEIGHTS = Object.freeze({ pinnacle: 3, circa: 3, 'circa sports': 3 });
+// Matches the quote API's /books list, which marks Pinnacle, Betfair and Circa as sharp benchmarks.
+export const DEFAULT_SHARP_WEIGHTS = Object.freeze({ pinnacle: 3, betfair: 3, 'betfair exchange': 3, circa: 3, 'circa sports': 3 });
 function referenceRules(quote, quotes, settings) {
   const configured = Array.isArray(settings.bookRules) && settings.bookRules.length ? settings.bookRules : null;
   const rules = new Map();

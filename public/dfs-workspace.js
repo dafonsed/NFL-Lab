@@ -28,13 +28,18 @@ export const STANDARD_PAYTABLES = Object.freeze({
   PrizePicks: { 2: allHit(2, 3), 3: allHit(3, 6), 4: allHit(4, 10), 5: allHit(5, 20), 6: allHit(6, 37.5) },
   'Underdog Fantasy': { 2: allHit(2, 3.5), 3: allHit(3, 6.5), 4: allHit(4, 12), 5: allHit(5, 20), 6: allHit(6, 35), 7: allHit(7, 65), 8: allHit(8, 120) },
 });
-/** Standard payouts with the member's saved tables layered on top (per app and entry size). */
-export function withStandardPaytables(saved = {}) {
+/**
+ * Payout tables per app and entry size: published standard payouts, then the quote API's tables
+ * (GET /site/dfs/payouts), then the member's saved tables on top.
+ */
+export function withStandardPaytables(saved = {}, api = {}) {
   const tables = Object.fromEntries(Object.entries(STANDARD_PAYTABLES).map(([app, sizes]) => [app, Object.fromEntries(Object.entries(sizes).map(([size, rules]) => [size, [...rules]]))]));
-  for (const [app, sizes] of Object.entries(saved && typeof saved === 'object' ? saved : {})) tables[canonicalPlatform(app)] = { ...(tables[canonicalPlatform(app)] || {}), ...sizes };
+  for (const layer of [api, saved]) for (const [app, sizes] of Object.entries(layer && typeof layer === 'object' ? layer : {})) tables[canonicalPlatform(app)] = { ...(tables[canonicalPlatform(app)] || {}), ...sizes };
   return tables;
 }
-export const isStandardPaytable = (saved, app, size) => !saved?.[app]?.[String(size)] && Boolean(STANDARD_PAYTABLES[app]?.[String(size)]);
+/** Where a table comes from: 'saved', 'api', 'standard', or '' when there is none. */
+export const paytableSource = (saved, app, size, api = {}) => saved?.[app]?.[String(size)] ? 'saved' : api?.[app]?.[String(size)] ? 'api' : STANDARD_PAYTABLES[app]?.[String(size)] ? 'standard' : '';
+export const isStandardPaytable = (saved, app, size, api = {}) => paytableSource(saved, app, size, api) === 'standard';
 const brand = name => {
   const asset = platformAsset(name);
   return asset ? `<img class="dfs-brand" src="${asset}" alt="${esc(name)}" width="28" height="28">` : `<span class="dfs-brand-fallback" aria-label="${esc(name)}">${esc(name.slice(0,2))}</span>`;
@@ -116,6 +121,9 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure}) {
   let previousPreview = null;
   let expanded = '', menuOpen = false, slipType = '3-power', entry = 10, feedback = '';
   let browsePosition = 0;
+  // The feed carries tens of thousands of lines (17k NFL PrizePicks props alone); show them in pages.
+  const ROW_PAGE = 50;
+  let rowLimit = ROW_PAGE;
   const selected = new Set(), hidden = new Set(), excludedPlatforms = new Set();
   const noProps = () => !getState().dfs.length;
   const allRows = () => getState().dfs.filter(item => isDfsPlatform(item.app));
@@ -222,7 +230,7 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure}) {
     </tr>${open ? comparison(item, threshold) : ''}`;
   }
   function table(rows, threshold) {
-    return `<div class="evb-table-wrap dfs-table-wrap"><table class="evb-table dfs-table" aria-label="${esc(platform)} DFS player props"><thead class="dfs-thead"><tr><th scope="col">Market and event</th><th scope="col">Selection</th><th scope="col">Sharp price</th><th scope="col">True probability</th><th scope="col">Actions</th></tr></thead><tbody>${rows.map(item => row(item,threshold)).join('')}</tbody></table></div>`;
+    return `<div class="evb-table-wrap dfs-table-wrap"><table class="evb-table dfs-table" aria-label="${esc(platform)} DFS player props"><thead class="dfs-thead"><tr><th scope="col">Market and event</th><th scope="col">Selection</th><th scope="col">Sharp price</th><th scope="col">Hit chance</th><th scope="col">Actions</th></tr></thead><tbody>${rows.slice(0, rowLimit).map(item => row(item,threshold)).join('')}</tbody></table></div>${rows.length > rowLimit ? `<button type="button" class="dfs-more" data-dfs-more>Show ${Math.min(ROW_PAGE, rows.length - rowLimit)} more · ${(rows.length - rowLimit).toLocaleString()} not shown</button>` : ''}`;
   }
   function togglePick(id) {
     const item = allRows().find(entry => entry.id === id);
@@ -302,7 +310,8 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure}) {
     else if (target.hasAttribute('data-dfs-restore')) { hidden.clear(); feedback=''; repaint(); }
     else if (target.dataset.dfsRemove) { selected.delete(target.dataset.dfsRemove); feedback=''; repaint(); }
     else if (target.hasAttribute('data-dfs-clear')) { selected.clear(); feedback=''; repaint(); }
-    else if (target.hasAttribute('data-dfs-reset')) { filterSport='';market='';query='';hidden.clear();repaint(); }
+    else if (target.hasAttribute('data-dfs-more')) { rowLimit += ROW_PAGE; repaint('[data-dfs-more]'); }
+    else if (target.hasAttribute('data-dfs-reset')) { filterSport='';market='';query='';hidden.clear();rowLimit=ROW_PAGE;repaint(); }
     else if (target.hasAttribute('data-dfs-refresh')) { feedback='Comparison refreshed from the available DFS lines.'; repaint('[data-dfs-refresh]'); }
     else if (target.dataset.dfsComparePlatform) { const app=target.dataset.dfsComparePlatform; excludedPlatforms.has(app) ? excludedPlatforms.delete(app) : excludedPlatforms.add(app); repaint(`[data-dfs-compare-platform="${CSS.escape(app)}"]`); }
     else if (target.hasAttribute('data-dfs-all-platforms')) { excludedPlatforms.clear(); repaint('[data-dfs-all-platforms]'); }
@@ -319,6 +328,7 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure}) {
   }
   function change(event) {
     const target=event.target;
+    if (['dfs-platform','dfs-sport','dfs-market','dfs-sort'].includes(target.id)) rowLimit=ROW_PAGE;
     if (target.id==='dfs-platform') {platform=target.value;selected.clear();hidden.clear();expanded='';feedback='';repaint('#dfs-platform');}
     else if (target.id==='dfs-sport') {filterSport=target.value;market='';repaint('#dfs-sport');}
     else if (target.id==='dfs-market') {market=target.value;repaint('#dfs-market');}
@@ -330,7 +340,7 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure}) {
   function input(event) {
     if(event.target.id!=='dfs-search') return false;
     const cursor=event.target.selectionStart;
-    query=event.target.value;redraw();
+    query=event.target.value;rowLimit=ROW_PAGE;redraw();
     const node=document.querySelector('#dfs-search');node.focus();node.setSelectionRange(cursor,cursor);
     return true;
   }

@@ -132,3 +132,25 @@ test('set-score and handicap selections are other markets', () => {
   assert.equal(repairSelection({ type: 'moneyline', side: 'home', selection: 'Correcaminos 11+', event: 'Lobos @ Correcaminos' }), null);
   assert.equal(repairSelection({ type: 'moneyline', side: 'home', selection: 'Philadelphia 76ers', event: 'Celtics @ Philadelphia 76ers' }).side, 'home');
 });
+
+test('the API\'s DFS props become picks; contests, rosters and placeholder probabilities are left out', async () => {
+  const { normalizeDfsRecords, payoutTables } = await import('../public/ev-feed-normalize.js');
+  const synced = '2026-10-02T00:30:00.000Z', ts = '2026-10-02T00:29:00.000Z';
+  const pp = (i, extra = {}) => ({ id: `pp${i}`, sport: 'nfl', event: '', player: `Player ${i}`, market: 'Rush Yards', line: 50.5 + i, side: 'higher', app: 'PrizePicks', probability: 0.6667, ts, ...extra });
+  const records = [...Array.from({ length: 24 }, (_, i) => pp(i)), pp(99, { probability: 0.58 }),
+    { id: 'fd1', sport: 'mlb', event: '', player: 'Main', market: 'salary_cap', line: 35000, side: 'higher', app: 'FanDuel Fantasy', probability: 0.6667, ts },
+    { id: 'sl1', sport: 'nba', event: '', player: 'Tyler Lydon', market: 'roster', line: 0, side: 'higher', app: 'Sleeper', probability: 0.9901, ts },
+    pp(100, { ts: '2026-10-01T22:00:00.000Z' })];
+  const { picks, skipped } = normalizeDfsRecords(records, { syncedAt: synced });
+  assert.equal(picks.length, 25);
+  assert.deepEqual(skipped, { invalid: 0, notProps: 2, stale: 1 });
+  assert.equal(picks[0].side, 'over');
+  assert.equal(picks[0].probability, undefined, '0.6667 on every PrizePicks line is a placeholder');
+  assert.equal(picks.at(-1).probability, 0.58, 'a real per-pick estimate is kept');
+  assert.deepEqual(payoutTables([{ app: 'Underdog', payouts: { 2: { power: { multiplier: 3 } }, 3: { power: { multiplier: 5 }, flex: null } } }]), { 'Underdog Fantasy': { 2: [0, 0, 3], 3: [0, 0, 0, 5] } });
+  const { withStandardPaytables, paytableSource } = await import('../public/dfs-workspace.js');
+  const api = { PrizePicks: { 3: [0, 0, 0, 5] } };
+  assert.deepEqual(withStandardPaytables({}, api).PrizePicks['3'], [0, 0, 0, 5], 'the API table wins over the built-in one');
+  assert.equal(paytableSource({}, 'PrizePicks', 3, api), 'api');
+  assert.equal(paytableSource({ PrizePicks: { 3: [0, 0, 1, 6] } }, 'PrizePicks', 3, api), 'saved');
+});
