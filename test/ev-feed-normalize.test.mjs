@@ -261,3 +261,21 @@ test('a sportsbook Over/Under pair with no margin is not devigged into a fair pr
   assert.deepEqual(pick.probabilityBooks, ['DraftKings']);
   assert.ok(Math.abs(pick.probability - fairFromAmerican([-140, 118]).fair[0]) < 1e-12);
 });
+
+test('a pick prices against the same player, stat and line when the books name the game differently', async () => {
+  const { dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const { fairFromAmerican } = await import('../public/ev-advanced-math.js');
+  const ts = new Date().toISOString();
+  const quote = (side, odds, eventId = 'NBA:wings @ valkyries') => ({ book: 'Fanatics', side, odds, sport: 'NBA', player: 'Veronica Burton', market: 'Points', line: 12.5, eventId, ts });
+  const pick = (eventId = 'NBA:dal @ gsv') => ({ book: 'PrizePicks', sport: 'NBA', player: 'Veronica Burton', market: 'Points', line: 12.5, side: 'over', eventId, ts });
+  // PrizePicks "DAL @ GSV" and Fanatics "Dallas Wings @ Golden State Valkyries" are one game.
+  const [priced] = dfsPicks([pick()], [quote('over', 100), quote('under', -130)]);
+  assert.ok(Math.abs(priced.probability - fairFromAmerican([100, -130]).fair[0]) < 1e-12);
+  assert.equal(Math.round(priced.probability * 10000) / 100, 46.94);
+  // The player has this stat in two games at the book: never guessed.
+  const [twoGames] = dfsPicks([pick()], [quote('over', 100), quote('under', -130), quote('over', 120, 'NBA:wings @ lynx'), quote('under', -150, 'NBA:wings @ lynx')]);
+  assert.equal(twoGames.probability, null);
+  // Or in two games among the picks.
+  const priced2 = dfsPicks([pick(), { ...pick('NBA:dal @ min'), line: 13.5 }], [quote('over', 100), quote('under', -130)]);
+  assert.ok(priced2.every(item => item.probability === null));
+});
