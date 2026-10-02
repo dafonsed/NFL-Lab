@@ -435,7 +435,10 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
   const realMultiplier = pick => pick.payoutMultiplier && pick.payoutMultiplier !== placeholder.get(`${pick.book}|${pick.oddsType}`) ? pick.payoutMultiplier : null;
   const weight = name => DEFAULT_SHARP_WEIGHTS[String(name).toLowerCase()] || 1;
   return [...latest.values()].map(pick => {
-    const books = [...(marketFor(pick)?.values() || [])]
+    // Every sportsbook with this exact player, stat and line (one side or both), for the comparison;
+    // the fair probability uses those that price both sides with a margin.
+    const listed = [...(marketFor(pick)?.values() || [])];
+    const books = listed
       // A sportsbook pair whose implied probabilities sum to 100.5% or less has no margin to remove:
       // the feed built the Under from the Over (DraftKings and Fanatics milestone props, Oct 2026).
       .filter(book => Number.isFinite(book.over) && Number.isFinite(book.under) && (book.exchange || book.over + book.under > 1.005))
@@ -456,6 +459,7 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
       ...(realMultiplier(pick) ? { payoutMultiplier: realMultiplier(pick) } : {}),
       probability, probabilityBooks: books.map(book => book.book), probabilityMethod: method,
       ...(books.length ? { probabilitySources: books.map(book => ({ book: book.book, over: book.overOdds, under: book.underOdds })) } : {}),
+      ...(listed.length ? { bookLines: listed.map(book => ({ book: book.book, ...(Number.isFinite(book.overOdds) ? { over: book.overOdds } : {}), ...(Number.isFinite(book.underOdds) ? { under: book.underOdds } : {}), ...(book.exchange ? { exchange: true } : {}) })) } : {}),
       ts: pick.ts, startTime: pick.startTime, live: pick.live, source: 'local-api',
     };
   });
@@ -490,7 +494,8 @@ export function createDfsPricer() {
       const priced = dfsPicks(merged(), quotes, names, { method });
       let hash = 0x811c9dc5;
       for (const pick of priced) {
-        const text = `${pick.id}|${pick.line}|${pick.probability}|${pick.oddsType || ''}|${pick.payoutMultiplier || ''}|${pick.startTime || ''}|${pick.event || ''};`;
+        const prices = (pick.bookLines || []).map(line => `${line.book}${line.over ?? ''}/${line.under ?? ''}`).join(',');
+        const text = `${pick.id}|${pick.line}|${pick.probability}|${pick.oddsType || ''}|${pick.payoutMultiplier || ''}|${pick.startTime || ''}|${pick.event || ''}|${prices};`;
         for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
       }
       const fingerprint = `${priced.length}:${hash >>> 0}`;
