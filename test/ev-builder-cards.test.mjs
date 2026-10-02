@@ -8,7 +8,7 @@ import * as views from '../public/ev-secondary-views.js';
 import {wagerCard} from '../public/ev-bet-card.js';
 import {canonicalPlatform, isContestPlatform, PREDICTION_PLATFORMS} from '../public/platform-catalog.js';
 import {TOOL_FILTER_DEFAULTS, oddsWithin} from '../public/ev-filters.js';
-import {withStandardPaytables, isStandardPaytable} from '../public/dfs-workspace.js';
+import {withStandardPaytables, paytableSource} from '../public/dfs-workspace.js';
 
 const source=await fs.readFile(new URL('../public/ev.js',import.meta.url),'utf8');
 const quote=(id,extra={})=>({id,sport:'NBA',event:'BOS vs NYK',player:'Player <One>',market:'Points',type:'prop',side:'Over',line:20.5,book:'FanDuel',odds:120,ts:'2026-09-25T10:00:00Z',...extra});
@@ -26,8 +26,9 @@ function render(name,extra={}) {
   // Parlay computes fair odds from every quote for the sport (quoteSource), not only the listed ones.
   context.quoteSource ??= () => context.state?.quotes ?? context.quotes?.() ?? [];
   // Standard payouts layer under saved tables (public/dfs-workspace.js).
-  context.paytables ??= () => withStandardPaytables(context.state?.paytables);
-  context.isStandardPaytable ??= isStandardPaytable;
+  context.apiPaytables ??= {};
+  context.paytables ??= () => withStandardPaytables(context.state?.paytables, context.apiPaytables);
+  context.paytableSource ??= paytableSource;
   const $=load(vm.runInContext(source.slice(start,end)+`\n${name}()`,context));
   assert.equal($('.wager-card button button').length,0,'actions are separate controls');
   return {$,context};
