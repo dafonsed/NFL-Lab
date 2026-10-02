@@ -24,8 +24,8 @@ export const DFS_PLATFORMS = FANTASY_PLATFORMS;
 export const isDfsPlatform = isFantasyPlatform;
 
 // Each app's published standard payouts: total return per $1 entry, indexed by picks correct.
-// PrizePicks Power Play: prizepicks.com/resources/prizepicks-payouts (updated 9 Sep 2026).
-// Underdog Standard entries: Underdog help center "Pick'em Standard & Flex Entry Payouts" (Oct 2026).
+// PrizePicks Power Play: prizepicks.com/help-center/payouts (last updated 9 Sep 2026; rechecked 2 Oct 2026).
+// Underdog Standard entries: Underdog help center "Pick'em Standard & Flex Entry Payouts" (rechecked 2 Oct 2026).
 // Sleeper sets a multiplier per pick, so it has no fixed table. Promotions, state rules, special
 // picks and same-game combinations change real payouts; saved tables override these.
 const allHit = (size, multiplier) => [...Array(size).fill(0), multiplier];
@@ -34,16 +34,20 @@ export const STANDARD_PAYTABLES = Object.freeze({
   'Underdog Fantasy': { 2: allHit(2, 3.5), 3: allHit(3, 6.5), 4: allHit(4, 12), 5: allHit(5, 20), 6: allHit(6, 35), 7: allHit(7, 65), 8: allHit(8, 120) },
 });
 /**
- * Payout tables per app and entry size: published standard payouts, then the quote API's tables
- * (GET /site/dfs/payouts), then the member's saved tables on top.
+ * Payout tables per app and entry size: the quote API's tables (GET /site/dfs/payouts) for apps
+ * without a published table, then each app's published payouts, then the member's saved tables on
+ * top. A published table always beats the API's: on 2 Oct 2026 the API still sent PrizePicks'
+ * retired 3-pick 5×, 5-pick 15× and 6-pick 25× (now 6×, 20×, 37.5×) and Underdog's 3×/5×/10×/15×.
  */
 export function withStandardPaytables(saved = {}, api = {}) {
-  const tables = Object.fromEntries(Object.entries(STANDARD_PAYTABLES).map(([app, sizes]) => [app, Object.fromEntries(Object.entries(sizes).map(([size, rules]) => [size, [...rules]]))]));
-  for (const layer of [api, saved]) for (const [app, sizes] of Object.entries(layer && typeof layer === 'object' ? layer : {})) tables[canonicalPlatform(app)] = { ...(tables[canonicalPlatform(app)] || {}), ...sizes };
+  const tables = {};
+  for (const layer of [api, STANDARD_PAYTABLES, saved]) for (const [app, sizes] of Object.entries(layer && typeof layer === 'object' ? layer : {})) {
+    tables[canonicalPlatform(app)] = { ...(tables[canonicalPlatform(app)] || {}), ...Object.fromEntries(Object.entries(sizes || {}).map(([size, rules]) => [size, Array.isArray(rules) ? [...rules] : rules])) };
+  }
   return tables;
 }
-/** Where a table comes from: 'saved', 'api', 'standard', or '' when there is none. */
-export const paytableSource = (saved, app, size, api = {}) => saved?.[app]?.[String(size)] ? 'saved' : api?.[app]?.[String(size)] ? 'api' : STANDARD_PAYTABLES[app]?.[String(size)] ? 'standard' : '';
+/** Where a table comes from: 'saved', 'standard' (published), 'api', or '' when there is none. */
+export const paytableSource = (saved, app, size, api = {}) => saved?.[app]?.[String(size)] ? 'saved' : STANDARD_PAYTABLES[app]?.[String(size)] ? 'standard' : api?.[app]?.[String(size)] ? 'api' : '';
 export const isStandardPaytable = (saved, app, size, api = {}) => paytableSource(saved, app, size, api) === 'standard';
 const brand = name => {
   const asset = platformAsset(name);
