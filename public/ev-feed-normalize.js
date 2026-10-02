@@ -351,8 +351,13 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
     const books = markets.get(key), family = quote.priceFamily || quote.book;
     books.set(family, { ...books.get(family), book: quote.book, exchange: quote.exchange === true, [quote.side]: implied(quote.odds) });
   }
+  // A pick'em line can be played either way at the same number: a standard line the feed sends as
+  // More only is also listed as Less. Goblin and demon lines are More only.
+  const sent = new Set(picks.map(pick => JSON.stringify([pick.book, propKey(pick.eventId, pick.player, pick.market, pick.line), pick.side])));
+  const bothSides = picks.flatMap(pick => pick.side !== 'over' || ['goblin', 'demon'].includes(pick.oddsType)
+    || sent.has(JSON.stringify([pick.book, propKey(pick.eventId, pick.player, pick.market, pick.line), 'under'])) ? [pick] : [pick, { ...pick, side: 'under' }]);
   const latest = new Map();
-  for (const pick of picks) {
+  for (const pick of bothSides) {
     const key = JSON.stringify([pick.book, propKey(pick.eventId, pick.player, pick.market, pick.line), pick.side]);
     const prior = latest.get(key);
     if (!prior || fresher(pick, prior)) latest.set(key, { ...pick, id: `local-api:${stableId(key)}` });
