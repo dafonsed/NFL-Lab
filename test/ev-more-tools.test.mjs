@@ -96,7 +96,7 @@ test('filtering available fantasy picks preserves the selected ticket and payout
   const source=await fs.readFile(new URL('../public/ev.js',import.meta.url),'utf8');
   const start=source.indexOf('function renderSlip()'), end=source.indexOf('\nfunction ',start+1);
   const dfs=[{id:'a',app:'PrizePicks',player:'First player',probability:.6,side:'Over',line:10,market:'Points'},{id:'b',app:'PrizePicks',player:'Second player',probability:.55,side:'Under',line:20,market:'Points'}];
-  const context=vm.createContext({...views,...core,state:{dfs,paytables:{PrizePicks:{2:[0,0,3]}}},fantasyApp:'PrizePicks',fantasyIds:['a','b'],fantasyStake:10,dfs:()=>[],isContestPlatform:()=>false,esc:views.toolEsc,fmtLine:String,money:n=>'$'+n.toFixed(2),percent:n=>(n*100).toFixed(1)+'%',signed:n=>(n*100).toFixed(1)+'%',action:()=>'',button:(label,attrs)=>`<button ${attrs}>${label}</button>`});
+  const context=vm.createContext({...views,...core,state:{dfs,paytables:{PrizePicks:{2:[0,0,3]}}},fantasyApp:'PrizePicks',fantasyIds:['a','b'],fantasyStake:10,slipVisibleCount:40,dfs:()=>[],isContestPlatform:()=>false,esc:views.toolEsc,fmtLine:String,money:n=>'$'+n.toFixed(2),percent:n=>(n*100).toFixed(1)+'%',signed:n=>(n*100).toFixed(1)+'%',action:()=>'',button:(label,attrs)=>`<button ${attrs}>${label}</button>`});
   // Standard payouts layer under saved tables (public/dfs-workspace.js).
   context.apiPaytables={};context.paytables=()=>withStandardPaytables(context.state.paytables,context.apiPaytables);context.paytableSource=paytableSource;context.standardPayout=standardPayout;
   const $=load(vm.runInContext(source.slice(start,end)+'\nrenderSlip()',context));

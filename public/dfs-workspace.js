@@ -5,7 +5,9 @@ import { boardIcon, renderBetPanel } from './ev-board.js?v=6';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const normalize = value => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-const appName = canonicalPlatform;
+// App-name lookups run for every one of ~30k lines on each render; the answers never change.
+const memo = fn => { const cache = new Map(); return value => { const key = String(value ?? ''); if (!cache.has(key)) cache.set(key, fn(value)); return cache.get(key); }; };
+const appName = memo(canonicalPlatform);
 // Goblin and demon picks change PrizePicks' payout by an amount the feed doesn't include, so their
 // edge, optimizer ranking and slip EV can't be measured against the standard payout table.
 export const standardPayout = item => !['goblin', 'demon'].includes(item?.oddsType);
@@ -21,7 +23,7 @@ const icons = {
 };
 const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.down}</svg>`;
 export const DFS_PLATFORMS = FANTASY_PLATFORMS;
-export const isDfsPlatform = isFantasyPlatform;
+export const isDfsPlatform = memo(isFantasyPlatform);
 
 // Each app's published standard payouts: total return per $1 entry, indexed by picks correct.
 // PrizePicks Power Play: prizepicks.com/help-center/payouts (last updated 9 Sep 2026; rechecked 2 Oct 2026).
@@ -103,6 +105,25 @@ export function selectedComparisonPlatforms(item, props, names) {
 
 // Use recorded prices for the exact selection; estimated hit rates are never offers.
 export function sportsbookOffer(item, quotes = []) { return sportsbookOffers(item, quotes)[0] || null; }
+// Quotes grouped by normalized player (or, for quotes without a player field, by normalized market),
+// built once per quote list: each DFS row then checks only its own player's quotes instead of all
+// ~13k (scanning them made every render take a second).
+const offerIndex = new WeakMap();
+function quotesFor(quotes, player, market) {
+  let index = offerIndex.get(quotes);
+  if (!index) {
+    index = new Map();
+    for (const quote of quotes) {
+      const key = normalize(quote.player) || normalize(quote.market);
+      if (!key) continue;
+      if (!index.has(key)) index.set(key, []);
+      index.get(key).push(quote);
+    }
+    offerIndex.set(quotes, index);
+  }
+  return [...(index.get(player) || []), ...(index.get(player + market) || [])];
+}
+const SPORTSBOOK_NAMES = new Set([...SPORTSBOOK_PLATFORMS, 'Pinnacle']);
 // Latest matching price per sportsbook, best price first.
 export function sportsbookOffers(item, quotes = []) {
   if (item.source === 'design-preview') return [];
@@ -115,16 +136,16 @@ export function sportsbookOffers(item, quotes = []) {
   const hasLine = value => value !== null && value !== undefined && String(value).trim() !== '' && Number.isFinite(Number(value));
   if (!player || !event || !market || !hasLine(item.line)) return [];
   const latest = new Map();
-  for (const quote of quotes) {
-    const book = [...SPORTSBOOK_PLATFORMS,'Pinnacle'].find(name => name === appName(quote.book));
+  for (const quote of quotesFor(quotes, player, market)) {
+    const book = SPORTSBOOK_NAMES.has(appName(quote.book)) ? appName(quote.book) : '';
     const quotePlayer = normalize(quote.player) || (normalize(quote.market) === player + market ? player : '');
-    if (!book || quote.exchange || !fresh(quote) || !Number.isFinite(decimal(quote.odds)) ||
+    if (!book || quote.exchange || !Number.isFinite(decimal(quote.odds)) ||
         (quote.source === 'example') !== (item.source === 'example') ||
-        normalize(quote.sport) !== normalize(item.sport) || normalize(quote.event) !== event ||
+        normalize(quote.sport) !== normalize(item.matchSport || item.sport) || normalize(quote.event) !== event ||
         quotePlayer !== player || marketName(quote.market) !== market ||
         !hasLine(quote.line) || Number(quote.line) !== Number(item.line) ||
         normalize(quote.side) !== normalize(item.side) || Boolean(quote.live) !== Boolean(item.live) ||
-        normalize(quote.period || 'full') !== normalize(item.period || 'full')) continue;
+        normalize(quote.period || 'full') !== normalize(item.period || 'full') || !fresh(quote)) continue;
     const prior = latest.get(book);
     if (!prior || (Date.parse(quote.ts) || 0) >= (Date.parse(prior.ts) || 0)) latest.set(book,{...quote,book});
   }
@@ -136,22 +157,29 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure}) {
   // chosen app, else the app with the most props listed (leadApp).
   let platform = null, filterSport, market = '', lineType = '', query = '', sort = 'edge', slipAppName = '', leadApp = '';
   let previousPreview = null;
-  let expanded = '', menuOpen = false, slipType = '3-power', entry = 10, feedback = '';
+  let expanded = '', menuOpen = false, slipType = '3-saved', entry = 10, feedback = '';
+  // The page's state is read once per render (getState copies it and filters the quotes).
+  let snap = null;
+  const current = () => snap || getState();
   let browsePosition = 0;
   // The feed carries tens of thousands of lines (17k NFL PrizePicks props alone); show them in pages.
   const ROW_PAGE = 50;
   let rowLimit = ROW_PAGE;
   const selected = new Set(), hidden = new Set(), excludedPlatforms = new Set();
-  const noProps = () => !getState().dfs.length;
-  const allRows = () => getState().dfs.filter(item => isDfsPlatform(item.app));
+  const noProps = () => !current().dfs.length;
+  // DFS-app lines, filtered once per list of picks (the list only changes when the feed does).
+  // (Adding a prop by hand pushes onto the same list, so its length is part of the key.)
+  let rowsCache = { dfs: null, length: -1, rows: [] };
+  const allRows = () => {
+    const dfs = current().dfs;
+    if (rowsCache.dfs !== dfs || rowsCache.length !== dfs.length) rowsCache = { dfs, length: dfs.length, rows: dfs.filter(item => isDfsPlatform(item.app)) };
+    return rowsCache.rows;
+  };
   const slipApp = () => (selected.size && slipAppName) || platform || leadApp || 'PrizePicks';
   // Salary-cap contest apps have no pick'em slip or payouts.
   const contestMode = () => isContestPlatform(slipApp());
-  const payoutRules = () => {
-    const tables = getState().paytables, app = slipApp();
-    return tables[app] || Object.entries(tables).find(([name]) => appName(name) === app)?.[1] || {};
-  };
-  const rulesFor = app => { const tables = getState().paytables; return tables[app] || Object.entries(tables).find(([name]) => appName(name) === app)?.[1] || {}; };
+  const rulesFor = app => { const tables = current().paytables; return tables[app] || Object.entries(tables).find(([name]) => appName(name) === app)?.[1] || {}; };
+  const payoutRules = () => rulesFor(slipApp());
   let breakEvens = new Map();
   const thresholdFor = item => {
     const app = appName(item.app);
@@ -183,7 +211,15 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure}) {
     const logo = app => { const asset = platformAsset(app); return asset ? `<img src="${asset}" alt="" width="26" height="26" decoding="async">` : `<span aria-hidden="true">${esc(app.slice(0,2))}</span>`; };
     return `<div class="dfs-platform-bar" role="group" aria-label="DFS platforms to compare"><p class="dfs-platform-bar-label"><span>Platforms</span><span class="dfs-book-count">${count}/${platformOptions.length}</span></p><div class="dfs-platform-rail">${platformOptions.map(app => { const on = !excludedPlatforms.has(app); return `<button type="button" class="dfs-platform-logo" data-dfs-compare-platform="${esc(app)}" data-platform="${esc(app)}" aria-label="Compare ${esc(app)}" title="${esc(app)}${on ? '' : ' (hidden)'}" aria-pressed="${on}">${logo(app)}</button>`; }).join('')}</div><button type="button" class="dfs-platform-all" data-dfs-all-platforms aria-pressed="${count===platformOptions.length}" title="Compare all platforms">All</button></div>`;
   }
-  const matched = () => allRows().filter(item => (!platform || appName(item.app) === platform) && (!filterSport || item.sport === filterSport) && (!lineType || (item.oddsType || 'standard') === lineType) && (!market || item.market === market) && !hidden.has(item.id) && (!query || [item.player,item.event,item.market,item.team].some(text => String(text || '').toLowerCase().includes(query.toLowerCase())))).sort((a,b) => sort === 'player' ? a.player.localeCompare(b.player) : sort === 'edge' ? (edgeKey(b)-edgeKey(a)) || 0 : Number(b.probability)-Number(a.probability));
+  const collator = new Intl.Collator(undefined, { sensitivity: 'base' });
+  const matched = () => {
+    const search = query.trim().toLowerCase();
+    const rows = allRows().filter(item => (!platform || appName(item.app) === platform) && (!filterSport || item.sport === filterSport) && (!lineType || (item.oddsType || 'standard') === lineType) && (!market || item.market === market) && !hidden.has(item.id) && (!search || [item.player,item.event,item.market,item.team].some(text => String(text || '').toLowerCase().includes(search))));
+    if (sort === 'player') return rows.sort((a,b) => collator.compare(a.player, b.player) || Number(a.line) - Number(b.line));
+    // Sort keys computed once per row; lines without a value go last, in feed order.
+    const keys = new Map(rows.map(item => [item, sort === 'edge' ? edgeKey(item) : validProbability(item.probability) ? Number(item.probability) : -Infinity]));
+    return rows.sort((a,b) => (keys.get(b) - keys.get(a)) || 0);
+  };
   const signed = value => Number.isFinite(value) ? `${value >= 0 ? '+' : '−'}${Math.abs(value * 100).toFixed(2)}%` : '—';
   const pad = value => String(value).padStart(2,'0');
   const whenLabel = item => {
@@ -198,7 +234,14 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure}) {
   const edgeFor = (item, threshold) => validProbability(item.probability) && threshold != null && standardPayout(item) ? Number(item.probability) - threshold : NaN;
   // Estimate vs the slip's break-even: clear edge, within about a point, or below.
   const heat = edge => !Number.isFinite(edge) ? 'none' : edge >= .01 ? 'high' : edge > -.01 ? 'near' : 'low';
-  const quotes = () => getState().quotes || [];
+  const quotes = () => current().quotes || [];
+  // When the books name the game differently from the DFS app, the best price behind the pick's fair
+  // probability stands in for the matched quote.
+  const sourceOffer = item => {
+    const side = String(item.side).toLowerCase();
+    const best = (item.probabilitySources || []).filter(source => Number.isFinite(decimal(source[side]))).sort((a,b) => decimal(b[side]) - decimal(a[side]))[0];
+    return best ? { book:best.book, odds:Number(best[side]) } : null;
+  };
   const averagePrice = offers => {
     // One book: its own price (an even-money +100 shouldn't come back from 50% as -100).
     if (offers.length === 1 && Number.isFinite(decimal(offers[0].odds))) return oddsLabel(offers[0].odds);
@@ -207,7 +250,9 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure}) {
   };
   const COLUMNS = 5;
   // Expanded row: the shared bet panel with sportsbook prices, then each selected DFS platform's line.
-  function comparison(item, threshold) {
+  function comparison(item) {
+    // The pick's own app's break-even, as on its row (not the slip app's when every app is listed).
+    const threshold = thresholdFor(item);
     const found = Object.fromEntries(['Over','Under'].map(side => [side, sportsbookOffers({...item,side},quotes())]));
     // Otherwise the Over/Under prices this pick's fair probability was devigged from (the books can
     // name the game differently from the DFS app).
@@ -235,9 +280,10 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure}) {
     const valid = validProbability(item.probability), fair = valid ? probabilityToAmerican(Number(item.probability)) : NaN;
     const edge = edgeFor(item, threshold), type = chosenType();
     const facts = [`Fair ${percent(item.probability)}`, Number.isFinite(fair) ? `Fair odds ${oddsLabel(fair)}` : '',
-      threshold == null ? 'Payout rules needed for break-even' : `Break-even ${percent(threshold)} (${type.size} Pick${type.kind ? ' '+type.kind : ''})`,
+      !standardPayout(item) ? `${ODDS_TYPE_LABELS[item.oddsType]} payout varies, so no break-even` : threshold == null ? 'Payout rules needed for break-even' : `Break-even ${percent(threshold)} (${appName(item.app)} ${type.size} Pick)`,
       Number.isFinite(edge) ? `Edge ${signed(edge)}` : ''].filter(Boolean).map(esc).join(' · ');
-    const legend = !books.length && !platforms.length ? 'Select a DFS platform above to compare lines.' : `${books.length ? 'Sportsbook columns show the American odds devigged into the fair probability. ' : 'No two-sided sportsbook market for this line. '}${platforms.length ? 'DFS columns show each app’s line and its fair probability.' : ''}`;
+    const fromSources = !(found.Over.length || found.Under.length) && sources.length > 0;
+    const legend = !books.length && !platforms.length ? 'Select a DFS platform above to compare lines.' : `${!books.length ? 'No two-sided sportsbook market for this line. ' : fromSources ? 'Sportsbook columns show the American odds devigged into the fair probability. ' : 'Sportsbook columns show each book’s American odds. '}${platforms.length ? 'DFS columns show each app’s line and its fair probability.' : ''}`;
     const picked = selected.has(item.id), id = esc(item.id);
     return renderBetPanel({ id:panelId(item), colspan:COLUMNS, label:`Price comparison for ${label(item)}`, boosts:[],
       tools:[
@@ -249,24 +295,24 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure}) {
       books:[...books, ...platforms.map(p => p.app)], rows, addAttrs:'data-add="dfs"',
       note:`<span class="dfs-panel-facts">${facts}</span> ${esc(legend)}` });
   }
-  // One prop per row: market and event, selection, sharp price, true probability, then round actions.
-  function row(item, threshold) {
+  // One prop per row: market and event, selection, sharp price, fair probability, then round actions.
+  function row(item) {
     const open = expanded === item.id, picked = selected.has(item.id), id = esc(item.id), name = esc(label(item));
-    const offer = sportsbookOffer(item,quotes()), edge = edgeFor(item, thresholdFor(item)), league = leagueLabel(item);
+    const offer = sportsbookOffer(item,quotes()) || sourceOffer(item), edge = edgeFor(item, thresholdFor(item)), league = leagueLabel(item);
     return `<tr class="evb-row dfs-prop${picked ? ' is-selected' : ''}${open ? ' is-open' : ''}" data-dfs-row="${id}">
       <td class="dfs-event-cell"><strong class="dfs-market-title">${esc(marketTitle(item))}</strong><span class="dfs-event-name">${esc(item.event || (item.source === 'local-api' ? 'Matchup not in feed' : 'Matchup not entered'))}</span><small>${esc(whenLabel(item))}${league ? ` · ${esc(league)}` : ''}</small></td>
       <td class="dfs-pick-cell" title="DFS line at ${esc(item.app)}"><strong class="dfs-selection"><span class="dfs-player">${esc(item.player)}</span> <span class="dfs-pick-line">${esc(item.side)} ${esc(item.line)}</span>${ODDS_TYPE_LABELS[item.oddsType] ? ` <span class="dfs-odds-type" data-odds-type="${esc(item.oddsType)}">${ODDS_TYPE_LABELS[item.oddsType]}</span>` : ''}</strong><small>${platform ? 'Selection' : esc(appName(item.app))}</small></td>
       <td class="dfs-offer" title="${offer ? esc(`${item.app} line · best recorded ${offer.book} price${offer.ts ? ` · Observed ${offer.ts}` : ''}`) : 'No matching sportsbook quote recorded for this selection'}"><span class="dfs-sharp">${offer ? brand(offer.book) : ''}<strong>${esc(item.line)} · ${offer ? oddsLabel(offer.odds) : '—'}</strong></span><small>${offer ? `Sharp · ${esc(offer.book)}` : 'No book price'}</small></td>
-      <td class="dfs-probability" data-heat="${heat(edge)}"><strong class="dfs-prob">${percent(item.probability)}</strong><small title="${esc(validProbability(item.probability) ? `Fair probability: ${(item.probabilityBooks || []).length || 'the'} sportsbook market${(item.probabilityBooks || []).length === 1 ? '' : 's'} devigged (${item.probabilityMethod || getState().devigMethod || 'multiplicative'})` : 'No two-sided sportsbook market for this player, market and line')}">${validProbability(item.probability) ? 'Fair (no-vig)' : 'No book odds'}</small>${Number.isFinite(edge) ? `<small class="dfs-vs-be">vs BE ${signed(edge)}</small>` : validProbability(item.probability) && !standardPayout(item) ? '<small class="dfs-vs-be" title="Goblin and demon picks change the payout; the feed does not include it, so break-even is unknown">Payout varies</small>' : ''}</td>
+      <td class="dfs-probability" data-heat="${heat(edge)}"><strong class="dfs-prob">${percent(item.probability)}</strong><small title="${esc(validProbability(item.probability) ? `Fair probability: ${(item.probabilityBooks || []).length || 'the'} sportsbook market${(item.probabilityBooks || []).length === 1 ? '' : 's'} devigged (${item.probabilityMethod || current().devigMethod || 'multiplicative'})` : 'No two-sided sportsbook market for this player, market and line')}">${validProbability(item.probability) ? 'Fair (no-vig)' : 'No book odds'}</small>${Number.isFinite(edge) ? `<small class="dfs-vs-be">vs BE ${signed(edge)}</small>` : validProbability(item.probability) && !standardPayout(item) ? '<small class="dfs-vs-be" title="Goblin and demon picks change the payout; the feed does not include it, so break-even is unknown">Payout varies</small>' : ''}</td>
       <td class="dfs-actions"><div>
         <button type="button" class="dfs-round dfs-hide" data-dfs-hide="${id}" aria-label="Hide ${esc(item.player)} prop" title="Hide prop">${boardIcon('hide',17)}</button>
         <button type="button" class="dfs-round dfs-pick" data-dfs-pick="${id}" aria-pressed="${picked}" aria-label="${picked ? `Remove ${name} from slip` : `Add ${name} to slip`}" title="${picked ? 'Remove from slip' : 'Add to slip'}" ${isContestPlatform(platform || item.app) ? 'disabled' : ''}>${boardIcon('pin',17)}</button>
         <button type="button" class="dfs-round dfs-expand" data-dfs-expand="${id}" aria-expanded="${open}" aria-controls="${panelId(item)}" aria-label="${open ? 'Hide' : 'Compare'} prices for ${name}" title="Compare prices">${boardIcon('chevron',17)}</button>
       </div></td>
-    </tr>${open ? comparison(item, threshold) : ''}`;
+    </tr>${open ? comparison(item) : ''}`;
   }
-  function table(rows, threshold) {
-    return `<div class="evb-table-wrap dfs-table-wrap"><table class="evb-table dfs-table" aria-label="${esc(platform || 'All apps')} DFS player props"><thead class="dfs-thead"><tr><th scope="col">Market and event</th><th scope="col">Selection</th><th scope="col">Sharp price</th><th scope="col">Fair probability</th><th scope="col">Actions</th></tr></thead><tbody>${rows.slice(0, rowLimit).map(item => row(item,threshold)).join('')}</tbody></table></div>${rows.length > rowLimit ? `<button type="button" class="dfs-more" data-dfs-more>Show ${Math.min(ROW_PAGE, rows.length - rowLimit)} more · ${(rows.length - rowLimit).toLocaleString()} not shown</button>` : ''}`;
+  function table(rows) {
+    return `<div class="evb-table-wrap dfs-table-wrap"><table class="evb-table dfs-table" aria-label="${esc(platform || 'All apps')} DFS player props"><thead class="dfs-thead"><tr><th scope="col">Market and event</th><th scope="col">Selection</th><th scope="col">Sharp price</th><th scope="col">Fair probability</th><th scope="col">Actions</th></tr></thead><tbody>${rows.slice(0, rowLimit).map(item => row(item)).join('')}</tbody></table></div>${rows.length > rowLimit ? `<button type="button" class="dfs-more" data-dfs-more>Show ${Math.min(ROW_PAGE, rows.length - rowLimit)} more · ${(rows.length - rowLimit).toLocaleString()} not shown</button>` : ''}`;
   }
   function togglePick(id) {
     const item = allRows().find(entry => entry.id === id);
@@ -284,7 +330,7 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure}) {
     const result = complete && rules && picks.every(standardPayout) ? fantasySlip(picks,rules,entry) : null;
     const title = `${slipApp()} ${type.size} Pick${type.kind ? ' '+type.kind : ''}`;
     if (!picks.length) return `<aside class="dfs-slip-panel dfs-slip-empty" aria-label="Selected picks"><h2>Add a pick to get started</h2><p>Selections for ${esc(title)} will appear here.</p><div class="dfs-slip-placeholder" aria-hidden="true">${Array.from({length:Math.min(type.size,6)},()=>'<div><i></i><span></span></div>').join('')}</div></aside>`;
-    return `<aside class="dfs-slip-panel" aria-label="Selected picks" tabindex="-1"><button type="button" class="dfs-return" data-dfs-return>Back to props</button><div class="dfs-slip-heading"><div><h2>Your picks <span>${picks.length}/${type.size}</span></h2><p>${esc(title)}</p></div><button type="button" data-dfs-clear class="dfs-text-button">Clear</button></div><div class="dfs-selected-picks">${picks.map(item => `<div class="dfs-slip-pick">${teamMark(item)}<div><strong>${esc(item.player)}</strong><span>${esc(item.side)} ${esc(item.line)} ${esc(item.market)}</span><small>${percent(item.probability)} estimated</small></div><button type="button" class="dfs-icon-button evb-icon" data-dfs-remove="${esc(item.id)}" aria-label="Remove ${esc(item.player)}">${icon('close')}</button></div>`).join('')}</div><div class="dfs-slip-total"><label for="dfs-entry">Entry amount</label><div class="dfs-entry-field"><span>$</span><input id="dfs-entry" type="number" min="1" step="0.01" value="${entry}" inputmode="decimal" aria-label="Entry amount"></div><dl><div><dt>Full-hit payout</dt><dd>${rules ? `${Number(rules.at(-1))}×` : 'Not entered'}</dd></div><div><dt>Estimated return</dt><dd>${result ? money(result.payout*entry) : '—'}</dd></div><div><dt>Expected profit</dt><dd${result?.expectedProfit > 0 ? ' class="dfs-profit"' : ''}>${result ? money(result.expectedProfit) : '—'}</dd></div></dl><button type="button" class="dfs-save-slip" data-dfs-${rules ? 'save' : 'configure'} ${complete ? '' : 'disabled'}>${!complete ? picks.length > type.size ? `Remove ${picks.length-type.size} pick${picks.length-type.size > 1 ? 's' : ''}` : `Add ${type.size-picks.length} more pick${type.size-picks.length > 1 ? 's' : ''}` : rules ? 'Save slip' : 'Set payout rules'}</button><p class="dfs-slip-note">${'Saved locally. No entry is placed.'} ${result ? 'Return assumes independent picks.' : picks.some(item => !standardPayout(item)) ? 'Goblin and demon picks change the payout, which the feed doesn’t include, so return and EV aren’t calculated.' : ''}</p></div></aside>`;
+    return `<aside class="dfs-slip-panel" aria-label="Selected picks" tabindex="-1"><button type="button" class="dfs-return" data-dfs-return>Back to props</button><div class="dfs-slip-heading"><div><h2>Your picks <span>${picks.length}/${type.size}</span></h2><p>${esc(title)}</p></div><button type="button" data-dfs-clear class="dfs-text-button">Clear</button></div><div class="dfs-selected-picks">${picks.map(item => `<div class="dfs-slip-pick">${teamMark(item)}<div><strong>${esc(item.player)}</strong><span>${esc(item.side)} ${esc(item.line)} ${esc(item.market)}</span><small>${validProbability(item.probability) ? `${percent(item.probability)} fair` : 'No fair probability'}</small></div><button type="button" class="dfs-icon-button evb-icon" data-dfs-remove="${esc(item.id)}" aria-label="Remove ${esc(item.player)}">${icon('close')}</button></div>`).join('')}</div><div class="dfs-slip-total"><label for="dfs-entry">Entry amount</label><div class="dfs-entry-field"><span>$</span><input id="dfs-entry" type="number" min="1" step="0.01" value="${entry}" inputmode="decimal" aria-label="Entry amount"></div><dl><div><dt>Full-hit payout</dt><dd>${rules ? `${Number(rules.at(-1))}×` : 'Not entered'}</dd></div><div><dt>Estimated return</dt><dd>${result ? money(result.payout*entry) : '—'}</dd></div><div><dt>Expected profit</dt><dd${result?.expectedProfit > 0 ? ' class="dfs-profit"' : ''}>${result ? money(result.expectedProfit) : '—'}</dd></div></dl><button type="button" class="dfs-save-slip" data-dfs-${rules ? 'save' : 'configure'} ${complete ? '' : 'disabled'}>${!complete ? picks.length > type.size ? `Remove ${picks.length-type.size} pick${picks.length-type.size > 1 ? 's' : ''}` : `Add ${type.size-picks.length} more pick${type.size-picks.length > 1 ? 's' : ''}` : rules ? 'Save slip' : 'Set payout rules'}</button><p class="dfs-slip-note">${'Saved locally. No entry is placed.'} ${result ? 'Return assumes independent picks.' : picks.some(item => !standardPayout(item)) ? 'Goblin and demon picks change the payout, which the feed doesn’t include, so return and EV aren’t calculated.' : picks.some(item => !validProbability(item.probability)) ? 'Return and EV need a fair probability for every pick; picks without a two-sided sportsbook market leave them blank.' : ''}</p></div></aside>`;
   }
   function slipDock() {
     if (contestMode()) return '';
@@ -292,10 +338,14 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure}) {
     if (!picks.length) return '';
     const complete = picks.length === type.size;
     const result = complete && type.rules && picks.every(standardPayout) ? fantasySlip(picks,type.rules,entry) : null;
-    return `<div class="dfs-slip-dock" aria-label="Slip summary"><button type="button" data-dfs-review><strong>${picks.length}/${type.size} picks · Review</strong><span>${result ? `${(result.expectedProfit / entry * 100).toFixed(1)}% est. EV` : `${Math.max(0,type.size-picks.length)} more picks needed`}${getState().demoPermanent ? ' · Demo' : ''}</span></button><button type="button" data-dfs-${type.rules ? 'save' : 'configure'} ${complete ? '' : 'disabled'}>${type.rules ? 'Save slip' : 'Set payouts'}</button></div>`;
+    return `<div class="dfs-slip-dock" aria-label="Slip summary"><button type="button" data-dfs-review><strong>${picks.length}/${type.size} picks · Review</strong><span>${result ? `${(result.expectedProfit / entry * 100).toFixed(1)}% est. EV` : `${Math.max(0,type.size-picks.length)} more picks needed`}${current().demoPermanent ? ' · Demo' : ''}</span></button><button type="button" data-dfs-${type.rules ? 'save' : 'configure'} ${complete ? '' : 'disabled'}>${type.rules ? 'Save slip' : 'Set payouts'}</button></div>`;
   }
-  function render({initialSport = ''} = {}) {
-    const workspace = getState();
+  function render(options) {
+    snap = getState();
+    try { return renderView(options); } finally { snap = null; }
+  }
+  function renderView({initialSport = ''} = {}) {
+    const workspace = current();
     const preview = noProps();
     if (previousPreview !== null && previousPreview !== preview) {
       platform = null;
@@ -321,12 +371,14 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure}) {
     const type = chosenType(), threshold = breakEven(type.rules);
     const platforms = DFS_PLATFORMS;
     const rows = matched();
-    const markets = [...new Set(source.filter(item => !filterSport || item.sport === filterSport).map(item => item.market))];
+    // Markets for the chosen app and sport, alphabetical; a chosen market stays listed.
+    const markets = [...new Set(source.filter(item => (!platform || appName(item.app) === platform) && (!filterSport || item.sport === filterSport)).map(item => item.market))].sort(collator.compare);
+    if (market && !markets.includes(market)) markets.unshift(market);
     const priced = rows.some(item => validProbability(item.probability));
     const hitNote = rows.length && !priced ? `<p class="dfs-feed-note" role="note">${bookProps ? 'No two-sided sportsbook market matches these props yet, so fair probabilities, edges and slip EV are blank.' : 'Fair probability comes from devigging sportsbook Over/Under odds on the same player prop. The quote feed has game lines only right now, so fair probabilities, edges and slip EV are blank.'} DFS apps don’t supply fair probabilities, and the feed’s DFS probability is not used.</p>` : '';
     const topEstimate = Math.max(...rows.map(item => Number(item.probability)).filter(value => validProbability(value)));
     const summary = `<div class="dfs-results-toolbar evb-summary"><p><strong>${rows.length} ${rows.length === 1 ? 'prop' : 'props'}</strong> from ${esc(platform || 'all apps')}${filterSport ? ` · ${esc(filterSport)}` : ''}</p><div class="dfs-summary-side"><dl>${threshold == null ? '' : `<div><dt>Break even</dt><dd class="is-positive">${percent(threshold)}</dd></div>`}<div><dt>Top fair</dt><dd>${Number.isFinite(topEstimate) ? percent(topEstimate) : '—'}</dd></div>${contestMode() ? '' : `<div><dt>Picks</dt><dd>${choices().length}/${type.size}</dd></div>`}</dl>${hidden.size ? `<button type="button" data-dfs-restore class="dfs-text-button">Show ${hidden.size} hidden</button>` : ''}<label class="dfs-sort-label">Sort by <select size="1" id="dfs-sort" aria-label="Sort DFS props"><option value="edge" ${sort==='edge' ? 'selected' : ''}>Edge vs break-even</option><option value="probability" ${sort==='probability' ? 'selected' : ''}>Fair probability</option><option value="player" ${sort==='player' ? 'selected' : ''}>Player name</option></select></label><button type="button" class="dfs-text-button" data-add="dfs">Add prop</button></div></div>`;
-    return `<div class="dfs-workspace evb-board"><div class="dfs-controls"><label class="dfs-filter dfs-app-filter"><span>DFS app</span><span class="dfs-app-value">${platform ? brand(platform) : ''}<select size="1" id="dfs-platform" aria-label="DFS app"><option value="" ${platform ? '' : 'selected'}>All apps</option>${platforms.map(app => `<option ${app===platform ? 'selected' : ''}>${esc(app)}</option>`).join('')}</select></span></label><div class="dfs-slip-type" ${contestMode() ? 'hidden' : ''}><button type="button" class="dfs-slip-trigger" data-dfs-menu aria-expanded="${menuOpen}" aria-controls="dfs-slip-options"><span>Slip Type<strong>${type.size} Pick${type.kind ? ' '+esc(type.kind) : ''}${type.rules ? ` · ${Number(type.rules.at(-1))}×` : ''}${threshold == null ? '' : ` · BE ${percent(threshold)}`}</strong></span>${icon('down')}</button>${menuOpen ? `<div class="dfs-slip-options" id="dfs-slip-options" role="group" aria-label="Slip types">${types().map(option => { const value = breakEven(option.rules); return `<button type="button" data-dfs-type="${option.id}" aria-pressed="${option.id===slipType}"><span><strong>${option.size} Pick</strong> ${esc(option.kind)}${option.rules ? ` · ${Number(option.rules.at(-1))}×` : ''}</span><small>Break Even: <b>${value == null ? 'Payout rules needed' : percent(value)}</b></small>${option.id===slipType ? icon('check') : ''}</button>`; }).join('')}<p>${esc(payoutNote)}</p></div>` : ''}</div><label class="dfs-filter"><span>Sport</span><select size="1" id="dfs-sport" aria-label="DFS sport"><option value="">All sports</option>${sports.map(value=>`<option ${value===filterSport ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label><label class="dfs-filter"><span>Line type</span><select size="1" id="dfs-line-type" aria-label="PrizePicks line type">${[['','All lines'],['standard','Standard'],['goblin','Goblin'],['demon','Demon']].map(([value,label])=>`<option value="${value}" ${value===lineType ? 'selected' : ''}>${label}</option>`).join('')}</select></label><label class="dfs-filter"><span>Market</span><select size="1" id="dfs-market" aria-label="DFS market"><option value="">All markets</option>${markets.map(value=>`<option ${value===market ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label><label class="dfs-search">${icon('search')}<input id="dfs-search" type="search" placeholder="Search players or teams" value="${esc(query)}" aria-label="Search DFS players or teams"></label></div>${platformFilters()}${summary}<p class="dfs-feedback" role="status" ${feedback ? '' : 'hidden'}>${esc(feedback)}</p><div class="dfs-layout"><section class="dfs-prop-list" aria-label="DFS player props">${hitNote}${rows.length ? table(rows, threshold) : preview && workspace.dfsLoading ? '<div class="dfs-empty-results" aria-busy="true"><h2>Loading DFS lines…</h2><p>Reading PrizePicks, Underdog and other pick&#39;em lines from the quote feed.</p></div>' : preview ? '<div class="dfs-empty-results"><h2>No DFS lines in the quote feed yet</h2><p>Picks appear here when the quote feed sends PrizePicks, Underdog, Sleeper or other pick&#39;em lines. You can also add props yourself.</p></div>' : '<div class="dfs-empty-results"><h2>No matching props</h2><p>Add player research or try another sport, market or search.</p><button type="button" data-dfs-reset>Clear filters</button></div>'}</section>${slip()}</div>${slipDock()}<p class="dfs-method-note">Sharp price pairs the DFS line with the best matching recorded sportsbook price for that side. Fair probability: each sportsbook's Over and Under odds for the same player, market and line are converted to implied probabilities and devigged (${esc(getState().devigMethod || 'multiplicative')}; change it in Pricing settings), then averaged across books. Edge is fair probability minus the app's break-even (BE) for the selected slip type; VisualOdds fair value appears in the expanded comparison. Expanded columns show sportsbook odds, then each DFS platform's line and entered estimate; a dash means unavailable.</p></div>`;
+    return `<div class="dfs-workspace evb-board"><div class="dfs-controls"><label class="dfs-filter dfs-app-filter"><span>DFS app</span><span class="dfs-app-value">${platform ? brand(platform) : ''}<select size="1" id="dfs-platform" aria-label="DFS app"><option value="" ${platform ? '' : 'selected'}>All apps</option>${platforms.map(app => `<option ${app===platform ? 'selected' : ''}>${esc(app)}</option>`).join('')}</select></span></label><div class="dfs-slip-type" ${contestMode() ? 'hidden' : ''}><button type="button" class="dfs-slip-trigger" data-dfs-menu aria-expanded="${menuOpen}" aria-controls="dfs-slip-options"><span>Slip Type<strong>${type.size} Pick${type.kind ? ' '+esc(type.kind) : ''}${type.rules ? ` · ${Number(type.rules.at(-1))}×` : ''}${threshold == null ? '' : ` · BE ${percent(threshold)}`}</strong></span>${icon('down')}</button>${menuOpen ? `<div class="dfs-slip-options" id="dfs-slip-options" role="group" aria-label="Slip types">${types().map(option => { const value = breakEven(option.rules); return `<button type="button" data-dfs-type="${option.id}" aria-pressed="${option.id===slipType}"><span><strong>${option.size} Pick</strong> ${esc(option.kind)}${option.rules ? ` · ${Number(option.rules.at(-1))}×` : ''}</span><small>Break Even: <b>${value == null ? 'Payout rules needed' : percent(value)}</b></small>${option.id===slipType ? icon('check') : ''}</button>`; }).join('')}<p>${esc(payoutNote)}</p></div>` : ''}</div><label class="dfs-filter"><span>Sport</span><select size="1" id="dfs-sport" aria-label="DFS sport"><option value="">All sports</option>${sports.map(value=>`<option ${value===filterSport ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label><label class="dfs-filter"><span>Line type</span><select size="1" id="dfs-line-type" aria-label="PrizePicks line type">${[['','All lines'],['standard','Standard'],['goblin','Goblin'],['demon','Demon']].map(([value,label])=>`<option value="${value}" ${value===lineType ? 'selected' : ''}>${label}</option>`).join('')}</select></label><label class="dfs-filter"><span>Market</span><select size="1" id="dfs-market" aria-label="DFS market"><option value="">All markets</option>${markets.map(value=>`<option ${value===market ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label><label class="dfs-search">${icon('search')}<input id="dfs-search" type="search" placeholder="Search players or teams" value="${esc(query)}" aria-label="Search DFS players or teams"></label></div>${platformFilters()}${summary}<p class="dfs-feedback" role="status" ${feedback ? '' : 'hidden'}>${esc(feedback)}</p><div class="dfs-layout"><section class="dfs-prop-list" aria-label="DFS player props">${hitNote}${rows.length ? table(rows) : preview && workspace.dfsLoading ? '<div class="dfs-empty-results" aria-busy="true"><h2>Loading DFS lines…</h2><p>Reading PrizePicks, Underdog and other pick&#39;em lines from the quote feed.</p></div>' : preview ? '<div class="dfs-empty-results"><h2>No DFS lines in the quote feed yet</h2><p>Picks appear here when the quote feed sends PrizePicks, Underdog, Sleeper or other pick&#39;em lines. You can also add props yourself.</p></div>' : '<div class="dfs-empty-results"><h2>No matching props</h2><p>Add player research or try another sport, market or search.</p><button type="button" data-dfs-reset>Clear filters</button></div>'}</section>${slip()}</div>${slipDock()}<p class="dfs-method-note">Sharp price pairs the DFS line with the best matching recorded sportsbook price for that side. Fair probability: each sportsbook's Over and Under odds for the same player, market and line are converted to implied probabilities and devigged (${esc(current().devigMethod || 'multiplicative')}; change it in Pricing settings), then averaged across books. Edge is fair probability minus the app's break-even (BE) for the selected slip type. Expand a row to see each sportsbook's odds and each DFS app's line; a dash means unavailable.</p></div>`;
   }
   function click(event) {
     if (menuOpen && !event.target.closest('.dfs-slip-type')) {
@@ -387,11 +439,18 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure}) {
     else return false;
     return true;
   }
+  // Typing re-filters ~30k lines: wait for a pause instead of rebuilding the board on every key.
+  let searchTimer = 0;
   function input(event) {
     if(event.target.id!=='dfs-search') return false;
-    const cursor=event.target.selectionStart;
-    query=event.target.value;rowLimit=ROW_PAGE;redraw();
-    const node=document.querySelector('#dfs-search');node.focus();node.setSelectionRange(cursor,cursor);
+    query=event.target.value;rowLimit=ROW_PAGE;
+    clearTimeout(searchTimer);
+    searchTimer=setTimeout(() => {
+      const before=document.querySelector('#dfs-search'), cursor=before?.selectionStart;
+      redraw();
+      const node=document.querySelector('#dfs-search');
+      if (node) { node.focus(); if (cursor != null) node.setSelectionRange(cursor,cursor); }
+    }, 200);
     return true;
   }
   function keydown(event) { if(event.key==='Escape' && menuOpen) {menuOpen=false;repaint('[data-dfs-menu]');return true;}return false; }

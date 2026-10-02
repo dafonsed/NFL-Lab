@@ -303,3 +303,18 @@ test('the comparison shows one column per app and the sportsbook prices the fair
   assert.match(cells[1],/-130/);
   assert.match($('.dfs-panel-facts').text(),/^Fair 53\.06%/);
 });
+
+test('the comparison panel uses the row\'s own app break-even when every app is listed', t => {
+  const originalDocument=globalThis.document, originalCSS=globalThis.CSS;
+  globalThis.document={querySelector:()=>null};globalThis.CSS={escape:value=>value};
+  t.after(()=>{if(originalDocument===undefined)delete globalThis.document;else globalThis.document=originalDocument;if(originalCSS===undefined)delete globalThis.CSS;else globalThis.CSS=originalCSS;});
+  const base={event:'A @ B',sport:'NBA',market:'Points',side:'Over',line:20.5,source:'local-api'};
+  const state={dfs:[{...base,id:'pp1',app:'PrizePicks',player:'P One',probability:.5},{...base,id:'pp2',app:'PrizePicks',player:'P Two',probability:.5},{...base,id:'ud',app:'Underdog Fantasy',player:'U One',probability:.545}],quotes:[],paytables:{PrizePicks:{3:[0,0,0,6]},'Underdog Fantasy':{3:[0,0,0,6.5]}}};
+  const view=createDfsWorkspace({getState:()=>state,redraw:()=>{}});
+  view.render();
+  view.click({target:{closest:()=>({dataset:{dfsExpand:'ud'},hasAttribute:()=>false})}});
+  const $=load(view.render());
+  // Underdog 3-pick 6.5x: break-even 53.58%, edge +0.92 (not PrizePicks' 55.03%).
+  assert.match($('.dfs-panel-facts').text(),/Break-even 53\.58% \(Underdog Fantasy 3 Pick\) · Edge \+0\.92%/);
+  assert.match($('[data-dfs-row="ud"] .dfs-vs-be').text(),/\+0\.92%/);
+});
