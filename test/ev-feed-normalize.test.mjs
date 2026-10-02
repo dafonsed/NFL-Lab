@@ -205,10 +205,11 @@ test('raw two-sided odds → implied → devig → fair probability, with the me
   const b = fairFromAmerican([-150, 125]);
   assert.deepEqual(b.implied.map(pct), [60, 44.44]);
   assert.deepEqual(b.fair.map(pct), [57.45, 42.55]);
-  // PrizePicks 6-pick Flex (6/6 25×, 5/6 2×, 4/6 0.4×) breaks even at 54.21%; the edge is fair minus that.
-  const flex6 = breakEven([0, 0, 0, 0, 0.4, 2, 25]);
-  assert.equal(pct(flex6), 54.21);
-  assert.equal(pct(b.fair[0] - flex6), 3.24);
+  // A 2-pick Power slip at 3× breaks even at √(1/3) = 57.74%; the edge is fair minus that.
+  const power2 = breakEven([0, 0, 3]);
+  assert.equal(pct(power2), 57.74);
+  assert.equal(pct(b.fair[0] - power2), -0.29, '57.45% fair does not clear a 2-pick Power slip');
+  assert.equal(pct(fairFromAmerican([-170, 140]).fair[0] - power2), 2.44, '60.18% fair does');
   assert.deepEqual([...DEVIG_METHODS], ['multiplicative', 'additive', 'power', 'probit']);
   for (const method of DEVIG_METHODS) {
     const [over, under] = fairFromAmerican([-150, 125], method).fair;
