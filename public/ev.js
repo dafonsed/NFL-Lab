@@ -161,7 +161,7 @@ let trendA = '', trendB = '', traderName = '', predictionPlatform = '';
 let editing = null;
 // Published standard payouts fill in until the member saves their own table for an app and size.
 const paytables = () => withStandardPaytables(state.paytables, apiPaytables);
-const dfsWorkspace = createDfsWorkspace({getState:()=>({...state,quotes:eligibleQuotes(state.quotes),paytables:paytables(),devigMethod:suite.settings().devigMethod,payoutSource:(app,size)=>paytableSource(state.paytables,app,size,apiPaytables),dfsLoading:dfsLoading&&!dfsLoaded}),redraw:()=>render(),onSave:slip=>{state.slips.push(slip);commit();},onConfigure:picks=>{fantasyIds=picks.map(item=>item.id);fantasyApp=picks[0].app;setTool('slip');}});
+const dfsWorkspace = createDfsWorkspace({getState:()=>({...state,quotes:eligibleQuotes(state.quotes),paytables:paytables(),devigMethod:suite.settings().devigMethod,payoutSource:(app,size)=>paytableSource(state.paytables,app,size,apiPaytables),dfsLoading:dfsLoading&&!dfsLoaded}),redraw:()=>redrawDfsBoard(),onSave:slip=>{state.slips.push(slip);commit();},onConfigure:picks=>{fantasyIds=picks.map(item=>item.id);fantasyApp=picks[0].app;setTool('slip');}});
 const oddsScreen = createOddsScreen({storage:localStorage,defaultFormat:getAccountPreferences().oddsFormat,getQuotes:()=>eligibleQuotes(oddsQuotes()),getSportsbookState:()=>sportsbookState,onAllSportsbooks:()=>{const saved=saveSportsbookState('');document.dispatchEvent(new CustomEvent(STATE_CHANGE_EVENT,{detail:{state:'',saved}}));},brandMark,redraw:()=>render(),onSport:value=>{sport=value;history.replaceState(history.state,'',`${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}#odds`);}});
 const suite = createEvSuite({
   getState:()=>state, save:persist, redraw:render, navigate:key=>setTool(key==='tracker'&&!accountSyncState().userId?'ledger':key), getTool:()=>active,
@@ -173,7 +173,7 @@ const suite = createEvSuite({
   bookSelected:sportsbookSelected, openComparison:showBetComparison
 });
 const oddsLabel = value => suite.displayOdds(value);
-const feedSports = () => [...new Set(['NFL','MLB','NBA','WNBA','NHL','Soccer', ...state.quotes.map(q => q.sport).filter(Boolean).sort(), ...(sport ? [sport] : [])])];
+const feedSports = () => [...new Set(['NFL','MLB','NBA','WNBA','NHL','Soccer', ...[...new Set(state.quotes.map(q => q.sport).filter(Boolean))].sort(), ...(sport ? [sport] : [])])];
 const now = () => new Date().toISOString();
 const uid = () => crypto.randomUUID();
 const origin = x => x.source === 'local-api' ? '<span class="ev-status">API</span>' : '<span class="ev-status">Manual</span>';
@@ -577,7 +577,8 @@ function renderBooks() {
   timingToggle.dataset.mode = active;
   timingToggle.setAttribute('aria-checked', String(active === 'ev-live'));
   timingToggle.title = active === 'ev-live' ? 'Switch to pregame bets' : 'Switch to live bets';
-  const entered = fantasyMode ? state.dfs.filter(item => isDfsPlatform(item.app)).map(item => canonicalPlatform(item.app)) : state.quotes.filter(q => !sport || q.sport === sport).map(q => q.book);
+  // One name per app, not one lookup per line (the feed has ~30k DFS lines).
+  const entered = fantasyMode ? [...new Set(state.dfs.map(item => item.app))].filter(isDfsPlatform).map(canonicalPlatform) : state.quotes.filter(q => !sport || q.sport === sport).map(q => q.book);
   const supported = fantasyMode ? fantasyNames : active === 'sharp' ? ['Pinnacle','DraftKings','FanDuel','bet365',...sportsbookNames.filter(name => !['DraftKings','FanDuel','bet365'].includes(name))] : sportsbookNames;
   const books = [...new Set([...supported, ...entered])].filter(book => fantasyMode || bookAvailable(book));
   const relevant = ['ev-pre','ev-live','odds','arb-pre','arb-live','sharp','fantasy'].includes(active);
@@ -1391,6 +1392,16 @@ function sharpKeydown(event) {
 
 function renderFantasy() {
   return dfsWorkspace.render({initialSport:initialSport === 'ALL' ? '' : initialSport === 'SOCCER' ? 'Soccer' : initialSport || ''});
+}
+// Filters, sorting, search and picks inside the DFS board change only the board: redraw it in place
+// instead of rebuilding the page around it (its menus, book bar and filter bar scan every quote).
+function redrawDfsBoard() {
+  const board = active === 'fantasy' ? $('#ev-view .dfs-workspace') : null;
+  if (!board) { render(); return; }
+  const left = board.querySelector('.dfs-table-wrap')?.scrollLeft || 0;
+  board.outerHTML = renderFantasy();
+  const table = $('#ev-view .dfs-table-wrap');
+  if (table) table.scrollLeft = left;
 }
 
 function renderOptimizer() {
