@@ -268,7 +268,9 @@ function ensureDfsFeed() {
       .then(records => { const tables = payoutTables(records); if (Object.keys(tables).length) { apiPaytables = tables; if (DFS_TOOLS.has(active)) render(); } })
       .catch(() => { payoutsLoaded = false; });
   }
-  if (dfsLoading || Date.now() - dfsSyncedAt < 60_000 || document.hidden) return;
+  // The first load runs even in a background tab so the lines are ready when it is opened; refreshes
+  // wait for the tab to be visible.
+  if (dfsLoading || (dfsLoaded && (Date.now() - dfsSyncedAt < 60_000 || document.hidden))) return;
   dfsLoading = true;
   let changed = false;
   void fetchFeed('dfs').then(result => {
@@ -1930,6 +1932,8 @@ $('#ev-export').addEventListener('click', () => {
 window.addEventListener('hashchange', () => { const key = location.hash.slice(1); if (toolMeta[key]) { if (key !== active) closeToolDialogs(); active = key; bookmaker = ''; marketType = ''; showAllBooks = false; bookMenuOpen = false; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; render(); } });
 let displayedQuoteRevision = '';
 document.addEventListener('ev-tool-change', () => { displayedQuoteRevision = quoteRevision(state.quotes); });
+// Coming back to the tab refreshes DFS lines right away instead of on the next tick.
+document.addEventListener('visibilitychange', () => { if (!document.hidden) ensureDfsFeed(); });
 setInterval(() => {
   if (document.hidden) return;
   ensureDfsFeed();
