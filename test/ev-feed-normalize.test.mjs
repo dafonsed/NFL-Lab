@@ -400,3 +400,12 @@ test('DFS sports for display: college football and WNBA split out by team abbrev
   assert.equal(bueckers.sport, 'WNBA');
   assert.ok(Math.abs(bueckers.probability - 0.5) < 1e-12, 'still priced from books that label the game NBA');
 });
+
+test('milestone thresholds for one player and stat are separate markets, not duplicates', async () => {
+  const { normalizeFeed } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date(Date.now() - 60_000).toISOString();
+  const row = (id, threshold, odds) => ({ id, sport: 'nfl', event: 'Chicago Bears @ Detroit Lions', market: 'Isaiah Davis - ALT Rushing Yards 1st Quarter', side: 'yes', book: 'Fanatics', odds, ts, type: 'prop', player: threshold, selection_name: threshold });
+  const { quotes, skipped } = normalizeFeed([row('a', '1+', -200), row('b', '5+', 129), row('c', '10+', 309)], { syncedAt: new Date().toISOString(), price: false });
+  assert.equal(skipped.duplicate, 0);
+  assert.deepEqual(quotes.map(q => [q.player, q.selection, q.odds]), [['Isaiah Davis', '1+', -200], ['Isaiah Davis', '5+', 129], ['Isaiah Davis', '10+', 309]]);
+});
