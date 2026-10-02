@@ -257,3 +257,27 @@ test('All apps lists every app, keeps a slip to one app and shows the slip payou
   assert.equal($('.dfs-prop').length,1);
   assert.equal($('.dfs-slip-pick').length,0,'switching apps starts a new slip');
 });
+
+test('goblin and demon lines show fair probability but no edge, and never produce a slip EV', t => {
+  const originalDocument=globalThis.document, originalCSS=globalThis.CSS;
+  globalThis.document={querySelector:()=>null};globalThis.CSS={escape:value=>value};
+  t.after(()=>{if(originalDocument===undefined)delete globalThis.document;else globalThis.document=originalDocument;if(originalCSS===undefined)delete globalThis.CSS;else globalThis.CSS=originalCSS;});
+  const base={event:'IND @ WAS',sport:'NFL',market:'Receiving Yards',side:'Over',app:'PrizePicks',source:'local-api',probability:.62};
+  const state={dfs:[{...base,id:'s',player:'A One',line:60.5,oddsType:'standard'},{...base,id:'g',player:'B Two',line:40.5,oddsType:'goblin'},{...base,id:'d',player:'C Three',line:90.5,oddsType:'demon'}],quotes:[],paytables:{PrizePicks:{2:[0,0,3],3:[0,0,0,5]}}};
+  const view=createDfsWorkspace({getState:()=>state,redraw:()=>{}});
+  let $=load(view.render());
+  const cell=id=>$(`[data-dfs-row="${id}"] .dfs-probability`);
+  assert.match(cell('s').text(),/vs BE/);
+  assert.match(cell('g').text(),/62\.00%.*Payout varies/s,'fair probability still shows');
+  assert.doesNotMatch(cell('g').text(),/vs BE/);
+  assert.equal($('[data-dfs-row="d"] .dfs-odds-type').text(),'Demon');
+  view.change({target:{id:'dfs-line-type',dataset:{},value:'goblin'}});
+  $=load(view.render());
+  assert.deepEqual($('.dfs-prop').map((_,row)=>$(row).attr('data-dfs-row')).get(),['g']);
+  view.change({target:{id:'dfs-line-type',dataset:{},value:''}});
+  for(const id of ['s','g','d'])view.click({target:{closest:()=>({dataset:{dfsPick:id},hasAttribute:()=>false})}});
+  $=load(view.render());
+  assert.equal($('.dfs-slip-pick').length,3);
+  assert.match($('.dfs-slip-note').text(),/Goblin and demon picks change the payout/);
+  assert.doesNotMatch($.html(),/est\. EV/,'no slip EV with goblin or demon legs');
+});

@@ -11,7 +11,7 @@ import { secondaryShell, toolHero, accentTitle, toolPanel, toolEmpty, toolStats,
 import { SECONDARY_TOOLS } from './ev-tool-catalog.js';
 import { emptyWorkspace, purgeDemoData, clearLegacyDemoStorage } from './ev-workspace-clean.js?v=1';
 import { createQuoteFeedControls, toolDataLabel } from './ev-feed.js?v=7';
-import { loadFeed, loadDfsFeed, dfsPicks, payoutTables, knownSport } from './ev-feed-normalize.js?v=9';
+import { loadFeed, loadDfsFeed, dfsPicks, payoutTables, knownSport } from './ev-feed-normalize.js?v=10';
 import { readQuoteCache, createThrottledCacheWriter } from './ev-quote-cache.js?v=1';
 import { START_WINDOWS, MIN_ODDS, MIN_EV, MIN_WIN_CHANCE, TOOL_FILTERS, TOOL_FILTER_DEFAULTS, activeFilterCount, startsWithin, oddsWithin, quoteMatches, readToolFilters, saveToolFilters, toolFilterBar } from './ev-filters.js?v=2';
 import { SITE_PLATFORMS, SPORTSBOOK_PLATFORMS, PREDICTION_PLATFORMS, EXCHANGE_PLATFORMS, canonicalPlatform, platformAsset, platformLabel, platformOptions, isContestPlatform } from './platform-catalog.js';
@@ -22,7 +22,7 @@ import { comparisonAnnotations } from './bet-comparison.js?v=4';
 import { inlineBetCard as betComparisonCard, bindInlineComparison as bindComparison } from './bet-inline.js?v=card-click-3';
 import { openArbCalculator } from './arb-calculator.js?v=2';
 import { openLineHistory, buildLineSeries } from './line-history.js?v=1';
-import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource, breakEven } from './dfs-workspace.js?v=15-devig';
+import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource, breakEven, standardPayout } from './dfs-workspace.js?v=16-odds-type';
 import { createOddsScreen } from './odds-screen.js?v=9';
 
 import {readSportsbookState, saveSportsbookState, sportsbookAvailable, availableSportsbookQuotes, STATE_CHANGE_EVENT} from './sportsbook-availability.js';
@@ -243,7 +243,7 @@ function fetchFeed(kind = 'quotes', apps = []) {
   if (feedWorker !== false && typeof Worker === 'function') {
     try {
       if (!feedWorker) {
-        feedWorker = new Worker('/ev-feed-worker.js?v=9', { type: 'module' });
+        feedWorker = new Worker('/ev-feed-worker.js?v=10', { type: 'module' });
         feedWorker.onmessage = ({ data }) => { pendingFeed.get(data.id)?.(data); pendingFeed.delete(data.id); };
         feedWorker.onerror = () => { feedWorker = false; for (const resolve of pendingFeed.values()) resolve({ ok: false, kind: 'worker' }); pendingFeed.clear(); };
       }
@@ -1410,7 +1410,8 @@ function renderOptimizer() {
   const breakEvens = new Map(Object.entries(tables).map(([app, sizes]) => [app, breakEven(sizes?.['2'])]));
   const byApp = new Map();
   for (const x of dfs()) {
-    if (isContestPlatform(x.app) || x.probability == null || !Number.isFinite(Number(x.probability))) continue;
+    // Goblin and demon picks pay differently by an amount the feed doesn't include.
+    if (isContestPlatform(x.app) || !standardPayout(x) || x.probability == null || !Number.isFinite(Number(x.probability))) continue;
     const edge = Number(x.probability) - breakEvens.get(x.app);
     if (!(edge > 0)) continue;
     edges.set(x.id, edge);
@@ -1455,7 +1456,7 @@ function renderSlip() {
   const selected=fantasyIds.map(id=>available.find(x=>x.id===id)).filter(Boolean);
   const rules=paytables()[fantasyApp]?.[String(selected.length)]||[];
   const rulesSource=paytableSource(state.paytables,fantasyApp,selected.length,apiPaytables);
-  const result=selected.length>=2&&rules.length===selected.length+1?fantasySlip(selected,rules,Number(fantasyStake)):null;
+  const result=selected.length>=2&&rules.length===selected.length+1&&selected.every(standardPayout)?fantasySlip(selected,rules,Number(fantasyStake)):null;
   const controls=`<div class="tool-form-grid"><label>Fantasy app<select id="ev-fantasy-app">${apps.length?apps.map(app=>`<option value="${esc(app)}" ${app===fantasyApp?'selected':''}>${esc(app)}</option>`).join(''):'<option value="">Add a prop to choose a platform</option>'}</select></label><label>Entry amount ($)<input id="ev-fantasy-stake" type="number" min="0.01" step="0.01" value="${esc(fantasyStake)}"></label></div>`;
   const choices=options.length?toolBoard({layout:'cards',variant:'slip',
     label:`Available ${fantasyApp} picks`,compact:true,
