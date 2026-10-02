@@ -116,6 +116,18 @@ const oddsType = raw => { const value = (text(raw, 'oddsType') || text(raw, 'odd
 const payoutMultiplier = raw => { const value = Number(raw?.payoutMultiplier ?? raw?.payout_multiplier); return value > 0 && value < 100 ? value : null; };
 const lineType = raw => ({ ...(oddsType(raw) ? { oddsType: oddsType(raw) } : {}), ...(payoutMultiplier(raw) ? { payoutMultiplier: payoutMultiplier(raw) } : {}) });
 
+// A bet link that names the game instead of the book's id ("events/kk bosna sarajevo @ lietkabelis",
+// "#/AS/B1/hanshin tigers @ hiroshima toyo carp/") opens nothing at the book, so it isn't offered.
+function usableLink(value) {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    let place = url.pathname + url.hash;
+    try { place = decodeURIComponent(place); } catch { return false; }
+    return /^https?:$/.test(url.protocol) && !/\s|@/.test(place);
+  } catch { return false; }
+}
+
 // Player and stat as the books send them. Fanatics files Over/Under player props as market "prop"
 // with the stat in propMarket, and milestone props as market "Awak Kuier - Points" with the
 // selection ("Over 6.5") where the player belongs.
@@ -172,7 +184,7 @@ export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
     // Feed times use the server's clock; shift them onto this device's clock.
     ts: new Date(observed - clockOffsetMs).toISOString(), source: 'local-api',
     // Optional fields the tools already use when the feed sends them: links, limits, suspension.
-    ...Object.fromEntries(['betUrl', 'eventUrl', 'prefillUrl'].filter(key => text(raw, key)).map(key => [key, text(raw, key)])),
+    ...Object.fromEntries(['betUrl', 'eventUrl', 'prefillUrl'].filter(key => usableLink(text(raw, key))).map(key => [key, text(raw, key)])),
     ...(raw.links && typeof raw.links === 'object' && !Array.isArray(raw.links) ? { links: raw.links } : {}),
     ...(Number(raw.maxStake) > 0 ? { maxStake: Number(raw.maxStake) } : {}), ...(raw.suspended === true ? { suspended: true } : {}),
   };
@@ -283,6 +295,9 @@ export function normalizeFeed(records, { syncedAt = new Date().toISOString(), cl
   for (const quote of quotes) if (quote.startTime && !startOf.has(quote.eventId)) startOf.set(quote.eventId, quote.startTime);
   quotes = quotes.filter(quote => {
     if (!quote.startTime && startOf.has(quote.eventId)) quote.startTime = startOf.get(quote.eventId);
+    // A price marked live for a game that a book says starts later is a pregame price (the feed
+    // flagged Sunday's Betr moneylines live on Friday).
+    if (quote.live && quote.startTime && Date.parse(quote.startTime) > now + 5 * 60_000) quote.live = false;
     if (!quote.live && quote.startTime && Date.parse(quote.startTime) <= now) { skipped.started += 1; return false; }
     // Pregame prices the API hasn't refreshed in 15 minutes are markets the book no longer offers.
     if (!quote.live && !quote.ageUnknown && now - Date.parse(quote.ts) > FEED_MAX_AGE_MS) { skipped.stale += 1; return false; }
