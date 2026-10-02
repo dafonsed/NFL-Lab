@@ -107,6 +107,17 @@ export function repairSelection({ type, side, line, selection, event }) {
 
 const text = (raw, key) => typeof raw?.[key] === 'string' ? raw[key].trim() : '';
 
+// Player and stat as the books send them. Fanatics files Over/Under player props as market "prop"
+// with the stat in propMarket, and milestone props as market "Awak Kuier - Points" with the
+// selection ("Over 6.5") where the player belongs.
+function propIdentity(raw) {
+  let market = text(raw, 'market'), player = text(raw, 'player') || text(raw, 'player_name');
+  if (market.toLowerCase() === 'prop' && text(raw, 'propMarket')) market = text(raw, 'propMarket');
+  const split = market.indexOf(' - ');
+  if (/^(over|under)\s+\d+(\.\d+)?$/i.test(player) && split > 0) { player = market.slice(0, split).trim(); market = market.slice(split + 3).trim(); }
+  return { market, player };
+}
+
 /** One API record → quote, or { skip: reason }. `clockOffsetMs` = server clock − this clock. */
 export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
   const id = text(raw, 'id') || (Number.isSafeInteger(raw?.id) ? String(raw.id) : '');
@@ -132,10 +143,11 @@ export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
   const eventId = matched ? `${sport}:${matched}` : text(raw, 'eventId') || `${sport}:${event.toLowerCase()}`;
   const liquidity = Number(raw.liquidity);
   const start = Date.parse(text(raw, 'startTime') || text(raw, 'start_time'));
+  const { market, player } = propIdentity(raw);
   return {
-    id: `local-api:${id}`, sport, event, market: text(raw, 'market'), displayMarket: MARKET_NAMES[type] || text(raw, 'market'),
+    id: `local-api:${id}`, sport, event, market, displayMarket: MARKET_NAMES[type] || market,
     eventId, marketId: matched ? `${type}|${eventId}` : text(raw, 'marketId') || `${type}|${eventId}`,
-    playerId: text(raw, 'playerId') || text(raw, 'player_id'), player: text(raw, 'player') || text(raw, 'player_name'), period: text(raw, 'period') || 'full', league: text(raw, 'league') || SOCCER_LEAGUES[text(raw, 'sport').toLowerCase()] || '',
+    playerId: text(raw, 'playerId') || text(raw, 'player_id'), player, period: text(raw, 'period') || 'full', league: text(raw, 'league') || SOCCER_LEAGUES[text(raw, 'sport').toLowerCase()] || '',
     startTime: Number.isFinite(start) ? new Date(start).toISOString() : '',
     type, line, side: repaired.side, selection: repaired.selection, sideVerified: repaired.verified,
     book: canonicalPlatform(text(raw, 'book')), odds: Number.isFinite(decimal(odds)) ? odds : null, outcomes,
@@ -261,7 +273,7 @@ export function normalizeFeed(records, { syncedAt = new Date().toISOString(), cl
     return true;
   });
   // Pick'em lines (a DFS app plus a player) are not sportsbook prices; they become DFS picks.
-  const picks = quotes.filter(quote => quote.player && isFantasyPlatform(quote.book));
+  const picks = relabelDfsSports(quotes.filter(quote => quote.player && isFantasyPlatform(quote.book)));
   quotes = quotes.filter(quote => !(quote.player && isFantasyPlatform(quote.book)));
   // Older copies of one selection (the API keeps them with new ids), and one book listing a game
   // twice, keep only the freshest price. This runs before the listing check so a stale copy can't
@@ -307,7 +319,7 @@ export function normalizeFeed(records, { syncedAt = new Date().toISOString(), cl
 const propName = value => String(value ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 // "Player Points", "Points", "Pts" and "points (incl. OT)" for one player compare as one market.
 const PROP_WORDS = { pass: 'passing', rush: 'rushing', rec: 'receiving', yds: 'yards', yd: 'yards', td: 'touchdowns', tds: 'touchdowns', pts: 'points', reb: 'rebounds', rebs: 'rebounds', ast: 'assists', asts: 'assists', stl: 'steals', blk: 'blocks', '3pm': 'threes', '3pt': 'threes', so: 'strikeouts', ks: 'strikeouts', att: 'attempts', comp: 'completions', cmp: 'completions', sog: 'shots on goal' };
-const propMarket = (market, player) => propName(market).replace(propName(player), '').replace(/\b(player|total|o u|over under|incl ot)\b/g, ' ')
+const propMarket = (market, player) => propName(market).replace(propName(player), '').replace(/\b(player|total|o u|over under|incl ot|alt)\b/g, ' ')
   .split(/\s+/).filter(Boolean).map(word => PROP_WORDS[word] || word).join(' ');
 const propKey = (eventId, player, market, line) => JSON.stringify([eventId, propName(player), propMarket(market, player), Number(line)]);
 
@@ -325,7 +337,7 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
     const key = propKey(quote.eventId, quote.player, quote.market, quote.line);
     if (!markets.has(key)) markets.set(key, new Map());
     const books = markets.get(key), family = quote.priceFamily || quote.book;
-    books.set(family, { ...books.get(family), book: quote.book, [quote.side]: implied(quote.odds) });
+    books.set(family, { ...books.get(family), book: quote.book, exchange: quote.exchange === true, [quote.side]: implied(quote.odds) });
   }
   const latest = new Map();
   for (const pick of picks) {
@@ -335,6 +347,9 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
   }
   return [...latest.values()].map(pick => {
     const books = [...(markets.get(propKey(pick.eventId, pick.player, pick.market, pick.line))?.values() || [])]
+      // A sportsbook pair whose implied probabilities sum to 100.5% or less has no margin to remove:
+      // the feed built the Under from the Over (874 of 876 Fanatics prop pairs on 2 Oct 2026).
+      .filter(book => book.exchange || book.over + book.under > 1.005)
       .map(book => ({ ...book, fairOver: devig([book.over, book.under], method)[0] })).filter(book => Number.isFinite(book.fairOver));
     const weight = book => DEFAULT_SHARP_WEIGHTS[String(book.book).toLowerCase()] || 1;
     const total = books.reduce((sum, book) => sum + weight(book), 0);
@@ -355,7 +370,7 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
  */
 export async function loadFeed(url, syncedAt = new Date().toISOString(), { method = 'multiplicative' } = {}) {
   try {
-    const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(15_000) });
+    const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(45_000) });
     // Feed times come from the server's clock; measure how far this device's clock is off.
     const serverNow = Date.parse(response.headers.get('Date') || ''), offset = Number.isFinite(serverNow) ? serverNow - Date.now() : 0;
     let payload;
@@ -382,6 +397,17 @@ const SEASON_LABEL = /^\d{4}(-\d{2,4})? season$/i;
 // some NHL) under NBA. A market basketball doesn't have moves all of that player's lines to the
 // sport it belongs to, so "Points" for an NHL forward follows his "Shots On Goal".
 const BASKETBALL = new Set(['NBA', 'WNBA', 'NCAAB']);
+/** Moves DFS picks filed under basketball to the sport their player's markets belong to (in place). */
+function relabelDfsSports(picks) {
+  const key = pick => `${pick.book}|${propName(pick.player)}`, sports = new Map();
+  for (const pick of picks) {
+    if (!BASKETBALL.has(pick.sport)) continue;
+    const sport = NOT_BASKETBALL.find(([pattern]) => pattern.test(String(pick.market).toLowerCase()))?.[1];
+    if (sport) sports.set(key(pick), sport);
+  }
+  if (sports.size) for (const pick of picks) if (BASKETBALL.has(pick.sport) && sports.has(key(pick))) pick.sport = sports.get(key(pick));
+  return picks;
+}
 const NOT_BASKETBALL = [
   [/\bmaps?\b|\bfirst bloods?\b|\bheadshots?\b/, 'Esports'],
   [/\bgoalie\b|\bshots on goal\b|\bpower play\b/, 'NHL'],
@@ -401,12 +427,6 @@ const NOT_BASKETBALL = [
 export function normalizeDfsRecords(records, { syncedAt = new Date().toISOString() } = {}) {
   const now = Date.parse(syncedAt), list = Array.isArray(records) ? records : [];
   const skipped = { invalid: 0, notProps: 0, stale: 0 };
-  const dfsPlayer = (app, player) => `${app}|${propName(player)}`, relabeled = new Map();
-  for (const raw of list) {
-    if (!BASKETBALL.has(sportName(text(raw, 'sport')))) continue;
-    const market = text(raw, 'market').toLowerCase(), sport = NOT_BASKETBALL.find(([pattern]) => pattern.test(market))?.[1];
-    if (sport) relabeled.set(dfsPlayer(canonicalPlatform(text(raw, 'app') || text(raw, 'book')), text(raw, 'player') || text(raw, 'player_name')), sport);
-  }
   const picks = [];
   for (const raw of list) {
     const app = canonicalPlatform(text(raw, 'app') || text(raw, 'book')), player = text(raw, 'player') || text(raw, 'player_name');
@@ -414,8 +434,7 @@ export function normalizeDfsRecords(records, { syncedAt = new Date().toISOString
     if (!app || !player || !market || !side || !Number.isFinite(line) || !Number.isFinite(ts)) { skipped.invalid += 1; continue; }
     if (DFS_NON_PROPS.has(market.toLowerCase()) || SEASON_LABEL.test(player) || line <= 0) { skipped.notProps += 1; continue; }
     if (now - ts > FEED_MAX_AGE_MS) { skipped.stale += 1; continue; }
-    const labeled = sportName(text(raw, 'sport')), event = text(raw, 'event');
-    const sport = (BASKETBALL.has(labeled) && relabeled.get(dfsPlayer(app, player))) || labeled;
+    const sport = sportName(text(raw, 'sport')), event = text(raw, 'event');
     const matched = matchedEventKey(sport, event);
     picks.push({
       id: text(raw, 'id'), book: app, sport, league: text(raw, 'league') || SOCCER_LEAGUES[text(raw, 'sport').toLowerCase()] || '',
@@ -424,7 +443,7 @@ export function normalizeDfsRecords(records, { syncedAt = new Date().toISOString
       ...(text(raw, 'team') ? { team: text(raw, 'team') } : {}),
     });
   }
-  return { picks, skipped };
+  return { picks: relabelDfsSports(picks), skipped };
 }
 
 /** The quote API's payout tables (GET /site/dfs/payouts) → { app: { size: [return by hits] } } (power play: all picks must hit). */

@@ -181,3 +181,11 @@ test('controls are loaded after upstream fetch and any control/provider failure 
   }
   await assert.rejects(readEvQuotes({ providerConfig, fetcher: unavailable }), error => error.status === 503 && !/do-not-expose/.test(error.message));
 });
+
+test('a provider snapshot over 50,000 quotes is served instead of rejected', async () => {
+  // The provider sent 76,799 quotes on 2 Oct 2026; a 50,000 cap blanked every dashboard refresh.
+  const large = Array.from({ length: 60_000 }, (_, index) => ({ ...quotes[index % quotes.length], id: `bulk-${index}` }));
+  const result = await proxy('/api/ev/quotes', { fetcher: async () => new Response(JSON.stringify({ quotes: large })), loadControls: async () => [] });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.count, 60_000);
+});

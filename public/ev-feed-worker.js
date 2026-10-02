@@ -1,7 +1,7 @@
 // Downloads, parses and cleans the quote snapshot (and, for the DFS tools, the DFS props) off the
 // main thread. Both are several MB; doing that in the page froze scrolling and typing on every
 // refresh. The page receives ready-to-use records (see fetchFeed in ev.js).
-import { loadFeed, loadDfsFeed } from './ev-feed-normalize.js?v=7';
+import { loadFeed, loadDfsFeed } from './ev-feed-normalize.js?v=8';
 
 self.onmessage = async ({ data }) => {
   const options = { method: data.method };

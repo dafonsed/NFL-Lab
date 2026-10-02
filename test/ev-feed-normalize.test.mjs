@@ -240,3 +240,24 @@ test('DFS fair probability devigs each book\'s Over/Under prices with the chosen
   const [alone] = dfsPicks([pick('over')], [], new Map());
   assert.equal(alone.probability, null, 'without sportsbook prices there is no fair probability, whatever the API sends');
 });
+
+test('Fanatics props read the stat from propMarket and repair a selection sent as the player', async () => {
+  const { normalizeRecord } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date().toISOString();
+  const yards = normalizeRecord({ id: 'f1', sport: 'nfl', event: 'Commanders @ Colts', market: 'prop', propMarket: 'Receiving Yards', player: 'Rachaad White', line: 20.5, side: 'over', book: 'Fanatics', odds: 240, ts, type: 'prop', selection_name: 'Rachaad White Over 20.5 Receiving Yards' });
+  assert.deepEqual([yards.player, yards.market, yards.side, yards.line], ['Rachaad White', 'Receiving Yards', 'over', 20.5]);
+  const points = normalizeRecord({ id: 'f2', sport: 'nba', event: 'Dallas Wings @ Golden State Valkyries', market: 'Awak Kuier - Points', side: 'yes', book: 'Fanatics', odds: -130, ts, type: 'prop', player: 'Over 6.5', selection_name: 'Over 6.5' });
+  assert.deepEqual([points.player, points.market, points.side, points.line], ['Awak Kuier', 'Points', 'over', 6.5]);
+});
+
+test('a sportsbook Over/Under pair with no margin is not devigged into a fair probability', async () => {
+  const { dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const { fairFromAmerican } = await import('../public/ev-advanced-math.js');
+  const ts = new Date().toISOString();
+  const book = (book, side, odds) => ({ book, side, odds, player: 'Rachaad White', market: 'Receiving Yards', line: 20.5, eventId: 'NFL:colts @ commanders', ts });
+  // +240 / -238 implies 29.4% + 70.4% = 99.8%: the Under is the Over mirrored, not a market.
+  const quotes = [book('Fanatics', 'over', 240), book('Fanatics', 'under', -238), book('DraftKings', 'over', -140), book('DraftKings', 'under', 118)];
+  const [pick] = dfsPicks([{ book: 'PrizePicks', player: 'Rachaad White', market: 'Receiving Yards', line: 20.5, side: 'over', eventId: 'NFL:colts @ commanders', ts }], quotes);
+  assert.deepEqual(pick.probabilityBooks, ['DraftKings']);
+  assert.ok(Math.abs(pick.probability - fairFromAmerican([-140, 118]).fair[0]) < 1e-12);
+});
