@@ -141,6 +141,30 @@ function propIdentity(raw) {
   return { market, player, milestone };
 }
 
+// Milestone and "N+" props are Over (N - 0.5) bets on the stat pick'em lines use, so they compare
+// with the same lines: Fanatics "ALT Longest Reception 15+" and FanDuel "Player to Record a 15+ Yard
+// Reception" are Longest Reception Over 14.5; "Anytime Touchdown Scorer" is Anytime TDs Over 0.5.
+const MILESTONE_MARKETS = [
+  [/^(?:player )?to record an? (\d+)\+ yard reception$/i, () => 'Longest Reception'],
+  [/^(?:player )?to record an? (\d+)\+ yard rush$/i, () => 'Longest Rush'],
+  [/^anytime touchdown scorer$/i, () => 'Anytime TDs', 1],
+  [/^(?:player )?to score (\d+)(?:\+| or more) touchdowns$/i, () => 'Anytime TDs'],
+  [/^player to score (\d+)\+ goals$/i, () => 'Goals'],
+  [/^player to record (\d+)\+ shots on goal$/i, () => 'Shots On Goal'],
+  [/^(\d+)\+ (points|assists|goals)$/i, match => match[2][0].toUpperCase() + match[2].slice(1).toLowerCase()],
+];
+const MILESTONE_SIDES = { over: 'over', yes: 'over', under: 'under', no: 'under' };
+function milestoneAsOverUnder(market, milestone, side) {
+  const direction = MILESTONE_SIDES[String(side ?? '').toLowerCase()];
+  if (!direction) return null;
+  if (milestone) return { market: market.replace(/^alt\s+/i, '').replace(/\s+milestones?$/i, ''), line: parseFloat(milestone) - 0.5, side: direction };
+  for (const [pattern, stat, count] of MILESTONE_MARKETS) {
+    const match = pattern.exec(market);
+    if (match) return { market: stat(match), line: (count ?? Number(match[1])) - 0.5, side: direction };
+  }
+  return null;
+}
+
 /** One API record → quote, or { skip: reason }. `clockOffsetMs` = server clock − this clock. */
 export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
   const id = text(raw, 'id') || (Number.isSafeInteger(raw?.id) ? String(raw.id) : '');
@@ -167,17 +191,21 @@ export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
   const eventId = matched ? `${sport}:${matched}` : text(raw, 'eventId') || `${sport}:${event.toLowerCase()}`;
   const liquidity = Number(raw.liquidity);
   const start = Date.parse(text(raw, 'startTime') || text(raw, 'start_time'));
-  const { market, player, milestone } = propIdentity(raw);
+  const identity = propIdentity(raw), { player, milestone } = identity;
+  const asOverUnder = type === 'prop' && !fantasy ? milestoneAsOverUnder(identity.market, milestone, repaired.side) : null;
+  const market = asOverUnder?.market || identity.market;
+  if (asOverUnder) line = asOverUnder.line;
   return {
     id: `local-api:${id}`, sport, event, market, displayMarket: type === 'prop' && market && market.toLowerCase() !== 'prop' ? market : MARKET_NAMES[type] || market,
     // A player prop's market is its stat: one player's Rebounds 8.5 and Assists 8.5 at a book are two
-    // markets, not two copies of one. Milestones carry no line, so the threshold ("5+", "10+") is
-    // part of the market too.
-    eventId, marketId: type === 'prop' ? `prop|${eventId}|${propName(market)}${milestone ? `|${milestone}` : ''}` : matched ? `${type}|${eventId}` : text(raw, 'marketId') || `${type}|${eventId}`,
+    // markets, not two copies of one. A milestone that couldn't be read as Over/Under carries no
+    // line, so its threshold ("5+", "10+") is part of the market too.
+    eventId, marketId: type === 'prop' ? `prop|${eventId}|${propName(market)}${milestone && !asOverUnder ? `|${milestone}` : ''}` : matched ? `${type}|${eventId}` : text(raw, 'marketId') || `${type}|${eventId}`,
     playerId: text(raw, 'playerId') || text(raw, 'player_id'), player, period: text(raw, 'period') || 'full', league: text(raw, 'league') || SOCCER_LEAGUES[text(raw, 'sport').toLowerCase()] || '',
     startTime: Number.isFinite(start) ? new Date(start).toISOString() : '',
     // Pick'em apps say higher/lower or more/less for Over/Under.
-    type, line, side: (fantasy && DFS_SIDES[repaired.side]) || repaired.side, selection: milestone || repaired.selection, sideVerified: repaired.verified,
+    type, line, side: asOverUnder?.side || (fantasy && DFS_SIDES[repaired.side]) || repaired.side,
+    selection: asOverUnder ? (asOverUnder.side === 'over' ? 'Over' : 'Under') : milestone || repaired.selection, sideVerified: repaired.verified,
     book: canonicalPlatform(text(raw, 'book')), odds: Number.isFinite(decimal(odds)) ? odds : null, outcomes,
     ...(text(raw, 'team') ? { team: text(raw, 'team') } : {}), ...lineType(raw), live: raw.live === true, exchange: raw.exchange === true,
     liquidity: Number.isFinite(liquidity) ? Math.max(0, liquidity) : 0,
@@ -277,6 +305,14 @@ export function normalizeFeed(records, { syncedAt = new Date().toISOString(), cl
   for (const raw of Array.isArray(records) ? records : []) {
     const result = normalizeRecord(raw, { clockOffsetMs });
     if (result.skip) skipped[result.skip] += 1; else quotes.push(result);
+  }
+  // Ladder props a book prices on one side at whole numbers ("Receiving Yards" 20, 25, 30 with only an
+  // Over) are N+ milestones: Over N - 0.5 on that stat. A whole number priced both ways is a real
+  // line with a push and stays as it is.
+  const ladderKey = quote => [quote.book, quote.eventId, propName(quote.player), propName(quote.market), quote.line].join('|');
+  const pricedUnder = new Set(quotes.filter(quote => quote.type === 'prop' && quote.side === 'under').map(ladderKey));
+  for (const quote of quotes) {
+    if (quote.type === 'prop' && quote.player && quote.side === 'over' && Number.isInteger(quote.line) && quote.line >= 1 && !isFantasyPlatform(quote.book) && !pricedUnder.has(ladderKey(quote))) quote.line -= 0.5;
   }
   // A book whose timestamps are all on the minute, with some in the future, is sending start times.
   const byBook = new Map();
