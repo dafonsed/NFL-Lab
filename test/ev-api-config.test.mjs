@@ -42,3 +42,22 @@ test('props and contracts routes find the upstream path that exists and pass its
   assert.equal(missing.status, 404);
   assert.deepEqual(missing.body.tried, ['/contracts', '/prediction/contracts', '/predictions', '/markets']);
 });
+
+test('the site routes of the quote API pass through read-only; writes and private routes do not', async () => {
+  const { handleEvApi } = await import('../lib/ev-api-proxy.mjs');
+  const providerConfig = { base: new URL('http://127.0.0.1:9/'), apiKey: 'k' };
+  const asked = [];
+  const fetcher = async target => { asked.push(target.pathname + target.search); return new Response('[{"ok":true}]', { status: 200 }); };
+  const call = async (method, path) => {
+    let status, body;
+    await handleEvApi({ method }, { writeHead(code) { status = code; }, end(value) { body = JSON.parse(value); } }, new URL(path, 'http://localhost'), { providerConfig, fetcher });
+    return { status, body };
+  };
+  assert.equal((await call('GET', '/api/ev/site/dfs/props?sport=nfl')).status, 200);
+  assert.equal((await call('GET', '/api/ev/clob?book=novig')).status, 200);
+  assert.deepEqual(asked, ['/site/dfs/props?sport=nfl', '/clob?book=novig']);
+  for (const [method, path] of [['GET', '/api/ev/collectors/status'], ['GET', '/api/ev/review'], ['POST', '/api/ev/site/dfs/props'], ['GET', '/api/ev/site/../review']]) {
+    assert.equal((await call(method, path)).status, 404, `${method} ${path}`);
+  }
+  assert.equal(asked.length, 2, 'nothing else reached the upstream API');
+});
