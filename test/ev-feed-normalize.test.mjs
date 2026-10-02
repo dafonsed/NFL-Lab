@@ -434,3 +434,19 @@ test('a payout multiplier repeated on nearly every goblin or demon line is a def
   const varied = dfsPicks(Array.from({ length: 25 }, (_, i) => demon(i, 1.2 + (i % 5) * 0.25)), []);
   assert.deepEqual([...new Set(varied.map(pick => pick.payoutMultiplier))].sort(), [1.2, 1.45, 1.7, 1.95, 2.2]);
 });
+
+test('bet links that name the game instead of the book id are dropped; a future game is not live', async () => {
+  const { normalizeRecord, normalizeFeed } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date(Date.now() - 60_000).toISOString();
+  const quote = (betUrl, extra = {}) => normalizeRecord({ id: 'q', sport: 'nfl', event: 'Cincinnati Bengals @ Miami Dolphins', market: 'moneyline', type: 'moneyline', side: 'home', book: 'DraftKings', odds: -150, ts, betUrl, eventUrl: betUrl, ...extra });
+  assert.equal(quote('https://sportsbook.fanduel.com/event/36112224?market=&selection=').betUrl, 'https://sportsbook.fanduel.com/event/36112224?market=&selection=');
+  assert.equal(quote('https://sportsbook.draftkings.com/event/cin bengals @ mia dolphins?market=&selection=').betUrl, undefined);
+  assert.equal(quote('https://www.az.bet365.com/#/AS/B1/hanshin tigers @ hiroshima toyo carp/').betUrl, undefined);
+  assert.equal(quote('https://az.betrivers.com/?page=sportsbook#event/1029303644?market=').betUrl, 'https://az.betrivers.com/?page=sportsbook#event/1029303644?market=');
+  assert.equal(quote('javascript:alert(1)').betUrl, undefined);
+  // Sunday's game flagged live on Friday: another book's start time says it hasn't started.
+  const sunday = new Date(Date.now() + 2 * 86_400_000).toISOString();
+  const raw = (id, book, extra) => ({ id, sport: 'nfl', event: 'Arizona Cardinals @ New York Giants', market: 'moneyline', type: 'moneyline', side: 'home', book, odds: 116, ts, ...extra });
+  const { quotes } = normalizeFeed([raw('a', 'Betr', { live: true }), raw('b', 'FanDuel', { startTime: sunday, odds: 120 })], { syncedAt: new Date().toISOString(), price: false });
+  assert.ok(quotes.every(q => q.live === false));
+});
