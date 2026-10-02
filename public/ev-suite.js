@@ -1,5 +1,5 @@
 import { decimal, implied, money, percent, signed, oddsLabel, probabilityToAmerican, fractionalKellyStake, arbitrageRows, middleRows, fantasySlip } from './ev-core.js?v=4-suite';
-import { quoteAvailable, marketIdentity, consensusPrice, computeAdvancedEv, projectProbability, constrainedArb, middleOutcomes, advancedParlay, performanceSummary } from './ev-advanced-math.js';
+import { DEVIG_METHODS, quoteAvailable, marketIdentity, consensusPrice, computeAdvancedEv, projectProbability, constrainedArb, middleOutcomes, advancedParlay, performanceSummary } from './ev-advanced-math.js';
 import { readBets, writeBets, validateBet, betReturns } from './bet-utils.js?v=3';
 import { createEvOperations } from './ev-operations.js';
 import { createEvMarketViews } from './ev-market-views.js';
@@ -49,7 +49,7 @@ export function createEvSuite(host) {
   }
   // Pregame prices expire after 15 minutes (the feed rescrapes every few). A saved value equal to the
   // old 24-hour default is treated as unset, so it moves to the new default.
-  const settings = () => { const saved = {...root().settings}; if (Number(saved.pregameMaxAgeSeconds) === 86400) delete saved.pregameMaxAgeSeconds; return {...defaults,...saved}; };
+  const settings = () => { const saved = {...root().settings}; if (Number(saved.pregameMaxAgeSeconds) === 86400) delete saved.pregameMaxAgeSeconds; if (!DEVIG_METHODS.includes(saved.devigMethod)) delete saved.devigMethod; return {...defaults,...saved}; };
   function save(redraw=true) {host.setBuilderIds?.([...root().builderIds]);if(host.save()===false)throw Error('Changes remain in this open workspace, but could not be saved. Export your records before leaving.');if(redraw)host.redraw();}
   const operations=createEvOperations({getState:host.getState,save:()=>save(false),redraw:host.redraw,navigate:host.navigate});
   const markets=createEvMarketViews({getState:host.getState,save:()=>save(false),redraw:host.redraw,navigate:host.navigate,getSettings:settings});
@@ -95,7 +95,7 @@ export function createEvSuite(host) {
     const group=(title,note,body,cls='')=>`<section class="evs-group ${cls}"><header><h4>${esc(title)}</h4><p>${esc(note)}</p></header><div class="evx-fields evs-fields">${body}</div></section>`;
     const toggle=(title,note,name,checked)=>`<label class="evs-toggle"><input type="checkbox" role="switch" name="${name}" ${checked?'checked':''}><span class="evs-toggle-copy"><strong>${esc(title)}</strong><small>${esc(note)}</small></span></label>`;
     return `<div class="evx-workspace evs-settings">${panel('Pricing, availability & filters',`<form data-suite-form="settings" class="evs-form">`
-      +group('Fair value','How consensus no-vig prices are built from reference books.',`${select('No-vig method','devigMethod',['multiplicative','additive','power'],s.devigMethod)}${field('Minimum reference books','minSharpBooks',s.minSharpBooks,'number','min="1" max="30" required')}${field('Maximum book vig %','maxVigPercent',s.maxVigPercent,'number','min="0" max="100" step="0.1" required')}`)
+      +group('Fair value','How consensus no-vig prices are built from reference books.',`${select('No-vig method','devigMethod',DEVIG_METHODS,s.devigMethod)}${field('Minimum reference books','minSharpBooks',s.minSharpBooks,'number','min="1" max="30" required')}${field('Maximum book vig %','maxVigPercent',s.maxVigPercent,'number','min="0" max="100" step="0.1" required')}`)
       +group('EV & odds limits','Blank upper and lower limits are unrestricted.',`${field('Minimum EV %','minEvPercent',s.minEvPercent,'number','step="0.1"')}${field('Maximum EV %','maxEvPercent',s.maxEvPercent,'number','step="0.1"')}${field('Minimum American odds','minOdds',s.minOdds,'number','step="1"')}${field('Maximum American odds','maxOdds',s.maxOdds,'number','step="1"')}`)
       +group('Arbitrage','Return range and the smallest stake a pair must support.',`${field('Minimum arb %','minArbPercent',s.minArbPercent,'number','step="0.1"')}${field('Maximum arb %','maxArbPercent',s.maxArbPercent,'number','step="0.1"')}${field('Minimum available arb stake','minAvailableStake',s.minAvailableStake,'number','min="0"')}`)
       +group('Liquidity & freshness','Exchange depth and how long observed prices stay usable.',`${field('Minimum exchange liquidity','minLiquidity',s.minLiquidity,'number','min="0"')}${field('Live max age (seconds)','liveMaxAgeSeconds',s.liveMaxAgeSeconds,'number','min="1" max="3600" required')}${field('Pregame max age (seconds)','pregameMaxAgeSeconds',s.pregameMaxAgeSeconds,'number','min="1" max="604800" required')}`)

@@ -2,7 +2,7 @@ import { browserAlertsControl, deliverAlerts, toggleBrowserAlerts } from './aler
 import { wagerCard } from './ev-bet-card.js';
 import { renderEvBoard, renderEvBoardDetail, renderBetPanel, boostedOffer, boardIcon, bookLogo, startLabel, selectionText } from './ev-board.js?v=5';
 import { createEvSuite, EV_SUITE_TOOLS } from './ev-suite.js?v=local-suite-5';
-import { computeAdvancedEv, consensusPrice, constrainedArb, middleOutcomes } from './ev-advanced-math.js';
+import { computeAdvancedEv, consensusPrice, constrainedArb, middleOutcomes, devig } from './ev-advanced-math.js';
 import { readSuiteState, writeSuiteState } from './ev-suite-storage.js?v=2';
 import { installMobileWorkspace, quoteRevision, preserveReadingOrder } from './ev-mobile.js';
 import { accountStorage as localStorage, accountReady, getAccountPreferences, accountSyncState } from './account-sync.js';
@@ -11,7 +11,7 @@ import { secondaryShell, toolHero, accentTitle, toolPanel, toolEmpty, toolStats,
 import { SECONDARY_TOOLS } from './ev-tool-catalog.js';
 import { emptyWorkspace, purgeDemoData, clearLegacyDemoStorage } from './ev-workspace-clean.js?v=1';
 import { createQuoteFeedControls, toolDataLabel } from './ev-feed.js?v=7';
-import { loadFeed, loadDfsFeed, dfsPicks, payoutTables, knownSport } from './ev-feed-normalize.js?v=6';
+import { loadFeed, loadDfsFeed, dfsPicks, payoutTables, knownSport } from './ev-feed-normalize.js?v=7';
 import { readQuoteCache, createThrottledCacheWriter } from './ev-quote-cache.js?v=1';
 import { START_WINDOWS, MIN_ODDS, MIN_EV, MIN_WIN_CHANCE, TOOL_FILTERS, TOOL_FILTER_DEFAULTS, activeFilterCount, startsWithin, oddsWithin, quoteMatches, readToolFilters, saveToolFilters, toolFilterBar } from './ev-filters.js?v=2';
 import { SITE_PLATFORMS, SPORTSBOOK_PLATFORMS, PREDICTION_PLATFORMS, EXCHANGE_PLATFORMS, canonicalPlatform, platformAsset, platformLabel, platformOptions, isContestPlatform } from './platform-catalog.js';
@@ -22,7 +22,7 @@ import { comparisonAnnotations } from './bet-comparison.js?v=4';
 import { inlineBetCard as betComparisonCard, bindInlineComparison as bindComparison } from './bet-inline.js?v=card-click-3';
 import { openArbCalculator } from './arb-calculator.js?v=2';
 import { openLineHistory, buildLineSeries } from './line-history.js?v=1';
-import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource } from './dfs-workspace.js?v=14-apps';
+import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource, breakEven } from './dfs-workspace.js?v=15-devig';
 import { createOddsScreen } from './odds-screen.js?v=9';
 
 import {readSportsbookState, saveSportsbookState, sportsbookAvailable, availableSportsbookQuotes, STATE_CHANGE_EVENT} from './sportsbook-availability.js';
@@ -161,7 +161,7 @@ let trendA = '', trendB = '', traderName = '', predictionPlatform = '';
 let editing = null;
 // Published standard payouts fill in until the member saves their own table for an app and size.
 const paytables = () => withStandardPaytables(state.paytables, apiPaytables);
-const dfsWorkspace = createDfsWorkspace({getState:()=>({...state,quotes:eligibleQuotes(state.quotes),paytables:paytables(),payoutSource:(app,size)=>paytableSource(state.paytables,app,size,apiPaytables),dfsLoading:dfsLoading&&!dfsLoaded}),redraw:()=>render(),onSave:slip=>{state.slips.push(slip);commit();},onConfigure:picks=>{fantasyIds=picks.map(item=>item.id);fantasyApp=picks[0].app;setTool('slip');}});
+const dfsWorkspace = createDfsWorkspace({getState:()=>({...state,quotes:eligibleQuotes(state.quotes),paytables:paytables(),devigMethod:suite.settings().devigMethod,payoutSource:(app,size)=>paytableSource(state.paytables,app,size,apiPaytables),dfsLoading:dfsLoading&&!dfsLoaded}),redraw:()=>render(),onSave:slip=>{state.slips.push(slip);commit();},onConfigure:picks=>{fantasyIds=picks.map(item=>item.id);fantasyApp=picks[0].app;setTool('slip');}});
 const oddsScreen = createOddsScreen({storage:localStorage,defaultFormat:getAccountPreferences().oddsFormat,getQuotes:()=>eligibleQuotes(oddsQuotes()),getSportsbookState:()=>sportsbookState,onAllSportsbooks:()=>{const saved=saveSportsbookState('');document.dispatchEvent(new CustomEvent(STATE_CHANGE_EVENT,{detail:{state:'',saved}}));},brandMark,redraw:()=>render(),onSport:value=>{sport=value;history.replaceState(history.state,'',`${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}#odds`);}});
 const suite = createEvSuite({
   getState:()=>state, save:persist, redraw:render, navigate:key=>setTool(key==='tracker'&&!accountSyncState().userId?'ledger':key), getTool:()=>active,
@@ -236,19 +236,19 @@ let lastSkipped = 0;
 let feedWorker = null, feedRequest = 0;
 const pendingFeed = new Map();
 function fetchFeed(kind = 'quotes', apps = []) {
-  const url = kind === 'dfs' ? '/api/ev/site/dfs/props' : '/api/ev/quotes', syncedAt = now();
-  const inline = () => kind === 'dfs' ? loadDfsFeed(url, syncedAt, apps) : loadFeed(url, syncedAt);
+  const url = kind === 'dfs' ? '/api/ev/site/dfs/props' : '/api/ev/quotes', syncedAt = now(), method = suite.settings().devigMethod;
+  const inline = () => kind === 'dfs' ? loadDfsFeed(url, syncedAt, apps, { method }) : loadFeed(url, syncedAt, { method });
   if (feedWorker !== false && typeof Worker === 'function') {
     try {
       if (!feedWorker) {
-        feedWorker = new Worker('/ev-feed-worker.js?v=6', { type: 'module' });
+        feedWorker = new Worker('/ev-feed-worker.js?v=7', { type: 'module' });
         feedWorker.onmessage = ({ data }) => { pendingFeed.get(data.id)?.(data); pendingFeed.delete(data.id); };
         feedWorker.onerror = () => { feedWorker = false; for (const resolve of pendingFeed.values()) resolve({ ok: false, kind: 'worker' }); pendingFeed.clear(); };
       }
       const id = ++feedRequest;
       return new Promise(resolve => {
         pendingFeed.set(id, resolve);
-        feedWorker.postMessage({ id, kind, url, syncedAt, apps });
+        feedWorker.postMessage({ id, kind, url, syncedAt, apps, method });
         setTimeout(() => { if (pendingFeed.delete(id)) resolve({ ok: false, kind: 'timeout' }); }, 40_000);
       }).then(result => result.kind === 'worker' ? inline() : result);
     } catch { feedWorker = false; }
@@ -281,7 +281,7 @@ function ensureDfsFeed() {
     if (!result.ok) return;
     const previous = dfsRevision();
     // The worker already built the picks; re-price here only when the page has sportsbook player props.
-    propsFeedDfs = state.quotes.some(q => q.player) ? dfsPicks(result.picks, state.quotes) : result.dfs;
+    propsFeedDfs = state.quotes.some(q => q.player) ? dfsPicks(result.picks, state.quotes, undefined, { method: suite.settings().devigMethod }) : result.dfs;
     applyFeedDfs();
     dfsSyncedAt = Date.now();
     persist();
@@ -815,7 +815,8 @@ function comparisonForQuote(quote) {
     const difference = same && quote.line !== '' && same.line !== '' && Number.isFinite(Number(same.line) - Number(quote.line)) && Number(same.line) !== Number(quote.line)
       ? `${Number(same.line) - Number(quote.line) > 0 ? '+' : ''}${Number(same.line) - Number(quote.line)}` : '';
     const complete=[...new Set(peers.map(item=>item.side))].map(side=>latest(book,side));
-    const noVig=same&&complete.length>=2&&complete.every(item=>item&&fresh(item))?implied(same.odds)/complete.reduce((sum,item)=>sum+implied(item.odds),0):NaN;
+    // This book's own fair probability: its complete market devigged with the member's method.
+    const noVig=same&&complete.length>=2&&complete.every(item=>item&&fresh(item))?devig(complete.map(item=>implied(item.odds)),suite.settings().devigMethod)[complete.indexOf(same)]??NaN:NaN;
     return {name:book,probability:Number.isFinite(noVig)?percent(noVig):null,mark:brandMark(book),exchange:peers.some(item=>item.book===book&&item.exchange),line:same?.line !== '' && same?.line != null ? fmtLine(same.line) : '—',difference,odds:same ? `${oddsLabel(same.odds)}${other ? ' / ' + oddsLabel(other.odds) : ''}` : '—'};
   });
   const selection = `${quote.side}${quote.line !== '' && quote.line != null ? ' ' + fmtLine(quote.line) : ''}`;
@@ -1256,13 +1257,14 @@ function renderPromo() {
 
 function renderParlay() {
   const selected = parlayIds.map(id=>state.quotes.find(q=>q.id===id)).filter(q=>q&&bookAvailable(q.book));
-  const legs = selected.map(q=>({...q,probability:fairProbability(q,groups(state.quotes).find(g=>g.some(x=>x.id===q.id))||[])}));
+  const method = suite.settings().devigMethod;
+  const legs = selected.map(q=>({...q,probability:fairProbability(q,groups(state.quotes).find(g=>g.some(x=>x.id===q.id))||[],method)}));
   const result = parlay(legs);
   const valid = result && Number.isFinite(result.ev) && new Set(selected.map(q=>q.book)).size===1;
   const invalidReason = selected.length < 2 ? 'Choose at least two legs from different events.' : new Set(selected.map(q=>q.book)).size > 1 ? 'Choose one sportsbook for every leg. These books cannot form one ticket.' : new Set(selected.map(q=>q.event)).size < selected.length ? 'Same-event legs may be correlated. This independent-leg calculator does not support that combination.' : 'A fair estimate needs complete comparison prices for every leg.';
   // Fair odds for each leg come from every book in the market; filters only choose which legs show.
   const listed = new Set(quotes().map(q => q.id));
-  const options = evRows(eligibleQuotes(quoteSource().filter(q => !sport || q.sport === sport)),false).filter(({quote,ev})=>listed.has(quote.id) && sportsbookSelected(quote.book)
+  const options = evRows(eligibleQuotes(quoteSource().filter(q => !sport || q.sport === sport)),false,method).filter(({quote,ev})=>listed.has(quote.id) && sportsbookSelected(quote.book)
     && (!toolFilters.book || quote.book === toolFilters.book)
     && (toolFilters.legEv === '' || ev * 100 >= Number(toolFilters.legEv))
     && oddsWithin(quote.odds, '', toolFilters.maxOdds));
@@ -1397,9 +1399,21 @@ function renderFantasy() {
 }
 
 function renderOptimizer() {
-  // Picks without a hit chance (no matching sportsbook market yet) can't be ranked.
-  const rows = dfs().filter(x=>!isContestPlatform(x.app) && x.probability != null && Number.isFinite(Number(x.probability)));
-  const combos = [], tables = paytables();
+  // Legs qualify when their fair probability beats the app's 2-pick break-even (edge > 0); the best
+  // 40 per app by edge are paired and the pairs ranked by slip EV. Picks without a fair probability
+  // (no two-sided sportsbook market yet) can't qualify.
+  const tables = paytables(), combos = [], edges = new Map();
+  const breakEvens = new Map(Object.entries(tables).map(([app, sizes]) => [app, breakEven(sizes?.['2'])]));
+  const byApp = new Map();
+  for (const x of dfs()) {
+    if (isContestPlatform(x.app) || x.probability == null || !Number.isFinite(Number(x.probability))) continue;
+    const edge = Number(x.probability) - breakEvens.get(x.app);
+    if (!(edge > 0)) continue;
+    edges.set(x.id, edge);
+    if (!byApp.has(x.app)) byApp.set(x.app, []);
+    byApp.get(x.app).push(x);
+  }
+  const rows = [...byApp.values()].flatMap(list => list.sort((a,b)=>edges.get(b.id)-edges.get(a.id)).slice(0,40));
   for(let i=0;i<rows.length;i++) for(let j=i+1;j<rows.length;j++) {
     if(rows[i].app!==rows[j].app||rows[i].player===rows[j].player)continue;
     const rules=tables[rows[i].app]?.['2'];

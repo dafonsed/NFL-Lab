@@ -8,7 +8,7 @@ import * as views from '../public/ev-secondary-views.js';
 import {wagerCard} from '../public/ev-bet-card.js';
 import {canonicalPlatform, isContestPlatform, PREDICTION_PLATFORMS} from '../public/platform-catalog.js';
 import {TOOL_FILTER_DEFAULTS, oddsWithin} from '../public/ev-filters.js';
-import {withStandardPaytables, paytableSource} from '../public/dfs-workspace.js';
+import {withStandardPaytables, paytableSource, breakEven} from '../public/dfs-workspace.js';
 
 const source=await fs.readFile(new URL('../public/ev.js',import.meta.url),'utf8');
 const quote=(id,extra={})=>({id,sport:'NBA',event:'BOS vs NYK',player:'Player <One>',market:'Points',type:'prop',side:'Over',line:20.5,book:'FanDuel',odds:120,ts:'2026-09-25T10:00:00Z',...extra});
@@ -22,7 +22,8 @@ function render(name,extra={}) {
     qName:q=>q.player+' '+q.side+' '+q.line,origin:()=>'<span class="ev-status">Manual</span>',
     table:(head,rows)=>`<table><thead><tr>${head.map(text=>`<th>${views.toolEsc(text)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`,
     button:(label,attrs='')=>`<button type="button" ${attrs}>${label}</button>`,action:()=>'',
-    toolFilters:{...TOOL_FILTER_DEFAULTS},oddsWithin,filteredEmpty:fallback=>fallback,sportsbookSelected:()=>true,sport:'',ARB_SANITY_LIMIT:.15,...extra});
+    toolFilters:{...TOOL_FILTER_DEFAULTS},oddsWithin,filteredEmpty:fallback=>fallback,sportsbookSelected:()=>true,sport:'',ARB_SANITY_LIMIT:.15,
+    breakEven,suite:{settings:()=>({devigMethod:'multiplicative'})},...extra});
   // Parlay computes fair odds from every quote for the sport (quoteSource), not only the listed ones.
   context.quoteSource ??= () => context.state?.quotes ?? context.quotes?.() ?? [];
   // Standard payouts layer under saved tables (public/dfs-workspace.js).
@@ -63,7 +64,7 @@ test('parlay leg cards retain selection state and the actual offered price',()=>
   assert.equal($('[data-parlay-remove="a"]').length,1,'selected ticket remains editable');
 });
 
-test('optimizer cards preserve edge ranking, saved payout rules and both pick IDs',()=>{
+test('optimizer cards pair only legs above break-even, keep payout rules and both pick IDs',()=>{
   const rows=[pick('a',{probability:.65}),pick('b',{probability:.6}),pick('c',{probability:.5})];
   const state={dfs:rows,paytables:{PrizePicks:{2:[0,0,3]}}};
   const {$}=render('renderOptimizer',{state,dfs:()=>rows});
@@ -75,7 +76,9 @@ test('optimizer cards preserve edge ranking, saved payout rules and both pick ID
   assert.equal(best.find('.evc-metric strong').text(),core.signed(core.fantasySlip(rows.slice(0,2),[0,0,3]).ev));
   assert.equal(best.find('.evc-ring strong').text(),'39.0%');
   assert.equal(best.find('.evc-combo-pick').length,2,'both picks are shown');
-  assert.equal($('.evc-optimizer .evc-card').length,3);
+  // 2-pick 3× break-even is √(1/3) = 57.74%: c (50%) has a negative edge and does not qualify.
+  assert.equal($('.evc-optimizer .evc-card').length,1);
+  assert.equal($('[data-optimize*="c"]').length,0);
 });
 
 test('slip pick cards pair each line\'s Over and Under and keep edit and select actions distinct',()=>{

@@ -1,5 +1,5 @@
 // Pure market math. Quote adapters can replace manual/example records without changing the workbench.
-import {marketIdentity as preciseMarketIdentity,quoteAvailable} from './ev-advanced-math.js';
+import {marketIdentity as preciseMarketIdentity,quoteAvailable,devig} from './ev-advanced-math.js';
 export const decimal = odds => {
   const n = Number(odds);
   if (!Number.isFinite(n) || (n > -100 && n < 100)) return NaN;
@@ -44,7 +44,9 @@ export function opposingSides(rows) {
   return sides.length === 2 ? sides : [];
 }
 
-export function fairProbability(quote, rows) {
+// Fair probability of one selection: each other book's complete market is devigged with `method`
+// (see devig in ev-advanced-math.js), then the books are averaged.
+export function fairProbability(quote, rows, method = 'multiplicative') {
   const sides = [...new Set(rows.map(q => q.side))];
   const count = Number(quote.outcomes) || (quote.type === 'three-way' ? 3 : quote.type === 'future' && !sides.every(side => ['yes','no'].includes(side.toLowerCase())) ? NaN : 2);
   if (!Number.isInteger(count) || count < 2 || sides.length !== count || !sides.includes(quote.side)) return NaN;
@@ -52,14 +54,16 @@ export function fairProbability(quote, rows) {
   const estimates = [];
   for (const book of books) {
     const complete = sides.map(side => rows.filter(q => q.book === book && q.side === side && fresh(q)).sort((x, y) => Date.parse(y.ts) - Date.parse(x.ts))[0]);
-    if (complete.every(Boolean)) estimates.push(implied(complete.find(q => q.side === quote.side).odds) / complete.reduce((sum,q) => sum + implied(q.odds),0));
+    if (!complete.every(Boolean)) continue;
+    const fair = devig(complete.map(q => implied(q.odds)), method);
+    if (fair.length) estimates.push(fair[sides.indexOf(quote.side)]);
   }
   return estimates.length ? estimates.reduce((a, b) => a + b, 0) / estimates.length : NaN;
 }
 
-export function evRows(quotes, mode) {
+export function evRows(quotes, mode, method = 'multiplicative') {
   return groups(quotes, mode).flatMap(rows => rows.filter(q => fresh(q)).map(q => {
-    const fair = fairProbability(q, rows);
+    const fair = fairProbability(q, rows, method);
     return { quote: q, fair, ev: expectedReturn(fair, q.odds), edge: fair - implied(q.odds) };
   })).filter(row => Number.isFinite(row.ev)).sort((a, b) => b.ev - a.ev);
 }
@@ -196,7 +200,7 @@ export function alertMatches(rule, state) {
   const observation = q => state.history.filter(h => h.quoteId === q.id).at(-1)?.id || q.id;
   if (rule.kind === 'price') return rows.filter(q => decimal(q.odds) >= decimal(rule.threshold)).map(q => ({ id: observation(q), label: `${q.side} ${oddsLabel(q.odds)} at ${q.book}` }));
   if (rule.kind === 'ev') {
-    const ids = new Set(evRows(state.quotes, rule.liveOnly ? true : null).filter(x => x.ev >= Number(rule.threshold) / 100).map(x => x.quote.id));
+    const ids = new Set(evRows(state.quotes, rule.liveOnly ? true : null, state.suite?.settings?.devigMethod || 'multiplicative').filter(x => x.ev >= Number(rule.threshold) / 100).map(x => x.quote.id));
     return rows.filter(q => ids.has(q.id)).map(q => ({ id: observation(q), label: `${q.side} at ${q.book}` }));
   }
   if (rule.kind === 'movement') return rows.flatMap(q => {
