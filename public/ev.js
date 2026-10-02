@@ -313,7 +313,7 @@ async function syncLocalApi() {
     throw failure;
   }
   // Bad or mislabeled records were skipped and counted; one bad record never blocks the snapshot.
-  const { quotes: kept, skipped } = result, records = { length: result.total };
+  const { quotes: kept, skipped } = result;
   const previousDfs = dfsRevision();
   if (Array.isArray(result.dfs)) { quoteFeedDfs = result.dfs; applyFeedDfs(); }
   const feed = new Map(kept.map(quote => [quote.id, quote]));
@@ -329,7 +329,9 @@ async function syncLocalApi() {
   const apiHistory = state.history.filter(item => item.source === 'local-api').slice(-5_000);
   state.history = [...state.history.filter(item => item.source !== 'local-api'), ...apiHistory];
   state.apiSyncedAt = now();
-  lastSkipped = records.length - kept.length - skipped.duplicate - skipped.stale;
+  // Records the feed sent that can't be used. Pick'em lines (now DFS picks), older copies, expired
+  // prices and started games are not "unusable".
+  lastSkipped = (skipped.invalid || 0) + (skipped.mislabeled || 0) + (skipped.inconsistent || 0);
   evaluateAlerts();
   // Alert-center watches run on every price update, not only when "Refresh saved records" is on.
   if (state.suite?.watchRules?.length) suite.evaluateWatches();
