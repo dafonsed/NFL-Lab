@@ -323,9 +323,9 @@ test('player props show their stat as the market and in the bet; margin bands an
   assert.equal(yards.displayMarket, 'Receiving Yards');
   assert.equal(selectionText(yards), 'Dawson Knox Under 10.5 Receiving Yards');
   const scorer = fanatics({ market: 'Anytime Touchdown Scorer', player: 'Dawson Knox', side: 'yes', selection_name: 'Dawson Knox' });
-  assert.equal(selectionText(scorer), 'Dawson Knox Anytime Touchdown Scorer');
+  assert.equal(selectionText(scorer), 'Dawson Knox Over 0.5 Anytime TDs', 'an anytime scorer is Anytime TDs Over 0.5, as pick\'em apps list it');
   const milestone = fanatics({ market: 'Dawson Knox - ALT Longest Reception', player: '20+', side: 'yes', selection_name: '20+' });
-  assert.equal(selectionText(milestone), 'Dawson Knox 20+ ALT Longest Reception');
+  assert.equal(selectionText(milestone), 'Dawson Knox Over 19.5 Longest Reception', 'a 20+ milestone is Over 19.5');
   const moneyline = selection => normalizeRecord({ id: 'm', sport: 'ncaaf', event: 'Pittsburgh Panthers @ Virginia Tech Hokies', market: 'moneyline', type: 'moneyline', side: 'away', book: 'Fanatics', odds: 550, ts, selection_name: selection });
   assert.equal(moneyline('Pittsburgh Panthers (13+)').skip, 'mislabeled', 'a winning-margin band is not a moneyline');
   assert.equal(moneyline('Pittsburgh Panthers in Rd 9').skip, 'mislabeled');
@@ -407,7 +407,8 @@ test('milestone thresholds for one player and stat are separate markets, not dup
   const row = (id, threshold, odds) => ({ id, sport: 'nfl', event: 'Chicago Bears @ Detroit Lions', market: 'Isaiah Davis - ALT Rushing Yards 1st Quarter', side: 'yes', book: 'Fanatics', odds, ts, type: 'prop', player: threshold, selection_name: threshold });
   const { quotes, skipped } = normalizeFeed([row('a', '1+', -200), row('b', '5+', 129), row('c', '10+', 309)], { syncedAt: new Date().toISOString(), price: false });
   assert.equal(skipped.duplicate, 0);
-  assert.deepEqual(quotes.map(q => [q.player, q.selection, q.odds]), [['Isaiah Davis', '1+', -200], ['Isaiah Davis', '5+', 129], ['Isaiah Davis', '10+', 309]]);
+  // N+ milestones are Over (N - 0.5) on the stat.
+  assert.deepEqual(quotes.map(q => [q.player, q.market, q.side, q.line, q.odds]), [['Isaiah Davis', 'Rushing Yards 1st Quarter', 'over', 0.5, -200], ['Isaiah Davis', 'Rushing Yards 1st Quarter', 'over', 4.5, 129], ['Isaiah Davis', 'Rushing Yards 1st Quarter', 'over', 9.5, 309]]);
 });
 
 test('DFS lines match a book that labels the game with another sport; payout multipliers and sportless quotes are read', async () => {
@@ -449,4 +450,32 @@ test('bet links that name the game instead of the book id are dropped; a future 
   const raw = (id, book, extra) => ({ id, sport: 'nfl', event: 'Arizona Cardinals @ New York Giants', market: 'moneyline', type: 'moneyline', side: 'home', book, odds: 116, ts, ...extra });
   const { quotes } = normalizeFeed([raw('a', 'Betr', { live: true }), raw('b', 'FanDuel', { startTime: sunday, odds: 120 })], { syncedAt: new Date().toISOString(), price: false });
   assert.ok(quotes.every(q => q.live === false));
+});
+
+test('milestone, N+ and one-sided ladder props compare with the same pick\'em lines as Over (N - 0.5)', async () => {
+  const { normalizeFeed, dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date(Date.now() - 60_000).toISOString(), start = new Date(Date.now() + 3_600_000).toISOString();
+  const base = { sport: 'nfl', event: 'New York Jets @ Chicago Bears', type: 'prop', ts, startTime: start };
+  const raw = [
+    // FanDuel "to record a 15+ yard reception" and Fanatics "ALT Longest Reception 15+".
+    { ...base, id: 'fd', book: 'FanDuel', market: 'prop', propMarket: 'Player to Record a 15+ Yard Reception', player: 'Luther Burden III', line: 15, side: 'over', odds: -300, selection_name: 'Luther Burden III Over 15 Player to Record a 15+ Yard Reception' },
+    { ...base, id: 'fa', book: 'Fanatics', market: 'Luther Burden III - ALT Longest Reception', player: '15+', side: 'yes', odds: -270, selection_name: '15+' },
+    // A one-sided whole-number ladder rung is a 50+ milestone; a whole number priced both ways stays.
+    { ...base, id: 'dk', book: 'DraftKings', market: 'prop', propMarket: 'Receiving Yards', player: 'Luther Burden III', line: 50, side: 'over', odds: 101, selection_name: 'Luther Burden III Over 50.0 Receiving Yards' },
+    { ...base, id: 'o4', book: 'BetMGM', market: 'prop', propMarket: 'Receptions', player: 'Luther Burden III', line: 4, side: 'over', odds: -110, selection_name: 'Luther Burden III Over 4 Receptions' },
+    { ...base, id: 'u4', book: 'BetMGM', market: 'prop', propMarket: 'Receptions', player: 'Luther Burden III', line: 4, side: 'under', odds: -110, selection_name: 'Luther Burden III Under 4 Receptions' },
+    { ...base, id: 'td', book: 'Fanatics', market: 'Anytime Touchdown Scorer', player: 'Luther Burden III', side: 'yes', odds: 215, selection_name: 'Luther Burden III' },
+  ];
+  const { quotes } = normalizeFeed(raw, { syncedAt: new Date().toISOString(), price: false });
+  const line = book => quotes.filter(q => q.book === book).map(q => [q.market, q.side, q.line]);
+  assert.deepEqual(line('FanDuel'), [['Longest Reception', 'over', 14.5]]);
+  assert.deepEqual(line('Fanatics').sort(), [['Anytime TDs', 'over', 0.5], ['Longest Reception', 'over', 14.5]]);
+  assert.deepEqual(line('DraftKings'), [['Receiving Yards', 'over', 49.5]]);
+  assert.deepEqual(line('BetMGM').map(x => x[2]), [4, 4], 'a line priced both ways keeps its number');
+  const pick = (market, ln) => ({ book: 'PrizePicks', sport: 'NFL', player: 'Luther Burden III', market, line: ln, side: 'over', eventId: 'NFL:jets @ bears', ts, startTime: start, oddsType: 'demon' });
+  const [longest, yards, tds] = dfsPicks([pick('Longest Reception', 14.5), pick('Receiving Yards', 49.5), pick('Anytime TDs', 0.5)], quotes);
+  assert.deepEqual(longest.bookLines.map(b => [b.book, b.over]).sort(), [['FanDuel', -300], ['Fanatics', -270]]);
+  assert.deepEqual(yards.bookLines.map(b => [b.book, b.over]), [['DraftKings', 101]]);
+  assert.deepEqual(tds.bookLines.map(b => [b.book, b.over]), [['Fanatics', 215]]);
+  assert.equal(longest.probability, null, 'one-sided prices are shown, not devigged');
 });
