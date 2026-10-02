@@ -1,5 +1,5 @@
 import { decimal, fresh, oddsLabel, probabilityToAmerican } from './ev-core.js?v=2';
-import { boardIcon, bookLogo } from './ev-board.js?v=5';
+import { boardIcon, bookLogo } from './ev-board.js?v=6';
 import { leagueMark, teamLogo } from './sports-identity.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));

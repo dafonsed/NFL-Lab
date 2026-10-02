@@ -55,6 +55,8 @@ export function fairProbability(quote, rows, method = 'multiplicative') {
   for (const book of books) {
     const complete = sides.map(side => rows.filter(q => q.book === book && q.side === side && fresh(q)).sort((x, y) => Date.parse(y.ts) - Date.parse(x.ts))[0]);
     if (!complete.every(Boolean)) continue;
+    // No margin, no real two-sided market (one side built from the other): not a fair-price source.
+    if (!complete.some(q => q.exchange) && complete.reduce((sum, q) => sum + implied(q.odds), 0) <= 1.005) continue;
     const fair = devig(complete.map(q => implied(q.odds)), method);
     if (fair.length) estimates.push(fair[sides.indexOf(quote.side)]);
   }

@@ -56,10 +56,12 @@ export function matchParticipant(name, participants) {
 
 // A selection for a different bet: a bare yes/no/tie, a total, or a pair ("A/B", "Cowboys / Tie")
 // inside a singles event. Whole-word checks only: "NO Saints" is New Orleans, not a "No" bet.
-// Set or correct-score picks ("Kate Fakih 2:1", "Team 2-0") and handicap bands ("Team 11+") are other
-// markets too, even when the name matches a player.
+// Set or correct-score picks ("Kate Fakih 2:1", "Team 2-0"), handicap and winning-margin bands
+// ("Team 11+", "Pittsburgh Panthers (13+)") and fight round or method props ("Sonny Hardy in Rd 9")
+// are other markets too, even when the name matches a participant.
 const otherMarket = (selection, event) => /^(yes|no|tie|draw)$/i.test(selection.trim()) || /^(over|under)\b/i.test(selection) || (selection.includes('/') && !String(event).includes('/'))
-  || /\b\d+\s*[:-]\s*\d+\b/.test(selection) || /\s\d+\+$/.test(selection.trim());
+  || /\b\d+\s*[:-]\s*\d+\b/.test(selection) || /\s\d+\+$/.test(selection.trim()) || /\(\d+\+?\)$/.test(selection.trim())
+  || /\b(in\s+rd\.?\s*\d+|in\s+round\s+\d+|by\s+(ko|tko|submission|decision|points))\b/i.test(selection);
 const signedTail = /^(.*?)\s*([+-]\d+(?:\.\d+)?)$/;
 
 /**
@@ -118,8 +120,10 @@ function propIdentity(raw) {
   let market = text(raw, 'market'), player = text(raw, 'player') || text(raw, 'player_name');
   if (market.toLowerCase() === 'prop' && text(raw, 'propMarket')) market = text(raw, 'propMarket');
   const split = market.indexOf(' - ');
-  if (/^(over|under)\s+\d+(\.\d+)?$/i.test(player) && split > 0) { player = market.slice(0, split).trim(); market = market.slice(split + 3).trim(); }
-  return { market, player };
+  // Milestone props send the threshold ("5+") as the player: "Tommy Tremble - ALT Longest Reception".
+  const milestone = split > 0 && /^\d+(\.\d+)?\+$/.test(player) ? player : '';
+  if ((milestone || /^(over|under)\s+\d+(\.\d+)?$/i.test(player)) && split > 0) { player = market.slice(0, split).trim(); market = market.slice(split + 3).trim(); }
+  return { market, player, milestone };
 }
 
 /** One API record → quote, or { skip: reason }. `clockOffsetMs` = server clock − this clock. */
@@ -147,13 +151,13 @@ export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
   const eventId = matched ? `${sport}:${matched}` : text(raw, 'eventId') || `${sport}:${event.toLowerCase()}`;
   const liquidity = Number(raw.liquidity);
   const start = Date.parse(text(raw, 'startTime') || text(raw, 'start_time'));
-  const { market, player } = propIdentity(raw);
+  const { market, player, milestone } = propIdentity(raw);
   return {
-    id: `local-api:${id}`, sport, event, market, displayMarket: MARKET_NAMES[type] || market,
+    id: `local-api:${id}`, sport, event, market, displayMarket: type === 'prop' && market && market.toLowerCase() !== 'prop' ? market : MARKET_NAMES[type] || market,
     eventId, marketId: matched ? `${type}|${eventId}` : text(raw, 'marketId') || `${type}|${eventId}`,
     playerId: text(raw, 'playerId') || text(raw, 'player_id'), player, period: text(raw, 'period') || 'full', league: text(raw, 'league') || SOCCER_LEAGUES[text(raw, 'sport').toLowerCase()] || '',
     startTime: Number.isFinite(start) ? new Date(start).toISOString() : '',
-    type, line, side: repaired.side, selection: repaired.selection, sideVerified: repaired.verified,
+    type, line, side: repaired.side, selection: milestone || repaired.selection, sideVerified: repaired.verified,
     book: canonicalPlatform(text(raw, 'book')), odds: Number.isFinite(decimal(odds)) ? odds : null, outcomes,
     ...(text(raw, 'team') ? { team: text(raw, 'team') } : {}), ...(oddsType(raw) ? { oddsType: oddsType(raw) } : {}), live: raw.live === true, exchange: raw.exchange === true,
     liquidity: Number.isFinite(liquidity) ? Math.max(0, liquidity) : 0,

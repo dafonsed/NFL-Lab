@@ -1,7 +1,7 @@
 // Line History modal: step chart of recorded prices per book for one selection.
 // Pure helpers (series building, range clipping, scales, paths, label spreading)
 // are exported for tests; openLineHistory() owns the single reusable <dialog>.
-import { bookLogo } from './ev-board.js?v=5';
+import { bookLogo } from './ev-board.js?v=6';
 
 const HOUR = 3_600_000;
 export const LINE_HISTORY_RANGES = [
