@@ -4,7 +4,7 @@
 // counted instead of failing the whole snapshot. Pure functions: the page and the tests share them.
 import { decimal, implied, marketKey } from './ev-core.js?v=3';
 import { canonicalPlatform, isFantasyPlatform } from './platform-catalog.js';
-import { DEFAULT_SHARP_WEIGHTS } from './ev-advanced-math.js';
+import { DEFAULT_SHARP_WEIGHTS, devig } from './ev-advanced-math.js';
 import { matchedEventKey, dropInconsistentListings } from './ev-event-match.js?v=3';
 
 const MAJOR = { NFL: 'NFL', MLB: 'MLB', NBA: 'NBA', WNBA: 'WNBA', NHL: 'NHL', SOCCER: 'Soccer' };
@@ -139,7 +139,6 @@ export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
     startTime: Number.isFinite(start) ? new Date(start).toISOString() : '',
     type, line, side: repaired.side, selection: repaired.selection, sideVerified: repaired.verified,
     book: canonicalPlatform(text(raw, 'book')), odds: Number.isFinite(decimal(odds)) ? odds : null, outcomes,
-    ...(Number(raw.probability) >= 0 && Number(raw.probability) <= 1 && raw.probability !== '' && raw.probability != null ? { probability: Number(raw.probability) } : {}),
     ...(text(raw, 'team') ? { team: text(raw, 'team') } : {}), live: raw.live === true, exchange: raw.exchange === true,
     liquidity: Number.isFinite(liquidity) ? Math.max(0, liquidity) : 0,
     // Feed times use the server's clock; shift them onto this device's clock.
@@ -231,7 +230,7 @@ const fresher = (a, b) => Boolean(a.ageUnknown) !== Boolean(b.ageUnknown) ? !a.a
  * Some books send the game start as `ts`; for those, `ts` becomes the start time, the price's age
  * is unknown, and games that already started are dropped from pregame.
  */
-export function normalizeFeed(records, { syncedAt = new Date().toISOString(), clockOffsetMs = 0 } = {}) {
+export function normalizeFeed(records, { syncedAt = new Date().toISOString(), clockOffsetMs = 0, method = 'multiplicative' } = {}) {
   const skipped = { invalid: 0, mislabeled: 0, duplicate: 0, stale: 0, started: 0, inconsistent: 0 };
   const now = Date.parse(syncedAt);
   let quotes = [];
@@ -302,7 +301,7 @@ export function normalizeFeed(records, { syncedAt = new Date().toISOString(), cl
     if (['home', 'away'].includes(quote.side) && away && home && (!quote.selection || matchParticipant(quote.selection, { away, home }) === quote.side)) quote.selection = quote.side === 'away' ? away : home;
     if (!quote.selection) quote.selection = { over: 'Over', under: 'Under', draw: 'Draw' }[quote.side] || quote.side;
   }
-  return { quotes, dfs: dfsPicks(picks, quotes, names), skipped };
+  return { quotes, dfs: dfsPicks(picks, quotes, names, { method }), skipped };
 }
 
 const propName = value => String(value ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -313,11 +312,13 @@ const propMarket = (market, player) => propName(market).replace(propName(player)
 const propKey = (eventId, player, market, line) => JSON.stringify([eventId, propName(player), propMarket(market, player), Number(line)]);
 
 /**
- * DFS picks in the shape the DFS tools use. A pick's hit chance is the no-vig sportsbook probability
- * for the same player, market and line (Pinnacle weighted, mirrored books once), unless the feed
- * sends its own `probability`. Without a matching sportsbook market it stays empty.
+ * DFS picks in the shape the DFS tools use. A pick's fair probability comes only from sportsbook
+ * prices for the same player, market and line: each book's two-sided Over/Under market is turned
+ * into implied probabilities, devigged with `method` (see devig), then averaged (sharp books
+ * weighted, mirrored books once). A probability the API sends with a DFS line is never used. Without
+ * a two-sided sportsbook market the fair probability stays empty.
  */
-export function dfsPicks(picks, quotes, names = new Map()) {
+export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplicative' } = {}) {
   const markets = new Map();
   for (const quote of quotes) {
     if (!quote.player || !['over', 'under'].includes(quote.side) || !Number.isFinite(implied(quote.odds))) continue;
@@ -333,15 +334,16 @@ export function dfsPicks(picks, quotes, names = new Map()) {
     if (!prior || fresher(pick, prior)) latest.set(key, { ...pick, id: `local-api:${stableId(key)}` });
   }
   return [...latest.values()].map(pick => {
-    const books = [...(markets.get(propKey(pick.eventId, pick.player, pick.market, pick.line))?.values() || [])].filter(book => book.over > 0 && book.under > 0);
+    const books = [...(markets.get(propKey(pick.eventId, pick.player, pick.market, pick.line))?.values() || [])]
+      .map(book => ({ ...book, fairOver: devig([book.over, book.under], method)[0] })).filter(book => Number.isFinite(book.fairOver));
     const weight = book => DEFAULT_SHARP_WEIGHTS[String(book.book).toLowerCase()] || 1;
     const total = books.reduce((sum, book) => sum + weight(book), 0);
-    const over = total ? books.reduce((sum, book) => sum + weight(book) * book.over / (book.over + book.under), 0) / total : NaN;
-    const probability = Number.isFinite(pick.probability) ? pick.probability : Number.isFinite(over) ? (pick.side === 'over' ? over : 1 - over) : null;
+    const over = total ? books.reduce((sum, book) => sum + weight(book) * book.fairOver, 0) / total : NaN;
+    const probability = Number.isFinite(over) ? (pick.side === 'over' ? over : 1 - over) : null;
     return {
       id: pick.id, app: pick.book, sport: pick.sport, league: pick.league, event: names.get(pick.eventId) || pick.event, eventId: pick.eventId,
       player: pick.player, ...(pick.team ? { team: pick.team } : {}), market: pick.market, line: pick.line, side: pick.side === 'under' ? 'Under' : 'Over',
-      probability, probabilityBooks: Number.isFinite(pick.probability) ? ['feed'] : books.map(book => book.book),
+      probability, probabilityBooks: books.map(book => book.book), probabilityMethod: method,
       ts: pick.ts, startTime: pick.startTime, live: pick.live, source: 'local-api',
     };
   });
@@ -351,7 +353,7 @@ export function dfsPicks(picks, quotes, names = new Map()) {
  * Fetches and cleans the snapshot. Runs in the feed worker (public/ev-feed-worker.js) or, where
  * module workers aren't supported, in the page. Returns a plain result object; never throws.
  */
-export async function loadFeed(url, syncedAt = new Date().toISOString()) {
+export async function loadFeed(url, syncedAt = new Date().toISOString(), { method = 'multiplicative' } = {}) {
   try {
     const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(15_000) });
     // Feed times come from the server's clock; measure how far this device's clock is off.
@@ -363,7 +365,7 @@ export async function loadFeed(url, syncedAt = new Date().toISOString()) {
     const records = Array.isArray(payload) ? payload : payload?.quotes;
     if (!Array.isArray(records)) return { ok: false, kind: 'shape' };
     if (payload?.complete === false || payload?.partial === true || payload?.next_cursor) return { ok: false, kind: 'partial' };
-    const { quotes, dfs, skipped } = normalizeFeed(records, { syncedAt, clockOffsetMs: Math.abs(offset) > 5_000 ? offset : 0 });
+    const { quotes, dfs, skipped } = normalizeFeed(records, { syncedAt, clockOffsetMs: Math.abs(offset) > 5_000 ? offset : 0, method });
     return { ok: true, quotes, dfs, skipped, total: records.length };
   } catch (error) {
     return { ok: false, kind: error?.name === 'TimeoutError' ? 'timeout' : 'network', message: String(error?.message || '') };
@@ -391,24 +393,14 @@ const NOT_BASKETBALL = [
 ];
 
 /**
- * The quote API's DFS props (GET /site/dfs/props) → pick records for dfsPicks(). Contest and
- * roster entries are skipped. A probability repeated across most of an app's props (the feed
- * sends 0.6667 for every PrizePicks line) is a placeholder, not an estimate, so it is ignored and
- * the hit chance comes from sportsbook props at the same line instead.
+ * The quote API's DFS props (GET /site/dfs/props) → pick records for dfsPicks(). Contest, roster
+ * and salary entries are skipped. Only the line is read: the record's `probability` is not a fair
+ * probability (it is the same 0.6667 on every pick), and fair probabilities come from devigged
+ * sportsbook prices in dfsPicks().
  */
 export function normalizeDfsRecords(records, { syncedAt = new Date().toISOString() } = {}) {
   const now = Date.parse(syncedAt), list = Array.isArray(records) ? records : [];
   const skipped = { invalid: 0, notProps: 0, stale: 0 };
-  const counts = new Map();
-  for (const raw of list) {
-    const app = canonicalPlatform(text(raw, 'app') || text(raw, 'book')), value = Number(raw?.probability);
-    if (!Number.isFinite(value)) continue;
-    const appCounts = counts.get(app) || new Map(); appCounts.set(value, (appCounts.get(value) || 0) + 1); counts.set(app, appCounts);
-  }
-  const placeholders = new Map([...counts].map(([app, values]) => {
-    const total = [...values.values()].reduce((sum, count) => sum + count, 0), [value, count] = [...values].sort((a, b) => b[1] - a[1])[0];
-    return [app, total >= 20 && count / total >= 0.5 ? value : NaN];
-  }));
   const dfsPlayer = (app, player) => `${app}|${propName(player)}`, relabeled = new Map();
   for (const raw of list) {
     if (!BASKETBALL.has(sportName(text(raw, 'sport')))) continue;
@@ -424,12 +416,11 @@ export function normalizeDfsRecords(records, { syncedAt = new Date().toISOString
     if (now - ts > FEED_MAX_AGE_MS) { skipped.stale += 1; continue; }
     const labeled = sportName(text(raw, 'sport')), event = text(raw, 'event');
     const sport = (BASKETBALL.has(labeled) && relabeled.get(dfsPlayer(app, player))) || labeled;
-    const matched = matchedEventKey(sport, event), probability = Number(raw.probability);
+    const matched = matchedEventKey(sport, event);
     picks.push({
       id: text(raw, 'id'), book: app, sport, league: text(raw, 'league') || SOCCER_LEAGUES[text(raw, 'sport').toLowerCase()] || '',
       event, eventId: matched ? `${sport}:${matched}` : event ? `${sport}:${event.toLowerCase()}` : `${sport}:${propName(player)}`,
       player, market, line, side, ts: new Date(ts).toISOString(), startTime: text(raw, 'startTime') || '', live: raw.live === true,
-      ...(Number.isFinite(probability) && probability >= 0 && probability <= 1 && probability !== placeholders.get(app) ? { probability } : {}),
       ...(text(raw, 'team') ? { team: text(raw, 'team') } : {}),
     });
   }
@@ -456,7 +447,7 @@ export function payoutTables(records) {
  * request leaves some apps out (DraftKings Pick6 only comes back with ?app=), so each app named in
  * `apps` that is missing from it is requested on its own.
  */
-export async function loadDfsFeed(url, syncedAt = new Date().toISOString(), apps = []) {
+export async function loadDfsFeed(url, syncedAt = new Date().toISOString(), apps = [], { method = 'multiplicative' } = {}) {
   const read = async target => {
     const response = await fetch(target, { cache: 'no-store', signal: AbortSignal.timeout(30_000) });
     if (!response.ok) return { ok: false, kind: 'http', status: response.status };
@@ -478,7 +469,7 @@ export async function loadDfsFeed(url, syncedAt = new Date().toISOString(), apps
       records.push(raw);
     }
     const { picks, skipped } = normalizeDfsRecords(records, { syncedAt });
-    return { ok: true, picks, dfs: dfsPicks(picks, []), skipped, total: records.length };
+    return { ok: true, picks, dfs: dfsPicks(picks, [], undefined, { method }), skipped, total: records.length };
   } catch (error) {
     return { ok: false, kind: error?.name === 'TimeoutError' ? 'timeout' : 'network' };
   }

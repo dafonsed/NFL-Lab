@@ -133,7 +133,7 @@ test('set-score and handicap selections are other markets', () => {
   assert.equal(repairSelection({ type: 'moneyline', side: 'home', selection: 'Philadelphia 76ers', event: 'Celtics @ Philadelphia 76ers' }).side, 'home');
 });
 
-test('the API\'s DFS props become picks; contests, rosters and placeholder probabilities are left out', async () => {
+test('the API\'s DFS props become picks; contests and rosters are left out and the API\'s probability is never read', async () => {
   const { normalizeDfsRecords, payoutTables } = await import('../public/ev-feed-normalize.js');
   const synced = '2026-10-02T00:30:00.000Z', ts = '2026-10-02T00:29:00.000Z';
   const pp = (i, extra = {}) => ({ id: `pp${i}`, sport: 'nfl', event: '', player: `Player ${i}`, market: 'Rush Yards', line: 50.5 + i, side: 'higher', app: 'PrizePicks', probability: 0.6667, ts, ...extra });
@@ -145,8 +145,8 @@ test('the API\'s DFS props become picks; contests, rosters and placeholder proba
   assert.equal(picks.length, 25);
   assert.deepEqual(skipped, { invalid: 0, notProps: 2, stale: 1 });
   assert.equal(picks[0].side, 'over');
-  assert.equal(picks[0].probability, undefined, '0.6667 on every PrizePicks line is a placeholder');
-  assert.equal(picks.at(-1).probability, 0.58, 'a real per-pick estimate is kept');
+  assert.equal(picks[0].probability, undefined, 'fair probability comes only from devigged sportsbook odds');
+  assert.equal(picks.at(-1).probability, undefined, 'a per-pick probability from the API is not used either');
   assert.deepEqual(payoutTables([{ app: 'Underdog', payouts: { 2: { power: { multiplier: 3 } }, 3: { power: { multiplier: 5 }, flex: null } } }]), { 'Underdog Fantasy': { 2: [0, 0, 3], 3: [0, 0, 0, 5] } });
   const { withStandardPaytables, paytableSource } = await import('../public/dfs-workspace.js');
   const api = { PrizePicks: { 3: [0, 0, 0, 5] } };
@@ -191,4 +191,51 @@ test('DFS props are also requested per app for apps the unfiltered response leav
   const result = await loadDfsFeed('/api/ev/site/dfs/props', ts, ['PrizePicks', 'Underdog', 'Sleeper', 'Betr']);
   assert.deepEqual(urls, ['/api/ev/site/dfs/props', '/api/ev/site/dfs/props?app=Underdog', '/api/ev/site/dfs/props?app=Betr'], 'apps already in the unfiltered response are not requested again');
   assert.deepEqual(result.picks.map(pick => pick.book).sort(), ['PrizePicks', 'Underdog Fantasy'], 'duplicates by id are dropped and roster rows skipped');
+});
+
+test('raw two-sided odds → implied → devig → fair probability, with the method as a setting', async () => {
+  const { americanToImpliedProbability, fairFromAmerican, devig, DEVIG_METHODS } = await import('../public/ev-advanced-math.js');
+  const { breakEven } = await import('../public/dfs-workspace.js');
+  const pct = value => Math.round(value * 10000) / 100;
+  assert.equal(pct(americanToImpliedProbability(-140)), 58.33);
+  assert.equal(pct(americanToImpliedProbability(118)), 45.87);
+  const a = fairFromAmerican([-140, 118]);
+  assert.equal(pct(a.overround), 104.2, 'the extra 4.20% is the book\'s vig');
+  assert.deepEqual(a.fair.map(pct), [55.98, 44.02], '0.58333 / 1.04205; about 56% / 44%');
+  const b = fairFromAmerican([-150, 125]);
+  assert.deepEqual(b.implied.map(pct), [60, 44.44]);
+  assert.deepEqual(b.fair.map(pct), [57.45, 42.55]);
+  // PrizePicks 6-pick Flex (6/6 25×, 5/6 2×, 4/6 0.4×) breaks even at 54.21%; the edge is fair minus that.
+  const flex6 = breakEven([0, 0, 0, 0, 0.4, 2, 25]);
+  assert.equal(pct(flex6), 54.21);
+  assert.equal(pct(b.fair[0] - flex6), 3.24);
+  assert.deepEqual([...DEVIG_METHODS], ['multiplicative', 'additive', 'power', 'probit']);
+  for (const method of DEVIG_METHODS) {
+    const [over, under] = fairFromAmerican([-150, 125], method).fair;
+    assert.ok(Math.abs(over + under - 1) < 1e-8, `${method} sums to 1`);
+    assert.ok(over > 0.55 && over < 0.6, `${method} keeps the favourite near 57%: ${over}`);
+    assert.deepEqual(fairFromAmerican([-110, -110], method).fair.map(pct), [50, 50], `${method}: an even market stays even`);
+  }
+  const methods = Object.fromEntries(DEVIG_METHODS.map(method => [method, pct(fairFromAmerican([-150, 125], method).fair[0])]));
+  assert.notEqual(methods.multiplicative, methods.power, 'methods can differ slightly');
+  assert.deepEqual(devig([0.6, 0.444], 'made-up'), [], 'an unknown method gives no fair probability');
+});
+
+test('DFS fair probability devigs each book\'s Over/Under prices with the chosen method', async () => {
+  const { dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const { fairFromAmerican } = await import('../public/ev-advanced-math.js');
+  const ts = new Date().toISOString();
+  const book = (book, side, odds) => ({ book, side, odds, player: 'Jalen Hurts', market: 'Pass Yards', line: 225.5, eventId: 'NFL:eagles', ts });
+  const quotes = [book('FanDuel', 'over', -140), book('FanDuel', 'under', 118), book('DraftKings', 'over', -150), book('DraftKings', 'under', 125), book('BetMGM', 'over', -130)];
+  const pick = side => ({ book: 'PrizePicks', player: 'Jalen Hurts', market: 'Pass Yards', line: 225.5, side, eventId: 'NFL:eagles', ts, probability: 0.6667 });
+  for (const method of ['multiplicative', 'probit']) {
+    const [over, under] = dfsPicks([pick('over'), pick('under')], quotes, new Map(), { method });
+    const expected = (fairFromAmerican([-140, 118], method).fair[0] + fairFromAmerican([-150, 125], method).fair[0]) / 2;
+    assert.ok(Math.abs(over.probability - expected) < 1e-12, `${method}: average of each book's devigged Over`);
+    assert.ok(Math.abs(under.probability - (1 - expected)) < 1e-12);
+    assert.deepEqual(over.probabilityBooks, ['FanDuel', 'DraftKings'], 'a one-sided book (BetMGM) is not devigged');
+    assert.equal(over.probabilityMethod, method);
+  }
+  const [alone] = dfsPicks([pick('over')], [], new Map());
+  assert.equal(alone.probability, null, 'without sportsbook prices there is no fair probability, whatever the API sends');
 });

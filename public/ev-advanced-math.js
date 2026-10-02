@@ -92,6 +92,54 @@ export function quoteAvailable(quote, settings = {}, now = Date.now()) {
   return true;
 }
 
+// Standard normal CDF (complementary error function, |error| < 1.2e-7) and its inverse (Acklam).
+function erfc(x) {
+  const z = Math.abs(x), t = 1 / (1 + 0.5 * z);
+  const r = t * Math.exp(-z * z - 1.26551223 + t * (1.00002368 + t * (0.37409196 + t * (0.09678418 + t * (-0.18628806 + t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277)))))))));
+  return x >= 0 ? r : 2 - r;
+}
+const normalCdf = x => 0.5 * erfc(-x / Math.SQRT2);
+function normalQuantile(p) {
+  const a = [-39.69683028665376, 220.9460984245205, -275.9285104469687, 138.3577518672690, -30.66479806614716, 2.506628277459239];
+  const b = [-54.47609879822406, 161.5858368580409, -155.6989798598866, 66.80131188771972, -13.28068155288572];
+  const c = [-0.007784894002430293, -0.3223964580411365, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783];
+  const d = [0.007784695709041462, 0.3224671290700398, 2.445134137142996, 3.754408661907416];
+  const tail = q => (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+  if (p < 0.02425) return tail(Math.sqrt(-2 * Math.log(p)));
+  if (p > 1 - 0.02425) return -tail(Math.sqrt(-2 * Math.log(1 - p)));
+  const q = p - 0.5, r = q * q;
+  return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+}
+
+/** Devig methods the fair-value settings offer. Multiplicative is the default. */
+export const DEVIG_METHODS = Object.freeze(['multiplicative', 'additive', 'power', 'probit']);
+
+/** American odds → the book's implied probability, vig included: -140 → 140/240 = 58.33%, +118 → 100/218 = 45.87%. */
+export function americanToImpliedProbability(odds) {
+  const n = Number(odds);
+  if (!Number.isFinite(n) || (n > -100 && n < 100)) return NaN;
+  return n < 0 ? -n / (-n + 100) : 100 / (n + 100);
+}
+
+/**
+ * Every outcome of one book's market (American odds) → implied probabilities, overround and fair
+ * probabilities. -140 / +118: implied 58.33% / 45.87% (104.20%), multiplicative fair 56.00% / 44.00%.
+ */
+export function fairFromAmerican(odds, method = 'multiplicative') {
+  const implied = (Array.isArray(odds) ? odds : []).map(americanToImpliedProbability);
+  const fair = implied.length > 1 && implied.every(Number.isFinite) ? devig(implied, method) : [];
+  return { implied, overround: implied.reduce((sum, value) => sum + value, 0), fair, method };
+}
+
+/**
+ * Implied probabilities of every outcome of one book's market → fair (no-vig) probabilities that sum
+ * to 1. Methods differ in how the book's margin is taken back:
+ *   multiplicative  p / Σp (each price keeps its share)
+ *   additive        p − (Σp − 1) / n (the same amount from every outcome)
+ *   power           p^k, with k chosen so Σp^k = 1 (more margin taken from long shots)
+ *   probit          Φ(Φ⁻¹(p) − c), with c chosen so the outcomes sum to 1 (one shift on the normal scale)
+ * Returns [] when the inputs or the method can't produce valid probabilities.
+ */
 export function devig(probabilities, method = 'multiplicative') {
   if (!Array.isArray(probabilities) || probabilities.length < 2) return [];
   const values = probabilities.map(number);
@@ -110,6 +158,15 @@ export function devig(probabilities, method = 'multiplicative') {
       if (total(middle) > 1) low = middle; else high = middle;
     }
     fair = values.map(value => value ** ((low + high) / 2));
+  } else if (method === 'probit') {
+    const scores = values.map(normalQuantile);
+    const total = shift => scores.reduce((result, score) => result + normalCdf(score - shift), 0);
+    let low = -10, high = 10;
+    for (let iteration = 0; iteration < 100; iteration++) {
+      const middle = (low + high) / 2;
+      if (total(middle) > 1) low = middle; else high = middle;
+    }
+    fair = scores.map(score => normalCdf(score - (low + high) / 2));
   } else return [];
   return fair.every(value => value > 0 && value < 1) && Math.abs(fair.reduce((total, value) => total + value, 0) - 1) < 1e-8 ? fair : [];
 }
