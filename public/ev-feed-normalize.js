@@ -373,6 +373,21 @@ export async function loadFeed(url, syncedAt = new Date().toISOString()) {
 // Entries that aren't player props: contest lobbies ("Main", "Snake Draft"), rosters.
 const DFS_NON_PROPS = new Set(['roster', 'salary cap', 'salary_cap', 'contest', 'lobby']);
 const DFS_SIDES = { higher: 'over', more: 'over', over: 'over', lower: 'under', less: 'under', under: 'under' };
+// Season-long entries list the season where the player goes ("2026-2027 Season").
+const SEASON_LABEL = /^\d{4}(-\d{2,4})? season$/i;
+// The feed files leagues it doesn't map (college football, esports, golf, motorsport, darts, NPB,
+// some NHL) under NBA. A market basketball doesn't have moves all of that player's lines to the
+// sport it belongs to, so "Points" for an NHL forward follows his "Shots On Goal".
+const BASKETBALL = new Set(['NBA', 'WNBA', 'NCAAB']);
+const NOT_BASKETBALL = [
+  [/\bmaps?\b|\bfirst bloods?\b|\bheadshots?\b/, 'Esports'],
+  [/\bgoalie\b|\bshots on goal\b|\bpower play\b/, 'NHL'],
+  [/\b(receiving|rush|rushing|pass|passing) yards\b|\breceptions\b|\blongest reception\b|\banytime tds?\b/, 'Football'],
+  [/\bstrokes\b|\bbirdies\b|\bbogeys\b/, 'Golf'],
+  [/\bpit stop\b|\b(finishing|starting) position\b|\bfastest lap\b/, 'Motorsports'],
+  [/\b180'?s\b|\bcheckout\b/, 'Darts'],
+  [/\bpitcher strikeouts\b|\bhits allowed\b|\bearned runs\b|\btotal bases\b/, 'Baseball'],
+];
 
 /**
  * The quote API's DFS props (GET /site/dfs/props) → pick records for dfsPicks(). Contest and
@@ -393,14 +408,21 @@ export function normalizeDfsRecords(records, { syncedAt = new Date().toISOString
     const total = [...values.values()].reduce((sum, count) => sum + count, 0), [value, count] = [...values].sort((a, b) => b[1] - a[1])[0];
     return [app, total >= 20 && count / total >= 0.5 ? value : NaN];
   }));
+  const dfsPlayer = (app, player) => `${app}|${propName(player)}`, relabeled = new Map();
+  for (const raw of list) {
+    if (!BASKETBALL.has(sportName(text(raw, 'sport')))) continue;
+    const market = text(raw, 'market').toLowerCase(), sport = NOT_BASKETBALL.find(([pattern]) => pattern.test(market))?.[1];
+    if (sport) relabeled.set(dfsPlayer(canonicalPlatform(text(raw, 'app') || text(raw, 'book')), text(raw, 'player') || text(raw, 'player_name')), sport);
+  }
   const picks = [];
   for (const raw of list) {
     const app = canonicalPlatform(text(raw, 'app') || text(raw, 'book')), player = text(raw, 'player') || text(raw, 'player_name');
     const market = text(raw, 'market'), side = DFS_SIDES[text(raw, 'side').toLowerCase()], line = Number(raw?.line), ts = Date.parse(text(raw, 'ts'));
     if (!app || !player || !market || !side || !Number.isFinite(line) || !Number.isFinite(ts)) { skipped.invalid += 1; continue; }
-    if (DFS_NON_PROPS.has(market.toLowerCase()) || line <= 0) { skipped.notProps += 1; continue; }
+    if (DFS_NON_PROPS.has(market.toLowerCase()) || SEASON_LABEL.test(player) || line <= 0) { skipped.notProps += 1; continue; }
     if (now - ts > FEED_MAX_AGE_MS) { skipped.stale += 1; continue; }
-    const sport = sportName(text(raw, 'sport')), event = text(raw, 'event');
+    const labeled = sportName(text(raw, 'sport')), event = text(raw, 'event');
+    const sport = (BASKETBALL.has(labeled) && relabeled.get(dfsPlayer(app, player))) || labeled;
     const matched = matchedEventKey(sport, event), probability = Number(raw.probability);
     picks.push({
       id: text(raw, 'id'), book: app, sport, league: text(raw, 'league') || SOCCER_LEAGUES[text(raw, 'sport').toLowerCase()] || '',

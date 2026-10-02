@@ -154,3 +154,25 @@ test('the API\'s DFS props become picks; contests, rosters and placeholder proba
   assert.equal(paytableSource({}, 'PrizePicks', 3, api), 'api');
   assert.equal(paytableSource({ PrizePicks: { 3: [0, 0, 1, 6] } }, 'PrizePicks', 3, api), 'saved');
 });
+
+test('DFS lines filed under NBA move to the sport their markets belong to; season rows are not players', async () => {
+  const { normalizeDfsRecords } = await import('../public/ev-feed-normalize.js');
+  const synced = '2026-10-02T00:30:00.000Z', ts = '2026-10-02T00:29:00.000Z';
+  const pick = (player, market, sport = 'nba') => ({ id: `${player}:${market}`, sport, event: '', player, market, line: 2.5, side: 'higher', app: 'PrizePicks', ts });
+  const { picks, skipped } = normalizeDfsRecords([
+    pick('Filip Forsberg', 'Shots On Goal'), pick('Filip Forsberg', 'Points'), pick('Juuse Saros', 'Goalie Saves'),
+    pick('soulfly', 'MAP 1 Kills'), pick('Justin Stevenson', 'Receiving Yards'), pick('Justin Rose', 'Strokes'),
+    pick('Caitlin Clark', 'Points'), pick('Bruno Fernandes', 'Shots On Goal', 'epl'),
+    pick('2026-2027 Season', 'Points Per Game'),
+  ], { syncedAt: synced });
+  const sportOf = (player, market) => picks.find(item => item.player === player && item.market === market)?.sport;
+  assert.equal(sportOf('Filip Forsberg', 'Shots On Goal'), 'NHL');
+  assert.equal(sportOf('Filip Forsberg', 'Points'), 'NHL', 'his other lines follow the market that gave the sport away');
+  assert.equal(sportOf('Juuse Saros', 'Goalie Saves'), 'NHL');
+  assert.equal(sportOf('soulfly', 'MAP 1 Kills'), 'Esports');
+  assert.equal(sportOf('Justin Stevenson', 'Receiving Yards'), 'Football');
+  assert.equal(sportOf('Justin Rose', 'Strokes'), 'Golf');
+  assert.equal(sportOf('Caitlin Clark', 'Points'), 'NBA', 'basketball markets keep the feed\'s label');
+  assert.equal(sportOf('Bruno Fernandes', 'Shots On Goal'), 'Soccer', 'only lines filed under basketball are relabeled');
+  assert.equal(skipped.notProps, 1);
+});
