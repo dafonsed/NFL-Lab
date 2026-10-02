@@ -409,3 +409,18 @@ test('milestone thresholds for one player and stat are separate markets, not dup
   assert.equal(skipped.duplicate, 0);
   assert.deepEqual(quotes.map(q => [q.player, q.selection, q.odds]), [['Isaiah Davis', '1+', -200], ['Isaiah Davis', '5+', 129], ['Isaiah Davis', '10+', 309]]);
 });
+
+test('DFS lines match a book that labels the game with another sport; payout multipliers and sportless quotes are read', async () => {
+  const { dfsPicks, normalizeRecord, normalizeDfsRecords } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date().toISOString(), start = new Date(Date.now() + 3_600_000).toISOString();
+  // FanDuel files this NFL game's props as NCAAF; PrizePicks says NFL.
+  const book = ['over', 'under'].map(side => ({ book: 'FanDuel', side, odds: -114, sport: 'NCAAF', player: 'Josh Downs', market: 'Receiving Yards', line: 52.5, eventId: 'NCAAF:indianapolis colts @ washington commanders', ts, startTime: start }));
+  const [pick] = dfsPicks([{ book: 'PrizePicks', sport: 'NFL', player: 'Josh Downs', market: 'Receiving Yards', line: 52.5, side: 'over', eventId: 'NFL:colts @ commanders', ts, startTime: start }], book);
+  assert.ok(Math.abs(pick.probability - 0.5) < 1e-12);
+  const sportless = normalizeRecord({ id: 'x', event: 'Pittsburgh @ Virginia Tech', market: 'prop', propMarket: 'Passing Yards', player: 'Eli Holstein', line: 210.5, side: 'over', book: 'FanDuel', odds: -110, ts, type: 'prop', selection_name: 'Eli Holstein Over 210.5' });
+  assert.equal(sportless.skip, undefined, 'a quote without a sport is kept');
+  assert.equal(sportless.sport, 'Other');
+  const { picks } = normalizeDfsRecords([{ id: 'g', sport: 'nfl', event: 'IND @ WAS', player: 'Josh Downs', market: 'Receiving Yards', line: 30.5, side: 'higher', app: 'PrizePicks', odds_type: 'goblin', payout_multiplier: 0.7, ts, startTime: start }], { syncedAt: ts });
+  assert.equal(picks[0].payoutMultiplier, 0.7);
+  assert.equal(normalizeRecord({ id: 'q', sport: 'nfl', event: 'IND @ WAS', market: 'Receiving Yards', side: 'over', book: 'PrizePicks', ts, type: 'prop', line: 90.5, player: 'Josh Downs', oddsType: 'demon', payoutMultiplier: 1.55 }).payoutMultiplier, 1.55);
+});

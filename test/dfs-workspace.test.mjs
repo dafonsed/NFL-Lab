@@ -318,3 +318,27 @@ test('the comparison panel uses the row\'s own app break-even when every app is 
   assert.match($('.dfs-panel-facts').text(),/Break-even 53\.58% \(Underdog Fantasy 3 Pick\) · Edge \+0\.92%/);
   assert.match($('[data-dfs-row="ud"] .dfs-vs-be').text(),/\+0\.92%/);
 });
+
+test('goblin and demon payout multipliers from the feed set the leg break-even and scale the slip payout', t => {
+  const originalDocument=globalThis.document, originalCSS=globalThis.CSS;
+  globalThis.document={querySelector:()=>null};globalThis.CSS={escape:value=>value};
+  t.after(()=>{if(originalDocument===undefined)delete globalThis.document;else globalThis.document=originalDocument;if(originalCSS===undefined)delete globalThis.CSS;else globalThis.CSS=originalCSS;});
+  const base={event:'IND @ WAS',sport:'NFL',market:'Receiving Yards',side:'Over',app:'PrizePicks',source:'local-api'};
+  const state={dfs:[{...base,id:'s',player:'A One',line:60.5,oddsType:'standard',probability:.6},{...base,id:'g',player:'B Two',line:40.5,oddsType:'goblin',payoutMultiplier:.7,probability:.8},{...base,id:'d',player:'C Three',line:90.5,oddsType:'demon',payoutMultiplier:1.55,probability:.4}],quotes:[],paytables:{PrizePicks:{3:[0,0,0,6]}}};
+  const view=createDfsWorkspace({getState:()=>state,redraw:()=>{}});
+  let $=load(view.render());
+  // 3-pick 6x: standard break-even 55.03%; goblin 55.032 / 0.7 = 78.617% (edge +1.38); demon 55.03 / 1.55 = 35.50% (edge +4.50).
+  assert.match($('[data-dfs-row="g"] .dfs-vs-be').text(),/\+1\.38%/);
+  assert.match($('[data-dfs-row="d"] .dfs-vs-be').text(),/\+4\.50%/);
+  assert.equal($('[data-dfs-row="g"] .dfs-odds-type').text(),'Goblin ×0.7');
+  for(const id of ['s','g','d'])view.click({target:{closest:()=>({dataset:{dfsPick:id},hasAttribute:()=>false})}});
+  $=load(view.render());
+  // Payout 6 × 0.7 × 1.55 = 6.51x; return = 0.6 × 0.8 × 0.4 × 6.51 = 1.2499 per $1.
+  assert.match($('.dfs-slip-total').text(),/6\.51×/);
+  const stake=10, expected=0.6*0.8*0.4*6*0.7*1.55*stake;
+  assert.match($('.dfs-slip-total').text(),new RegExp(`Estimated return\\$${expected.toFixed(2).replace('.','\\.')}`));
+  // A goblin without a multiplier still gets no edge or EV.
+  state.dfs=state.dfs.map(item=>item.id==='g'?{...item,payoutMultiplier:undefined}:item);
+  $=load(view.render());
+  assert.match($('[data-dfs-row="g"] .dfs-vs-be').text(),/Payout varies/);
+});
