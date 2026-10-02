@@ -16,3 +16,29 @@ test('public plain HTTP needs an explicit opt-in; unsafe addresses are refused',
   }
   assert.throws(() => parseEvApiConfig({ address: 'https://api.example.com', apiKey: ' ' }), /EV_TOOL_API_KEY/);
 });
+
+test('props and contracts routes find the upstream path that exists and pass its JSON through', async () => {
+  const { handleEvApi } = await import('../lib/ev-api-proxy.mjs');
+  const providerConfig = { base: new URL('http://127.0.0.1:9/'), apiKey: 'k' };
+  const asked = [];
+  const fetcher = async target => {
+    asked.push(target.pathname + target.search);
+    return target.pathname === '/dfs/props' ? new Response(JSON.stringify({ props: [{ id: 'p1' }] }), { status: 200 }) : new Response('{}', { status: 404 });
+  };
+  const call = async path => {
+    let status, headers, body;
+    await handleEvApi({ method: 'GET' }, { writeHead(code, value) { status = code; headers = value; }, end(value) { body = JSON.parse(value); } }, new URL(path, 'http://localhost'), { providerConfig, fetcher });
+    return { status, headers, body };
+  };
+  const first = await call('/api/ev/props?sport=nfl');
+  assert.equal(first.status, 200);
+  assert.equal(first.headers['X-Upstream-Path'], '/dfs/props');
+  assert.deepEqual(first.body, { props: [{ id: 'p1' }] });
+  assert.deepEqual(asked, ['/props?sport=nfl', '/dfs/props?sport=nfl']);
+  asked.length = 0;
+  await call('/api/ev/props');
+  assert.deepEqual(asked, ['/dfs/props'], 'the working path is remembered');
+  const missing = await call('/api/ev/contracts');
+  assert.equal(missing.status, 404);
+  assert.deepEqual(missing.body.tried, ['/contracts', '/prediction/contracts', '/predictions', '/markets']);
+});
