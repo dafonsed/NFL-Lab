@@ -603,8 +603,23 @@ function relabelDfsSports(picks) {
     const sport = NOT_BASKETBALL.find(([pattern]) => pattern.test(String(pick.market).toLowerCase()))?.[1];
     if (sport) sports.set(key(pick), sport);
   }
+  // A game filed as football whose lines are another sport's moves to that sport: the feed files some
+  // NHL, MLB and NWSL games as NFL ("SEA @ EDM" Shots On Goal, "CWS @ CLE" Total Bases).
+  const gameSports = new Map(), footballGames = new Set();
+  for (const pick of picks) {
+    if (!FOOTBALL.has(pick.sport)) continue;
+    const market = String(pick.market).toLowerCase();
+    if (FOOTBALL_MARKETS.test(market)) { footballGames.add(pick.eventId); continue; }
+    const sport = NOT_FOOTBALL.find(([pattern]) => pattern.test(market))?.[1];
+    if (sport && !gameSports.has(pick.eventId)) gameSports.set(pick.eventId, sport);
+  }
   for (const pick of picks) {
     if (BASKETBALL.has(pick.sport) && sports.has(key(pick))) { relabel(pick, sports.get(key(pick))); continue; }
+    if (FOOTBALL.has(pick.sport) && gameSports.has(pick.eventId) && !footballGames.has(pick.eventId)) {
+      const sport = gameSports.get(pick.eventId);
+      relabel(pick, sport === 'Basketball' ? (abbreviations(pick.event) || []).some(team => WNBA_ONLY_TEAMS.has(team)) ? 'WNBA' : 'NBA' : sport);
+      continue;
+    }
     const teams = abbreviations(pick.event);
     if (!teams) continue;
     if (pick.sport === 'NFL' && teams.some(team => !NFL_TEAMS.has(team))) relabel(pick, 'NCAAF');
@@ -612,6 +627,15 @@ function relabelDfsSports(picks) {
   }
   return picks;
 }
+const FOOTBALL = new Set(['NFL', 'NCAAF']);
+// ("FG Made" is left out: basketball has field goals too.)
+const FOOTBALL_MARKETS = /\b(pass|passing|rush|rushing|receiving|receptions|rec targets|anytime tds|touchdowns|interceptions|int|sacks|tackles|kicking points|punts|longest (reception|rush|completion))\b/;
+const NOT_FOOTBALL = [
+  [/\b(pitcher strikeouts|hitter strikeouts|total bases|hits\+runs\+rbis|earned runs|hits allowed|pitching outs|stolen bases|home runs|rbis|walks allowed)\b/, 'MLB'],
+  [/\b(shots on goal|goalie saves|goals allowed|power play points|blocked shots|faceoffs? won|time on ice)\b/, 'NHL'],
+  [/\b(shots on target|passes attempted|clearances|crosses|attempted dribbles|goal \+ assist)\b/, 'Soccer'],
+  [/\b(rebounds|rebs|3-pt|3pm|pts\+|blks|stls|steals|turnovers|double-double|triple-doubles?)\b/, 'Basketball'],
+];
 const NOT_BASKETBALL = [
   [/\bmaps?\b|\bfirst bloods?\b|\bheadshots?\b/, 'Esports'],
   [/\bgoalie\b|\bshots on goal\b|\bpower play\b/, 'NHL'],

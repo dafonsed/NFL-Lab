@@ -479,3 +479,21 @@ test('milestone, N+ and one-sided ladder props compare with the same pick\'em li
   assert.deepEqual(tds.bookLines.map(b => [b.book, b.over]), [['Fanatics', 215]]);
   assert.equal(longest.probability, null, 'one-sided prices are shown, not devigged');
 });
+
+test('games filed as football whose lines are hockey, baseball or basketball show under that sport', async () => {
+  const { normalizeDfsRecords } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date().toISOString(), start = new Date(Date.now() + 3_600_000).toISOString();
+  const row = (event, player, market) => ({ id: `${event}${player}${market}`, sport: 'nfl', event, player, market, line: 1.5, side: 'higher', app: 'PrizePicks', ts, startTime: start });
+  const { picks } = normalizeDfsRecords([
+    row('SEA @ EDM', 'Connor McDavid', 'Shots On Goal'), row('SEA @ EDM', 'Connor McDavid', 'Points'),
+    row('CWS @ CLE', 'Jose Ramirez', 'Total Bases'), row('CWS @ CLE', 'Jose Ramirez', 'Hits'),
+    row('DAL @ GSV', 'Paige Bueckers', 'Rebounds'), row('DAL @ GSV', 'Paige Bueckers', 'FG Made'),
+    row('IND @ WAS', 'Josh Downs', 'Receptions'), row('IND @ WAS', 'Spencer Shrader', 'FG Made'),
+  ], { syncedAt: ts });
+  const sportOf = (player, market) => picks.find(p => p.player === player && p.market === market).sport;
+  assert.equal(sportOf('Connor McDavid', 'Points'), 'NHL');
+  assert.equal(sportOf('Jose Ramirez', 'Hits'), 'MLB');
+  assert.equal(sportOf('Paige Bueckers', 'FG Made'), 'WNBA');
+  assert.equal(sportOf('Spencer Shrader', 'FG Made'), 'NFL', 'a real football game keeps its label');
+  assert.ok(picks.filter(p => p.sport !== 'NFL').every(p => p.matchSport === 'NFL'), 'matching keeps the feed sport');
+});
