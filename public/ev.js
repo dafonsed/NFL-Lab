@@ -11,7 +11,7 @@ import { secondaryShell, toolHero, accentTitle, toolPanel, toolEmpty, toolStats,
 import { SECONDARY_TOOLS } from './ev-tool-catalog.js';
 import { emptyWorkspace, purgeDemoData, clearLegacyDemoStorage } from './ev-workspace-clean.js?v=1';
 import { createQuoteFeedControls, toolDataLabel } from './ev-feed.js?v=7';
-import { loadFeed, loadDfsFeed, dfsPicks, payoutTables, knownSport } from './ev-feed-normalize.js?v=13';
+import { loadAndPrice, createDfsPricer, payoutTables, knownSport } from './ev-feed-normalize.js?v=14';
 import { readQuoteCache, createThrottledCacheWriter } from './ev-quote-cache.js?v=1';
 import { START_WINDOWS, MIN_ODDS, MIN_EV, MIN_WIN_CHANCE, TOOL_FILTERS, TOOL_FILTER_DEFAULTS, activeFilterCount, startsWithin, oddsWithin, quoteMatches, readToolFilters, saveToolFilters, toolFilterBar } from './ev-filters.js?v=2';
 import { SITE_PLATFORMS, SPORTSBOOK_PLATFORMS, PREDICTION_PLATFORMS, EXCHANGE_PLATFORMS, canonicalPlatform, platformAsset, platformLabel, platformOptions, isContestPlatform } from './platform-catalog.js';
@@ -22,7 +22,7 @@ import { comparisonAnnotations } from './bet-comparison.js?v=4';
 import { inlineBetCard as betComparisonCard, bindInlineComparison as bindComparison } from './bet-inline.js?v=card-click-3';
 import { openArbCalculator } from './arb-calculator.js?v=2';
 import { openLineHistory, buildLineSeries } from './line-history.js?v=1';
-import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource, breakEven, standardPayout } from './dfs-workspace.js?v=19-payouts';
+import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource, breakEven, standardPayout } from './dfs-workspace.js?v=20-audit';
 import { createOddsScreen } from './odds-screen.js?v=9';
 
 import {readSportsbookState, saveSportsbookState, sportsbookAvailable, availableSportsbookQuotes, STATE_CHANGE_EVENT} from './sportsbook-availability.js';
@@ -99,7 +99,7 @@ void readQuoteCache().then(cache => {
   const ids = new Set(state.quotes.map(q => q.id));
   state.history = cache.history.filter(item => ids.has(item.quoteId));
   // Cached pick'em lines stand in for the props request until it answers.
-  if (Array.isArray(cache.dfs) && !dfsLoaded) { propsFeedDfs = cache.dfs; applyFeedDfs(); }
+  if (Array.isArray(cache.dfs) && !dfsLoaded) setFeedDfs(cache.dfs);
   state.apiSyncedAt = cache.apiSyncedAt;
   if (QUOTE_TOOLS.has(active) || DFS_TOOLS.has(active)) render(); else feedControls?.update();
 });
@@ -140,7 +140,7 @@ const initialSport = new URLSearchParams(location.search).get('sport')?.toUpperC
 // Any sport the feed carries (Tennis, MMA ...) can be chosen, not only the six major leagues.
 let sport = initialSport === 'ALL' ? '' : knownSport(initialSport) || 'NFL';
 let parlayIds = Array.isArray(state.suite?.builderIds) ? state.suite.builderIds.filter(id=>state.quotes.some(q=>q.id===id)) : [], fantasyIds = [], fantasyApp = '', stake = 100, fantasyStake = 10;
-let parlayVisibleCount = 40;
+let parlayVisibleCount = 40, slipVisibleCount = 40;
 let evVisibleCount = 40;
 let evOpenId = '';
 const builderSessionKey = `sportslab-builder-session:${accountSyncState().userId || 'guest'}:${STORE}`;
@@ -221,29 +221,24 @@ function snapshotQuote(q) { state.history.push({ id: uid(), quoteId: q.id, sport
 const QUOTE_TOOLS = new Set(['odds','ev-pre','ev-live','arb-pre','arb-live','middles','holds','promo','parlay','sharp','line-alerts']);
 // DFS tools re-render only when the feed's pick'em lines or hit chances change.
 const DFS_TOOLS = new Set(['fantasy','optimizer','slip','fantasy-alerts']);
-const dfsRevision = () => state.dfs.filter(item => item.source === 'local-api').map(item => [item.id, item.line, item.probability].join('|')).join('\n');
-// Feed DFS lines come from two requests on different clocks: pick'em lines inside the quote snapshot
-// (every 10 s) and GET /site/dfs/props (every minute). Each refresh replaces only its own list, so a
-// quote sync never wipes the props. A line in both is shown once, from the quote snapshot, which
-// carries its event and start time.
-let quoteFeedDfs = [], propsFeedDfs = [];
-const dfsLineKey = item => [item.app, String(item.player).trim().toLowerCase(), String(item.market).trim().toLowerCase(), Number(item.line), item.side].join('|');
-function applyFeedDfs() {
-  const lines = new Set(quoteFeedDfs.map(dfsLineKey));
-  state.dfs = [...state.dfs.filter(item => item.source !== 'local-api'), ...quoteFeedDfs, ...propsFeedDfs.filter(item => !lines.has(dfsLineKey(item)))];
-}
+// Feed DFS picks arrive from the feed worker already merged (the quote snapshot's pick'em lines and
+// GET /site/dfs/props, each line once) and priced against the latest sportsbook quotes, and only
+// when they changed; the page just swaps them in.
+function setFeedDfs(dfs) { state.dfs = [...state.dfs.filter(item => item.source !== 'local-api'), ...dfs]; }
+// The same pricing in the page, for browsers without module workers.
+const inlinePricer = createDfsPricer();
 let lastSkipped = 0;
 // The snapshot is downloaded and cleaned in a worker so the page stays responsive; browsers
-// without module workers run the same loadFeed in the page.
+// without module workers run the same loadAndPrice in the page.
 let feedWorker = null, feedRequest = 0;
 const pendingFeed = new Map();
 function fetchFeed(kind = 'quotes', apps = []) {
   const url = kind === 'dfs' ? '/api/ev/site/dfs/props' : '/api/ev/quotes', syncedAt = now(), method = suite.settings().devigMethod;
-  const inline = () => kind === 'dfs' ? loadDfsFeed(url, syncedAt, apps, { method }) : loadFeed(url, syncedAt, { method });
+  const inline = () => loadAndPrice(inlinePricer, { kind, url, syncedAt, apps, method });
   if (feedWorker !== false && typeof Worker === 'function') {
     try {
       if (!feedWorker) {
-        feedWorker = new Worker('/ev-feed-worker.js?v=13', { type: 'module' });
+        feedWorker = new Worker('/ev-feed-worker.js?v=14', { type: 'module' });
         feedWorker.onmessage = ({ data }) => { pendingFeed.get(data.id)?.(data); pendingFeed.delete(data.id); };
         feedWorker.onerror = () => { feedWorker = false; for (const resolve of pendingFeed.values()) resolve({ ok: false, kind: 'worker' }); pendingFeed.clear(); };
       }
@@ -258,8 +253,8 @@ function fetchFeed(kind = 'quotes', apps = []) {
   return inline();
 }
 // DFS props (GET /site/dfs/props, about 30k lines) load while a DFS tool is open and refresh every
-// minute; hit chances are priced against the sportsbook quotes already on the page. Payout tables
-// (GET /site/dfs/payouts) load once and name the apps the props are requested for.
+// minute; the worker prices them with the quote snapshot's lines. Payout tables (GET
+// /site/dfs/payouts) load once and name the apps the props are requested for.
 let dfsSyncedAt = 0, dfsLoading = false, dfsLoaded = false, apiPaytables = {}, payouts = null;
 function loadPayouts() {
   payouts ||= fetch('/api/ev/site/dfs/payouts', { cache: 'no-store', signal: AbortSignal.timeout(15_000) })
@@ -281,13 +276,9 @@ function ensureDfsFeed() {
   let changed = false;
   void loadPayouts().then(apps => fetchFeed('dfs', apps)).then(result => {
     if (!result.ok) return;
-    const previous = dfsRevision();
-    // The worker already built the picks; re-price here only when the page has sportsbook player props.
-    propsFeedDfs = state.quotes.some(q => q.player) ? dfsPicks(result.picks, state.quotes, undefined, { method: suite.settings().devigMethod }) : result.dfs;
-    applyFeedDfs();
     dfsSyncedAt = Date.now();
-    persist();
-    changed = dfsRevision() !== previous;
+    // No dfs in the answer: the priced picks are the same as last time.
+    if (Array.isArray(result.dfs)) { setFeedDfs(result.dfs); persist(); changed = true; }
   }).finally(() => {
     // The first answer, even an empty or failed one, replaces the loading message.
     const first = !dfsLoaded;
@@ -314,8 +305,8 @@ async function syncLocalApi() {
   }
   // Bad or mislabeled records were skipped and counted; one bad record never blocks the snapshot.
   const { quotes: kept, skipped } = result;
-  const previousDfs = dfsRevision();
-  if (Array.isArray(result.dfs)) { quoteFeedDfs = result.dfs; applyFeedDfs(); }
+  const dfsChanged = Array.isArray(result.dfs);
+  if (dfsChanged) setFeedDfs(result.dfs);
   const feed = new Map(kept.map(quote => [quote.id, quote]));
   if (state !== workspace) throw invalid('The workspace changed during sync. Try again after your import.');
   const existing = new Map(state.quotes.filter(quote => quote.source === 'local-api').map(quote => [quote.id, quote]));
@@ -337,7 +328,7 @@ async function syncLocalApi() {
   if (state.suite?.watchRules?.length) suite.evaluateWatches();
   const saved = persist();
   // Rebuild only a quote tab, and only when prices actually changed, keeping scroll and menus.
-  if (DFS_TOOLS.has(active) ? dfsRevision() !== previousDfs : QUOTE_TOOLS.has(active) && quoteRevision(state.quotes) !== displayedQuoteRevision) {
+  if (DFS_TOOLS.has(active) ? dfsChanged : QUOTE_TOOLS.has(active) && quoteRevision(state.quotes) !== displayedQuoteRevision) {
     if (active === 'odds' && !suite.hasView(active)) oddsScreen.refresh();
     else renderKeepingView();
   }
@@ -1412,7 +1403,10 @@ function renderOptimizer() {
   for (const x of dfs()) {
     // Goblin and demon picks pay differently by an amount the feed doesn't include.
     if (isContestPlatform(x.app) || !standardPayout(x) || x.probability == null || !Number.isFinite(Number(x.probability))) continue;
-    const edge = Number(x.probability) - breakEvens.get(x.app);
+    // No 2-pick table, no break-even: the leg can't qualify (p - null would read as p).
+    const be = breakEvens.get(x.app);
+    if (!Number.isFinite(be)) continue;
+    const edge = Number(x.probability) - be;
     if (!(edge > 0)) continue;
     edges.set(x.id, edge);
     if (!byApp.has(x.app)) byApp.set(x.app, []);
@@ -1458,16 +1452,24 @@ function renderSlip() {
   const rulesSource=paytableSource(state.paytables,fantasyApp,selected.length,apiPaytables);
   const result=selected.length>=2&&rules.length===selected.length+1&&selected.every(standardPayout)?fantasySlip(selected,rules,Number(fantasyStake)):null;
   const controls=`<div class="tool-form-grid"><label>Fantasy app<select id="ev-fantasy-app">${apps.length?apps.map(app=>`<option value="${esc(app)}" ${app===fantasyApp?'selected':''}>${esc(app)}</option>`).join(''):'<option value="">Add a prop to choose a platform</option>'}</select></label><label>Entry amount ($)<input id="ev-fantasy-stake" type="number" min="0.01" step="0.01" value="${esc(fantasyStake)}"></label></div>`;
+  // One card per player line: its Over and Under picks become the two side buttons. Grouped in one
+  // pass (the feed has ~30k lines), lines with a fair probability first, shown 40 cards at a time.
+  const lineGroups=new Map();
+  for(const x of options){
+    const key=[x.player,x.market,x.line,x.event].join('|');
+    if(!lineGroups.has(key))lineGroups.set(key,[]);
+    const group=lineGroups.get(key);
+    if(!group.some(p=>p.side===x.side))group.push(x);
+  }
+  const fairOf=picks=>Math.max(...picks.map(p=>p.probability==null||p.probability===''?-1:Number(p.probability)));
+  const groups=[...lineGroups.values()].sort((a,b)=>fairOf(b)-fairOf(a)||String(a[0].player).localeCompare(String(b[0].player)));
+  // Picks already in the slip stay on the page.
+  const shown=[...groups.slice(0,slipVisibleCount),...groups.slice(slipVisibleCount).filter(picks=>picks.some(p=>fantasyIds.includes(p.id)))];
   const choices=options.length?toolBoard({layout:'cards',variant:'slip',
     label:`Available ${fantasyApp} picks`,compact:true,
-    summary:{text:`<strong>${options.length} ${options.length===1?'pick':'picks'}</strong> on ${esc(fantasyApp)}`,pills:[['In slip',String(selected.length)]]},
+    summary:{text:`<strong>${groups.length.toLocaleString()} ${groups.length===1?'line':'lines'}</strong> on ${esc(fantasyApp)}`,pills:[['In slip',String(selected.length)]]},
     columns:{metric:'Hit rate',event:'Event',market:'Market',bet:'Pick & app',odds:'Line'},
-    // One card per player line: its Over and Under picks become the two side buttons.
-    rows:options.reduce((groups,x)=>{
-      const key=[x.player,x.market,x.line,x.event].join('|'),group=groups.find(g=>g.key===key&&!g.picks.some(p=>p.side===x.side));
-      if(group)group.picks.push(x);else groups.push({key,picks:[x]});
-      return groups;
-    },[]).map(({picks})=>{
+    rows:shown.map(picks=>{
       picks.sort((a,b)=>String(a.side).toLowerCase()==='over'?-1:String(b.side).toLowerCase()==='over'?1:0);
       const x=picks.find(p=>fantasyIds.includes(p.id))||picks[0], label=`${x.player} ${x.side} ${String(x.line??'—')}`;
       return {id:'slip-'+picks[0].id,attrs:`data-open-dfs="${esc(x.id)}"`,selected:picks.some(p=>fantasyIds.includes(p.id)),
@@ -1475,9 +1477,9 @@ function renderSlip() {
           sides:picks.map(p=>{const inSlip=fantasyIds.includes(p.id),name=`${p.player} ${p.side} ${String(p.line??'—')}`;
             return {side:p.side,value:percent(p.probability),rate:Number(p.probability),attrs:`data-fantasy="${esc(p.id)}" aria-pressed="${inSlip}" aria-label="${inSlip?'Remove':'Add'} ${esc(name)}"`};})},
         bet:{book:x.app,title:label},
-        actions:(x.source==='local-api'?'<span class="evc-slip-note">Hit chance from sportsbook odds</span>':'<span class="evc-slip-note">Estimated hit rates</span>'+boardIconButton('edit',`Edit ${label}`,`data-edit="dfs" data-id="${esc(x.id)}"`))+boardToggle(`Compare ${label}`,`data-open-dfs="${esc(x.id)}"`)};
+        actions:(x.source==='local-api'?`<span class="evc-slip-note">${x.probability==null?'No two-sided sportsbook market':'Fair probability from sportsbook odds'}</span>`:'<span class="evc-slip-note">Estimated hit rates</span>'+boardIconButton('edit',`Edit ${label}`,`data-edit="dfs" data-id="${esc(x.id)}"`))+boardToggle(`Compare ${label}`,`data-open-dfs="${esc(x.id)}"`)};
     })
-  }):available.length?toolEmpty('No picks match your filters','Try a different sport or search. Your selected picks stay in the ticket.',button('Clear filters','data-tool-clear'),'search'):dfsLoading&&!dfsLoaded?toolEmpty('Loading DFS lines…','Reading PrizePicks, Underdog and other pick\'em lines from the quote feed.','','picks'):toolEmpty('No DFS lines in the quote feed yet','Picks appear when the quote feed sends PrizePicks, Underdog or other pick\'em lines. You can also add a prop by hand.',action('Add DFS prop','dfs'),'picks');
+  })+`${groups.length>slipVisibleCount?`<button type="button" class="ev-parlay-more" data-slip-more>Show ${Math.min(40,groups.length-slipVisibleCount)} more lines · ${(groups.length-slipVisibleCount).toLocaleString()} not shown</button>`:''}`:available.length?toolEmpty('No picks match your filters','Try a different sport or search. Your selected picks stay in the ticket.',button('Clear filters','data-tool-clear'),'search'):dfsLoading&&!dfsLoaded?toolEmpty('Loading DFS lines…','Reading PrizePicks, Underdog and other pick\'em lines from the quote feed.','','picks'):toolEmpty('No DFS lines in the quote feed yet','Picks appear when the quote feed sends PrizePicks, Underdog or other pick\'em lines. You can also add a prop by hand.',action('Add DFS prop','dfs'),'picks');
   const picked=selected.length?boardTicket(selected.map(x=>({book:x.app,title:x.player,sub:`${x.side} ${String(x.line??'—')} ${x.market} · ${percent(x.probability)}`,action:button('Remove',`data-fantasy="${esc(x.id)}"`)}))):toolEmpty('Choose your picks','Select at least two picks from the same app.','','picks');
   const payout=selected.length>=2?toolPanel('Payout rules',rulesSource==='api'?`${esc(fantasyApp)}'s ${selected.length}-pick payout comes from the quote feed. Confirm it in the app: promotions, your state and special picks can change it. Edit and save to use your own.`:rulesSource==='standard'?`${esc(fantasyApp)}'s published standard payout for a ${selected.length}-pick entry is filled in. Confirm it in the app: promotions, your state and special picks can change it. Edit and save to use your own.`:'Total return multiplier for each number of correct picks, including the returned stake.',`<div class="tool-form-grid">${Array.from({length:selected.length+1},(_,hits)=>`<label>${hits} of ${selected.length} hits<input data-pay-hits="${hits}" type="number" min="0" step="0.01" value="${Number(rules[hits]||0)}"></label>`).join('')}</div><div class="ev-card-footer">${button('Save payout rules','id="ev-save-paytable"')}</div>${result?`<div class="ev-chip-row">${result.dist.map((p,i)=>`<span class="ev-chip">${i} hits · ${percent(p)} · ${Number(rules[i]||0)}×</span>`).join('')}</div>`:''}`):'';
   return `<div class="tool-stack"><div class="tool-two-column evt-builder"><div class="tool-stack">${toolPanel('Build your entry','Use the payout rules for your chosen platform.',controls)}${options.length?choices:toolPanel('Available picks','Compare your entered player lines and estimates.',choices)}${payout}</div><div class="tool-stack">${toolPanel('Your picks',selected.length+' selected',picked)}${toolReceipt('Expected return',result?money(result.payout*fantasyStake):'—',[['Entry amount',money(fantasyStake)],['Expected profit',result?money(result.expectedProfit):'—'],['Expected value',result?signed(result.ev):'—']],selected.length<2?'Select at least two picks to start the calculation.':result?'Calculated from the saved rules and your estimated hit rates.':'Save the payout rules for this entry size to calculate a return.')}</div></div>${toolNote('Picks are treated as independent. Pushes, ties, correlations, and platform settlement exceptions require adjustments to the payout rules.')}</div>`;
@@ -1825,6 +1827,7 @@ $('#ev-view').addEventListener('click', event => {
   if (target.hasAttribute('data-parlay-ticket')) { $('#ev-parlay-ticket')?.scrollIntoView({block:'start',behavior:'instant'}); $('#ev-parlay-ticket')?.focus({preventScroll:true}); return; }
   if (target.hasAttribute('data-parlay-browse')) { $('#ev-parlay-browse')?.scrollIntoView({block:'start',behavior:'instant'}); return; }
   if (target.hasAttribute('data-parlay-more')) { const top = window.scrollY; parlayVisibleCount += 40; render(); window.scrollTo({top,behavior:'instant'}); return; }
+  if (target.hasAttribute('data-slip-more')) { const top = window.scrollY; slipVisibleCount += 40; render(); window.scrollTo({top,behavior:'instant'}); return; }
   if (target.hasAttribute('data-pair-more')) { const top=window.scrollY;pairVisibleCount+=40;render();window.scrollTo({top,behavior:'instant'});return; }
   if (target.hasAttribute('data-ev-more')) { const top=window.scrollY;evVisibleCount+=40;render();window.scrollTo({top,behavior:'instant'});return; }
   if (target.dataset.sharpSelect && target.matches('.sm-item')) return selectSharpItem(target.dataset.sharpSelect, true);
@@ -1909,14 +1912,14 @@ $('#ev-view').addEventListener('change', event => {
   if (active === 'odds' && oddsScreen.change(event)) return;
   if (active === 'fantasy' && dfsWorkspace.change(event)) return;
   const t = event.target;
-  if (t.dataset.toolFilter) { toolFilters = { ...toolFilters, [t.dataset.toolFilter]: t.value }; saveToolFilters(toolFilters, window.localStorage); pairVisibleCount = 40; parlayVisibleCount = 40; render(); $(`[data-tool-filter="${t.dataset.toolFilter}"]`)?.focus(); return; }
+  if (t.dataset.toolFilter) { toolFilters = { ...toolFilters, [t.dataset.toolFilter]: t.value }; saveToolFilters(toolFilters, window.localStorage); pairVisibleCount = 40; parlayVisibleCount = 40; slipVisibleCount = 40; render(); $(`[data-tool-filter="${t.dataset.toolFilter}"]`)?.focus(); return; }
   if (t.hasAttribute('data-tool-sport')) { sport = t.value; history.replaceState(history.state, '', `${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}${location.hash}`); render(); return; }
   if (t.id === 'sharp-sport') { sport = t.value; history.replaceState(history.state, '', `${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}${location.hash}`); render(); }
   else if (t.id === 'sharp-market') { marketType = t.value; render(); }
   else if (t.id === 'sharp-min') { localStorage.setItem('sportslab-ev-sharp-min', String(Math.max(0,Number(t.value)||0))); render(); }
   else if (t.id === 'ev-bankroll') { stake = Math.max(.01,Number(t.value)||100); render(); }
   else if (t.dataset.promo) { promoInput[t.dataset.promo] = t.dataset.promo === 'kind' ? t.value : Number(t.value); render(); }
-  else if (t.id === 'ev-fantasy-app') { fantasyApp = t.value; fantasyIds = []; render(); }
+  else if (t.id === 'ev-fantasy-app') { fantasyApp = t.value; fantasyIds = []; slipVisibleCount = 40; render(); }
   else if (t.id === 'ev-fantasy-stake') { fantasyStake = Math.max(.01,Number(t.value)||10); render(); }
   else if (t.id === 'ev-trader-filter') { traderName = t.value; render(); }
   else if (t.id === 'ev-prediction-platform') { predictionPlatform = t.value; render(); }

@@ -84,7 +84,7 @@ test('optimizer cards pair only legs above break-even, keep payout rules and bot
 test('slip pick cards pair each line\'s Over and Under and keep edit and select actions distinct',()=>{
   const rows=[pick('a'),pick('b',{player:'Player a',side:'Under',probability:.4}),pick('c',{player:'Player Two',probability:.55})];
   const {$,context}=render('renderSlip',{state:{dfs:rows,paytables:{PrizePicks:{2:[0,0,3]}}},dfs:()=>rows,
-    fantasyApp:'PrizePicks',fantasyIds:['a'],fantasyStake:10});
+    fantasyApp:'PrizePicks',fantasyIds:['a'],fantasyStake:10,slipVisibleCount:40});
   assert.equal($('.evc-slip .evc-card').length,2,'one card per player line');
   const first=$('.evc-slip .evc-card[data-wager-id="slip-a"]');
   assert.equal(first.find('.evc-slip-line strong').text(),'20.5','the line is shown; no sportsbook price is invented');

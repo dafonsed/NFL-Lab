@@ -143,7 +143,7 @@ test('the API\'s DFS props become picks; contests and rosters are left out and t
     pp(100, { ts: '2026-10-01T22:00:00.000Z' })];
   const { picks, skipped } = normalizeDfsRecords(records, { syncedAt: synced });
   assert.equal(picks.length, 25);
-  assert.deepEqual(skipped, { invalid: 0, notProps: 2, stale: 1 });
+  assert.deepEqual(skipped, { invalid: 0, notProps: 2, stale: 1, started: 0 });
   assert.equal(picks[0].side, 'over');
   assert.equal(picks[0].probability, undefined, 'fair probability comes only from devigged sportsbook odds');
   assert.equal(picks.at(-1).probability, undefined, 'a per-pick probability from the API is not used either');
@@ -344,4 +344,59 @@ test('a sportsbook market with no margin is never a fair-price reference; an exc
   assert.ok(consensusPrice(offered, priced, { now }).probability > 0.4);
   const exchange = [offered, row('a', 'Novig', 'over', -110, { exchange: true }), row('b', 'Novig', 'under', 110, { exchange: true })];
   assert.ok(consensusPrice(offered, exchange, { now }).probability > 0.4, 'an exchange can price at zero margin');
+});
+
+test('DFS audit fixes: stat-aware props, sides per book, pregame only, per-app matching, higher/lower, merged pricing', async () => {
+  const { normalizeFeed, dfsPicks, createDfsPricer, normalizeRecord } = await import('../public/ev-feed-normalize.js');
+  const { fairFromAmerican } = await import('../public/ev-advanced-math.js');
+  const { fantasySlip } = await import('../public/ev-core.js');
+  const now = Date.now(), ts = new Date(now - 60_000).toISOString(), start = new Date(now + 3 * 3_600_000).toISOString();
+  const dk = (id, propMarket, side, odds) => ({ id, sport: 'nba', event: 'Dallas Mavericks @ Denver Nuggets', market: 'prop', propMarket, player: 'Luka Doncic', line: 8.5, side, book: 'DraftKings', odds, ts, type: 'prop', startTime: start, selection_name: `Luka Doncic ${side === 'over' ? 'Over' : 'Under'} 8.5 ${propMarket}` });
+  // 1. Rebounds 8.5 and Assists 8.5 for one player at one book are two markets, not duplicates.
+  const feed = normalizeFeed([dk('r1', 'Rebounds', 'over', -120), dk('r2', 'Rebounds', 'under', -110), dk('a1', 'Assists', 'over', 105), dk('a2', 'Assists', 'under', -135)], { syncedAt: new Date(now).toISOString() });
+  assert.equal(feed.quotes.length, 4, 'all four prices are kept');
+  assert.equal(feed.skipped.duplicate, 0);
+  // 2. Each book keeps its own Over and Under; a price family is averaged after devigging.
+  const q = (book, side, odds, extra = {}) => ({ book, side, odds, sport: 'NBA', player: 'Luka Doncic', market: 'Rebounds', line: 8.5, eventId: 'NBA:mavericks @ nuggets', ts, startTime: start, ...extra });
+  const pick = extra => ({ book: 'PrizePicks', sport: 'NBA', player: 'Luka Doncic', market: 'Rebounds', line: 8.5, side: 'over', eventId: 'NBA:mavericks @ nuggets', ts, startTime: start, ...extra });
+  const family = [q('BetRivers', 'over', -115, { priceFamily: 'kambi' }), q('BetRivers', 'under', -105, { priceFamily: 'kambi' }), q('Bally Bet', 'over', -125, { priceFamily: 'kambi' }), q('Bally Bet', 'under', 105, { priceFamily: 'kambi' })];
+  const [priced] = dfsPicks([pick()], family);
+  const expected = (fairFromAmerican([-115, -105]).fair[0] + fairFromAmerican([-125, 105]).fair[0]) / 2;
+  assert.ok(Math.abs(priced.probability - expected) < 1e-12, 'each book devigged on its own prices, then the family averaged');
+  assert.deepEqual(priced.probabilitySources.map(s => [s.book, s.over, s.under]), [['BetRivers', -115, -105], ['Bally Bet', -125, 105]]);
+  // 3. Live or period quotes never price a pregame, full-game pick.
+  assert.equal(dfsPicks([pick()], [q('DraftKings', 'over', 400, { live: true }), q('DraftKings', 'under', -600, { live: true })])[0].probability, null);
+  assert.equal(dfsPicks([pick()], [q('DraftKings', 'over', -110, { period: '1st half' }), q('DraftKings', 'under', -110, { period: '1st half' })])[0].probability, null);
+  // 4. Two DFS apps naming the game differently don't switch off the name fallback.
+  const book = [q('FanDuel', 'over', -110, { eventId: 'NBA:dallas mavericks @ denver nuggets' }), q('FanDuel', 'under', -110, { eventId: 'NBA:dallas mavericks @ denver nuggets' })];
+  const twoApps = dfsPicks([pick({ eventId: 'NBA:dal @ den' }), pick({ book: 'Underdog Fantasy', eventId: 'NBA:mavericks @ nuggets' })], book);
+  assert.ok(twoApps.every(item => Math.abs(item.probability - 0.5) < 1e-12), 'both apps priced');
+  // ...but a book game far from the pick's start time is another game.
+  const tomorrow = new Date(now + 27 * 3_600_000).toISOString();
+  assert.equal(dfsPicks([pick({ eventId: 'NBA:dal @ den', startTime: tomorrow })], book)[0].probability, null);
+  // 5. Pick'em higher/lower sides read as Over/Under.
+  const lower = normalizeRecord({ id: 'pp', sport: 'nba', event: 'DAL @ DEN', market: 'Rebounds', side: 'lower', book: 'PrizePicks', ts, type: 'prop', line: 8.5, player: 'Luka Doncic' });
+  assert.equal(lower.side, 'under');
+  // 6. A slip with a pick that has no fair probability has no EV (not -100%).
+  assert.equal(fantasySlip([{ probability: .56 }, { probability: null }], [0, 0, 3], 10), null);
+  // 7. One pricer: a line in both feeds once, a goblin flag sticks, unchanged prices aren't resent.
+  const pricer = createDfsPricer();
+  pricer.setQuotes({ quotes: family, names: new Map(), picks: [pick({ oddsType: undefined })] });
+  pricer.setProps([pick({ oddsType: 'goblin', event: '' })]);
+  const merged = pricer.price();
+  assert.equal(merged.length, 1, 'one line, More only once it is a goblin');
+  assert.equal(merged[0].oddsType, 'goblin');
+  assert.equal(pricer.price(), null, 'unchanged picks are not sent again');
+});
+
+test('DFS sports for display: college football and WNBA split out by team abbreviation, matching keeps the feed sport', async () => {
+  const { normalizeDfsRecords, dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date().toISOString(), start = new Date(Date.now() + 3_600_000).toISOString();
+  const row = (sport, event, player) => ({ id: player, sport, event, player, market: 'Points', line: 10.5, side: 'higher', app: 'PrizePicks', ts, startTime: start });
+  const { picks } = normalizeDfsRecords([row('nfl', 'PITT @ VT', 'College Player'), row('nfl', 'IND @ WAS', 'Pro Player'), row('nba', 'DAL @ GSV', 'Paige Bueckers'), row('nba', 'DAL @ DEN', 'Luka Doncic')], { syncedAt: ts });
+  assert.deepEqual(picks.map(p => [p.player, p.sport]), [['College Player', 'NCAAF'], ['Pro Player', 'NFL'], ['Paige Bueckers', 'WNBA'], ['Luka Doncic', 'NBA']]);
+  const book = ['over', 'under'].map(side => ({ book: 'Fanatics', side, odds: -115, sport: 'NBA', player: 'Paige Bueckers', market: 'Points', line: 10.5, eventId: 'NBA:wings @ valkyries', ts, startTime: start }));
+  const [bueckers] = dfsPicks([picks[2]], book);
+  assert.equal(bueckers.sport, 'WNBA');
+  assert.ok(Math.abs(bueckers.probability - 0.5) < 1e-12, 'still priced from books that label the game NBA');
 });

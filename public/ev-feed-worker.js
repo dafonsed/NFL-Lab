@@ -1,10 +1,11 @@
-// Downloads, parses and cleans the quote snapshot (and, for the DFS tools, the DFS props) off the
-// main thread. Both are several MB; doing that in the page froze scrolling and typing on every
-// refresh. The page receives ready-to-use records (see fetchFeed in ev.js).
-import { loadFeed, loadDfsFeed } from './ev-feed-normalize.js?v=13';
+// Downloads, parses and cleans the quote snapshot and the DFS props off the main thread, and prices
+// the DFS lines from both against the latest sportsbook quotes. Both downloads are several MB; doing
+// this in the page froze scrolling and typing on every refresh. The page receives ready-to-use
+// records, and DFS picks only when they changed (see fetchFeed in ev.js).
+import { loadAndPrice, createDfsPricer } from './ev-feed-normalize.js?v=14';
 
+const pricer = createDfsPricer();
 self.onmessage = async ({ data }) => {
-  const options = { method: data.method };
-  const result = data.kind === 'dfs' ? await loadDfsFeed(data.url, data.syncedAt, data.apps, options) : await loadFeed(data.url, data.syncedAt, options);
+  const result = await loadAndPrice(pricer, data);
   self.postMessage({ id: data.id, ...result });
 };
