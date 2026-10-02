@@ -56,7 +56,7 @@ test('selected DFS platforms remain visible without lines and never include spor
   const prop = {sport:'NBA',event:'PHI vs ORL',player:'Tyrese Maxey',market:'Points',line:28.5,app:'PrizePicks',side:'Under',probability:.55};
   const rows = [prop, {...prop,line:27.5}, {...prop,app:'FanDuel'}];
   const result = selectedComparisonPlatforms(prop,rows,['Sleeper Picks','PrizePicks','FanDuel','Pinnacle']);
-  assert.deepEqual(result.map(row=>[row.app,row.line]),[['Sleeper Picks',undefined],['PrizePicks',28.5],['PrizePicks',27.5]]);
+  assert.deepEqual(result.map(row=>[row.app,row.line]),[['Sleeper Picks',undefined],['PrizePicks',28.5]],'one column per app: the selected line');
   assert.equal(result[0].over,undefined);
   assert.equal(result[0].under,undefined);
   assert.deepEqual(selectedComparisonPlatforms(prop,rows,[]),[]);
@@ -181,7 +181,7 @@ test('DFS rows show the book logo and offered odds, while fair value stays in th
   const button = {dataset:{dfsExpand:prop.id},hasAttribute:()=>false};
   view.click({target:{closest:()=>button}});
   const panel = load(view.render());
-  assert.match(panel('.evd-note').text(),/Fair -150/);
+  assert.match(panel('.evd-note').text(),/Fair odds -150/);
   assert.deepEqual(panel('.evd-grid tbody th').map((_,th)=>panel(th).text()).get(),['Josh Allen Over 249.5','Josh Allen Under 249.5']);
   assert.equal(panel('.evd-grid tbody tr.is-selected th').text(),'Josh Allen Over 249.5');
   assert.equal(panel('.evd-grid tbody tr.is-selected .evd-average').text(),'-120');
@@ -280,4 +280,26 @@ test('goblin and demon lines show fair probability but no edge, and never produc
   assert.equal($('.dfs-slip-pick').length,3);
   assert.match($('.dfs-slip-note').text(),/Goblin and demon picks change the payout/);
   assert.doesNotMatch($.html(),/est\. EV/,'no slip EV with goblin or demon legs');
+});
+
+test('the comparison shows one column per app and the sportsbook prices the fair probability came from', t => {
+  const originalDocument=globalThis.document, originalCSS=globalThis.CSS;
+  globalThis.document={querySelector:()=>null};globalThis.CSS={escape:value=>value};
+  t.after(()=>{if(originalDocument===undefined)delete globalThis.document;else globalThis.document=originalDocument;if(originalCSS===undefined)delete globalThis.CSS;else globalThis.CSS=originalCSS;});
+  const base={app:'PrizePicks',sport:'NBA',event:'DAL @ GSV',player:'Kaila Charles',market:'Points',source:'local-api'};
+  // Standard 5.5 with goblin and demon alternates for the same player and stat.
+  const lines=[[5.5,'standard'],[4.5,'goblin'],[6.5,'demon'],[7.5,'demon'],[9.5,'demon'],[13.5,'demon']].map(([line,oddsType])=>({...base,id:`pp-${line}`,line,oddsType,side:'Over'}));
+  const under={...base,id:'pp-u',line:5.5,oddsType:'standard',side:'Under',probability:.5306,probabilitySources:[{book:'Fanatics',over:100,under:-130}]};
+  const state={dfs:[...lines,under],quotes:[],paytables:{PrizePicks:{3:[0,0,0,5]}}};
+  const view=createDfsWorkspace({getState:()=>state,redraw:()=>{}});
+  view.render();
+  view.click({target:{closest:()=>({dataset:{dfsExpand:'pp-u'},hasAttribute:()=>false})}});
+  const $=load(view.render());
+  const heads=$('.evd-grid thead th[title]').map((_,th)=>th.attribs.title).get();
+  assert.equal(heads.filter(name=>name==='PrizePicks').length,1,'PrizePicks appears once');
+  assert.ok(heads.includes('Fanatics'),'the sportsbook behind the fair probability is a column');
+  const cells=$('.evd-grid tbody tr').map((_,tr)=>$(tr).text().replace(/\s+/g,' ')).get();
+  assert.match(cells[0],/\+100/);
+  assert.match(cells[1],/-130/);
+  assert.match($('.dfs-panel-facts').text(),/^Fair 53\.06%/);
 });
