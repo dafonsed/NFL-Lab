@@ -149,10 +149,17 @@ test('the API\'s DFS props become picks; contests and rosters are left out and t
   assert.equal(picks.at(-1).probability, undefined, 'a per-pick probability from the API is not used either');
   assert.deepEqual(payoutTables([{ app: 'Underdog', payouts: { 2: { power: { multiplier: 3 } }, 3: { power: { multiplier: 5 }, flex: null } } }]), { 'Underdog Fantasy': { 2: [0, 0, 3], 3: [0, 0, 0, 5] } });
   const { withStandardPaytables, paytableSource } = await import('../public/dfs-workspace.js');
-  const api = { PrizePicks: { 3: [0, 0, 0, 5] } };
-  assert.deepEqual(withStandardPaytables({}, api).PrizePicks['3'], [0, 0, 0, 5], 'the API table wins over the built-in one');
-  assert.equal(paytableSource({}, 'PrizePicks', 3, api), 'api');
+  // The API's PrizePicks 3-pick 5× is retired; PrizePicks publishes 6×. Published tables win.
+  const api = { PrizePicks: { 3: [0, 0, 0, 5] }, Sleeper: { 3: [0, 0, 0, 5.64] } };
+  const tables = withStandardPaytables({}, api);
+  assert.deepEqual(tables.PrizePicks['3'], [0, 0, 0, 6], 'the published PrizePicks payout beats the API');
+  assert.deepEqual(tables['Sleeper Picks']['3'], [0, 0, 0, 5.64], 'the API fills apps without a published table');
+  assert.equal(paytableSource({}, 'PrizePicks', 3, api), 'standard');
+  assert.equal(paytableSource({}, 'Sleeper Picks', 3, { 'Sleeper Picks': api.Sleeper }), 'api');
   assert.equal(paytableSource({ PrizePicks: { 3: [0, 0, 1, 6] } }, 'PrizePicks', 3, api), 'saved');
+  const { breakEven } = await import('../public/dfs-workspace.js');
+  // Published PrizePicks Power: 3×, 6×, 10×, 20×, 37.5× → per-pick break-even M^(-1/n).
+  assert.deepEqual([2, 3, 4, 5, 6].map(n => Math.round(breakEven(tables.PrizePicks[String(n)]) * 10000) / 100), [57.74, 55.03, 56.23, 54.93, 54.66]);
 });
 
 test('DFS lines filed under NBA move to the sport their markets belong to; season rows are not players', async () => {
