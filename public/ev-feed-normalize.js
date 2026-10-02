@@ -402,6 +402,22 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
       if (!prior || fresher(pick, prior)) latest.set(key, { ...pick, side: each, id: `local-api:${stableId(key)}` });
     }
   }
+  // PrizePicks sets a payout multiplier per goblin or demon projection. One value on (nearly) every
+  // goblin or demon line of an app is a default, not that pick's multiplier (on 2 Oct 2026 the feed
+  // sent 0.7 for all 6,080 goblins and 1.55 for all 16,183 demons, which showed +25% demon "edges"),
+  // so it is ignored and those lines get no edge until real per-pick values arrive.
+  const multipliers = new Map();
+  for (const pick of latest.values()) {
+    if (!['goblin', 'demon'].includes(pick.oddsType) || !pick.payoutMultiplier) continue;
+    const key = `${pick.book}|${pick.oddsType}`, counts = multipliers.get(key) || new Map();
+    counts.set(pick.payoutMultiplier, (counts.get(pick.payoutMultiplier) || 0) + 1);
+    multipliers.set(key, counts);
+  }
+  const placeholder = new Map([...multipliers].map(([key, counts]) => {
+    const total = [...counts.values()].reduce((sum, count) => sum + count, 0), [value, count] = [...counts].sort((a, b) => b[1] - a[1])[0];
+    return [key, total >= 20 && count / total >= 0.9 ? value : NaN];
+  }));
+  const realMultiplier = pick => pick.payoutMultiplier && pick.payoutMultiplier !== placeholder.get(`${pick.book}|${pick.oddsType}`) ? pick.payoutMultiplier : null;
   const weight = name => DEFAULT_SHARP_WEIGHTS[String(name).toLowerCase()] || 1;
   return [...latest.values()].map(pick => {
     const books = [...(marketFor(pick)?.values() || [])]
@@ -422,7 +438,7 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
       id: pick.id, app: pick.book, sport: pick.sport, ...(pick.matchSport ? { matchSport: pick.matchSport } : {}), league: pick.league, event: names.get(pick.eventId) || pick.event, eventId: pick.eventId,
       player: pick.player, ...(pick.team ? { team: pick.team } : {}), market: pick.market, line: pick.line, side: pick.side === 'under' ? 'Under' : 'Over',
       ...(pick.oddsType ? { oddsType: pick.oddsType } : pick.book === 'PrizePicks' ? { oddsType: 'standard' } : {}),
-      ...(pick.payoutMultiplier ? { payoutMultiplier: pick.payoutMultiplier } : {}),
+      ...(realMultiplier(pick) ? { payoutMultiplier: realMultiplier(pick) } : {}),
       probability, probabilityBooks: books.map(book => book.book), probabilityMethod: method,
       ...(books.length ? { probabilitySources: books.map(book => ({ book: book.book, over: book.overOdds, under: book.underOdds })) } : {}),
       ts: pick.ts, startTime: pick.startTime, live: pick.live, source: 'local-api',

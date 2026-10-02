@@ -424,3 +424,13 @@ test('DFS lines match a book that labels the game with another sport; payout mul
   assert.equal(picks[0].payoutMultiplier, 0.7);
   assert.equal(normalizeRecord({ id: 'q', sport: 'nfl', event: 'IND @ WAS', market: 'Receiving Yards', side: 'over', book: 'PrizePicks', ts, type: 'prop', line: 90.5, player: 'Josh Downs', oddsType: 'demon', payoutMultiplier: 1.55 }).payoutMultiplier, 1.55);
 });
+
+test('a payout multiplier repeated on nearly every goblin or demon line is a default and is ignored', async () => {
+  const { dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date().toISOString();
+  const demon = (i, payoutMultiplier) => ({ book: 'PrizePicks', sport: 'NFL', player: `Player ${i}`, market: 'Rush Yards', line: 80.5 + i, side: 'over', eventId: 'NFL:a @ b', ts, oddsType: 'demon', payoutMultiplier });
+  const flat = dfsPicks(Array.from({ length: 25 }, (_, i) => demon(i, 1.55)), []);
+  assert.ok(flat.every(pick => pick.payoutMultiplier === undefined), 'the same 1.55 on all 25 demons is not a per-pick value');
+  const varied = dfsPicks(Array.from({ length: 25 }, (_, i) => demon(i, 1.2 + (i % 5) * 0.25)), []);
+  assert.deepEqual([...new Set(varied.map(pick => pick.payoutMultiplier))].sort(), [1.2, 1.45, 1.7, 1.95, 2.2]);
+});
