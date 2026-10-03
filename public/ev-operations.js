@@ -1,5 +1,5 @@
 /* Local, auditable workspaces. External observations are supplied by the user. */
-import {quoteAvailable} from './ev-advanced-math.js?v=2';
+import {quoteAvailable} from './ev-advanced-math.js';
 import {hasBetLink} from './ev-board.js?v=7';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm = value => String(value ?? '').trim().toLowerCase();

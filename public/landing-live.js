@@ -1,5 +1,5 @@
 import { icon } from './ui-icons.js';
-import { oddsLabel } from './ev-core.js?v=6';
+import { oddsLabel } from './ev-core.js';
 import { teamLogo } from './sports-identity.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);

@@ -1,6 +1,6 @@
 import { accountStorage, accountReady, accountSyncState } from './account-sync.js';
 import { readBets, writeBets, validateBet, betReturns, STATUSES, SPORTS, BET_STORAGE_KEY } from './bet-utils.js?v=4';
-import { performanceSummary, marketIdentity, quoteAvailable, consensusPrice } from './ev-advanced-math.js?v=2';
+import { performanceSummary, marketIdentity, quoteAvailable, consensusPrice } from './ev-advanced-math.js';
 
 await accountReady;
 

@@ -1,6 +1,6 @@
-import { decimal, implied, money, percent, signed, oddsLabel, probabilityToAmerican, fractionalKellyStake, arbitrageRows, middleRows, fantasySlip, plausibleEv, marketRowsOf } from './ev-core.js?v=6';
+import { decimal, implied, money, percent, signed, oddsLabel, probabilityToAmerican, fractionalKellyStake, arbitrageRows, middleRows, fantasySlip, plausibleEv, marketRowsOf } from './ev-core.js';
 import { startsWithin, oddsWithin } from './ev-filters.js?v=2';
-import { DEVIG_METHODS, quoteAvailable, passesFilters, marketIdentity, consensusPrice, computeAdvancedEv, projectProbability, constrainedArb, middleOutcomes, advancedParlay, performanceSummary } from './ev-advanced-math.js?v=2';
+import { DEVIG_METHODS, quoteAvailable, passesFilters, marketIdentity, consensusPrice, computeAdvancedEv, projectProbability, constrainedArb, middleOutcomes, advancedParlay, performanceSummary } from './ev-advanced-math.js';
 import { readBets, writeBets, validateBet, betReturns } from './bet-utils.js?v=4';
 import { createEvOperations } from './ev-operations.js?v=2';
 import { createEvMarketViews } from './ev-market-views.js?v=2';

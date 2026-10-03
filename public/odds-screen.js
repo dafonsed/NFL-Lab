@@ -1,5 +1,5 @@
-import { decimal } from './ev-core.js?v=6';
-import { marketFairPrice, marketIdentity } from './ev-advanced-math.js?v=2';
+import { decimal } from './ev-core.js';
+import { marketFairPrice, marketIdentity } from './ev-advanced-math.js';
 import { boardIcon, bookLogo } from './ev-board.js?v=7';
 import { leagueMark, teamLogo } from './sports-identity.js';
 

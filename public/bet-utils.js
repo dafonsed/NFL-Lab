@@ -1,6 +1,6 @@
 import { canonicalPlatform } from './platform-catalog.js';
 import { validateLeg, ticketSettlement, LEG_RESULTS, legState, formatLegTarget } from './bet-legs.js';
-import { priceClv, noVigClv } from './ev-advanced-math.js?v=2';
+import { priceClv, noVigClv } from './ev-advanced-math.js';
 export const BET_STORAGE_KEY = 'nfl-lab.personal-bets.v1';
 export const SPORTS = ['NFL', 'MLB', 'NBA', 'WNBA', 'NHL', 'Soccer', 'Other'];
 export const STATUSES = { open: 'Open', won: 'Won', lost: 'Lost', push: 'Push', void: 'Void', cashed: 'Cashed out' };

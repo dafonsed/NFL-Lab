@@ -10,7 +10,7 @@ import {playerPortrait, teamMark} from './sports-identity.js';
 import {icon} from './ui-icons.js';
 import {sportTools, betTrackerUrl, SPORTS} from './navigation.js';
 import {evToolUrl} from './ev-tool-catalog.js';
-import {computeAdvancedEv, evCapFor, DEVIG_METHODS} from './ev-advanced-math.js?v=2';
+import {computeAdvancedEv, evCapFor, DEVIG_METHODS} from './ev-advanced-math.js';
 import {isDemoRecord} from './ev-workspace-clean.js?v=1';
 import {readQuoteCache} from './ev-quote-cache.js?v=3';
 import {platformAsset, platformLabel} from './platform-catalog.js';

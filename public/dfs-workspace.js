@@ -1,4 +1,4 @@
-import { probabilityToAmerican, fantasySlip, money, oddsLabel, decimal, fresh } from './ev-core.js?v=6';
+import { probabilityToAmerican, fantasySlip, money, oddsLabel, decimal, fresh } from './ev-core.js';
 import { teamLogo } from './sports-identity.js';
 import { FANTASY_PLATFORMS, SPORTSBOOK_PLATFORMS, canonicalPlatform, platformAsset, isFantasyPlatform, isContestPlatform } from './platform-catalog.js';
 import { boardIcon, renderBetPanel } from './ev-board.js?v=7';

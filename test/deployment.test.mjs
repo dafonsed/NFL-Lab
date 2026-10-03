@@ -99,3 +99,25 @@ test('Vercel can import the default server without starting a listener or backgr
   const code=await new Promise((resolve,reject)=>{child.on('error',reject);child.on('exit',resolve);});
   assert.equal(code,0,output);
 });
+
+// Vercel traces the server's imports as files when it builds the function: an import with a query
+// ("./ev-core.js?v=6") isn't a file, and the deploy fails although Node runs it fine (3 Oct 2026).
+test('nothing the server imports uses a versioned (query) import', async () => {
+  const fs = await import('node:fs/promises'), path = await import('node:path');
+  const root = new URL('../', import.meta.url), seen = new Set(), queried = [];
+  const visit = async file => {
+    if (seen.has(file)) return;
+    seen.add(file);
+    let source;
+    try { source = await fs.readFile(new URL(file, root), 'utf8'); } catch { return; }
+    for (const match of source.matchAll(/(?:^|\n)\s*(?:import|export)[^'"\n]*?from\s*['"]([^'"]+)['"]|(?:^|\n)\s*import\s*['"]([^'"]+)['"]/g)) {
+      const spec = match[1] || match[2];
+      if (!spec.startsWith('.')) continue;
+      if (spec.includes('?')) queried.push(`${file} imports ${spec}`);
+      await visit(path.posix.normalize(path.posix.join(path.posix.dirname(file), spec.split('?')[0])));
+    }
+  };
+  await visit('server.mjs');
+  assert.ok(seen.size > 50, 'the server import graph was read');
+  assert.deepEqual(queried, []);
+});

@@ -1,5 +1,5 @@
 // Pure market math. Quote adapters can replace manual/example records without changing the workbench.
-import {marketIdentity as preciseMarketIdentity,quoteAvailable,devig,evCapFor,computeAdvancedEv} from './ev-advanced-math.js?v=2';
+import {marketIdentity as preciseMarketIdentity,quoteAvailable,devig,evCapFor,computeAdvancedEv} from './ev-advanced-math.js';
 export const decimal = odds => {
   const n = Number(odds);
   if (!Number.isFinite(n) || (n > -100 && n < 100)) return NaN;
