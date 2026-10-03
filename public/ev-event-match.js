@@ -12,7 +12,8 @@ const CLUB_SUFFIXES = new Set(['if', 'hc', 'hk', 'bk', 'kk', 'fc', 'sc', 'cf', '
 
 /** "CIN Bengals", "Bengals" and "Cincinnati Bengals" all become "bengals". */
 export function teamKey(name) {
-  const words = String(name ?? '').replace(/[^\p{L}\p{N} ]/gu, ' ').trim().split(/\s+/).filter(Boolean);
+  // Notes in brackets ("(TBD)", a listed pitcher, "(W)") aren't part of the name.
+  const words = String(name ?? '').replace(/\([^)]*\)/g, ' ').replace(/[^\p{L}\p{N} ]/gu, ' ').trim().split(/\s+/).filter(Boolean);
   // A leading 2-4 letter code ("CIN", "LA", "NY") is a city abbreviation, not the nickname.
   if (words.length > 1 && /^[A-Z]{2,4}$/.test(words[0])) words.shift();
   if (!words.length) return '';
@@ -21,13 +22,15 @@ export function teamKey(name) {
 }
 
 /**
- * Shared key for an "Away @ Home" event, or null when the name can't be split reliably.
- * Only "@" is used: "vs" names don't say which team is home, and the feed's sides are home/away.
+ * Shared key for an "Away @ Home" (or "Away at Home") event, or null when the name can't be split
+ * reliably. Fanatics names prop events "Home v Away" ("Washington Commanders v Indianapolis Colts" for
+ * Colts @ Commanders), so a "v"/"vs" name is read home first, as participantsOf reads it.
  */
 export function matchedEventKey(sport, event) {
   if (!MATCHED_SPORTS.has(sport)) return null;
-  const parts = String(event ?? '').split(/\s+@\s+/);
-  if (parts.length !== 2) return null;
+  const text = String(event ?? ''), at = text.split(/\s+(?:@|at)\s+/), versus = text.split(/\s+(?:vs\.?|v)\s+/i);
+  const parts = at.length === 2 ? at : versus.length === 2 ? [versus[1], versus[0]] : null;
+  if (!parts) return null;
   const [away, home] = parts.map(teamKey);
   return away && home && away !== home ? `${away} @ ${home}` : null;
 }

@@ -142,6 +142,19 @@ test('corrupt or unavailable persisted controls fail closed instead of allowing 
   await assert.rejects(readMarketControls(app.db), error => error.status === 503 && error.code === 'MARKET_CONTROLS_UNAVAILABLE');
 });
 
+test('a failed controls read reuses controls read in the last minute, then fails closed', async t => {
+  const { readMarketControlsWithFallback } = await import('../lib/admin-market-controls.mjs');
+  const app = await fixture(t);
+  t.mock.timers.enable({ apis: ['Date'], now: 2_000_000 });
+  await app.change({});
+  assert.equal((await readMarketControlsWithFallback(app.db)).length, 1);
+  await app.db.updateTable('adminMarketControl').set({ selector: '{broken' }).execute();
+  t.mock.timers.tick(30_000);
+  assert.deepEqual((await readMarketControlsWithFallback(app.db)).map(control => control.key), ['book a'], 'one failed read is covered');
+  t.mock.timers.tick(31_000);
+  await assert.rejects(readMarketControlsWithFallback(app.db), error => error.status === 503 && error.code === 'MARKET_CONTROLS_UNAVAILABLE');
+});
+
 async function proxy(route, options) {
   let status, headers, body;
   const response = { writeHead(code, values) { status = code; headers = values; }, end(value) { body = JSON.parse(value); } };

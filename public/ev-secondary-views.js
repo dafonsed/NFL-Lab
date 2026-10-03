@@ -1,6 +1,6 @@
 import {SECONDARY_TOOLS, MORE_TOOL_GROUPS} from './ev-tool-catalog.js';
 import {icon} from './ui-icons.js';
-import {boardIcon, bookLogo, startLabel} from './ev-board.js?v=6';
+import {boardIcon, bookLogo, startLabel} from './ev-board.js?v=7';
 import {leagueMark} from './sports-identity.js';
 export const toolEsc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const purposes = {
@@ -8,7 +8,7 @@ const purposes = {
   holds:'Find the tightest two-sided markets across your recorded sportsbook prices.',
   promo:'Turn a promotion into a clear stake plan. See the result on either side.',
   parlay:'Build your ticket one leg at a time, with fair probabilities beside every price.',
-  optimizer:'Compare two-pick combinations using your estimated hit rates and saved payout rules.',
+  optimizer:'Rank two-pick power entries from no-vig fair probabilities and each app’s published payouts.',
   slip:'Choose your picks, set the payout rules, and see the math behind your entry.',
   'fantasy-alerts':'Keep your player-prop watchlist in one place. Review matches as you add new lines.',
   prediction:'A workspace for contract prices, market depth, and your recorded positions.',

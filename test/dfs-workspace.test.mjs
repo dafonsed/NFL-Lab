@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { breakEven, comparisonPlatforms, selectedComparisonPlatforms, sportsbookOffer, createDfsWorkspace, DFS_PLATFORMS } from '../public/dfs-workspace.js';
+import { breakEven, comparisonPlatforms, selectedComparisonPlatforms, sportsbookOffer, createDfsWorkspace, DFS_PLATFORMS, withStandardPaytables } from '../public/dfs-workspace.js';
 import { isContestPlatform } from '../public/platform-catalog.js';
 // The rail lists pick'em apps; salary-cap contest apps never post pick'em lines.
 const PICKEM = DFS_PLATFORMS.filter(app => !isContestPlatform(app));
@@ -364,4 +364,157 @@ test('the comparison lists every sportsbook with the exact prop, including one-s
   assert.equal($('.dfs-prop .dfs-offer small').text(),'FanDuel','only FanDuel prices the Under');
   assert.ok(!heads.includes('FanDuel Fantasy') && !heads.includes('DraftKings Fantasy'),'contest apps are not comparison columns');
   assert.equal($('[data-dfs-compare-platform="FanDuel Fantasy"]').length,0,'the rail lists pick\'em apps only');
+});
+
+// Shared setup for the slip, label and availability tests below: DOM stubs and a click driver.
+function board(t, state, options = {}) {
+  const originalDocument=globalThis.document, originalCSS=globalThis.CSS;
+  globalThis.document={querySelector:()=>null};globalThis.CSS={escape:value=>value};
+  t.after(()=>{if(originalDocument===undefined)delete globalThis.document;else globalThis.document=originalDocument;if(originalCSS===undefined)delete globalThis.CSS;else globalThis.CSS=originalCSS;});
+  const view=createDfsWorkspace({getState:()=>({...state}),redraw:()=>{},...options});
+  const press=(dataset,attributes=[])=>view.click({target:{closest:()=>({dataset,hasAttribute:name=>attributes.includes(name)})}});
+  return {view,press,html:()=>load(view.render())};
+}
+const feedLine={app:'PrizePicks',sport:'NFL',market:'Receiving Yards',side:'Over',source:'local-api',oddsType:'standard'};
+
+test('a goblin or demon without a payout multiplier makes the slip payout vary and blocks saving; a known one saves the scaled table', t => {
+  const state={dfs:[{...feedLine,id:'a',event:'A @ B',player:'A One',line:60.5,probability:.6},{...feedLine,id:'b',event:'C @ D',player:'B Two',line:50.5,probability:.58},{...feedLine,id:'g',event:'E @ F',player:'G One',line:40.5,oddsType:'goblin',probability:.8}],quotes:[],slips:[],paytables:{PrizePicks:{3:[0,0,0,6]}}};
+  const {view,press,html}=board(t,state,{onSave:slip=>state.slips.push(slip)});
+  view.render();
+  for(const id of ['a','b','g'])press({dfsPick:id});
+  let $=html();
+  assert.equal($('.dfs-slip-total dl div').first().find('dd').text(),'Varies (goblin/demon)','never the standard 6x');
+  assert.equal($('.dfs-save-slip').attr('disabled'),'disabled');
+  assert.equal($('.dfs-slip-dock [data-dfs-save]').attr('disabled'),'disabled');
+  assert.match($('.dfs-slip-dock').text(),/Payout varies/);
+  press({},['data-dfs-save']);
+  assert.equal(state.slips.length,0,'nothing is saved with an unknown payout');
+  assert.match(html()('.dfs-feedback').text(),/the feed sent no multiplier for G One Over 40\.5/);
+  state.dfs=state.dfs.map(item=>item.id==='g'?{...item,payoutMultiplier:.7}:item);
+  $=html();
+  assert.match($('.dfs-slip-total dl div').first().find('dd').text(),/^4\.2×/);
+  assert.equal($('.dfs-save-slip').attr('disabled'),undefined);
+  press({},['data-dfs-save']);
+  assert.equal(state.slips.length,1);
+  assert.ok(Math.abs(state.slips[0].paytable[3]-4.2)<1e-12,'the saved table is the scaled one the slip was priced with');
+  assert.deepEqual(state.slips[0].paytable.slice(0,3),[0,0,0]);
+  assert.equal(state.slips[0].payoutFactor,.7);
+});
+
+test('saved slips are listed newest first in the slip panel and can be deleted', t => {
+  const state={dfs:[{...feedLine,id:'a',event:'A @ B',player:'A One',line:60.5,probability:.6},{...feedLine,id:'b',event:'C @ D',player:'B Two',line:50.5,probability:.58}],quotes:[],slips:[],paytables:{PrizePicks:{2:[0,0,3]}}};
+  const deleted=[];
+  const {view,press,html}=board(t,state,{onSave:slip=>state.slips.push(slip),onDeleteSlip:id=>{deleted.push(id);state.slips=state.slips.filter(slip=>slip.id!==id);}});
+  view.render();
+  press({dfsType:'2-saved'});
+  press({dfsPick:'a'});press({dfsPick:'b'});
+  press({},['data-dfs-save']);
+  let $=html();
+  assert.match($('.dfs-feedback').text(),/listed under Saved slips/);
+  assert.equal($('.dfs-saved-slips li').length,1);
+  assert.match($('.dfs-saved-slips li').text(),/PrizePicks 2 Pick · 3×/);
+  assert.match($('.dfs-saved-slips li').text(),/A One Over 60\.5 · B Two Over 50\.5/);
+  assert.match($('.dfs-saved-slips li').text(),/\$10\.00 entry · \+4\.40% est\. EV/,'0.6 × 0.58 × 3 − 1');
+  for(let i=0;i<6;i++)state.slips.push({id:`old-${i}`,app:'PrizePicks',picks:[{player:`P${i}`,side:'Over',line:1.5}],paytable:[0,3],stake:5,ts:new Date(Date.now()+i*1000).toISOString()});
+  $=html();
+  assert.equal($('.dfs-saved-slips li').length,5,'five at a time');
+  assert.match($('.dfs-saved-slips li').first().text(),/P5 Over 1\.5/,'newest first');
+  assert.match($('[data-dfs-saved-all]').text(),/Show all 7/);
+  press({},['data-dfs-saved-all']);
+  assert.equal(html()('.dfs-saved-slips li').length,7);
+  press({dfsDeleteSlip:'old-5'});
+  assert.deepEqual(deleted,['old-5']);
+  $=html();
+  assert.equal($('.dfs-saved-slips li').length,6);
+  assert.match($('.dfs-feedback').text(),/Saved slip deleted/);
+  press({},['data-dfs-clear']);
+  assert.equal(html()('.dfs-slip-empty.has-saved .dfs-saved-slips li').length,6,'the list stays with an empty slip');
+});
+
+test('without onDeleteSlip a saved slip is removed from the page state in place', t => {
+  const slips=[{id:'s1',app:'PrizePicks',picks:[{player:'A',side:'Over',line:1}],paytable:[0,0,3],stake:10,ts:new Date().toISOString()}];
+  const state={dfs:[{...feedLine,id:'a',event:'A @ B',player:'A One',line:60.5,probability:.6}],quotes:[],slips,paytables:{}};
+  const {view,press,html}=board(t,state);
+  view.render();
+  press({dfsDeleteSlip:'s1'});
+  assert.equal(slips.length,0);
+  assert.equal(html()('.dfs-saved-slips').length,0);
+});
+
+test('slip sizes follow the app\'s payout tables (Underdog runs to 8 picks) and an over-full slip says how many to remove', t => {
+  const state={dfs:Array.from({length:4},(_,i)=>({...feedLine,id:`p${i}`,event:`E${i}`,player:`P${i}`,line:20.5,probability:.55})),quotes:[],paytables:withStandardPaytables()};
+  const {view,press,html}=board(t,state);
+  view.render();
+  view.change({target:{id:'dfs-platform',value:'Underdog Fantasy'}});
+  press({},['data-dfs-menu']);
+  let $=html();
+  assert.deepEqual($('[data-dfs-type]').map((_,b)=>b.attribs['data-dfs-type']).get(),['2-saved','3-saved','4-saved','5-saved','6-saved','7-saved','8-saved']);
+  assert.match($('[data-dfs-type="7-saved"]').text(),/65×/);
+  assert.match($('[data-dfs-type="8-saved"]').text(),/120×.*54\.97%/s,'120^(-1/8)');
+  assert.match($('.dfs-empty-results h2').text(),/No Underdog Fantasy lines in the quote feed right now/);
+  press({},['data-dfs-all-apps']);
+  assert.equal(html()('.dfs-prop').length,4);
+  view.change({target:{id:'dfs-platform',value:'Sleeper Picks'}});
+  assert.deepEqual(html()('[data-dfs-type]').map((_,b)=>b.attribs['data-dfs-type']).get(),['2-saved','3-saved','4-saved','5-saved','6-saved'],'2-6 without a table');
+  press({},['data-dfs-menu']);
+  view.change({target:{id:'dfs-platform',value:'PrizePicks'}});
+  press({dfsType:'4-saved'});
+  for(let i=0;i<4;i++)press({dfsPick:`p${i}`});
+  press({dfsType:'2-saved'});
+  $=html();
+  assert.match($('.dfs-slip-dock').text(),/4\/2 picks · ReviewRemove 2 picks/);
+  assert.doesNotMatch($('.dfs-slip-dock').text(),/more picks needed/);
+  assert.equal($('.dfs-save-slip').text(),'Remove 2 picks');
+  assert.equal($('#dfs-entry').attr('min'),'1','the same $1 minimum as the entry check');
+});
+
+test('part-game lines can\'t be added to a slip', t => {
+  const state={dfs:[{...feedLine,id:'part',event:'A @ B',player:'A One',line:20.5,period:'part'},{...feedLine,id:'full',event:'A @ B',player:'B Two',line:60.5,probability:.6}],quotes:[],paytables:{}};
+  const {view,press,html}=board(t,state);
+  view.render();
+  press({dfsPick:'part'});
+  const $=html();
+  assert.equal($('.dfs-slip-pick').length,0);
+  assert.equal($('.dfs-feedback').text(),'Part-game lines can’t be priced; the feed doesn’t say which period this is.');
+  press({dfsTogglePick:'part'});
+  assert.equal(html()('.dfs-slip-pick').length,0,'nor from the comparison panel');
+  press({dfsPick:'full'});
+  assert.equal(html()('.dfs-slip-pick').length,1);
+});
+
+test('the summary shows the top edge among lines with a known payout, not a goblin\'s raw fair probability', t => {
+  const state={dfs:[{...feedLine,id:'s',event:'A @ B',player:'A One',line:60.5,probability:.57},{...feedLine,id:'g',event:'A @ B',player:'B Two',line:.5,oddsType:'goblin',probability:.9},{...feedLine,id:'d',event:'A @ B',player:'C Three',line:90.5,oddsType:'demon',payoutMultiplier:1.5,probability:.3}],quotes:[],paytables:{PrizePicks:{3:[0,0,0,6]}}};
+  const {view,html}=board(t,state);
+  view.render();
+  const $=html();
+  assert.doesNotMatch($('.dfs-results-toolbar').text(),/Top fair|90\.00%/);
+  // Standard: 57.00 − 55.03 = +1.97; demon: 30.00 − 55.03 / 1.5 = −6.69; the goblin has no break-even.
+  assert.match($('.dfs-results-toolbar dl').text(),/Top edge\+1\.97%/);
+});
+
+test('rows name team and combo markets, season-long boards and the best book price', t => {
+  const state={dfs:[{...feedLine,id:'team',event:'IND @ WAS',player:'WAS',market:'Pass Yards',line:240.5},{...feedLine,id:'combo',event:'NFL',player:'Jonathan Taylor + Puka Nacua',market:'Anytime TDs (Combo)',line:.5},{...feedLine,id:'szn',sport:'NBA',event:'NBASZN',player:'Nikola Jokic',market:'Triple-Doubles',line:30.5},{...feedLine,id:'player',event:'IND @ WAS',player:'Terry McLaurin',line:60.5}],quotes:[],paytables:{}};
+  const {view,html}=board(t,state);
+  view.render();
+  const $=html(), title=id=>$(`[data-dfs-row="${id}"] .dfs-market-title`).text();
+  assert.equal(title('team'),'Team Pass Yards');
+  assert.equal(title('combo'),'Anytime TDs (Combo)');
+  assert.equal(title('player'),'Player Receiving Yards');
+  assert.equal($('[data-dfs-row="szn"] .dfs-event-name').text(),'NBA season-long');
+  assert.deepEqual($('.dfs-thead th').map((_,th)=>$(th).text()).get(),['Market and event','Selection','Best book price','Fair probability','Actions']);
+  assert.doesNotMatch($.html(),/Sharp price/);
+});
+
+test('sportsbooks the member can\'t use leave the row price and comparison, while the fair probability still names its books', t => {
+  const pick={...feedLine,id:'p',event:'NYJ @ CHI',player:'Luther Burden III',market:'Receptions',line:4.5,side:'Under',probability:.5458,probabilityBooks:['FanDuel'],bookLines:[{book:'FanDuel',over:110,under:-140},{book:'DraftKings',over:105,under:-150}]};
+  const state={dfs:[pick],quotes:[],paytables:{PrizePicks:{3:[0,0,0,6]}}};
+  const {view,press,html}=board(t,state);
+  view.render();
+  assert.equal(html()('.dfs-offer small').text(),'FanDuel · best of 2 books','every book without an availability check');
+  state.bookAvailable=book=>book!=='FanDuel';
+  press({dfsExpand:'p'});
+  const $=html();
+  assert.equal($('.dfs-offer small').text(),'DraftKings');
+  assert.deepEqual($('.evd-grid thead th[title]').map((_,th)=>th.attribs.title).get().filter(name=>['FanDuel','DraftKings'].includes(name)),['DraftKings']);
+  assert.match($('.evd-note').text(),/fair probability devigs FanDuel \(both sides priced; FanDuel hidden by your sportsbook settings\)/);
 });

@@ -1,29 +1,29 @@
 import { browserAlertsControl, deliverAlerts, toggleBrowserAlerts } from './alert-delivery.js?v=1';
 import { wagerCard } from './ev-bet-card.js';
-import { renderEvBoard, renderEvBoardDetail, renderBetPanel, boostedOffer, boardIcon, bookLogo, startLabel, selectionText } from './ev-board.js?v=6';
-import { createEvSuite, EV_SUITE_TOOLS } from './ev-suite.js?v=local-suite-5';
-import { computeAdvancedEv, consensusPrice, constrainedArb, middleOutcomes, devig } from './ev-advanced-math.js';
+import { renderEvBoard, renderEvBoardDetail, renderBetPanel, boostedOffer, boardIcon, bookLogo, startLabel, selectionText } from './ev-board.js?v=7';
+import { createEvSuite, EV_SUITE_TOOLS } from './ev-suite.js?v=local-suite-6';
+import { computeAdvancedEv, consensusPrice, constrainedArb, middleOutcomes, devig, evCapFor } from './ev-advanced-math.js?v=2';
 import { readSuiteState, writeSuiteState } from './ev-suite-storage.js?v=2';
 import { installMobileWorkspace, quoteRevision, preserveReadingOrder } from './ev-mobile.js';
 import { accountStorage as localStorage, accountReady, getAccountPreferences, accountSyncState } from './account-sync.js';
 await accountReady;
-import { secondaryShell, toolHero, accentTitle, toolPanel, toolEmpty, toolStats, toolNote, toolReceipt, toolBoard, boardTicket, boardButton, boardIconButton, boardToggle } from './ev-secondary-views.js?v=5';
+import { secondaryShell, toolHero, accentTitle, toolPanel, toolEmpty, toolStats, toolNote, toolReceipt, toolBoard, boardTicket, boardButton, boardIconButton, boardToggle } from './ev-secondary-views.js?v=6';
 import { SECONDARY_TOOLS } from './ev-tool-catalog.js';
 import { emptyWorkspace, purgeDemoData, clearLegacyDemoStorage } from './ev-workspace-clean.js?v=1';
-import { createQuoteFeedControls, toolDataLabel } from './ev-feed.js?v=7';
-import { loadAndPrice, createDfsPricer, payoutTables, knownSport } from './ev-feed-normalize.js?v=24';
-import { readQuoteCache, createThrottledCacheWriter } from './ev-quote-cache.js?v=1';
+import { createQuoteFeedControls, toolDataLabel } from './ev-feed.js?v=9';
+import { loadAndPrice, createDfsPricer, payoutTables, knownSport } from './ev-feed-normalize.js?v=25';
+import { readQuoteCache, createThrottledCacheWriter } from './ev-quote-cache.js?v=3';
 import { START_WINDOWS, MIN_ODDS, MIN_EV, MIN_WIN_CHANCE, TOOL_FILTERS, TOOL_FILTER_DEFAULTS, activeFilterCount, startsWithin, oddsWithin, quoteMatches, readToolFilters, saveToolFilters, toolFilterBar } from './ev-filters.js?v=2';
 import { SITE_PLATFORMS, SPORTSBOOK_PLATFORMS, PREDICTION_PLATFORMS, EXCHANGE_PLATFORMS, canonicalPlatform, platformAsset, platformLabel, platformOptions, isContestPlatform } from './platform-catalog.js';
 import { betTrackerUrl, legacyBetTrackerUrl } from './navigation.js?v=tracker-1';
-import { decimal, implied, expectedReturn, money, percent, signed, probabilityToAmerican, fairProbability, fresh, groups, marketKey, evRows, fractionalKellyStake, holdRows, arbitrage, arbitrageRows, middleRows, promoConversion, parlay, fantasySlip, closingLineValue, gradedBet, pearson, sharpMatches, alertMatches } from './ev-core.js?v=3';
+import { decimal, implied, expectedReturn, money, percent, signed, probabilityToAmerican, fairProbability, fresh, groups, marketKey, evRows, fractionalKellyStake, holdRows, arbitrage, arbitrageRows, middleRows, promoConversion, parlay, fantasySlip, closingLineValue, gradedBet, pearson, sharpMatches, alertMatches, opposingSides, ownBookConsistent, priceFamily, sameGame, plausibleEv, marketRowsOf } from './ev-core.js?v=6';
 import { teamMark, leagueMark } from './sports-identity.js';
 import { comparisonAnnotations } from './bet-comparison.js?v=4';
-import { inlineBetCard as betComparisonCard, bindInlineComparison as bindComparison } from './bet-inline.js?v=card-click-3';
+import { inlineBetCard as betComparisonCard, bindInlineComparison as bindComparison } from './bet-inline.js?v=card-click-4';
 import { openArbCalculator } from './arb-calculator.js?v=2';
 import { openLineHistory, buildLineSeries } from './line-history.js?v=1';
-import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource, breakEven, payoutFactor, payoutKnown } from './dfs-workspace.js?v=23-part';
-import { createOddsScreen } from './odds-screen.js?v=9';
+import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource, breakEven, payoutFactor, payoutKnown } from './dfs-workspace.js?v=24';
+import { createOddsScreen } from './odds-screen.js?v=10';
 
 import {readSportsbookState, saveSportsbookState, sportsbookAvailable, availableSportsbookQuotes, STATE_CHANGE_EVENT} from './sportsbook-availability.js';
 
@@ -42,7 +42,7 @@ const TOOLS = [
   ['Builders', 'parlay', 'Parlay builder', 'Combine independent legs from one book using consensus estimates for each leg.'],
   ['Research', 'sharp', 'Sharp money / Pro', 'Inspect exchange liquidity, opposing sportsbook prices and price history.'],
   ['Fantasy', 'fantasy', 'Fantasy lines', 'Compare DFS player lines and entered hit probabilities across apps.'],
-  ['Fantasy', 'optimizer', 'Fantasy optimizer', 'Rank two-pick combinations using each app’s saved payout rules.'],
+  ['Fantasy', 'optimizer', 'Fantasy optimizer', 'Rank two-pick power entries from no-vig fair probabilities and each app’s payouts.'],
   ['Fantasy', 'slip', 'Fantasy slip builder', 'Calculate exact hit-count probabilities and projected payout for your selected slip.'],
   ['Fantasy', 'fantasy-alerts', 'Fantasy alerts', 'Watch for newly entered props and their estimated hit rates.'],
   ['Records', 'prediction', 'Prediction traders', 'Track bid, ask, order book snapshots, traders, positions and trades.'],
@@ -90,14 +90,17 @@ function normalize(data) {
   return data;
 }
 let state = load();
-const quoteCacheWriter = createThrottledCacheWriter(() => ({ quotes: state.quotes.filter(q => q.source === 'local-api'), dfs: state.dfs.filter(item => item.source === 'local-api'), history: state.history.filter(item => item.source === 'local-api'), apiSyncedAt: state.apiSyncedAt }));
+// Nothing is cached before the first sync (or the cache's own prices are shown), so a reload while the
+// API is down still starts from the last prices.
+const quoteCacheWriter = createThrottledCacheWriter(() => !state.apiSyncedAt ? null : ({ quotes: state.quotes.filter(q => q.source === 'local-api'), dfs: state.dfs.filter(item => item.source === 'local-api'), history: state.history.filter(item => item.source === 'local-api'), apiSyncedAt: state.apiSyncedAt }));
 // Show the last cached prices while the first sync runs, unless that sync has already finished.
 void readQuoteCache().then(cache => {
+  if (!cache) return;
+  // Recorded price history stays useful after the prices themselves are too old to show.
+  if (Array.isArray(cache.history) && !state.history.some(item => item.source === 'local-api')) state.history = trimHistory([...state.history, ...cache.history.filter(item => item?.source === 'local-api')]);
   // A cache older than 15 minutes holds prices the books may no longer offer; wait for the sync.
-  if (!cache || Date.now() - Date.parse(cache.apiSyncedAt || 0) > 15 * 60_000 || (state.apiSyncedAt && Date.parse(state.apiSyncedAt) >= Date.parse(cache.apiSyncedAt || 0))) return;
+  if (Date.now() - Date.parse(cache.apiSyncedAt || 0) > 15 * 60_000 || (state.apiSyncedAt && Date.parse(state.apiSyncedAt) >= Date.parse(cache.apiSyncedAt || 0))) return;
   state.quotes = [...state.quotes.filter(q => q.source !== 'local-api'), ...cache.quotes.filter(q => q?.source === 'local-api')];
-  const ids = new Set(state.quotes.map(q => q.id));
-  state.history = cache.history.filter(item => ids.has(item.quoteId));
   // Cached pick'em lines stand in for the props request until it answers.
   if (Array.isArray(cache.dfs) && !dfsLoaded) setFeedDfs(cache.dfs);
   state.apiSyncedAt = cache.apiSyncedAt;
@@ -139,8 +142,25 @@ try {
 const initialSport = new URLSearchParams(location.search).get('sport')?.toUpperCase();
 // Any sport the feed carries (Tennis, MMA ...) can be chosen, not only the six major leagues.
 let sport = initialSport === 'ALL' ? '' : knownSport(initialSport) || 'NFL';
-let parlayIds = Array.isArray(state.suite?.builderIds) ? state.suite.builderIds.filter(id=>state.quotes.some(q=>q.id===id)) : [], fantasyIds = [], fantasyApp = '', stake = 100, fantasyStake = 10;
-let parlayVisibleCount = 40, slipVisibleCount = 40;
+let parlayIds = Array.isArray(state.suite?.builderIds) ? state.suite.builderIds.filter(id=>state.quotes.some(q=>q.id===id)) : [], fantasyIds = [], fantasyApp = '', stake = 100, fantasyStake = 10, slipNotice = '';
+// Adds a pick to the slip the way the app builds entries: one pick per player (a new pick of a player
+// replaces their old one, including the other side of the same line), no more picks than the app's
+// largest entry, and never a part-game line (the feed doesn't say which period it is).
+function addSlipPick(id) {
+  const item = state.dfs.find(x => x.id === id);
+  slipNotice = '';
+  if (!item) return;
+  if (item.app !== fantasyApp) { fantasyApp = item.app; fantasyIds = []; }
+  if (fantasyIds.includes(id)) { fantasyIds = fantasyIds.filter(x => x !== id); return; }
+  if (item.period === 'part') { slipNotice = 'Part-game lines can’t be priced: the feed doesn’t say which half or quarter they are.'; return; }
+  const player = name => String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const kept = fantasyIds.filter(x => player(state.dfs.find(d => d.id === x)?.player) !== player(item.player));
+  const largest = Math.max(0, ...Object.keys(paytables()[item.app] || {}).map(Number).filter(Number.isFinite));
+  if (largest && kept.length >= largest) { slipNotice = `${item.app} entries take at most ${largest} picks.`; return; }
+  if (kept.length < fantasyIds.length) slipNotice = `One pick per player: ${item.player}'s earlier pick was replaced.`;
+  fantasyIds = [...kept, id];
+}
+let parlayVisibleCount = 40, slipVisibleCount = 40, optimizerVisibleCount = 40;
 let evVisibleCount = 40;
 let evOpenId = '';
 const builderSessionKey = `sportslab-builder-session:${accountSyncState().userId || 'guest'}:${STORE}`;
@@ -161,14 +181,14 @@ let trendA = '', trendB = '', traderName = '', predictionPlatform = '';
 let editing = null;
 // Published standard payouts fill in until the member saves their own table for an app and size.
 const paytables = () => withStandardPaytables(state.paytables, apiPaytables);
-const dfsWorkspace = createDfsWorkspace({getState:()=>({...state,quotes:eligibleQuotes(state.quotes),paytables:paytables(),devigMethod:suite.settings().devigMethod,payoutSource:(app,size)=>paytableSource(state.paytables,app,size,apiPaytables),dfsLoading:dfsLoading&&!dfsLoaded}),redraw:()=>redrawDfsBoard(),onSave:slip=>{state.slips.push(slip);commit();},onConfigure:picks=>{fantasyIds=picks.map(item=>item.id);fantasyApp=picks[0].app;setTool('slip');}});
-const oddsScreen = createOddsScreen({storage:localStorage,defaultFormat:getAccountPreferences().oddsFormat,getQuotes:()=>eligibleQuotes(oddsQuotes()),getSportsbookState:()=>sportsbookState,onAllSportsbooks:()=>{const saved=saveSportsbookState('');document.dispatchEvent(new CustomEvent(STATE_CHANGE_EVENT,{detail:{state:'',saved}}));},brandMark,redraw:()=>render(),onSport:value=>{sport=value;history.replaceState(history.state,'',`${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}#odds`);}});
+const dfsWorkspace = createDfsWorkspace({onDeleteSlip:id=>{state.slips=state.slips.filter(slip=>slip.id!==id);commit();},getState:()=>({...state,quotes:eligibleQuotes(state.quotes),bookAvailable,paytables:paytables(),devigMethod:suite.settings().devigMethod,payoutSource:(app,size)=>paytableSource(state.paytables,app,size,apiPaytables),dfsLoading:dfsLoading&&!dfsLoaded}),redraw:()=>redrawDfsBoard(),onSave:slip=>{state.slips.push(slip);commit();},onConfigure:picks=>{fantasyIds=picks.map(item=>item.id);fantasyApp=picks[0].app;setTool('slip');}});
+const oddsScreen = createOddsScreen({storage:localStorage,defaultFormat:getAccountPreferences().oddsFormat,getSettings:()=>suite.settings(),getQuotes:()=>eligibleQuotes(oddsQuotes()),getSportsbookState:()=>sportsbookState,onAllSportsbooks:()=>{const saved=saveSportsbookState('');document.dispatchEvent(new CustomEvent(STATE_CHANGE_EVENT,{detail:{state:'',saved}}));},brandMark,redraw:()=>render(),onSport:value=>{sport=value;history.replaceState(history.state,'',`${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}#odds`);}});
 const suite = createEvSuite({
   getState:()=>state, save:persist, redraw:render, navigate:key=>setTool(key==='tracker'&&!accountSyncState().userId?'ledger':key), getTool:()=>active,
   nativeViews:['ev-pre','ev-live','arb-pre','arb-live','middles','odds','sharp','parlay'],
   getBuilderIds:()=>parlayIds,
   setBuilderIds:ids=>{parlayIds=ids;saveBuilderSession();},
-  getContext:()=>({sport,search,marketType,league:evLeague,date:evDateRange,maxOdds:evMaxOdds,sort:evSort,designFilters,bankroll,kelly,books:selectedSportsbooks?[...selectedSportsbooks]:null}),
+  getContext:()=>({sport,search,marketType,league:evLeague,date:evDateRange,maxOdds:evMaxOdds,sort:evSort,designFilters,toolFilters,bankroll,kelly,books:selectedSportsbooks?[...selectedSportsbooks]:null}),
   restoreContext:c=>{if(!c)return;sport=c.sport||'';search=c.search||'';marketType=c.marketType||'';evLeague=c.league||'';evDateRange=c.date||'all';evMaxOdds=c.maxOdds||'all';evSort=c.sort||'ev';designFilters={...designFilters,...c.designFilters};selectedSportsbooks=Array.isArray(c.books)?new Set(c.books):null;if(Number(c.bankroll)>0)bankroll=Number(c.bankroll);if(Number(c.kelly)>=0&&Number(c.kelly)<=1)kelly=Number(c.kelly);},
   bookSelected:sportsbookSelected, openComparison:showBetComparison
 });
@@ -208,14 +228,30 @@ function persist() {
     localStorage.setItem(STORE, JSON.stringify({ ...account, dfs: dfs.filter(item => item.source !== 'local-api'), quotes: [], history: [] }));
     if(state.suite) writeSuiteState(state.suite);
     const apiCount = state.quotes.filter(q => q.source === 'local-api').length;
-    $('#ev-notice').textContent = state.apiSyncedAt || apiCount ? `${apiCount} API quotes saved. Use Sync API or auto-refresh to update prices.` : 'Waiting for the quote API. Prices appear here once it syncs.';
+    $('#ev-notice').textContent = state.apiSyncedAt || apiCount ? `${apiCount.toLocaleString()} feed prices in this browser. Auto-refresh or Refresh prices updates them.` : 'Waiting for the quote API. Prices appear here once it syncs.';
     return true;
   } catch {
     $('#ev-notice').textContent = 'Browser storage is unavailable. Export your work before leaving this page.';
     return false;
   }
 }
-function snapshotQuote(q) { state.history.push({ id: uid(), quoteId: q.id, sport: q.sport, event: q.displayEvent || q.event, market: q.market, side: q.side, selection: q.selection, book: q.book, line: q.line, odds: q.odds, ts: q.ts, source: q.source }); }
+// Feed price history is kept per series (a book's line, followed as it moves; see normalizeFeed) for 24
+// hours, up to 20 observations each, and not dropped when a price misses one sync. One global cap of
+// 5,000 left most prices with no earlier observation.
+const HISTORY_MS = 24 * 3_600_000, SERIES_POINTS = 20, HISTORY_LIMIT = 30_000;
+function trimHistory(history) {
+  const cutoff = Date.now() - HISTORY_MS, counts = new Map(), kept = [];
+  for (let i = history.length - 1; i >= 0 && kept.length < HISTORY_LIMIT; i--) {
+    const item = history[i];
+    if (item.source !== 'local-api') { kept.push(item); continue; }
+    const key = item.seriesId || item.quoteId, count = counts.get(key) || 0;
+    if (!(Date.parse(item.ts) >= cutoff) || count >= SERIES_POINTS) continue;
+    counts.set(key, count + 1);
+    kept.push(item);
+  }
+  return kept.reverse();
+}
+function snapshotQuote(q) { state.history.push({ id: uid(), quoteId: q.id, seriesId: q.seriesId || q.id, sport: q.sport, event: q.displayEvent || q.event, market: q.market, side: q.side, selection: q.selection, book: q.book, line: q.line, odds: q.odds, ts: q.ts, source: q.source }); }
 // Tools that show feed prices. Other tabs hold the member's own records and forms, so a quote
 // sync must not rebuild them (it would wipe what they are typing).
 const QUOTE_TOOLS = new Set(['odds','ev-pre','ev-live','arb-pre','arb-live','middles','holds','promo','parlay','sharp','line-alerts']);
@@ -224,30 +260,35 @@ const DFS_TOOLS = new Set(['fantasy','optimizer','slip','fantasy-alerts']);
 // Feed DFS picks arrive from the feed worker already merged (the quote snapshot's pick'em lines and
 // GET /site/dfs/props, each line once) and priced against the latest sportsbook quotes, and only
 // when they changed; the page just swaps them in.
-function setFeedDfs(dfs) { state.dfs = [...state.dfs.filter(item => item.source !== 'local-api'), ...dfs]; }
+// An entry saved by an earlier version under a feed line's id is dropped: the feed line is the record.
+function setFeedDfs(dfs) { const ids = new Set(dfs.map(item => item.id)); state.dfs = [...state.dfs.filter(item => item.source !== 'local-api' && !ids.has(item.id)), ...dfs]; }
 // The same pricing in the page, for browsers without module workers.
 const inlinePricer = createDfsPricer();
 let lastSkipped = 0;
 // The snapshot is downloaded and cleaned in a worker so the page stays responsive; browsers
 // without module workers run the same loadAndPrice in the page.
-let feedWorker = null, feedRequest = 0;
+let feedWorker = null, feedRequest = 0, missedDfs = false;
 const pendingFeed = new Map();
 function fetchFeed(kind = 'quotes', apps = []) {
-  const url = kind === 'dfs' ? '/api/ev/site/dfs/props' : '/api/ev/quotes', syncedAt = now(), method = suite.settings().devigMethod;
-  const inline = () => loadAndPrice(inlinePricer, { kind, url, syncedAt, apps, method });
+  const url = kind === 'dfs' ? '/api/ev/site/dfs/props' : '/api/ev/quotes', syncedAt = now(), settings = suite.settings();
+  // DFS lines use the member's devig method, minimum books and maximum margin. After an answer the page
+  // gave up waiting for, the worker resends DFS lines even if unchanged (it counted them as delivered).
+  const job = { kind, url, syncedAt, apps, method: settings.devigMethod, minBooks: settings.minSharpBooks, maxVigPercent: settings.maxVigPercent, force: missedDfs };
+  const delivered = result => { if (result.ok) missedDfs = false; else if (result.kind === 'timeout') missedDfs = true; return result; };
+  const inline = () => loadAndPrice(inlinePricer, job).then(delivered);
   if (feedWorker !== false && typeof Worker === 'function') {
     try {
       if (!feedWorker) {
-        feedWorker = new Worker('/ev-feed-worker.js?v=24', { type: 'module' });
+        feedWorker = new Worker('/ev-feed-worker.js?v=25', { type: 'module' });
         feedWorker.onmessage = ({ data }) => { pendingFeed.get(data.id)?.(data); pendingFeed.delete(data.id); };
         feedWorker.onerror = () => { feedWorker = false; for (const resolve of pendingFeed.values()) resolve({ ok: false, kind: 'worker' }); pendingFeed.clear(); };
       }
       const id = ++feedRequest;
       return new Promise(resolve => {
         pendingFeed.set(id, resolve);
-        feedWorker.postMessage({ id, kind, url, syncedAt, apps, method });
+        feedWorker.postMessage({ id, ...job });
         setTimeout(() => { if (pendingFeed.delete(id)) resolve({ ok: false, kind: 'timeout' }); }, 60_000);
-      }).then(result => result.kind === 'worker' ? inline() : result);
+      }).then(result => result.kind === 'worker' && !result.message ? inline() : delivered(result));
     } catch { feedWorker = false; }
   }
   return inline();
@@ -255,8 +296,12 @@ function fetchFeed(kind = 'quotes', apps = []) {
 // DFS props (GET /site/dfs/props, about 30k lines) load while a DFS tool is open and refresh every
 // minute; the worker prices them with the quote snapshot's lines. Payout tables (GET
 // /site/dfs/payouts) load once and name the apps the props are requested for.
-let dfsSyncedAt = 0, dfsLoading = false, dfsLoaded = false, apiPaytables = {}, payouts = null;
+let dfsSyncedAt = 0, dfsLoading = false, dfsLoaded = false, dfsError = '', dfsFailures = 0, dfsRetryAt = 0, apiPaytables = {}, payouts = null, payoutsAt = 0;
 function loadPayouts() {
+  // Payout tables change rarely: fetched once an hour, and after a failure no sooner than a minute later.
+  if (payouts && Date.now() - payoutsAt > 3_600_000) payouts = null;
+  if (!payouts && Date.now() - payoutsAt < 60_000 && payoutsAt) return Promise.resolve([]);
+  if (!payouts) payoutsAt = Date.now();
   payouts ||= fetch('/api/ev/site/dfs/payouts', { cache: 'no-store', signal: AbortSignal.timeout(15_000) })
     .then(response => { if (!response.ok) throw Error(`payouts ${response.status}`); return response.json(); })
     .then(records => {
@@ -267,18 +312,39 @@ function loadPayouts() {
     .catch(() => { payouts = null; return []; });
   return payouts;
 }
+// Prediction contracts from the quote API (GET /site/prediction/contracts), shown read-only beside the
+// member's own. ProphetX sends up to 113 unlabeled contracts per event that can't be told apart, so an
+// event with more than one contract per platform is left out, as are crossed books (bid above ask).
+let feedContracts = [], contractsLoading = false, contractsAt = 0;
+function ensureContracts() {
+  if (active !== 'prediction' || contractsLoading || Date.now() - contractsAt < 60_000 || document.hidden && contractsAt) return;
+  contractsLoading = true;
+  fetch('/api/ev/site/prediction/contracts', { cache: 'no-store', signal: AbortSignal.timeout(20_000) })
+    .then(response => response.ok ? response.json() : Promise.reject(Error(String(response.status))))
+    .then(rows => {
+      const list = Array.isArray(rows) ? rows : [], perEvent = new Map(), key = row => `${row?.platform}|${row?.event}`;
+      for (const row of list) perEvent.set(key(row), (perEvent.get(key(row)) || 0) + 1);
+      feedContracts = list.filter(row => perEvent.get(key(row)) === 1 && typeof row?.event === 'string' && row.event && Number(row.yes_bid_cents) >= 0 && Number(row.yes_ask_cents) <= 100 && Number(row.yes_bid_cents) <= Number(row.yes_ask_cents) && Number.isFinite(Date.parse(row.ts)))
+        .map(row => ({ id: `feed-contract:${key(row)}`, platform: canonicalPlatform(row.platform), event: row.event, sport: knownSport(row.sport) || 'Other', bid: Number(row.yes_bid_cents), ask: Number(row.yes_ask_cents), ...(Number.isFinite(Number(row.last)) ? { last: Number(row.last) } : {}), volume: Number(row.volume) || 0, ts: row.ts, source: 'local-api' }));
+      contractsAt = Date.now();
+    })
+    .catch(() => { contractsAt = Date.now() - 30_000; })
+    .finally(() => { contractsLoading = false; if (active === 'prediction') render(); });
+}
 function ensureDfsFeed() {
   if (!DFS_TOOLS.has(active)) return;
   // The first load runs even in a background tab so the lines are ready when it is opened; refreshes
   // wait for the tab to be visible.
-  if (dfsLoading || (dfsLoaded && (Date.now() - dfsSyncedAt < 60_000 || document.hidden))) { void loadPayouts(); return; }
+  if (dfsLoading || Date.now() < dfsRetryAt || (dfsLoaded && (Date.now() - dfsSyncedAt < 60_000 || document.hidden))) { void loadPayouts(); return; }
   dfsLoading = true;
   let changed = false;
   void loadPayouts().then(apps => fetchFeed('dfs', apps)).then(result => {
-    if (!result.ok) return;
-    dfsSyncedAt = Date.now();
+    // A failed props request keeps the last lines and says so; retries back off up to 5 minutes.
+    if (!result.ok) { dfsFailures += 1; dfsRetryAt = Date.now() + Math.min(300_000, 15_000 * 2 ** Math.min(dfsFailures, 5)); dfsError = result.kind === 'timeout' ? 'The DFS lines request timed out.' : 'The DFS lines could not be loaded.'; changed = true; return; }
+    if (dfsError) changed = true;
+    dfsSyncedAt = Date.now(); dfsFailures = 0; dfsRetryAt = 0; dfsError = '';
     // No dfs in the answer: the priced picks are the same as last time.
-    if (Array.isArray(result.dfs)) { setFeedDfs(result.dfs); persist(); changed = true; }
+    if (Array.isArray(result.dfs)) { setFeedDfs(result.dfs); evaluateAlerts(); persist(); changed = true; }
   }).finally(() => {
     // The first answer, even an empty or failed one, replaces the loading message.
     const first = !dfsLoaded;
@@ -293,9 +359,12 @@ async function syncLocalApi() {
   if (!result.ok) {
     if (result.kind === 'timeout') throw Object.assign(Error('The request timed out. Saved prices were kept.'), { name: 'TimeoutError' });
     if (result.kind === 'network') throw Object.assign(Error('The quote feed could not be reached. Saved prices were kept.'), { retryable: true });
-    if (result.kind === 'unreadable') throw Object.assign(Error('The quote server returned an unreadable response. Saved prices were kept.'), { retryable: result.status === 429 || result.status >= 500 });
+    // A 200 that can't be read was cut off mid-download; that is worth another try.
+    if (result.kind === 'unreadable') throw Object.assign(Error('The quote server returned an unreadable response. Saved prices were kept.'), { retryable: result.status === 200 || result.status === 429 || result.status >= 500 });
+    if (result.kind === 'worker') throw Object.assign(Error('The price update failed in this browser. Saved prices were kept.'), { retryable: true });
     if (result.kind === 'shape') throw invalid('The EV API did not return a quotes array.');
-    if (result.kind === 'partial') throw invalid('Quote sync needs a complete snapshot; this response is partial or paginated.');
+    // A partial snapshot (the API restarting) is temporary: keep the old prices and try again.
+    if (result.kind === 'partial') throw Object.assign(Error('The quote API sent a partial snapshot. Saved prices were kept.'), { retryable: true });
     const payload = result.payload;
     const failure = Error(typeof payload?.error === 'string' ? payload.error : typeof payload?.detail === 'string' ? payload.detail : 'The EV API is unavailable. Saved prices were kept.');
     failure.retryable = payload?.retryable !== false && ![400,401,403,404,405,422].includes(result.status);
@@ -311,15 +380,13 @@ async function syncLocalApi() {
   if (state !== workspace) throw invalid('The workspace changed during sync. Try again after your import.');
   const existing = new Map(state.quotes.filter(quote => quote.source === 'local-api').map(quote => [quote.id, quote]));
   state.quotes = [...state.quotes.filter(quote => quote.source !== 'local-api' && !feed.has(quote.id)), ...feed.values()];
-  const retainedIds = new Set(state.quotes.map(quote => quote.id));
-  state.history = state.history.filter(item => retainedIds.has(item.quoteId));
   for (const quote of feed.values()) {
     const prior = existing.get(quote.id);
     if (!prior || prior.odds !== quote.odds || prior.line !== quote.line) snapshotQuote(quote);
   }
-  const apiHistory = state.history.filter(item => item.source === 'local-api').slice(-5_000);
-  state.history = [...state.history.filter(item => item.source !== 'local-api'), ...apiHistory];
-  state.apiSyncedAt = now();
+  state.history = trimHistory(state.history);
+  // The time the proxy fetched what it served: a held-over snapshot isn't shown as just updated.
+  state.apiSyncedAt = result.snapshotAt && Date.parse(result.snapshotAt) <= Date.now() + 5_000 ? result.snapshotAt : now();
   // Records the feed sent that can't be used. Pick'em lines (now DFS picks), older copies, expired
   // prices and started games are not "unusable".
   lastSkipped = (skipped.invalid || 0) + (skipped.mislabeled || 0) + (skipped.inconsistent || 0);
@@ -332,7 +399,7 @@ async function syncLocalApi() {
     if (active === 'odds' && !suite.hasView(active)) oddsScreen.refresh();
     else renderKeepingView();
   }
-  return { count: feed.size, saved, skipped: lastSkipped, expired: skipped.stale };
+  return { count: feed.size, saved, skipped: lastSkipped, expired: skipped.stale, heldOver: Boolean(result.stale || result.warmingUp) };
 }
 // Re-render after a price sync without moving the reader: sideways scroll positions and open
 // menus inside the view come back as they were.
@@ -353,18 +420,21 @@ function emailAlertsControl() {
   const on = state.alertEmail === true;
   return `<div class="browser-alerts email-alerts" data-state="${on ? 'on' : 'off'}"><button type="button" data-email-alerts aria-pressed="${on}">${on ? 'Email alerts on' : 'Email me new matches'}</button><small>${on ? 'New matches are emailed to your account address (checked on a schedule; each match is sent once).' : 'Get new matches by email, even when VisualOdds is closed.'}</small></div>`;
 }
+// The member's alert rules against current prices on their books. Only current matches are remembered,
+// so a price that newly meets a rule fires once and the list stays as small as the matches (it lives in
+// the account document beside tracked bets).
+const alertState = () => ({ ...state, quotes: eligibleQuotes(state.quotes) });
 function evaluateAlerts() {
-  const fresh = [];
+  const fresh = [], current = alertState(), settings = suite.settings();
   for (const rule of state.alerts) {
     if (rule.enabled === false) continue;
-    const matched = alertMatches(rule, state);
+    const matched = alertMatches(rule, current, { settings });
     const seen = new Set(rule.seen || []);
     for (const match of matched) if (!seen.has(match.id)) {
       state.notifications.unshift({ id: uid(), ruleId: rule.id, message: `${rule.kind === 'fantasy-new' ? 'New fantasy prop' : rule.kind === 'ev' ? 'EV threshold' : rule.kind === 'movement' ? 'Line movement' : 'Price threshold'}: ${match.label}`, ts: now(), read: false });
       fresh.push(state.notifications[0]);
-      seen.add(match.id);
     }
-    rule.seen = [...seen];
+    rule.seen = matched.map(match => match.id);
   }
   state.notifications = state.notifications.slice(0, 300);
   deliverAlerts(fresh);
@@ -454,7 +524,6 @@ function renderEvThresholds() {
     + choice('minProb','◔','Min Win Chance',MIN_WIN_CHANCE,'Fair no-vig probability. Raise it to skip long shots.');
 }
 let inlineDetail=null;
-const evReferenceModels = new Map();
 let renderedTool = '';
 function render() {
   // Switching tools: drop the old view before anything measures layout. Leaving it in place made
@@ -462,6 +531,7 @@ function render() {
   if (renderedTool !== active) { $('#ev-view').replaceChildren(); renderedTool = active; }
   feedControls?.update();
   ensureDfsFeed();
+  ensureContracts();
   if (active === 'tracker') { location.replace(legacyBetTrackerUrl(new URL(location.href)) || betTrackerUrl(sport.toLowerCase())); return; }
   renderNav();
   const titles = { odds:'Odds Screen', 'ev-pre':'Positive EV', 'ev-live':'Live Positive EV', fantasy:'DFS Props', 'arb-pre':'Arbitrage', 'arb-live':'Live Arbitrage', sharp:'Smart Money', tracker:'Bet Tracker' };
@@ -527,8 +597,9 @@ function render() {
   const usesFlat = ['arb-pre','arb-live'].includes(active);
   $('#ev-kelly').value = usesKelly ? kelly : flatMultiplier.toFixed(2);
   const dataKind = active === 'fantasy' ? (state.dfs.length ? 'Entered props' : 'No props yet') : hasApiSnapshot() ? 'API snapshot' : 'No prices yet';
-  $('#ev-data-kind').textContent = toolDataLabel(active, state, dataKind);
-  $('#ev-top-badge').textContent = toolDataLabel(active, state, dataKind);
+  const dataLabel = toolDataLabel(active, { ...state, dfsLoading: dfsLoading && !dfsLoaded, dfsError, feedContracts }, dataKind);
+  $('#ev-data-kind').textContent = dataLabel;
+  $('#ev-top-badge').textContent = dataLabel;
   $('#ev-multiplier-label').textContent = usesKelly ? 'Kelly multiplier' : 'Flat multiplier';
   $('#ev-kelly').disabled = !usesKelly && !usesFlat;
   $('#ev-kelly').min = usesKelly ? '0' : '0.05';
@@ -562,9 +633,8 @@ function render() {
     const heroActions={ledger:button('Performance','data-suite-action="navigate" data-id="performance"')+button('Add a bet','data-evl-action="add" data-evl-id="" data-evl-hero class="tool-hero-primary"'),performance:button('Bet ledger','data-suite-action="navigate" data-id="ledger" class="tool-hero-primary"'),alerts:button('Pricing & filters','data-suite-action="navigate" data-id="settings"'),settings:button('Alert center','data-suite-action="navigate" data-id="alerts"')};
     content=`<div class="tool-workspace es-2026" data-tool-workspace="${esc(active)}">${toolHero({title:pageTitle,description:esc(toolMeta[active][3]),group:toolMeta[active][0],symbol:SUITE_ICONS[active],actions:heroActions[active]||'',stats:suite.heroStats?.(active)||[]})}<div class="tool-content">${content}</div></div>`;
   }
-  $('#ev-view').innerHTML = secondaryShell(active, content, {actions:viewActions[active] || '',sport,sports:feedSports(),search,dataLabel:toolDataLabel(active,state,dataKind),filters:toolFilterBar(active, toolFilters, state.quotes.filter(q => !sport || q.sport === sport))});
+  $('#ev-view').innerHTML = secondaryShell(active, content, {actions:viewActions[active] || '',sport,sports:feedSports(),search,dataLabel,filters:toolFilterBar(active, toolFilters, state.quotes.filter(q => !sport || q.sport === sport))});
   suite.mount();
-  if (positiveScreen && !suiteView) bindEvReferenceCards();
   document.dispatchEvent(new Event('ev-tool-change'));
   if(inlineDetail?.tool===active)showBetComparison(inlineDetail.id,inlineDetail.kind,{force:true});else inlineDetail=null;
 }
@@ -685,23 +755,31 @@ function renderEvExpanded(quote, fair, ev, asCard = false) {
   </article>${asCard ? '' : '</td></tr>'}`;
 }
 
-const EV_SANITY_LIMIT = .25, EV_SINGLE_BOOK_LIMIT = .10;
+// Pricing every quote takes 0.1-0.2 s, so Positive EV reuses it until the prices, pricing settings, sport
+// or league change, and for at most 10 seconds as prices age out.
+let evPricing = { quotes: null, key: '', at: 0, rows: [] };
+function pricedQuotes(pool, settings) {
+  const key = JSON.stringify([sport, evLeague, settings]);
+  if (evPricing.quotes !== state.quotes || evPricing.key !== key || Date.now() - evPricing.at > 10_000) evPricing = { quotes: state.quotes, key, at: Date.now(), rows: computeAdvancedEv(pool, settings) };
+  return evPricing.rows;
+}
 function renderEv(live) {
   // Fair odds use every book in the market; the Starts window only narrows the result rows
   // (filtering first would drop books that don't report a start time from the consensus).
   const pool = state.quotes.filter(q => (!sport || q.sport === sport) && (!evLeague || (q.league || q.sport) === evLeague));
   const settings = suite.settings();
-  const all = computeAdvancedEv(pool, settings).filter(row=>Boolean(row.quote.live)===live && suite.quoteVisible(row.quote) && (live || startsWithin(row.quote, evDateRange)));
+  const all = pricedQuotes(pool, settings).filter(row=>Boolean(row.quote.live)===live && suite.quoteVisible(row.quote) && (live || startsWithin(row.quote, evDateRange)));
   const { evMinOdds, minEv, minProb } = toolFilters;
-  // Without a saved maximum, EV above 25% is treated as a feed error (a mislabeled or stale price),
-  // the way arbitrage above 15% is. Real edges are almost always a few percent.
+  // Without a saved maximum, EV above 25% (10% with one reference book) is a feed error, the way
+  // arbitrage above 15% is, and a game line counts only from a book pricing both sides (plausibleEv).
   const defaultCaps = settings.maxEvPercent === '' || settings.maxEvPercent == null;
-  // One soft book disagreeing by 10%+ is far more often a stale or mislabeled price than value.
-  const capFor = row => !defaultCaps ? Infinity : (row.consensus?.books?.length || 0) <= 1 ? EV_SINGLE_BOOK_LIMIT : EV_SANITY_LIMIT;
-  const hiddenAsErrors = all.filter(row => row.ev > capFor(row)).length;
-  const rows = all.filter(row => row.ev <= capFor(row)).filter(({quote:q,ev,fair}) => ev > 0 && oddsWithin(q.odds, evMinOdds, evMaxOdds === 'all' ? '' : evMaxOdds)
+  const markets = marketRowsOf(pool), believable = row => plausibleEv(row, markets, settings);
+  const matching = all.filter(({quote:q,ev,fair}) => ev > 0 && oddsWithin(q.odds, evMinOdds, evMaxOdds === 'all' ? '' : evMaxOdds)
     && (!minEv || ev * 100 >= Number(minEv)) && (!minProb || fair * 100 >= Number(minProb))
     && sportsbookSelected(q.book) && (!marketType || q.type === marketType) && (!search || [q.displayEvent,q.event,q.market,q.book,q.selection,q.sport,q.player].some(value => filterText(value))));
+  // Counted among the rows the other filters would show, so the note matches what is hidden.
+  const hiddenAsErrors = matching.filter(row => !believable(row)).length;
+  const rows = matching.filter(believable);
   const startOf = q => { const start = Date.parse(q.startTime); return Number.isFinite(start) ? start : Infinity; };
   if (evSort === 'event') rows.sort((a,b) => (a.quote.displayEvent || a.quote.event).localeCompare(b.quote.displayEvent || b.quote.event) || b.ev - a.ev);
   else if (evSort === 'odds') rows.sort((a,b) => decimal(b.quote.odds) - decimal(a.quote.odds));
@@ -710,7 +788,8 @@ function renderEv(live) {
   else rows.sort((a,b) => b.ev - a.ev);
   rows.sort((a,b)=>Number(Boolean(comparisonAnnotations(b.quote.id).pin))-Number(Boolean(comparisonAnnotations(a.quote.id).pin)));
   rows.sort((a,b)=>Number(Boolean(state.suite?.flags?.[b.quote.id]?.pin))-Number(Boolean(state.suite?.flags?.[a.quote.id]?.pin)));
-  if (preserveLiveOrder) preserveReadingOrder(rows, [...document.querySelectorAll('.evb-row[data-wager-id]')].map(card=>card.dataset.wagerId), row=>row.quote.id);
+  // Live rows keep their reading order between 3-second refreshes; pregame rows re-sort, so a new edge isn't stuck below "Show more".
+  if (preserveLiveOrder && live) preserveReadingOrder(rows, [...document.querySelectorAll('.evb-row[data-wager-id]')].map(card=>card.dataset.wagerId), row=>row.quote.id);
   const noLive = live && !pool.some(q => q.live);
   const emptyTitle = noLive ? 'No live games in the feed right now' : !pool.length ? 'No prices for this sport yet' : 'No positive EV selections match these filters';
   const emptyBody = noLive ? 'Live +EV appears here when the quote feed sends in-play prices. Pregame +EV is under the Pregame tab.' : !pool.length ? 'Prices appear here once the odds feed syncs.' : 'No book is currently priced above the fair line for these filters. Clear a filter or wait for the next refresh.';
@@ -721,9 +800,11 @@ function renderEv(live) {
   return `<div class="ev-stack ev-positive-screen evb-board"><div class="wager-results-bar evb-results-bar">${summary}</div>${rows.length ? renderEvBoard(evBoardContext(shown, live)) + more : empty(emptyTitle,emptyBody)}<p class="ev-caption ev-method-note">Fair probability uses your saved reference-book, weighting and no-vig settings; by default Pinnacle counts three times as much as other books. Recommended stakes use your bankroll and Kelly multiplier. Open a row to compare every book. ${live ? 'Live entries expire after 90 seconds.' : ''}${hiddenAsErrors ? ` ${hiddenAsErrors} ${hiddenAsErrors === 1 ? 'price' : 'prices'} above 25% EV (10% when only one book sets the fair price) ${hiddenAsErrors === 1 ? 'is' : 'are'} hidden as likely feed errors; set a maximum EV in Pricing &amp; filters to change this.` : ''} Confirm price, limits and freshness independently.</p></div>`;
 }
 
+// A stake no larger than the book's limit or the exchange's available amount, when the feed sends one.
+const cappedStake = (amount, quote) => { const limits = [quote?.maxStake, quote?.exchange ? quote?.liquidity : undefined].map(Number).filter(value => value > 0); return limits.length ? Math.min(amount, ...limits) : amount; };
 function evBoardContext(rows, live) {
   return {rows, live, sort:evSort, openId:evOpenId, oddsLabel, age,
-    stake:(fair,odds)=>fractionalKellyStake(bankroll,kelly,fair,odds),
+    stake:(fair,odds,quote)=>cappedStake(fractionalKellyStake(bankroll,kelly,fair,odds),quote),
     kellyLabel:`${kelly === 1 ? 'Full' : kelly === .5 ? '½' : kelly === .25 ? '¼' : kelly} Kelly`,
     flags:id=>({...comparisonAnnotations(id),...state.suite?.flags?.[id]}),
     detail:comparisonForQuote};
@@ -739,7 +820,7 @@ function toggleEvBoardRow(id) {
   evOpenId = evOpenId === id || analysisOpen ? '' : id;
   if (!evOpenId) return;
   const row = view.querySelector(`.evb-row[data-evb-row="${CSS.escape(id)}"]`);
-  const match = row && computeAdvancedEv(quoteSource(), suite.settings()).find(item => item.quote.id === id);
+  const match = row && (evPricing.rows.find(item => item.quote.id === id) || computeAdvancedEv(quoteSource(), suite.settings()).find(item => item.quote.id === id));
   if (!match) { evOpenId = ''; return; }
   row.classList.add('is-open');
   row.querySelector('[data-evb-toggle]')?.setAttribute('aria-expanded','true');
@@ -759,41 +840,6 @@ function evReferenceModel(quote, fair, ev) {
     extraActions:quote.live?'':`<button type="button" class="bet-inline-icon" data-parlay="${esc(quote.id)}" aria-label="Add to parlay" title="Add to parlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/></svg></button>`,
     referenceRows:[{selection:'Line',prices:model.columns.map(column=>({value:column.line,difference:column.difference}))},{selection:'Odds',prices:model.columns.map(column=>({value:column.odds}))}]
   };
-}
-
-function bindEvReferenceCard(root, model) {
-  bindComparison(root,model,{
-    onEdit:()=>openForm('quote',model.id),
-    onTrack:()=>{
-      const quote=state.quotes.find(item=>item.id===model.id);
-      if(quote)suite.trackQuote(quote,active);
-    },
-    onSwap:()=>{
-      const quote=quoteSource().find(item=>item.id===model.swapId);
-      if(!quote)return;
-      const next=comparisonForQuote(quote),fair=next.rawFair;
-      const replacement=evReferenceModel(quote,fair,expectedReturn(fair,quote.odds));
-      root.innerHTML=betComparisonCard(replacement);
-      bindEvReferenceCard(root,replacement);
-      root.querySelector('[data-comparison-action="swap"]')?.focus({preventScroll:true});
-    },
-    onRefresh:()=>{
-      const quote=quoteSource().find(item=>item.id===model.id);
-      if(!quote)return;
-      const next=comparisonForQuote(quote),fair=next.rawFair;
-      const replacement=evReferenceModel(quote,fair,expectedReturn(fair,quote.odds));
-      root.innerHTML=betComparisonCard(replacement);
-      bindEvReferenceCard(root,replacement);
-      root.querySelector('[data-comparison-action="refresh"]')?.focus({preventScroll:true});
-    }
-  });
-}
-
-function bindEvReferenceCards() {
-  $('#ev-view').querySelectorAll('.ev-reference-mount').forEach(root=>{
-    const model=evReferenceModels.get(root.dataset.referenceId);
-    if(model)bindEvReferenceCard(root,model);
-  });
 }
 
 function comparisonForQuote(quote) {
@@ -842,21 +888,39 @@ function comparisonForQuote(quote) {
 // Line History modal for any [data-line-history="<quote id>"] button.
 // The quote API keeps each price's history (GET /site/odds/history?id=&hours=). Pull it for every
 // book in this market so the chart starts with real movement, not only what this browser saw.
+// The API's recorded prices for the opened market: the opened book's sides plus up to four other books
+// (sharp books first), one request at a time and cached for a minute, so opening a chart can't use up
+// the price feed's request limit. The API keys rows by its own record id (without this site's
+// "local-api:" prefix) and sometimes files another selection's price under the same id within the same
+// scrape, so only rows at this line, one per second, are kept.
+const DEFAULT_SHARP_BOOKS = new Set(['pinnacle', 'circa', 'circa sports', 'betfair', 'betfair exchange']);
+const serverHistoryCache = new Map();
 async function loadServerHistory(quote) {
-  const key = marketKey(quote);
-  const peers = state.quotes.filter(q => q.source === 'local-api' && q.feedId && marketKey(q) === key).slice(0, 24);
-  await Promise.all(peers.map(async peer => {
-    try {
-      const response = await fetch(`/api/ev/site/odds/history?id=${encodeURIComponent(peer.feedId)}&hours=24`, { cache: 'no-store', signal: AbortSignal.timeout(5_000) });
-      const rows = response.ok ? await response.json() : [];
-      const seen = new Set(state.history.filter(item => item.quoteId === peer.id).map(item => item.ts));
-      for (const row of Array.isArray(rows) ? rows : []) {
-        const ts = Date.parse(row?.ts), odds = Number(row?.odds);
-        if (!Number.isFinite(ts) || !Number.isFinite(decimal(odds)) || seen.has(new Date(ts).toISOString())) continue;
-        state.history.push({ id: uid(), quoteId: peer.id, sport: peer.sport, event: peer.displayEvent || peer.event, market: peer.market, side: peer.side, selection: peer.selection, book: peer.book, line: peer.line, odds, ts: new Date(ts).toISOString(), source: 'local-api' });
-      }
-    } catch { /* The chart still shows what this browser recorded. */ }
-  }));
+  const key = marketKey(quote), sharp = book => DEFAULT_SHARP_BOOKS.has(String(book).toLowerCase());
+  const peers = state.quotes.filter(q => q.source === 'local-api' && q.feedId && marketKey(q) === key);
+  const others = [...new Set(peers.filter(q => q.book !== quote.book).sort((a, b) => Number(sharp(b.book)) - Number(sharp(a.book))).map(q => q.book))].slice(0, 4);
+  for (const peer of peers.filter(q => q.book === quote.book || others.includes(q.book))) {
+    const id = String(peer.feedId).replace(/^local-api:/, ''), cached = serverHistoryCache.get(id);
+    let rows = cached && Date.now() - cached.at < 60_000 ? cached.rows : null;
+    if (!rows) {
+      try {
+        const response = await fetch(`/api/ev/site/odds/history?id=${encodeURIComponent(id)}&hours=24`, { cache: 'no-store', signal: AbortSignal.timeout(5_000) });
+        rows = response.ok ? await response.json() : [];
+      } catch { rows = []; /* The chart still shows what this browser recorded. */ }
+      if (!Array.isArray(rows)) rows = [];
+      serverHistoryCache.set(id, { at: Date.now(), rows });
+    }
+    const seen = new Set(state.history.filter(item => item.quoteId === peer.id).map(item => item.ts));
+    const usable = rows.map(row => ({ ts: Date.parse(row?.ts), odds: Number(row?.odds), line: row?.line })).filter(row => Number.isFinite(row.ts) && Number.isFinite(decimal(row.odds))
+      && (row.line == null || row.line === '' || peer.line === '' || Number(row.line) === Number(peer.line))).sort((a, b) => a.ts - b.ts);
+    for (const [index, row] of usable.entries()) {
+      // A row followed within a second by another for the same id is a mixed-up copy from one scrape.
+      if (usable[index + 1] && usable[index + 1].ts - row.ts < 1_000) continue;
+      const ts = new Date(row.ts).toISOString();
+      if (seen.has(ts)) continue;
+      state.history.push({ id: uid(), quoteId: peer.id, seriesId: peer.seriesId || peer.id, sport: peer.sport, event: peer.displayEvent || peer.event, market: peer.market, side: peer.side, selection: peer.selection, book: peer.book, line: peer.line, odds: row.odds, ts, source: 'local-api' });
+    }
+  }
   state.history.sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
 }
 async function openQuoteLineHistory(id, trigger) {
@@ -886,7 +950,10 @@ function showBetComparison(id, kind = 'quote', options = {}) {
     const item = state.dfs.find(entry => entry.id === id);
     if (!item) return;
     const peers = state.dfs.filter(entry => entry.player === item.player && entry.market === item.market && entry.event === item.event && entry.side === item.side);
-    model = {market:item.market,sport:item.sport,event:item.event,time:age(item.ts),selection:`${item.player} ${item.side} ${fmtLine(item.line)}`,probability:Number.isFinite(Number(item.probability)) ? percent(Number(item.probability)) : null,probabilityLabel:'Est. hit rate',fairLabel:'Fair value',context:'Entered DFS props',note:'DFS hit rates are entered estimates. No sportsbook odds or fair value are calculated for these props.',columns:peers.map(entry => ({name:entry.app,mark:brandMark(canonicalPlatform(entry.app)),line:fmtLine(entry.line),odds:'—'})),actions:[{label:'Edit prop',icon:'✎',attrs:`data-compare-edit-dfs="${esc(item.id)}"`},{label:'Add to slip',icon:'＋',attrs:`data-compare-dfs="${esc(item.id)}"`}]};
+    const feed = item.source === 'local-api', known = item.probability != null && item.probability !== '' && Number.isFinite(Number(item.probability));
+    model = {market:item.market,sport:item.sport,event:item.event,time:feed ? startLabel(item) : age(item.ts),selection:`${item.player} ${item.side} ${fmtLine(item.line)}`,probability:known ? percent(Number(item.probability)) : null,probabilityLabel:feed ? 'Fair (no-vig)' : 'Est. hit rate',fairLabel:'Fair value',context:feed ? 'Feed DFS line' : 'Entered DFS props',
+      note:feed ? (item.period === 'part' ? 'A 1st-half or 1st-quarter line sent under the full-game stat; it isn’t compared with full-game sportsbook prices.' : known ? `Fair probability: ${(item.probabilityBooks || []).join(', ')} at this exact line, devigged (${item.probabilityMethod || 'multiplicative'}).` : 'No sportsbook prices both sides of this exact line, so there is no fair probability.') : 'DFS hit rates are entered estimates. No sportsbook odds or fair value are calculated for these props.',
+      columns:feed && item.bookLines?.length ? item.bookLines.map(line => ({name:line.book,mark:brandMark(line.book),line:fmtLine(item.line),odds:[Number.isFinite(Number(line.over)) ? `O ${oddsLabel(line.over)}` : '', Number.isFinite(Number(line.under)) ? `U ${oddsLabel(line.under)}` : ''].filter(Boolean).join(' / ') || '—'})) : peers.map(entry => ({name:entry.app,mark:brandMark(canonicalPlatform(entry.app)),line:fmtLine(entry.line),odds:'—'})),actions:[...(feed ? [] : [{label:'Edit prop',icon:'✎',attrs:`data-compare-edit-dfs="${esc(item.id)}"`}]),{label:'Add to slip',icon:'＋',attrs:`data-compare-dfs="${esc(item.id)}"`}]};
   } else if (kind === 'tracked') {
     const bet = state.bets.find(entry => entry.id === id);
     if (!bet) return;
@@ -967,7 +1034,7 @@ function pairCells(q, pinned, metric) {
     <td class="evb-event"><small>${esc(startLabel(q))}</small><strong>${esc(q.displayEvent || q.event)}</strong><span class="evb-league">${leagueMark(sportKey) || ''}<span>${esc(q.sport)}${q.league && q.league !== q.sport ? ` · ${esc(q.league)}` : ''}</span></span><small class="pair-event-market">${esc(market)}</small></td>
     <td class="evb-market"><span>${esc(market)}</span>${q.live ? '<small class="evb-live-dot">Live</small>' : ''}</td>`;
 }
-const pairLeg = (ctx, q, side, note = '') => `<td class="pair-leg pair-leg-${side}"><div><span class="evb-book-logo">${bookLogo(q.book, 30)}</span><span class="pair-leg-copy"><strong>${esc(selectionText(q))}</strong><small>${esc(q.book)}</small>${note ? `<small class="pair-leg-note">${note}</small>` : ''}</span><span class="evb-price">${esc(ctx.oddsLabel(q.odds))}</span></div></td>`;
+const pairLeg = (ctx, q, side, note = '') => `<td class="pair-leg pair-leg-${side}"><div><span class="evb-book-logo">${bookLogo(q.book, 30)}</span><span class="pair-leg-copy"><strong>${esc(selectionText(q))}</strong><small>${esc(q.book)}${q.exchange && !(Number(q.commissionPercent) >= 0 || Number(q.commission) >= 0) ? ' · exchange, commission not included' : ''}</small>${note ? `<small class="pair-leg-note">${note}</small>` : ''}</span><span class="evb-price">${esc(ctx.oddsLabel(q.odds))}</span></div></td>`;
 const pairToggle = (key, label) => `<button type="button" class="evb-icon evb-toggle" data-pair-toggle="${esc(key)}" aria-expanded="${pairOpenId === key}" aria-controls="pair-detail-${esc(key)}" aria-label="Details for ${esc(label)}" title="Details">${boardIcon('chevron')}</button>`;
 const pairTable = (label, heads, body) => `<div class="evb-table-wrap"><table class="evb-table pair-table" aria-label="${esc(label)}"><thead><tr>${heads.map(([text, cls = '']) => `<th scope="col"${cls ? ` class="${cls}"` : ''}>${text}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
 const pairStats = items => `<dl class="evb-stats">${items.map(([label, value, cls = '']) => `<div class="${cls}"><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>`;
@@ -1111,7 +1178,7 @@ function pairLadder(x) {
   const word = leg => leg ? {win:'Win', push:'Push', loss:'Loss'}[leg.result] || '—' : '—';
   const net = result => !result ? '' : result.a.result === 'win' && result.b.result === 'win' ? 'is-best' : result.profit >= 0 ? 'is-plus' : 'is-loss';
   const legRow = (q, pick) => `<tr><th scope="row"><span>${esc(selectionText(q))}</span></th>${results.map(result => `<td class="pair-result is-${pick(result)?.result || 'none'}"><span>${word(pick(result))}</span></td>`).join('')}</tr>`;
-  return `<div class="evb-matrix-scroll" tabindex="0" role="region" aria-label="Net result at each final score. Scroll horizontally to see every score."><table class="evb-matrix pair-ladder"><thead><tr><th scope="col" class="evb-matrix-side">${x.kind === 'spread' ? `${esc(over.side)} margin` : 'Final total'}</th>${scores.map(score => `<th scope="col">${score}</th>`).join('')}</tr></thead><tbody>${legRow(over, result => result?.a)}${legRow(under, result => result?.b)}<tr class="is-selected-side"><th scope="row"><span>Net result</span></th>${results.map(result => `<td class="${net(result)}"><span>${result ? money(result.profit) : '—'}</span></td>`).join('')}</tr></tbody></table></div>`;
+  return `<div class="evb-matrix-scroll" tabindex="0" role="region" aria-label="Net result at each final score. Scroll horizontally to see every score."><table class="evb-matrix pair-ladder"><thead><tr><th scope="col" class="evb-matrix-side">${x.kind === 'spread' ? `${esc(over.selection || over.side)} margin` : 'Final total'}</th>${scores.map(score => `<th scope="col">${score}</th>`).join('')}</tr></thead><tbody>${legRow(over, result => result?.a)}${legRow(under, result => result?.b)}<tr class="is-selected-side"><th scope="row"><span>Net result</span></th>${results.map(result => `<td class="${net(result)}"><span>${result ? money(result.profit) : '—'}</span></td>`).join('')}</tr></tbody></table></div>`;
 }
 
 // ctx: pairContext({stake})
@@ -1124,11 +1191,12 @@ function renderMiddleBoard(rows, ctx, empty) {
     const calc = `data-suite-action="middle" data-id="${esc(over.id)}" data-hedge="${esc(under.id)}" aria-haspopup="dialog"`;
     const cells = pairCells(over, pinned, {value:money(x.inside.profit), width:pairBar(x.inside.profit / top), tier:'high', note:`Window ${esc(low)} to ${esc(high)}`})
       + pairLeg(ctx, over, 'a', `Stake ${money(plan.stakes[0])}`) + pairLeg(ctx, under, 'b', `Stake ${money(plan.stakes[1])}`)
-      + `<td class="pair-window"><span class="pair-window-line" aria-hidden="true" style="--win-left:${(2/(Math.abs(high-low)+4)*100).toFixed(1)}%;--win-width:${(Math.abs(high-low)/(Math.abs(high-low)+4)*100).toFixed(1)}%"><b></b></span><strong>${esc(low)} to ${esc(high)}</strong><small>${x.kind === 'spread' ? `${esc(over.side)} margin` : 'Final total'} · ${esc(x.width)} ${x.width === 1 ? 'pt' : 'pts'}</small></td>
+      + `<td class="pair-window"><span class="pair-window-line" aria-hidden="true" style="--win-left:${(2/(Math.abs(high-low)+4)*100).toFixed(1)}%;--win-width:${(Math.abs(high-low)/(Math.abs(high-low)+4)*100).toFixed(1)}%"><b></b></span><strong>${esc(low)} to ${esc(high)}</strong><small>${x.kind === 'spread' ? `${esc(over.selection || over.side)} margin` : 'Final total'} · ${esc(x.width)} ${x.width === 1 ? 'pt' : 'pts'}</small></td>
       <td class="pair-outside"><strong class="${x.outside >= 0 ? 'is-positive' : 'is-negative'}">${money(x.outside)}</strong><small>on ${money(plan.actualTotal)}</small></td>
       <td class="evb-actions"><div><button type="button" class="evb-link" ${calc} aria-label="Calculate outcome for ${esc(label)}" title="Calculate outcome">${pairCalcIcon(14)}<span>Calculate</span></button>${pairToggle(key, label)}</div></td>`;
     const detail = () => pairDetail(key, 8, `Outcomes for ${label}`,
-      pairStats([['Net if both win', money(x.inside.profit), 'is-positive'], ['Total stake', money(plan.actualTotal)], ['At lower line', money(x.lower.profit), x.lower.profit >= 0 ? '' : 'is-negative'], ['At upper line', money(x.upper.profit), x.upper.profit >= 0 ? '' : 'is-negative'], ['Lowest outside', money(x.outside), x.outside >= 0 ? 'is-positive' : 'is-negative'], ['Capacity', pairCapacity(plan)]])
+      pairStats([['Net if both win', money(x.inside.profit), 'is-positive'], ['Total stake', money(plan.actualTotal)], // A score can only land on a whole-number line (a push for that leg); half-point lines never.
+      ...(Number.isInteger(low) ? [['At lower line', money(x.lower.profit), x.lower.profit >= 0 ? '' : 'is-negative']] : []), ...(Number.isInteger(high) ? [['At upper line', money(x.upper.profit), x.upper.profit >= 0 ? '' : 'is-negative']] : []), ['Lowest outside', money(x.outside), x.outside >= 0 ? 'is-positive' : 'is-negative'], ['Capacity', pairCapacity(plan)]])
       + pairLadder(x)
       + pairFooter([['is-best', 'Both bets win'], ['is-plus', 'Net gain or even'], ['is-loss', 'Net loss']],
         `<button type="button" data-suite-action="track" data-id="${esc(over.id)}" data-tool="middles">${boardIcon('track', 14)}Track first</button><button type="button" data-suite-action="track" data-id="${esc(under.id)}" data-tool="middles">${boardIcon('track', 14)}Track second</button><button type="button" class="evb-primary" ${calc}>${pairCalcIcon(14)}Calculate outcome</button>`,
@@ -1148,7 +1216,7 @@ function renderHoldBoard(rows, ctx, empty) {
   const holds = rows.map(x => x.hold), worst = Math.max(...holds, 0), best = Math.min(...holds, 0);
   const body = rows.slice(0, pairVisibleCount).map(x => {
     const [a, b] = x.best, key = pairKey(a, b), label = `${selectionText(a)} and ${selectionText(b)}`;
-    const sum = implied(a.odds) + implied(b.odds), fair = [implied(a.odds) / sum, implied(b.odds) / sum];
+    const fair = devig([implied(a.odds), implied(b.odds)], suite.settings().devigMethod);
     const cells = pairCells(a, false, {value:signed(x.hold), width:pairBar(worst === best ? 1 : .06 + .94 * (worst - x.hold) / (worst - best)), tier:x.hold < 0 ? 'high' : 'flat'})
       + pairLeg(ctx, a, 'a', `${percent(implied(a.odds))} implied`) + pairLeg(ctx, b, 'b', `${percent(implied(b.odds))} implied`)
       + `<td class="pair-fair"><strong>${percent(fair[0])} / ${percent(fair[1])}</strong><span class="pair-split" aria-hidden="true"><i style="width:${(fair[0]*100).toFixed(1)}%"></i></span><small>No-vig split</small></td>
@@ -1165,6 +1233,9 @@ function renderHoldBoard(rows, ctx, empty) {
 }
 
 const ARB_SANITY_LIMIT = .15;
+// The largest return an arbitrage-like pair may show (Arbitrage, Middles, Low holds): the saved
+// maximum, else 15%; bigger gaps are mislabeled or stale prices.
+const arbCap = settings => settings.maxArbPercent === '' || settings.maxArbPercent == null ? ARB_SANITY_LIMIT : Number(settings.maxArbPercent) / 100;
 function renderArb(live) {
   const settings = suite.settings();
   const budget = Math.max(.01, Number(bankroll) || 5000);
@@ -1172,20 +1243,22 @@ function renderArb(live) {
   const minimumMargin = Math.max(Number(settings.minArbPercent || 0) / 100, Number(designFilters.minEdge) || 0);
   // Without a saved max, returns above 15% are hidden: real arbitrage is almost always a few
   // percent, and larger gaps come from mislabeled sides, sports or stale prices in the feed.
-  const maximumMargin = settings.maxArbPercent === '' || settings.maxArbPercent == null ? ARB_SANITY_LIMIT : Number(settings.maxArbPercent) / 100;
+  const maximumMargin = arbCap(settings);
   const pinned = legs => legs.some(q => state.suite?.flags?.[q.id]?.pin);
   const capacityPasses = plan => !(Number(settings.minAvailableStake) > 0) || plan.limitsKnown && Number.isFinite(plan.maximumFeasibleTotal) && plan.maximumFeasibleTotal >= Number(settings.minAvailableStake);
   const opportunities = arbitrageRows(quotes().filter(q => sportsbookSelected(q.book) && suite.quoteVisible(q)), live, settings)
-    .flatMap(({ rows, best }) => rows.filter(q => q.side === best[0].side).flatMap(a =>
-      rows.filter(b => b.side === best[1].side && b.book !== a.book).map(b => {
-        const legs = [a,b], allocation = constrainedArb(legs, budget);
+    .flatMap(({ rows, pairs }) => pairs.map(legs => {
+        const allocation = constrainedArb(legs, budget);
         if (!allocation) return null;
         const requested = Math.min(budget, firstStake * allocation.actualTotal / allocation.stakes[0]);
         const plan = constrainedArb(legs, requested);
         return plan ? {legs,plan,rows} : null;
-      })))
-    .filter(entry => entry && (!marketType || entry.legs[0].type === marketType) && entry.plan.margin >= minimumMargin && entry.plan.margin <= maximumMargin && capacityPasses(entry.plan))
-    .sort((left,right) => Number(pinned(right.legs)) - Number(pinned(left.legs)) || right.plan.margin - left.plan.margin);
+      }))
+    .filter(entry => entry && (!marketType || entry.legs[0].type === marketType) && entry.plan.margin >= minimumMargin && entry.plan.margin <= maximumMargin && capacityPasses(entry.plan));
+  const eventOf = entry => entry.legs[0].displayEvent || entry.legs[0].event, startOf = entry => Date.parse(entry.legs[0].startTime) || Infinity;
+  const order = designSort === 'event' ? (left,right) => eventOf(left).localeCompare(eventOf(right)) || right.plan.margin - left.plan.margin
+    : designSort === 'time' ? (left,right) => startOf(left) - startOf(right) || right.plan.margin - left.plan.margin : (left,right) => right.plan.margin - left.plan.margin;
+  opportunities.sort((left,right) => Number(pinned(right.legs)) - Number(pinned(left.legs)) || order(left,right));
   if (preserveLiveOrder) {
     preserveReadingOrder(opportunities, [...document.querySelectorAll('.evb-row[data-pair-row]')].map(row=>row.dataset.pairRow), ({legs:[a,b]})=>pairKey(a,b));
     opportunities.sort((left,right) => Number(pinned(right.legs)) - Number(pinned(left.legs)));
@@ -1199,12 +1272,14 @@ const filteredEmpty = (fallback, symbol = 'filter') => TOOL_FILTERS[active] && a
   ? toolEmpty('Nothing matches these filters', 'The quote API has prices, but none pass the filters you picked. Loosen or clear a filter to see more.', button('Clear filters', 'data-tool-filter-clear'), symbol)
   : fallback;
 function renderMiddles() {
-  const settings = suite.settings();
+  const settings = suite.settings(), maximumMargin = arbCap(settings);
   const pinned = row => [row.over,row.under].some(q => state.suite?.flags?.[q.id]?.pin);
   // Allocate only the supplied financial terms here. Settlement still uses the
   // original exact market identities and distinct thresholds below.
   const allocationLeg = q => Object.fromEntries(['odds','commission','commissionPercent','boostPercent','minStake','maxStake','maxBet','exchange','liquidity'].filter(key=>q[key]!==undefined).map(key=>[key,q[key]]));
-  const rows = [false,true].flatMap(mode => middleRows(eligibleQuotes(quotes()).filter(q=>sportsbookSelected(q.book)&&suite.quoteVisible(q)),mode,settings))
+  // The sportsbook picker isn't shown here, so its choices on Arbitrage don't hide books (eligibleQuotes
+  // keeps the member's available books).
+  const rows = [false,true].flatMap(mode => middleRows(eligibleQuotes(quotes()).filter(q=>suite.quoteVisible(q)),mode,settings))
     .map(row => {
       const plan = constrainedArb([allocationLeg(row.over),allocationLeg(row.under)],Number(stake));
       if (!plan || Number(settings.minAvailableStake)>0 && (!plan.limitsKnown || !Number.isFinite(plan.maximumFeasibleTotal) || plan.maximumFeasibleTotal<Number(settings.minAvailableStake))) return null;
@@ -1212,12 +1287,12 @@ function renderMiddles() {
       const outcomes = [lower-1,(lower+upper)/2,upper+1,lower,upper].map(score=>middleOutcomes(row.over,row.under,plan.stakes[0],plan.stakes[1],score));
       if (outcomes.some(outcome=>!outcome)) return null;
       return {...row,plan,inside:outcomes[1],outside:Math.min(outcomes[0].profit,outcomes[2].profit),lower:outcomes[3],upper:outcomes[4]};
-    }).filter(row => row && (!toolFilters.minWidth || row.width >= Number(toolFilters.minWidth)) && (!toolFilters.maxCost || row.cost * 100 <= Number(toolFilters.maxCost))).sort((left,right)=>Number(pinned(right))-Number(pinned(left)));
+    }).filter(row => row && row.cost >= -maximumMargin && (!toolFilters.minWidth || row.width >= Number(toolFilters.minWidth)) && (!toolFilters.maxCost || row.cost * 100 <= Number(toolFilters.maxCost))).sort((left,right)=>Number(pinned(right))-Number(pinned(left)));
   return `<div class="tool-stack evb-board pair-board middle-board">${renderMiddleBoard(rows, pairContext({stake}), toolPanel('Middle opportunities','Compare overlapping totals and spread lines.',filteredEmpty(toolEmpty('Find a winning window','Middles appear when the quote API has a lower Over and a higher Under, or opposing spreads with room for both sides to win. Prices must meet your availability and stake settings.',action('Add market prices','quote'),'expand'))))}</div>`;
 }
 
 function renderHolds() {
-  const rows = [false,true].flatMap(mode=>holdRows(eligibleQuotes(quotes()).filter(q => sportsbookSelected(q.book)),mode)).filter(row=>1/(1+row.hold)-1 <= ARB_SANITY_LIMIT && (!toolFilters.maxHold || row.hold*100 <= Number(toolFilters.maxHold))).sort((a,b)=>a.hold-b.hold);
+  const cap = arbCap(suite.settings()), rows = [false,true].flatMap(mode=>holdRows(eligibleQuotes(quotes()),mode)).filter(row=>1/(1+row.hold)-1 <= cap && (!toolFilters.maxHold || row.hold*100 <= Number(toolFilters.maxHold))).sort((a,b)=>a.hold-b.hold);
   const empty = filteredEmpty(toolEmpty('No two-sided markets yet','Holds appear here once the quote API returns both sides of a market across books.',action('Add prices','quote'),'performance'));
   return `<div class="tool-stack evb-board pair-board hold-board">${renderHoldBoard(rows, pairContext(), empty)}</div>`;
 }
@@ -1225,13 +1300,17 @@ function renderHolds() {
 function renderPromo() {
   const outcome = promoConversion({...promoInput, boost:promoInput.kind === 'bonus' ? 0 : promoInput.boost});
   // Promo book and min odds describe the promotion side only; the hedge can be at any other book.
-  const promoSide = q => fresh(q) && (!toolFilters.book || q.book === toolFilters.book) && oddsWithin(q.odds, toolFilters.minOdds);
-  const paired = groups(eligibleQuotes(quotes()).filter(q => sportsbookSelected(q.book))).flatMap(rows=>rows.length>=2?rows.filter(promoSide).map(q=>({q,opposite:rows.filter(x=>x.side!==q.side&&x.book!==q.book&&fresh(x)).sort((a,b)=>decimal(b.odds)-decimal(a.odds))[0]})).filter(x=>x.opposite):[]);
+  // A bonus is a sportsbook's: the promotion side is never an exchange. Only two-way markets can be
+  // hedged with one bet (a draw would lose both), and both prices must come from books that price
+  // both sides of that market (see ownBookConsistent).
+  const promoSide = q => !q.exchange && fresh(q) && (!toolFilters.book || q.book === toolFilters.book) && oddsWithin(q.odds, toolFilters.minOdds);
+  const paired = groups(eligibleQuotes(quotes())).flatMap(rows=>opposingSides(rows).length!==2?[]:rows.filter(q=>promoSide(q)&&ownBookConsistent(q,rows,fresh)).map(q=>({q,opposite:rows.filter(x=>x.side!==q.side&&priceFamily(x)!==priceFamily(q)&&fresh(x)&&sameGame(x,q)&&ownBookConsistent(x,rows,fresh)).sort((a,b)=>decimal(b.odds)-decimal(a.odds))[0]})).filter(x=>x.opposite));
   const fields = `<div class="tool-form-grid"><label>Promotion type<select data-promo="kind"><option value="bonus" ${promoInput.kind==='bonus'?'selected':''}>Bonus bet · stake not returned</option><option value="boost" ${promoInput.kind==='boost'?'selected':''}>Odds boost · cash stake</option></select></label><label>${promoInput.kind==='bonus'?'Bonus value':'Cash stake'} ($)<input data-promo="stake" type="number" min="0.01" step="0.01" value="${esc(promoInput.stake)}"></label><label>Profit boost (%)<input data-promo="boost" type="number" min="0" step="0.1" value="${esc(promoInput.boost)}" ${promoInput.kind==='bonus'?'disabled':''}></label><label>Promotion odds<input data-promo="promoOdds" type="number" step="1" value="${esc(promoInput.promoOdds)}"><small>American odds, such as +150.</small></label><label>Hedge odds<input data-promo="hedgeOdds" type="number" step="1" value="${esc(promoInput.hedgeOdds)}"><small>The opposing selection at another book.</small></label></div>`;
   const result = toolReceipt('Hedge stake',outcome?money(outcome.hedge):'—', [['Promotion wins',outcome?money(outcome.ifPromoWins):'—'],['Hedge wins',outcome?money(outcome.ifHedgeWins):'—'],[promoInput.kind==='bonus'?'Bonus conversion':'Cash stake',outcome?(promoInput.kind==='bonus'?percent(outcome.conversion):money(promoInput.stake)):'—']],outcome?'Calculated from the prices entered. Check promotion terms and settlement rules before using this plan.':'Enter a positive stake and valid American odds to calculate both outcomes.');
   const bonus = promoInput.kind === 'bonus';
-  const pick = q => [q.player,q.side,q.line!==''&&q.line!=null?String(q.line):''].filter(Boolean).join(' ');
-  const plans = paired.filter(({q,opposite})=>1/(implied(q.odds)+implied(opposite.odds))-1 <= ARB_SANITY_LIMIT).map(({q,opposite})=>({q,opposite,plan:promoConversion({...promoInput,boost:bonus?0:promoInput.boost,promoOdds:q.odds,hedgeOdds:opposite.odds})})).filter(x=>x.plan).map(x=>({...x,locked:Math.min(x.plan.ifPromoWins,x.plan.ifHedgeWins)})).sort((a,b)=>b.locked-a.locked).slice(0,12);
+  const pick = selectionText, seenPairs = new Set();
+  const plans = paired.filter(({q,opposite})=>1/(implied(q.odds)+implied(opposite.odds))-1 <= ARB_SANITY_LIMIT).map(({q,opposite})=>({q,opposite,plan:promoConversion({...promoInput,boost:bonus?0:promoInput.boost,promoOdds:q.odds,hedgeOdds:opposite.odds})})).filter(x=>x.plan&&(!bonus||x.plan.conversion<=1)).map(x=>({...x,locked:Math.min(x.plan.ifPromoWins,x.plan.ifHedgeWins)})).sort((a,b)=>b.locked-a.locked)
+    .filter(({q,opposite})=>{const key=JSON.stringify([marketKey(q),priceFamily(q),Number(q.odds),priceFamily(opposite),Number(opposite.odds)]);return !seenPairs.has(key)&&seenPairs.add(key);}).slice(0,12);
   const prices = plans.length ? toolBoard({layout:'cards',variant:'promo',
     label:'Saved promotion and hedge pairs',
     summary:{text:`<strong>${plans.length} hedge ${plans.length===1?'pair':'pairs'}</strong> from saved prices`,pills:[[bonus?'Best conversion':'Best locked profit',bonus?percent(plans[0].plan.conversion):money(plans[0].locked),plans[0].locked>0],[bonus?'Bonus value':'Cash stake',money(promoInput.stake)]]},
@@ -1243,7 +1322,7 @@ function renderPromo() {
         event:{quote:q,title:q.displayEvent||q.event,sport:q.sport},market:q.displayMarket||q.market,live:q.live,
         bet:{book:q.book,title:pick(q),lines:[q.book]},
         odds:{value:oddsLabel(q.odds)},
-        prob:{value:oddsLabel(opposite.odds),sub:`${pick(opposite)} · ${opposite.book}`},
+        prob:{value:oddsLabel(opposite.odds),sub:`${pick(opposite)} · ${opposite.book}${opposite.exchange?' (exchange; commission not included)':''}`},
         stake:{value:money(plan.hedge),sub:`at ${opposite.book}`},
         actions:boardButton(loaded?'Loaded':'Use prices',`data-promo-pair="${esc(q.id)}" data-hedge="${esc(opposite.id)}" aria-pressed="${loaded}"`)+boardToggle(`Compare prices for ${pick(q)}`,`data-detail="${esc(q.id)}"`)};
     })
@@ -1253,18 +1332,20 @@ function renderPromo() {
 
 function renderParlay() {
   const selected = parlayIds.map(id=>state.quotes.find(q=>q.id===id)).filter(q=>q&&bookAvailable(q.book));
-  const method = suite.settings().devigMethod;
-  const legs = selected.map(q=>({...q,probability:fairProbability(q,groups(state.quotes).find(g=>g.some(x=>x.id===q.id))||[],method)}));
+  const settings = suite.settings(), priced = new Map(computeAdvancedEv(eligibleQuotes(quoteSource()), settings).map(row => [row.quote.id, row]));
+  // Legs are priced exactly as on Positive EV; an EV above its sanity cap is a data error, not a leg.
+  const usable = row => row && !row.estimated && row.ev <= evCapFor(row, settings);
+  const legs = selected.map(q=>({...q,probability:usable(priced.get(q.id))?priced.get(q.id).fair:NaN}));
   const result = parlay(legs);
   const valid = result && Number.isFinite(result.ev) && new Set(selected.map(q=>q.book)).size===1;
   const invalidReason = selected.length < 2 ? 'Choose at least two legs from different events.' : new Set(selected.map(q=>q.book)).size > 1 ? 'Choose one sportsbook for every leg. These books cannot form one ticket.' : new Set(selected.map(q=>q.event)).size < selected.length ? 'Same-event legs may be correlated. This independent-leg calculator does not support that combination.' : 'A fair estimate needs complete comparison prices for every leg.';
   // Fair odds for each leg come from every book in the market; filters only choose which legs show.
   const listed = new Set(quotes().map(q => q.id));
-  const options = evRows(eligibleQuotes(quoteSource().filter(q => !sport || q.sport === sport)),false,method).filter(({quote,ev})=>listed.has(quote.id) && sportsbookSelected(quote.book)
+  const options = [...priced.values()].filter(row => usable(row) && !row.quote.live && (!sport || row.quote.sport === sport)).filter(({quote,ev})=>listed.has(quote.id)
     && (!toolFilters.book || quote.book === toolFilters.book)
     && (toolFilters.legEv === '' || ev * 100 >= Number(toolFilters.legEv))
     && oddsWithin(quote.odds, '', toolFilters.maxOdds));
-  const pick = q => [q.player,q.side,q.line!==''&&q.line!=null?String(q.line):''].filter(Boolean).join(' ');
+  const pick = selectionText;
   const available = options.length ? toolBoard({layout:'cards',variant:'parlay',
     label:'Available parlay legs',compact:true,
     summary:{text:`<strong>${options.length} ${options.length===1?'leg':'legs'}</strong> with complete comparison prices`,pills:[['In ticket',String(selected.length)]]},
@@ -1290,12 +1371,12 @@ function renderSharp() {
   const shortCash = value => Number(value) >= 1000 ? `$${(Number(value)/1000).toFixed(1)}k` : cash(value);
   const source = state.quotes;
   const filtered = source.filter(q => !sport || q.sport === sport);
-  const matches = sharpMatches(filtered.filter(q => !q.depthOnly), threshold).filter(x => bookAvailable(x.sportsbook.book) && (!marketType || x.exchange.type === marketType) && (!bookmaker || [x.exchange.book,x.sportsbook.book].includes(bookmaker)) && (!search || [x.exchange.event,x.exchange.market,x.exchange.side,x.exchange.book,x.sportsbook.side,x.sportsbook.book,x.exchange.sport].some(value => filterText(value))) && suite.quoteVisible(x.exchange));
+  const matches = sharpMatches(filtered.filter(q => !q.depthOnly), threshold).filter(x => bookAvailable(x.sportsbook.book) && sportsbookSelected(x.sportsbook.book) && quotePassesDesign(x.exchange) && quotePassesDesign(x.sportsbook) && (!marketType || x.exchange.type === marketType) && (!bookmaker || [x.exchange.book,x.sportsbook.book].includes(bookmaker)) && (!search || [x.exchange.event,x.exchange.market,x.exchange.side,x.exchange.book,x.sportsbook.side,x.sportsbook.book,x.exchange.sport].some(value => filterText(value))) && suite.quoteVisible(x.exchange));
   const eventName = q => q.displayEvent || q.event;
   const sorters = { liquidity:(a,b) => b.liquidity - a.liquidity, event:(a,b) => eventName(a.exchange).localeCompare(eventName(b.exchange)) || b.liquidity - a.liquidity, odds:(a,b) => decimal(b.sportsbook.odds) - decimal(a.sportsbook.odds) || b.liquidity - a.liquidity };
   matches.sort(sorters[sharpSort] || sorters.liquidity);
   if (preserveLiveOrder) preserveReadingOrder(matches, [...document.querySelectorAll('.sm-item[data-wager-id]')].map(item=>item.dataset.wagerId), row=>row.exchange.id);
-  const selectionText = q => `${q.type === 'prop' && q.player ? q.player + ' ' : ''}${q.side}${q.line !== '' && q.line != null ? ' ' + (q.type === 'spread' && Number(q.line) > 0 ? '+' : '') + q.line : ''}`;
+  const selectionText = q => `${q.type === 'prop' && q.player ? q.player + ' ' : ''}${q.selection || q.side}${q.line !== '' && q.line != null ? ' ' + (q.type === 'spread' && Number(q.line) > 0 ? '+' : '') + q.line : ''}`;
   const marketName = q => q.displayMarket || (q.player ? String(q.market).replace(q.player,'').trim() : q.market);
   const maxLiquidity = Math.max(1,...matches.map(x => x.liquidity));
   const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${{search:'<circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/>',filter:'<path d="M4 7h16M7 12h10M10 17h4"/>',refresh:'<path d="M20 11a8 8 0 1 0-2 6M20 4v7h-7"/>'}[name]}</svg>`;
@@ -1391,7 +1472,8 @@ function sharpKeydown(event) {
 
 
 function renderFantasy() {
-  return dfsWorkspace.render({initialSport:initialSport === 'ALL' ? '' : initialSport === 'SOCCER' ? 'Soccer' : initialSport || ''});
+  // The sport as the board names it ("tennis" in the address is Tennis, not TENNIS).
+  return dfsWorkspace.render({initialSport:initialSport === 'ALL' ? '' : knownSport(initialSport) || ''});
 }
 // Filters, sorting, search and picks inside the DFS board change only the board: redraw it in place
 // instead of rebuilding the page around it (its menus, book bar and filter bar scan every quote).
@@ -1411,15 +1493,17 @@ function renderOptimizer() {
   const tables = paytables(), combos = [], edges = new Map();
   const breakEvens = new Map(Object.entries(tables).map(([app, sizes]) => [app, breakEven(sizes?.['2'])]));
   const byApp = new Map();
+  let priced = 0, bestBelow = null;
   for (const x of dfs()) {
-    // Goblin and demon picks need the feed's payout multiplier.
-    if (isContestPlatform(x.app) || !payoutKnown(x) || x.probability == null || !Number.isFinite(Number(x.probability))) continue;
+    // Goblin and demon picks need the feed's payout multiplier; part-game lines are never priced.
+    if (isContestPlatform(x.app) || x.period === 'part' || !payoutKnown(x) || x.probability == null || !Number.isFinite(Number(x.probability))) continue;
     // No 2-pick table, no break-even: the leg can't qualify (p - null would read as p). A goblin or
     // demon's break-even is the standard one divided by its payout factor.
     const be = breakEvens.get(x.app) / payoutFactor(x);
     if (!Number.isFinite(be)) continue;
     const edge = Number(x.probability) - be;
-    if (!(edge > 0)) continue;
+    priced += 1;
+    if (!(edge > 0)) { if (!bestBelow || edge > bestBelow.edge) bestBelow = { edge, be, x }; continue; }
     edges.set(x.id, edge);
     if (!byApp.has(x.app)) byApp.set(x.app, []);
     byApp.get(x.app).push(x);
@@ -1431,7 +1515,8 @@ function renderOptimizer() {
     if(!Array.isArray(rules)||rules.length!==3)continue;
     const factor=payoutFactor(rows[i])*payoutFactor(rows[j]);
     const result=fantasySlip([rows[i],rows[j]],rules.map(value=>Number(value)*factor));
-    if(result)combos.push({a:rows[i],b:rows[j],factor,...result});
+    // Same-game picks can be related; the estimate treats them as independent, so they are flagged.
+    if(result)combos.push({a:rows[i],b:rows[j],factor,sameGame:Boolean(rows[i].eventId&&rows[i].eventId===rows[j].eventId),...result});
   }
   combos.sort((a,b)=>b.ev-a.ev);
   const leg = x => `${x.player} ${x.side} ${String(x.line??'—')} ${x.market} · ${percent(x.probability)}`;
@@ -1439,10 +1524,10 @@ function renderOptimizer() {
     label:'Ranked two-pick combinations',
     summary:{text:`<strong>${combos.length} eligible ${combos.length===1?'combination':'combinations'}</strong> ranked by projected EV`,pills:[['Best projected EV',signed(combos[0].ev),combos[0].ev>0],['Platforms',String(new Set(rows.map(x=>x.app)).size)]]},
     columns:{metric:'Proj. EV',event:'Events',market:'Market',bet:'Picks & app',odds:'Payout',prob:'Both hit'},
-    rows:combos.map(x=>({
+    rows:combos.slice(0,optimizerVisibleCount).map(x=>({
       id:'optimizer-'+x.a.id+'-'+x.b.id,
       metric:{value:signed(x.ev),bar:Math.max(0,x.ev),negative:x.ev<0,tier:x.ev>=.1?'high':x.ev>=.04?'mid':'low'},
-      event:{time:x.a.startLabel||'',title:x.a.event||'Event not entered',note:x.b.event&&x.b.event!==x.a.event?x.b.event:'',sport:[...new Set([x.a.sport,x.b.sport].filter(Boolean))].join(' / ')},
+      event:{time:startLabel(x.a),title:x.a.event||'Event not entered',note:x.sameGame?'Same game: results may be related':x.b.event&&x.b.event!==x.a.event?x.b.event:'',sport:[...new Set([x.a.sport,x.b.sport].filter(Boolean))].join(' / ')},
       market:'2-pick entry',
       bet:{book:x.a.app,title:x.a.player+' + '+x.b.player,lines:[leg(x.a),leg(x.b),x.a.app]},
       picks:[x.a,x.b].map(p=>({player:p.player,side:p.side,line:p.line,market:p.market,chance:percent(p.probability)})),
@@ -1450,7 +1535,8 @@ function renderOptimizer() {
       prob:{value:percent(x.dist[2]),sub:'Estimated'},
       actions:boardButton('Build slip',`data-optimize="${esc(x.a.id)},${esc(x.b.id)}" aria-label="Build a slip with ${esc(x.a.player)} and ${esc(x.b.player)}"`)
     }))
-  }):toolPanel('Ranked combinations','Your strongest estimated edge first. Open a combination to build the slip.',toolEmpty(state.dfs.length?'Find your first combination':'No DFS lines in the quote feed yet',state.dfs.length?'Combinations need two picks from the same app with a hit chance.':'Combinations appear when the quote feed sends PrizePicks, Underdog or other pick\'em lines. You can also add a prop by hand.',action('Add DFS prop','dfs')+button('Set payout rules','data-tool="slip"'),'settings'));
+  })+(combos.length>optimizerVisibleCount?`<button type="button" class="ev-parlay-more" data-optimizer-more>Show ${Math.min(40,combos.length-optimizerVisibleCount)} more · ${combos.length} combinations</button>`:'')
+  :toolPanel('Ranked combinations','Your strongest estimated edge first. Open a combination to build the slip.',toolEmpty(!state.dfs.length?'No DFS lines in the quote feed yet':priced?'No line beats the 2-pick break-even':'Find your first combination',!state.dfs.length?'Combinations appear when the quote feed sends PrizePicks, Underdog or other pick\'em lines. You can also add a prop by hand.':priced?`None of the ${priced.toLocaleString()} priced lines has a fair probability above its app's 2-pick break-even${bestBelow?` (closest: ${bestBelow.x.player} ${bestBelow.x.side} ${bestBelow.x.line} ${bestBelow.x.market}, ${percent(bestBelow.x.probability)} vs ${percent(bestBelow.be)})`:''}. Lines that beat larger entries' break-evens show on DFS Props.`:'Combinations appear when the quote feed sends PrizePicks, Underdog or other pick\'em lines. You can also add a prop by hand.',action('Add DFS prop','dfs')+button('Set payout rules','data-tool="slip"'),'settings'));
   return `<div class="tool-stack">${ranking}${toolNote('Hit chances come from no-vig sportsbook odds at the same line (or your own entries). Payouts are each app\'s published standard payouts unless you saved your own; confirm them in the app. Picks are treated as independent; platform limits, fees and contest standings are not modeled.')}</div>`;
 }
 
@@ -1466,7 +1552,7 @@ function renderSlip() {
   // Goblin and demon picks scale the payout by their multiplier from the feed.
   const slipScale=selected.reduce((product,x)=>product*payoutFactor(x),1);
   const result=selected.length>=2&&rules.length===selected.length+1&&Number.isFinite(slipScale)?fantasySlip(selected,rules.map(value=>Number(value)*slipScale),Number(fantasyStake)):null;
-  const controls=`<div class="tool-form-grid"><label>Fantasy app<select id="ev-fantasy-app">${apps.length?apps.map(app=>`<option value="${esc(app)}" ${app===fantasyApp?'selected':''}>${esc(app)}</option>`).join(''):'<option value="">Add a prop to choose a platform</option>'}</select></label><label>Entry amount ($)<input id="ev-fantasy-stake" type="number" min="0.01" step="0.01" value="${esc(fantasyStake)}"></label></div>`;
+  const controls=`<div class="tool-form-grid"><label>Fantasy app<select id="ev-fantasy-app">${apps.length?apps.map(app=>`<option value="${esc(app)}" ${app===fantasyApp?'selected':''}>${esc(app)}</option>`).join(''):'<option value="">Add a prop to choose a platform</option>'}</select></label><label>Entry amount ($)<input id="ev-fantasy-stake" type="number" min="1" step="0.01" value="${esc(fantasyStake)}"></label></div>`;
   // One card per player line: its Over and Under picks become the two side buttons. Grouped in one
   // pass (the feed has ~30k lines), lines with a fair probability first, shown 40 cards at a time.
   const lineGroups=new Map();
@@ -1476,8 +1562,9 @@ function renderSlip() {
     const group=lineGroups.get(key);
     if(!group.some(p=>p.side===x.side))group.push(x);
   }
-  const fairOf=picks=>Math.max(...picks.map(p=>p.probability==null||p.probability===''?-1:Number(p.probability)));
-  const groups=[...lineGroups.values()].sort((a,b)=>fairOf(b)-fairOf(a)||String(a[0].player).localeCompare(String(b[0].player)));
+  // Lines whose payout is known come first (a goblin's high hit chance pays less, by an unknown amount).
+  const fairOf=picks=>Math.max(...picks.map(p=>p.probability==null||p.probability===''?-1:Number(p.probability))), known=picks=>Number(picks.every(payoutKnown));
+  const groups=[...lineGroups.values()].sort((a,b)=>known(b)-known(a)||fairOf(b)-fairOf(a)||String(a[0].player).localeCompare(String(b[0].player)));
   // Picks already in the slip stay on the page.
   const shown=[...groups.slice(0,slipVisibleCount),...groups.slice(slipVisibleCount).filter(picks=>picks.some(p=>fantasyIds.includes(p.id)))];
   const choices=options.length?toolBoard({layout:'cards',variant:'slip',
@@ -1488,23 +1575,24 @@ function renderSlip() {
       picks.sort((a,b)=>String(a.side).toLowerCase()==='over'?-1:String(b.side).toLowerCase()==='over'?1:0);
       const x=picks.find(p=>fantasyIds.includes(p.id))||picks[0], label=`${x.player} ${x.side} ${String(x.line??'—')}`;
       return {id:'slip-'+picks[0].id,attrs:`data-open-dfs="${esc(x.id)}"`,selected:picks.some(p=>fantasyIds.includes(p.id)),
-        slip:{player:x.player,team:x.team||'',sport:x.sport||'',market:x.market||'',line:String(x.line??'—'),event:x.event||'',time:x.startLabel||'',
+        slip:{player:x.player,team:x.team||'',sport:x.sport||'',market:[x.market||'',['goblin','demon'].includes(x.oddsType)?x.oddsType[0].toUpperCase()+x.oddsType.slice(1):'',x.period==='part'?'Part game':''].filter(Boolean).join(' · '),line:String(x.line??'—'),event:x.event||'',time:startLabel(x),
           sides:picks.map(p=>{const inSlip=fantasyIds.includes(p.id),name=`${p.player} ${p.side} ${String(p.line??'—')}`;
             return {side:p.side,value:percent(p.probability),rate:Number(p.probability),attrs:`data-fantasy="${esc(p.id)}" aria-pressed="${inSlip}" aria-label="${inSlip?'Remove':'Add'} ${esc(name)}"`};})},
         bet:{book:x.app,title:label},
-        actions:(x.source==='local-api'?`<span class="evc-slip-note">${x.probability==null?'No two-sided sportsbook market':'Fair probability from sportsbook odds'}</span>`:'<span class="evc-slip-note">Estimated hit rates</span>'+boardIconButton('edit',`Edit ${label}`,`data-edit="dfs" data-id="${esc(x.id)}"`))+boardToggle(`Compare ${label}`,`data-open-dfs="${esc(x.id)}"`)};
+        actions:(x.source==='local-api'?`<span class="evc-slip-note">${x.period==='part'?'Part-game line; not compared':x.probability==null?'No two-sided sportsbook market':!payoutKnown(x)?'Payout varies (goblin/demon)':'Fair probability from sportsbook odds'}</span>`:'<span class="evc-slip-note">Estimated hit rates</span>'+boardIconButton('edit',`Edit ${label}`,`data-edit="dfs" data-id="${esc(x.id)}"`))+boardToggle(`Compare ${label}`,`data-open-dfs="${esc(x.id)}"`)};
     })
   })+`${groups.length>slipVisibleCount?`<button type="button" class="ev-parlay-more" data-slip-more>Show ${Math.min(40,groups.length-slipVisibleCount)} more lines · ${(groups.length-slipVisibleCount).toLocaleString()} not shown</button>`:''}`:available.length?toolEmpty('No picks match your filters','Try a different sport or search. Your selected picks stay in the ticket.',button('Clear filters','data-tool-clear'),'search'):dfsLoading&&!dfsLoaded?toolEmpty('Loading DFS lines…','Reading PrizePicks, Underdog and other pick\'em lines from the quote feed.','','picks'):toolEmpty('No DFS lines in the quote feed yet','Picks appear when the quote feed sends PrizePicks, Underdog or other pick\'em lines. You can also add a prop by hand.',action('Add DFS prop','dfs'),'picks');
   const picked=selected.length?boardTicket(selected.map(x=>({book:x.app,title:x.player,sub:`${x.side} ${String(x.line??'—')} ${x.market} · ${percent(x.probability)}`,action:button('Remove',`data-fantasy="${esc(x.id)}"`)}))):toolEmpty('Choose your picks','Select at least two picks from the same app.','','picks');
-  const payout=selected.length>=2?toolPanel('Payout rules',rulesSource==='api'?`${esc(fantasyApp)}'s ${selected.length}-pick payout comes from the quote feed. Confirm it in the app: promotions, your state and special picks can change it. Edit and save to use your own.`:rulesSource==='standard'?`${esc(fantasyApp)}'s published standard payout for a ${selected.length}-pick entry is filled in. Confirm it in the app: promotions, your state and special picks can change it. Edit and save to use your own.`:'Total return multiplier for each number of correct picks, including the returned stake.',`<div class="tool-form-grid">${Array.from({length:selected.length+1},(_,hits)=>`<label>${hits} of ${selected.length} hits<input data-pay-hits="${hits}" type="number" min="0" step="0.01" value="${Number(rules[hits]||0)}"></label>`).join('')}</div><div class="ev-card-footer">${button('Save payout rules','id="ev-save-paytable"')}</div>${result?`<div class="ev-chip-row">${result.dist.map((p,i)=>`<span class="ev-chip">${i} hits · ${percent(p)} · ${Number(rules[i]||0)}×</span>`).join('')}</div>`:''}`):'';
-  return `<div class="tool-stack"><div class="tool-two-column evt-builder"><div class="tool-stack">${toolPanel('Build your entry','Use the payout rules for your chosen platform.',controls)}${options.length?choices:toolPanel('Available picks','Compare your entered player lines and estimates.',choices)}${payout}</div><div class="tool-stack">${toolPanel('Your picks',selected.length+' selected',picked)}${toolReceipt('Expected return',result?money(result.payout*fantasyStake):'—',[['Entry amount',money(fantasyStake)],['Expected profit',result?money(result.expectedProfit):'—'],['Expected value',result?signed(result.ev):'—']],selected.length<2?'Select at least two picks to start the calculation.':result?'Calculated from the saved rules and your estimated hit rates.':'Save the payout rules for this entry size to calculate a return.')}</div></div>${toolNote('Picks are treated as independent. Pushes, ties, correlations, and platform settlement exceptions require adjustments to the payout rules.')}</div>`;
+  const payout=selected.length>=2?toolPanel('Payout rules',rulesSource==='api'?`${esc(fantasyApp)}'s ${selected.length}-pick payout comes from the quote feed. Confirm it in the app: promotions, your state and special picks can change it. Edit and save to use your own.`:rulesSource==='standard'?`${esc(fantasyApp)}'s published standard payout for a ${selected.length}-pick entry is filled in. Confirm it in the app: promotions, your state and special picks can change it. Edit and save to use your own.`:'Total return multiplier for each number of correct picks, including the returned stake.',`<div class="tool-form-grid">${Array.from({length:selected.length+1},(_,hits)=>`<label>${hits} of ${selected.length} hits<input data-pay-hits="${hits}" type="number" min="0" step="0.01" value="${hits<selected.length?0:Number(rules[hits]||0)}" ${hits<selected.length?'disabled title="Power entries pay only when every pick hits"':''}></label>`).join('')}</div><div class="ev-card-footer">${button('Save payout rules','id="ev-save-paytable"')}</div>${result?`<div class="ev-chip-row">${result.dist.map((p,i)=>`<span class="ev-chip">${i} hits · ${percent(p)} · ${Math.round(Number(rules[i]||0)*slipScale*100)/100}×</span>`).join('')}</div>`:''}`):'';
+  return `<div class="tool-stack"><div class="tool-two-column evt-builder"><div class="tool-stack">${toolPanel('Build your entry','Use the payout rules for your chosen platform.',controls)}${options.length?choices:toolPanel('Available picks','Compare your entered player lines and estimates.',choices)}${payout}</div><div class="tool-stack">${toolPanel('Your picks',selected.length+' selected',picked)}${toolReceipt('Expected return',result?money(result.payout*fantasyStake):'—',[['Entry amount',money(fantasyStake)],['Expected profit',result?money(result.expectedProfit):'—'],['Expected value',result?signed(result.ev):'—']],slipNotice||(selected.length<2?'Select at least two picks to start the calculation.':result?'Calculated from the payout rules and each pick’s no-vig fair probability.':!Number.isFinite(slipScale)?'Goblin and demon picks change the payout, and the feed didn’t send this pick’s multiplier, so return and EV aren’t calculated.':selected.some(x=>x.probability==null||x.probability==='')?'Every pick needs a fair probability: a two-sided sportsbook market at the same line.':'Save the payout rules for this entry size to calculate a return.'))}</div></div>${toolNote('Picks are treated as independent. Pushes, ties, correlations, and platform settlement exceptions require adjustments to the payout rules.')}</div>`;
 }
 
 function renderFantasyAlerts() {
   const rules=state.alerts.filter(x=>x.kind==='fantasy-new'&&visible(x,['market','event']));
-  const notes=state.notifications.filter(x=>rules.some(r=>r.id===x.ruleId));
+  const notes=state.notifications.filter(x=>rules.some(r=>r.id===x.ruleId)),unread=unread;
+  for(const note of notes)note.read=true;
   const watches=rules.length?`<div class="ev-list">${rules.map(r=>`<div class="ev-list-item"><div><strong>${esc(r.market||'Any market')}</strong><span>${esc(r.sport||'All sports')} · Minimum hit rate ${Number(r.threshold)||0}%</span><span class="tool-rule-status ${r.enabled===false?'is-paused':''}">${r.enabled===false?'Paused':'Watching'}</span></div><div>${button('Edit',`data-edit="alert" data-id="${esc(r.id)}"`)}${button(r.enabled===false?'Resume':'Pause',`data-alert-toggle="${esc(r.id)}"`)}</div></div>`).join('')}</div>`:toolEmpty('Watch the props you care about','Choose a market and a minimum estimated hit rate. New matching entries will appear in your activity.',action('Create a fantasy alert','alert','data-kind="fantasy-new"'),'bookmark');
-  return `<div class="tool-stack">${browserAlertsControl()}${emailAlertsControl()}${toolStats([['Active watches',rules.filter(x=>x.enabled!==false).length],['Paused',rules.filter(x=>x.enabled===false).length],['Unread matches',notes.filter(x=>!x.read).length]])}<div class="tool-two-column">${toolPanel('Your watchlist','Rules apply when new player props enter this workspace.',watches)}${toolPanel('Recent activity','Matches from your saved fantasy alerts.',notes.length?renderNotifications(notes):toolEmpty('You’re all caught up','New matching props will appear here as you add or import data.','','live'))}</div>${toolNote('These are local workspace alerts. They do not fetch player props or send push notifications while the page is closed.')}</div>`;
+  return `<div class="tool-stack">${browserAlertsControl()}${emailAlertsControl()}${toolStats([['Active watches',rules.filter(x=>x.enabled!==false).length],['Paused',rules.filter(x=>x.enabled===false).length],['Unread matches',unread]])}<div class="tool-two-column">${toolPanel('Your watchlist','Rules apply when new player props enter this workspace.',watches)}${toolPanel('Recent activity','Matches from your saved fantasy alerts.',notes.length?renderNotifications(notes):toolEmpty('You’re all caught up','New matching props will appear here as you add or import data.','','live'))}</div>${toolNote('These are local workspace alerts. They do not fetch player props or send push notifications while the page is closed.')}</div>`;
 }
 
 function renderNotifications(notes) {
@@ -1512,14 +1600,14 @@ function renderNotifications(notes) {
 }
 
 function renderPrediction() {
-  const contracts=state.contracts.filter(x=>visible(x,['event','platform'])&&(!predictionPlatform||canonicalPlatform(x.platform)===predictionPlatform));
+  const contracts=[...state.contracts,...feedContracts].filter(x=>visible(x,['event','platform'])&&(!predictionPlatform||canonicalPlatform(x.platform)===predictionPlatform));
   const contractIds=new Set(contracts.map(x=>x.id));
   const names=[...new Set([...state.traders.filter(x=>contractIds.has(x.contractId)).map(x=>x.name),...state.trades.filter(x=>contractIds.has(x.contractId)).map(x=>x.trader)])];
   if(!traderName||!names.includes(traderName))traderName=names[0]||'';
   const positions=state.traders.filter(x=>x.name===traderName&&contractIds.has(x.contractId));
   const trades=state.trades.filter(x=>x.trader===traderName&&contractIds.has(x.contractId));
   const snapshots=state.contractHistory.filter(h=>contractIds.has(h.contractId)).slice().reverse().slice(0,100);
-  const controls=`<div class="tool-board-toolbar"><h2>Markets you follow</h2><div><label>Platform<select id="ev-prediction-platform"><option value="">All prediction platforms</option>${[...new Set([...PREDICTION_PLATFORMS,...state.contracts.map(c=>canonicalPlatform(c.platform))])].map(name=>`<option value="${esc(name)}" ${predictionPlatform===name?'selected':''}>${esc(name)}</option>`).join('')}</select></label></div></div>`;
+  const controls=`<div class="tool-board-toolbar"><h2>Markets you follow</h2><div><label>Platform<select id="ev-prediction-platform"><option value="">All prediction platforms</option>${[...new Set([...PREDICTION_PLATFORMS,...state.contracts.map(c=>canonicalPlatform(c.platform)),...feedContracts.map(c=>c.platform)])].map(name=>`<option value="${esc(name)}" ${predictionPlatform===name?'selected':''}>${esc(name)}</option>`).join('')}</select></label></div></div>`;
   const cards=contracts.length?toolBoard({layout:'cards',variant:'prediction',
     label:'Prediction market contracts',
     summary:{text:`<strong>${contracts.length} ${contracts.length===1?'contract':'contracts'}</strong> · prices in cents per $1 settlement`,pills:[['Positions',String(positions.length)],['Recorded trades',String(trades.length)]]},
@@ -1532,8 +1620,8 @@ function renderPrediction() {
         bet:{book:c.platform,title:c.platform,html:origin(c)},
         odds:{value:Number(c.ask).toFixed(0)+'¢',sub:`No ${(100-Number(c.bid)).toFixed(0)}¢`},
         prob:{value:Number(c.bid).toFixed(0)+'¢',sub:'Best bid'},
-        stake:{value:Number(c.volume).toLocaleString(),sub:'Contracts'},
-        actions:boardButton('Update',`data-edit="contract" data-id="${esc(c.id)}" aria-label="Update ${esc(c.event)}"`,'edit')};
+        stake:c.source==='local-api'?{value:'$'+Math.round(Number(c.volume)).toLocaleString(),sub:'Traded volume'}:{value:Number(c.volume).toLocaleString(),sub:'Contracts'},
+        actions:c.source==='local-api'?'':boardButton('Update',`data-edit="contract" data-id="${esc(c.id)}" aria-label="Update ${esc(c.event)}"`,'edit')};
     })
   }):toolPanel('Market board','Bids and asks in cents per $1 settlement.',toolEmpty('Start following a market','Add a contract’s bid, ask, and available depth to start recording its price history.',action('Add contract','contract'),'research'));
   const positionTable=positions.length?table(['Contract','Side','Quantity','Entry','Mark / unrealized P&L',''],positions.map(p=>{const c=state.contracts.find(x=>x.id===p.contractId);const mark=c?p.side==='No'?100-Number(c.ask):Number(c.bid):NaN;const profit=Number.isFinite(mark)?(mark-Number(p.entry))*Number(p.quantity)/100:NaN;return `<tr><td><strong>${esc(c?.event||'Contract missing')}</strong></td><td>${esc(p.side)}</td><td data-num>${Number(p.quantity)}</td><td data-num>${Number(p.entry)}¢</td><td data-num class="${profit>=0?'ev-positive':'ev-negative'}">${Number.isFinite(mark)?mark+'¢':'—'}<small>${money(profit)}</small></td><td>${button('Edit',`data-edit="trader" data-id="${esc(p.id)}"`)}</td></tr>`;})):toolEmpty('No positions recorded','Add a position for a saved contract to compare its entry price with the current mark.',action('Add position','trader'),'picks');
@@ -1552,14 +1640,26 @@ function renderTrends() {
   const right = rows.filter(x => x.player + '|' + x.market === trendB);
   const paired = left.flatMap(a => right.filter(b => b.game === a.game).map(b => [Number(a.result),Number(b.result)]));
   const correlation = pearson(paired);
-  return `<div class="ev-stack">${toolStats([['Player profiles',profiles.length],['Results recorded',rows.length],['Paired games',paired.length]])}${profiles.length ? toolPanel('Recent hit rates','Share of recorded games that finished over the listed line.',table(['Player / prop', 'Last 5', 'Last 10', 'All recorded', 'Results'], profiles.map(key => { const [player,market,line] = key.split('|'); const games = rows.filter(x => `${x.player}|${x.market}|${x.line}` === key).sort((a,b) => b.date.localeCompare(a.date)); const rate = n => percent(games.slice(0,n).filter(x => Number(x.result) > Number(x.line)).length / Math.min(n,games.length)); return `<tr><td><strong>${esc(player)}</strong><small>${esc(market)} · Over ${esc(line)}</small></td><td data-num>${rate(5)}<small>${Math.min(5,games.length)} games</small></td><td data-num>${rate(10)}<small>${Math.min(10,games.length)} games</small></td><td data-num>${rate(games.length)}<small>${games.length} games</small></td><td><div class="ev-mini-bars" aria-label="Recent results">${games.slice(0,10).reverse().map(g => `<i title="${esc(g.game)}: ${esc(g.result)}" style="height:${Math.max(5, Math.min(100, Number(g.result)/Number(g.line)*65))}%"></i>`).join('')}</div></td></tr>`; }))) : toolEmpty('Build a picture of recent form','Add game results to compare recent hit rates and player-prop correlations.',action('Add result','result'),'trends')}${toolPanel('Paired-game correlation','Compare two props recorded against the same game IDs.',`<div class="ev-fields"><label>First prop<select id="ev-trend-a">${options.map(x => `<option value="${esc(x)}" ${x === trendA ? 'selected' : ''}>${esc(x.replace('|',' · '))}</option>`).join('')}</select></label><label>Second prop<select id="ev-trend-b">${options.map(x => `<option value="${esc(x)}" ${x === trendB ? 'selected' : ''}>${esc(x.replace('|',' · '))}</option>`).join('')}</select></label><div class="ev-result">${Number.isFinite(correlation) ? `Pearson r <strong>${correlation.toFixed(2)}</strong> across ${paired.length} matching game IDs` : `Need at least three matching game IDs with variation in both results. Currently ${paired.length}.`}</div></div>`)}<p class="ev-caption">Recent hit rates describe entered historical games. They do not estimate a future hit probability; correlation is descriptive and needs aligned game IDs.</p></div>`;
+  return `<div class="ev-stack">${toolStats([['Player profiles',profiles.length],['Results recorded',rows.length],['Paired games',paired.length]])}${profiles.length ? toolPanel('Recent hit rates','Share of recorded games that finished over the listed line.',table(['Player / prop', 'Last 5', 'Last 10', 'All recorded', 'Results'], profiles.map(key => { const [player,market,line] = key.split('|'); const games = rows.filter(x => `${x.player}|${x.market}|${x.line}` === key).sort((a,b) => b.date.localeCompare(a.date)); const rate = n => percent(games.slice(0,n).filter(x => Number(x.result) > Number(x.line)).length / Math.min(n,games.length)); return `<tr><td><strong>${esc(player)}</strong><small>${esc(market)} · Over ${esc(line)}</small></td><td data-num>${rate(5)}<small>${Math.min(5,games.length)} games</small></td><td data-num>${rate(10)}<small>${Math.min(10,games.length)} games</small></td><td data-num>${rate(games.length)}<small>${games.length} games</small></td><td><div class="ev-mini-bars" aria-label="Recent results">${games.slice(0,10).reverse().map(g => `<i title="${esc(g.game)}: ${esc(g.result)}" style="height:${Math.max(5, Math.min(100, Number(g.line) > 0 ? Number(g.result)/Number(g.line)*65 : 5)) || 5}%"></i>`).join('')}</div></td></tr>`; }))) : toolEmpty('Build a picture of recent form','Add game results to compare recent hit rates and player-prop correlations.',action('Add result','result'),'trends')}${toolPanel('Paired-game correlation','Compare two props recorded against the same game IDs.',`<div class="ev-fields"><label>First prop<select id="ev-trend-a">${options.map(x => `<option value="${esc(x)}" ${x === trendA ? 'selected' : ''}>${esc(x.replace('|',' · '))}</option>`).join('')}</select></label><label>Second prop<select id="ev-trend-b">${options.map(x => `<option value="${esc(x)}" ${x === trendB ? 'selected' : ''}>${esc(x.replace('|',' · '))}</option>`).join('')}</select></label><div class="ev-result">${Number.isFinite(correlation) ? `Pearson r <strong>${correlation.toFixed(2)}</strong> across ${paired.length} matching game IDs` : `Need at least three matching game IDs with variation in both results. Currently ${paired.length}.`}</div></div>`)}<p class="ev-caption">Recent hit rates describe entered historical games. They do not estimate a future hit probability; correlation is descriptive and needs aligned game IDs.</p></div>`;
 }
 
+// History grouped by series (a book's line, followed as it moves), built once per history list.
+let seriesIndex = { history: null, length: -1, map: new Map() };
+function historySeries() {
+  if (seriesIndex.history !== state.history || seriesIndex.length !== state.history.length) {
+    const map = new Map();
+    for (const item of state.history) { const key = item.seriesId || item.quoteId; if (!map.has(key)) map.set(key, []); map.get(key).push(item); }
+    seriesIndex = { history: state.history, length: state.history.length, map };
+  }
+  return seriesIndex.map;
+}
 function renderLineAlerts() {
   const all = state.history.filter(h => (!sport || !h.sport || h.sport === sport) && (!search || ['event','market','book','side'].some(k => filterText(h[k])))).sort((a,b) => b.ts.localeCompare(a.ts));
   const rules = state.alerts.filter(x => x.kind !== 'fantasy-new' && visible(x,['event','market']));
-  const notes = state.notifications.filter(x => rules.some(r => r.id === x.ruleId));
-  return `<div class="ev-stack">${browserAlertsControl()}${emailAlertsControl()}${toolStats([['Active watches',rules.filter(x=>x.enabled!==false).length],['Unread alerts',notes.filter(x=>!x.read).length],['Price snapshots',all.length]])}<div class="tool-two-column">${toolPanel('Price and EV watches','Alerts fire in this browser when a newly saved or imported record meets a threshold. They do not poll sportsbooks.',rules.length ? `<div class="ev-list">${rules.map(r => `<div class="ev-list-item"><div><strong>${r.kind === 'ev' ? 'EV at least ' + r.threshold + '%' : r.kind === 'movement' ? 'Line change at least ' + r.threshold : 'American price at least ' + oddsLabel(r.threshold)}</strong><span> ${esc(r.sport || 'All sports')} · ${esc(r.event || 'Any event')} · ${esc(r.market || 'Any market')} · ${r.liveOnly ? 'Live only' : 'All'} · ${r.enabled === false ? 'Paused' : 'Active'}</span></div><div>${button('Edit', `data-edit="alert" data-id="${esc(r.id)}"`)} ${button(r.enabled === false ? 'Resume' : 'Pause', `data-alert-toggle="${esc(r.id)}"`)}</div></div>`).join('')}</div>` : toolEmpty('Choose your price target','Set a price, EV threshold, or line movement to watch.',action('Create alert','alert'),'live'),{actions:action('New alert','alert')})}${toolPanel('Alert activity','Matches from your saved rules.',notes.length?renderNotifications(notes):toolEmpty('You’re all caught up','Matching price updates will appear here.','','live'))}</div>${toolPanel('Recorded line movement','The latest 200 price snapshots, newest first.',all.length ? table(['Time', 'Market', 'Book', 'Side', 'Line', 'Price', 'Change'], all.slice(0,200).map(h => { const sequence = state.history.filter(x => x.quoteId === h.quoteId), index = sequence.findIndex(x => x.id === h.id), prior = sequence[index-1]; return `<tr><td>${new Date(h.ts).toLocaleString()}</td><td>${esc(h.event)}<small>${esc(h.market)}</small></td><td>${esc(h.book)}</td><td>${esc(h.side)}</td><td data-num>${fmtLine(h.line)}</td><td data-num>${oddsLabel(h.odds)}</td><td>${prior ? `${oddsLabel(prior.odds)} → ${oddsLabel(h.odds)}${String(prior.line) !== String(h.line) ? ` · line ${fmtLine(prior.line)} → ${fmtLine(h.line)}` : ''}` : 'First entry'}</td></tr>`; })) : toolEmpty('Follow a line from its first price','Each new or edited price creates a timestamped snapshot.',action('Add price','quote'),'trends'))}</div>`;
+  const notes = state.notifications.filter(x => rules.some(r => r.id === x.ruleId)), unread = notes.filter(x => !x.read).length;
+  // Seeing the list reads it; the bell count drops on the next save.
+  for (const note of notes) note.read = true;
+  return `<div class="ev-stack">${browserAlertsControl()}${emailAlertsControl()}${toolStats([['Active watches',rules.filter(x=>x.enabled!==false).length],['Unread alerts',unread],['Price snapshots',all.length]])}<div class="tool-two-column">${toolPanel('Price and EV watches','Alerts check every price update while this page is open (and by email, when turned on), and fire once when a price newly meets a rule.',rules.length ? `<div class="ev-list">${rules.map(r => `<div class="ev-list-item"><div><strong>${r.kind === 'ev' ? 'EV at least ' + r.threshold + '%' : r.kind === 'movement' ? 'Line change at least ' + r.threshold : 'American price at least ' + oddsLabel(r.threshold)}</strong><span> ${esc(r.sport || 'All sports')} · ${esc(r.event || 'Any event')} · ${esc(r.market || 'Any market')} · ${r.liveOnly ? 'Live only' : 'All'} · ${r.enabled === false ? 'Paused' : 'Active'}</span></div><div>${button('Edit', `data-edit="alert" data-id="${esc(r.id)}"`)} ${button(r.enabled === false ? 'Resume' : 'Pause', `data-alert-toggle="${esc(r.id)}"`)}</div></div>`).join('')}</div>` : toolEmpty('Choose your price target','Set a price, EV threshold, or line movement to watch.',action('Create alert','alert'),'live'),{actions:action('New alert','alert')})}${toolPanel('Alert activity','Matches from your saved rules.',notes.length?renderNotifications(notes):toolEmpty('You’re all caught up','Matching price updates will appear here.','','live'))}</div>${toolPanel('Recorded line movement','The latest 200 price snapshots, newest first.',all.length ? table(['Time', 'Market', 'Book', 'Side', 'Line', 'Price', 'Change'], all.slice(0,200).map(h => { const sequence = historySeries().get(h.seriesId || h.quoteId) || [], index = sequence.findIndex(x => x.id === h.id), prior = sequence[index-1]; return `<tr><td>${new Date(h.ts).toLocaleString()}</td><td>${esc(h.event)}<small>${esc(h.market)}</small></td><td>${esc(h.book)}</td><td>${esc(h.selection || h.side)}</td><td data-num>${fmtLine(h.line)}</td><td data-num>${oddsLabel(h.odds)}</td><td>${prior ? `${oddsLabel(prior.odds)} → ${oddsLabel(h.odds)}${String(prior.line) !== String(h.line) ? ` · line ${fmtLine(prior.line)} → ${fmtLine(h.line)}` : ''}` : 'First entry'}</td></tr>`; })) : toolEmpty('No price changes recorded yet','Each feed price is recorded when it first appears and whenever its price or line changes, for 24 hours.','','trends'))}</div>`;
 }
 
 const FIELDS = {
@@ -1575,7 +1675,7 @@ const FIELDS = {
   trade: [['trader','Trader name','text',true],['contractId','Contract','contract',true],['side','Trade side','select',true,['Buy Yes','Sell Yes','Buy No','Sell No']],['quantity','Quantity','number',true],['price','Price (¢)','number',true],['ts','Executed at','datetime-local',true]],
   bet: [['sport','Sport','select',true,['NFL','MLB','NBA','WNBA','NHL','Soccer']],['date','Date placed','date',true],['selection','Selection / exact line','text',true],['book','Sportsbook','text',true],['stake','Stake ($)','number',true],['odds','Booked American odds','number',true],['closeOdds','Closing American odds','number',false],['result','Result','select',true,['open','win','loss','push','void']]],
   result: [['sport','Sport','select',true,['NFL','MLB','NBA','WNBA','NHL','Soccer']],['date','Game date','date',true],['game','Game ID / matchup','text',true],['player','Player','text',true],['market','Prop market','text',true],['line','Prop line','number',true],['result','Recorded result','number',true]],
-  alert: [['sport','Sport','select',false,['NFL','MLB','NBA','WNBA','NHL','Soccer']],['kind','Alert type','select',true,[['price','Price at or better'],['ev','Estimated EV at or above'],['movement','Line move at least'],['fantasy-new','New fantasy prop']]],['event','Event contains','text',false],['market','Market contains','text',false],['threshold','Threshold (odds, line points or %)','number',true],['liveOnly','Live quotes only','checkbox',false]]
+  alert: [['sport','Sport','select',false,() => [...new Set([...feedSports(), ...state.dfs.map(x => x.sport).filter(Boolean)])].sort()],['kind','Alert type','select',true,[['price','Price at or better'],['ev','Estimated EV at or above'],['movement','Line move at least'],['fantasy-new','New fantasy prop']]],['event','Event contains','text',false],['market','Market contains','text',false],['threshold','Threshold (odds, line points or %)','number',true],['liveOnly','Live quotes only','checkbox',false]]
 };
 const formTitles = { quote:'market price', dfs:'fantasy prop', contract:'prediction contract', trader:'trader position', trade:'trade', bet:'tracked bet', result:'player result', alert:'alert rule' };
 const collection = { quote:'quotes', dfs:'dfs', contract:'contracts', trader:'traders', trade:'trades', bet:'bets', result:'results', alert:'alerts' };
@@ -1586,11 +1686,11 @@ function fieldMarkup(field, item) {
   if (type === 'platform') return `<label>${esc(label)}<input name="${name}" list="ev-platform-${name}" value="${esc(value)}" maxlength="180" ${required ? 'required' : ''} placeholder="Choose or enter a platform"><datalist id="ev-platform-${name}">${platformOptions(options)}</datalist></label>`;
   if (type === 'checkbox') return `<label><input name="${name}" type="checkbox" ${value ? 'checked' : ''}>${esc(label)}</label>`;
   if (type === 'select' || type === 'contract') {
-    const values = type === 'contract' ? state.contracts.map(c => [c.id, `${c.platform}: ${c.event}`]) : options.map(x => Array.isArray(x) ? x : [x,x]);
+    const values = type === 'contract' ? state.contracts.map(c => [c.id, `${c.platform}: ${c.event}`]) : (typeof options === 'function' ? options() : options).map(x => Array.isArray(x) ? x : [x,x]);
     return `<label>${esc(label)}<select name="${name}" ${required ? 'required' : ''}><option value="">${name === 'sport' && !required ? 'All sports' : 'Choose…'}</option>${values.map(([key,text]) => `<option value="${esc(key)}" ${String(value) === String(key) ? 'selected' : ''}>${esc(text)}</option>`).join('')}</select></label>`;
   }
   const adjusted = type === 'datetime-local' ? dateInput(value) : value;
-  const attributes = type === 'number' ? `step="${['odds','closeOdds','threshold'].includes(name) ? '1' : 'any'}"` : '';
+  const attributes = type === 'number' ? `step="${['odds','closeOdds'].includes(name) ? '1' : 'any'}"` : '';
   return `<label>${esc(label)}<input name="${name}" type="${type}" value="${esc(adjusted)}" ${required ? 'required' : ''} ${attributes} ${type === 'text' ? 'maxlength="180"' : ''}></label>`;
 }
 function openForm(type, id = null, presets = {}) {
@@ -1634,14 +1734,17 @@ function saveForm(event) {
   const item = parseForm();
   if (!item) return;
   if (editing.type === 'quote') return;
-  const {type,id} = editing, key = collection[type], previous = id ? state[key].find(x => x.id === id) : null;
-  const record = { ...previous, ...item, id: id || uid(), source:'manual' };
+  const {type,id} = editing, key = collection[type], found = id ? state[key].find(x => x.id === id) : null;
+  // Editing a feed line saves the member's own copy under a new id, without the feed's sportsbook
+  // pricing (the feed line stays as it is and keeps refreshing).
+  const fromFeed = found?.source === 'local-api', previous = fromFeed ? Object.fromEntries(Object.entries(found).filter(([field]) => !['id','source','probabilityBooks','probabilitySources','probabilityMethod','bookLines','period','payoutMultiplier'].includes(field))) : found;
+  const record = { ...previous, ...item, id: fromFeed ? uid() : id || uid(), source:'manual' };
   if (type === 'dfs' || type === 'contract') record.ts = now();
   if (type === 'alert') {
     record.enabled = previous?.enabled ?? true;
-    record.seen = previous?.seen || alertMatches(record, state).map(x => x.id);
+    record.seen = previous?.seen || alertMatches(record, alertState(), { settings: suite.settings() }).map(x => x.id);
   }
-  if (id) state[key] = state[key].map(x => x.id === id ? record : x);
+  if (id && !fromFeed) state[key] = state[key].map(x => x.id === id ? record : x);
   else state[key].push(record);
   if (type === 'quote') snapshotQuote(record);
   if (type === 'contract') state.contractHistory.push({ id:uid(), contractId:record.id, bid:record.bid, ask:record.ask, volume:record.volume, ts:record.ts });
@@ -1784,7 +1887,7 @@ $('#ev-detail').addEventListener('click', event => {
   const editKind = control.dataset.compareEdit ? 'quote' : control.dataset.compareEditDfs ? 'dfs' : control.dataset.compareEditBet ? 'bet' : '';
   if (editKind) { const id = control.dataset.compareEdit || control.dataset.compareEditDfs || control.dataset.compareEditBet; $('#ev-detail').close(); return openForm(editKind, id); }
   if (control.dataset.compareParlay) { const id = control.dataset.compareParlay; $('#ev-detail').close(); parlayIds = [...new Set([...parlayIds,id])]; return setTool('parlay'); }
-  if (control.dataset.compareDfs) { const id = control.dataset.compareDfs, item = state.dfs.find(entry => entry.id === id); $('#ev-detail').close(); if (item && item.app !== fantasyApp) { fantasyApp = item.app; fantasyIds = []; } fantasyIds = [...new Set([...fantasyIds,id])]; return setTool('slip'); }
+  if (control.dataset.compareDfs) { const id = control.dataset.compareDfs, item = state.dfs.find(entry => entry.id === id); $('#ev-detail').close(); if (item && !fantasyIds.includes(id)) addSlipPick(id); return setTool('slip'); }
 });
 $('#ev-sport').addEventListener('change', event => {
   sport = event.target.value;
@@ -1842,6 +1945,7 @@ $('#ev-view').addEventListener('click', event => {
   if (target.hasAttribute('data-parlay-ticket')) { $('#ev-parlay-ticket')?.scrollIntoView({block:'start',behavior:'instant'}); $('#ev-parlay-ticket')?.focus({preventScroll:true}); return; }
   if (target.hasAttribute('data-parlay-browse')) { $('#ev-parlay-browse')?.scrollIntoView({block:'start',behavior:'instant'}); return; }
   if (target.hasAttribute('data-parlay-more')) { const top = window.scrollY; parlayVisibleCount += 40; render(); window.scrollTo({top,behavior:'instant'}); return; }
+  if (target.hasAttribute('data-optimizer-more')) { const top = window.scrollY; optimizerVisibleCount += 40; render(); window.scrollTo({top,behavior:'instant'}); return; }
   if (target.hasAttribute('data-slip-more')) { const top = window.scrollY; slipVisibleCount += 40; render(); window.scrollTo({top,behavior:'instant'}); return; }
   if (target.hasAttribute('data-pair-more')) { const top=window.scrollY;pairVisibleCount+=40;render();window.scrollTo({top,behavior:'instant'});return; }
   if (target.hasAttribute('data-ev-more')) { const top=window.scrollY;evVisibleCount+=40;render();window.scrollTo({top,behavior:'instant'});return; }
@@ -1850,7 +1954,7 @@ $('#ev-view').addEventListener('click', event => {
   if (target.dataset.sharpAnalysis) { const actions = target.closest('.sm-panel-actions'); if (!actions) return; showBetComparison(target.dataset.sharpAnalysis, 'quote', {anchor:actions}); return actions.nextElementSibling?.matches('.bet-inline-mount') && actions.nextElementSibling.scrollIntoView({block:'nearest'}); }
   if (target.hasAttribute('data-sharp-filters')) { sharpFiltersOpen = !sharpFiltersOpen; return render(); }
   if (target.hasAttribute('data-sharp-refresh')) { render(); $('#ev-notice').textContent = state.quotes.length ? 'Comparison refreshed from the latest prices.' : 'No prices yet. They appear once the quote feed updates.'; return; }
-  if (target.hasAttribute('data-sharp-clear')) { search = ''; marketType = ''; bookmaker = ''; sport = ''; history.replaceState(history.state, '', `${location.pathname}?sport=all${location.hash}`); localStorage.setItem('sportslab-ev-sharp-min','0'); return render(); }
+  if (target.hasAttribute('data-sharp-clear')) { search = ''; marketType = ''; bookmaker = ''; sport = ''; history.replaceState(history.state, '', `${location.pathname}?sport=all${location.hash}`); localStorage.setItem('sportslab-ev-sharp-min','1000'); return render(); }
   if (target.dataset.sort) { evSort = target.dataset.sort; return render(); }
   if (target.dataset.evbToggle) return toggleEvBoardRow(target.dataset.evbToggle);
   if (target.dataset.evbRefresh) { toggleEvBoardRow(target.dataset.evbRefresh); toggleEvBoardRow(target.dataset.evbRefresh); return $('#ev-view').querySelector(`[data-evb-refresh="${CSS.escape(target.dataset.evbRefresh)}"]`)?.focus({preventScroll:true}); }
@@ -1898,7 +2002,7 @@ $('#ev-view').addEventListener('click', event => {
     $('#ev-view').querySelector(`[data-parlay="${CSS.escape(id)}"]`)?.focus({preventScroll:true});
     return;
   }
-  if (target.dataset.fantasy) { const id = target.dataset.fantasy; const item = state.dfs.find(x => x.id === id); if (item && item.app !== fantasyApp) { fantasyApp = item.app; fantasyIds = []; } const sameLine = other => other && item && other.player === item.player && other.market === item.market && String(other.line) === String(item.line) && other.event === item.event; fantasyIds = fantasyIds.includes(id) ? fantasyIds.filter(x => x !== id) : [...fantasyIds.filter(x => !sameLine(state.dfs.find(d => d.id === x))), id]; if (active !== 'slip') return setTool('slip'); const top = window.scrollY; render(); window.scrollTo({top,behavior:'instant'}); $('#ev-view').querySelector(`[data-fantasy="${CSS.escape(id)}"]`)?.focus({preventScroll:true}); return; }
+  if (target.dataset.fantasy) { const id = target.dataset.fantasy; addSlipPick(id); if (active !== 'slip') return setTool('slip'); const top = window.scrollY; render(); window.scrollTo({top,behavior:'instant'}); $('#ev-view').querySelector(`[data-fantasy="${CSS.escape(id)}"]`)?.focus({preventScroll:true}); return; }
   if (target.dataset.optimize) { fantasyIds = target.dataset.optimize.split(','); fantasyApp = state.dfs.find(x => x.id === fantasyIds[0])?.app || ''; return setTool('slip'); }
   if (target.dataset.promoPair) { const a = state.quotes.find(x => x.id === target.dataset.promoPair), b = state.quotes.find(x => x.id === target.dataset.hedge); if (a && b) { promoInput.promoOdds = a.odds; promoInput.hedgeOdds = b.odds; render(); } return; }
   if (target.dataset.alertToggle) { const rule = state.alerts.find(x => x.id === target.dataset.alertToggle); if (rule) { rule.enabled = rule.enabled === false; commit(); } return; }
@@ -1935,7 +2039,7 @@ $('#ev-view').addEventListener('change', event => {
   else if (t.id === 'ev-bankroll') { stake = Math.max(.01,Number(t.value)||100); render(); }
   else if (t.dataset.promo) { promoInput[t.dataset.promo] = t.dataset.promo === 'kind' ? t.value : Number(t.value); render(); }
   else if (t.id === 'ev-fantasy-app') { fantasyApp = t.value; fantasyIds = []; slipVisibleCount = 40; render(); }
-  else if (t.id === 'ev-fantasy-stake') { fantasyStake = Math.max(.01,Number(t.value)||10); render(); }
+  else if (t.id === 'ev-fantasy-stake') { const value = Number(t.value); if (value >= 1) fantasyStake = value; render(); }
   else if (t.id === 'ev-trader-filter') { traderName = t.value; render(); }
   else if (t.id === 'ev-prediction-platform') { predictionPlatform = t.value; render(); }
   else if (t.id === 'ev-trend-a') { trendA = t.value; render(); }
@@ -2000,13 +2104,16 @@ document.addEventListener(STATE_CHANGE_EVENT, event => {
   selectedSportsbooks = null; bookmaker = ''; bookMenuOpen = false; detailQuoteId = ''; sharpSelectedBook = '';
   render();
 });
-// A price refresh waits while someone is typing, choosing from an open dropdown or menu, or using
-// the phone filter sheet, so it never wipes an edit or closes what they are reading.
+// A price refresh waits while someone is typing (until 5 seconds after the last key), has a menu open,
+// or uses the phone filter sheet, so it never wipes an edit or closes what they are reading. A focused
+// dropdown doesn't count: its choice is already applied, and focus stays on it afterwards.
+let lastTyped = 0;
+document.addEventListener('input', event => { if (event.target?.closest?.('#main') && !(event.target instanceof HTMLSelectElement)) lastTyped = Date.now(); }, true);
 const interacting = () => bookMenuOpen || Boolean(document.fullscreenElement)
   || document.body.classList.contains('ev-mobile-filter-open')
   || Boolean(document.querySelector('dialog[open],[aria-haspopup][aria-expanded="true"],.wager-more[open],.evx-more[open],.evx-tools-menu[open],.bet-expanded-more[open]'))
-  || Boolean(document.activeElement?.closest?.('#main input:not([type=button]):not([type=checkbox]):not([type=radio]),#main select,#main textarea,#main [contenteditable]'));
-feedControls = createQuoteFeedControls({ sync: syncLocalApi, getState: () => state, getTool: () => active, canRefresh: () => !interacting(), hasLive: () => state.quotes.some(q => q.live) });
+  || Date.now() - lastTyped < 5_000 && Boolean(document.activeElement?.closest?.('#main input:not([type=button]):not([type=checkbox]):not([type=radio]),#main textarea,#main [contenteditable]'));
+feedControls = createQuoteFeedControls({ sync: syncLocalApi, getState: () => state, getTool: () => active, canRefresh: () => !interacting(), hasLive: () => state.quotes.some(q => q.live && fresh(q)) });
 installMobileWorkspace();
 for(const type of ['click','change','input','submit','dragstart','dragover','drop'])$('#main').addEventListener(type,event=>{if(suite.handleEvent(event))event.stopImmediatePropagation();},true);
 suite.startRefresh();

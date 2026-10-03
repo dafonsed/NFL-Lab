@@ -1,5 +1,5 @@
 // Pure market math. Quote adapters can replace manual/example records without changing the workbench.
-import {marketIdentity as preciseMarketIdentity,quoteAvailable,devig} from './ev-advanced-math.js';
+import {marketIdentity as preciseMarketIdentity,quoteAvailable,devig,evCapFor,computeAdvancedEv} from './ev-advanced-math.js?v=2';
 export const decimal = odds => {
   const n = Number(odds);
   if (!Number.isFinite(n) || (n > -100 && n < 100)) return NaN;
@@ -19,7 +19,7 @@ export const oddsLabel = odds => Number(odds) > 0 ? '+' + Number(odds) : String(
 export const probabilityToAmerican = probability => {
   const p = Number(probability);
   if (!(p > 0 && p < 1)) return NaN;
-  return Math.round(p >= .5 ? -100 * p / (1 - p) : 100 * (1 - p) / p);
+  return Math.round(p > .5 ? -100 * p / (1 - p) : 100 * (1 - p) / p);
 };
 export const marketKey = q => preciseMarketIdentity(q,true);
 export const familyKey = q => preciseMarketIdentity(q,false);
@@ -70,10 +70,44 @@ export function evRows(quotes, mode, method = 'multiplicative') {
   })).filter(row => Number.isFinite(row.ev)).sort((a, b) => b.ev - a.ev);
 }
 
-export function bestSides(rows) {
+// Books that copy one platform's prices (BetRivers, Desert Diamond, Bally Bet on Kambi) are one book.
+export const priceFamily = q => q.priceFamily || q.book;
+const START_GAP_MS = 3 * 3_600_000;
+/** False when both legs carry start times more than 3 hours apart: the feed filed two games under one name. */
+export const sameGame = (a, b) => { const x = Date.parse(a.startTime), y = Date.parse(b.startTime); return !(Number.isFinite(x) && Number.isFinite(y) && Math.abs(x - y) > START_GAP_MS); };
+/**
+ * A price only counts in a cross-book comparison when its own book prices every side of the same
+ * market at a real margin: 100-125% implied. One-sided listings can't be checked, and a book whose own
+ * sides add up to under 100% (Novig pairs at 99%, which can't both be takeable) or far over is quoting
+ * something else:
+ * a mixed ladder, a mislabeled side, a yes/no prop or another game (Oct 2026: every arbitrage the
+ * feed produced came from such listings).
+ */
+export function ownBookConsistent(q, rows, available = fresh) {
+  const sides = opposingSides(rows);
+  if (!sides.includes(q.side)) return false;
+  const own = sides.map(side => rows.filter(x => x.book === q.book && x.side === side && available(x)).sort((a, b) => Date.parse(b.ts) - Date.parse(a.ts))[0]);
+  if (!own.every(Boolean)) return false;
+  const sum = own.reduce((total, x) => total + implied(x.odds), 0);
+  return sum >= 1 && sum <= 1.25;
+}
+
+/** Market rows by market key, for ownBookConsistent and plausibleEv lookups. */
+export const marketRowsOf = quotes => new Map(groups(quotes).map(rows => [marketKey(rows[0]), rows]));
+/**
+ * Whether a priced row can be shown as +EV: within the sanity cap (evCapFor), and, for a game line, from
+ * a book that prices both sides (one-sided Fanatics ladder prices were the feed's biggest "edges").
+ * Props may be one-sided milestones.
+ */
+export function plausibleEv(row, marketRows, settings = {}, available = fresh) {
+  if (!(row.ev <= evCapFor(row, settings))) return false;
+  return !['moneyline', 'spread', 'total'].includes(row.quote.type) || ownBookConsistent(row.quote, marketRows.get(marketKey(row.quote)) || [], available);
+}
+
+export function bestSides(rows, available = fresh) {
   const sides = opposingSides(rows);
   if (!sides.length) return [];
-  return sides.map(side => rows.filter(q => q.side === side && fresh(q)).sort((a, b) => decimal(b.odds) - decimal(a.odds))[0]).filter(Boolean);
+  return sides.map(side => rows.filter(q => q.side === side && available(q) && ownBookConsistent(q, rows, available)).sort((a, b) => decimal(b.odds) - decimal(a.odds))[0]).filter(Boolean);
 }
 
 export function holdRows(quotes, mode) {
@@ -91,20 +125,35 @@ export function arbitrage(best, bankroll) {
   return { margin: 1 / sum - 1, stakes, payout: bankroll / sum, profit: bankroll * (1 / sum - 1) };
 }
 
+/**
+ * Markets where two books' opposite sides add up to under 100%: { rows, best, pairs } with every such
+ * pair, best first. Each leg must pass ownBookConsistent, come from a different price family and the
+ * same game; mirrored books quoting the same pair are listed once.
+ */
 export function arbitrageRows(quotes, mode, settings = {}) {
+  const available = q => quoteAvailable(q, settings), total = pair => implied(pair[0].odds) + implied(pair[1].odds);
   return groups(quotes, mode).map(rows => {
     const sides = opposingSides(rows);
     if (!sides.length) return null;
-    const pairs = rows.filter(q => q.side === sides[0] && quoteAvailable(q,settings)).flatMap(a => rows.filter(b => b.side === sides[1] && b.book !== a.book && quoteAvailable(b,settings)).map(b => [a,b]));
-    pairs.sort((a,b) => implied(a[0].odds) + implied(a[1].odds) - implied(b[0].odds) - implied(b[1].odds));
-    const best = pairs[0];
-    return best && implied(best[0].odds) + implied(best[1].odds) < 1 ? { rows, best } : null;
-  }).filter(Boolean).sort((a,b) => implied(a.best[0].odds) + implied(a.best[1].odds) - implied(b.best[0].odds) - implied(b.best[1].odds));
+    const usable = rows.filter(q => available(q) && ownBookConsistent(q, rows, available));
+    const seen = new Set(), pairs = [];
+    for (const a of usable.filter(q => q.side === sides[0])) for (const b of usable.filter(q => q.side === sides[1])) {
+      if (priceFamily(a) === priceFamily(b) || !sameGame(a, b) || total([a, b]) >= 1) continue;
+      const key = JSON.stringify([priceFamily(a), Number(a.odds), priceFamily(b), Number(b.odds)]);
+      if (!seen.has(key)) { seen.add(key); pairs.push([a, b]); }
+    }
+    pairs.sort((a, b) => total(a) - total(b));
+    return pairs.length ? { rows, best: pairs[0], pairs } : null;
+  }).filter(Boolean).sort((a, b) => total(a.best) - total(b.best));
 }
 
 export function middleRows(quotes, mode, settings = {}) {
+  const available = q => quoteAvailable(q, settings), candidates = quotes.filter(validQuote).filter(q => ['total','spread','alternate'].includes(q.type) && Boolean(q.live) === mode && available(q));
+  // Each leg's own book must price both sides of its line (see ownBookConsistent).
+  const markets = new Map();
+  for (const q of candidates) { const key = marketKey(q); if (!markets.has(key)) markets.set(key, []); markets.get(key).push(q); }
   const families = new Map();
-  for (const q of quotes.filter(validQuote).filter(q => ['total','spread','alternate'].includes(q.type) && Boolean(q.live) === mode && quoteAvailable(q,settings))) {
+  for (const q of candidates.filter(q => ownBookConsistent(q, markets.get(marketKey(q)), available))) {
     const key = familyKey(q);
     if (!families.has(key)) families.set(key, []);
     families.get(key).push(q);
@@ -116,14 +165,14 @@ export function middleRows(quotes, mode, settings = {}) {
     const overs = rows.filter(q => q.side.toLowerCase() === 'over');
     const unders = rows.filter(q => q.side.toLowerCase() === 'under');
     for (const over of overs) for (const under of unders) {
-      if (Number(over.line) >= Number(under.line) || over.book === under.book || !reachable(Number(over.line), Number(under.line))) continue;
+      if (Number(over.line) >= Number(under.line) || priceFamily(over) === priceFamily(under) || !sameGame(over, under) || !reachable(Number(over.line), Number(under.line))) continue;
       found.push({ over, under, kind:'total', window:`Total ${over.line} to ${under.line}`, width: Number(under.line) - Number(over.line), cost: 1 - 1 / (implied(over.odds) + implied(under.odds)) });
     }
     const spreadSides = [...new Set(rows.filter(q => q.type === 'spread' || q.type === 'alternate' && !['over','under'].includes(q.side.toLowerCase())).map(q => q.side))];
     if (spreadSides.length !== 2) continue;
     for (const over of rows.filter(q => q.side === spreadSides[0])) for (const under of rows.filter(q => q.side === spreadSides[1])) {
       const low = -Number(over.line), high = Number(under.line);
-      if (!Number.isFinite(low) || !Number.isFinite(high) || low >= high || over.book === under.book || !reachable(low, high)) continue;
+      if (!Number.isFinite(low) || !Number.isFinite(high) || low >= high || priceFamily(over) === priceFamily(under) || !sameGame(over, under) || !reachable(low, high)) continue;
       found.push({ over, under, kind:'spread', window:`${over.selection || spreadSides[0]} margin ${low} to ${high}`, width:high-low, cost:1-1/(implied(over.odds)+implied(under.odds)) });
     }
   }
@@ -132,7 +181,8 @@ export function middleRows(quotes, mode, settings = {}) {
 
 export function promoConversion({ stake, promoOdds, hedgeOdds, kind = 'bonus', boost = 0 }) {
   const d1 = decimal(promoOdds), d2 = decimal(hedgeOdds), amount = Number(stake), factor = 1 + Number(boost) / 100;
-  if (!(amount > 0) || !Number.isFinite(d1) || !Number.isFinite(d2) || !(factor > 0)) return null;
+  // A boost adds to the profit; a negative one isn't a promotion.
+  if (!(amount > 0) || !Number.isFinite(d1) || !Number.isFinite(d2) || !(Number(boost) >= 0)) return null;
   const payout = kind === 'bonus' ? amount * (d1 - 1) * factor : amount * (1 + (d1 - 1) * factor);
   const hedge = payout / d2;
   const ifPromoWins = kind === 'bonus' ? payout - hedge : payout - amount - hedge;
@@ -189,31 +239,55 @@ export function pearson(pairs) {
   return sx && sy ? numerator / Math.sqrt(sx * sy) : NaN;
 }
 
+// Exchange prices with liquidity beside the best sportsbook price on the other side. Two-way markets only
+// (a three-way draw isn't "the other side"), and only sides the feed confirmed: ProphetX's unnamed
+// "home" prices were the other player's.
 export function sharpMatches(quotes, minimum = 1000) {
-  return groups(quotes).flatMap(rows => rows.filter(q => q.exchange && Number(q.liquidity) >= minimum && fresh(q)).map(exchange => {
-    const opposite = rows.filter(q => q.exchange && q.side !== exchange.side && fresh(q)).sort((a,b) => decimal(b.odds)-decimal(a.odds))[0];
-    const sportsbook = rows.filter(q => !q.exchange && q.side !== exchange.side && fresh(q)).sort((a,b) => decimal(b.odds)-decimal(a.odds))[0];
+  const confirmed = q => q.sideVerified !== false;
+  return groups(quotes).filter(rows => opposingSides(rows).length === 2).flatMap(rows => rows.filter(q => q.exchange && confirmed(q) && Number(q.liquidity) >= minimum && fresh(q)).map(exchange => {
+    const opposite = rows.filter(q => q.exchange && confirmed(q) && q.side !== exchange.side && fresh(q)).sort((a,b) => decimal(b.odds)-decimal(a.odds))[0];
+    const sportsbook = rows.filter(q => !q.exchange && confirmed(q) && q.side !== exchange.side && fresh(q)).sort((a,b) => decimal(b.odds)-decimal(a.odds))[0];
     if (!sportsbook || (opposite && decimal(sportsbook.odds) <= decimal(opposite.odds))) return null;
     return { exchange, opposite, sportsbook, liquidity:Number(exchange.liquidity), improvement:opposite ? decimal(sportsbook.odds)/decimal(opposite.odds)-1 : NaN };
   }).filter(Boolean));
 }
 
-export function alertMatches(rule, state) {
-  if (rule.kind === 'fantasy-new') return state.dfs.filter(x => knownProbability(x.probability) && (!rule.sport || x.sport === rule.sport) && (!rule.market || x.market.toLowerCase().includes(rule.market.toLowerCase())) && (!Number.isFinite(Number(rule.threshold)) || Number(x.probability) * 100 >= Number(rule.threshold))).map(x => ({ id: x.id, label: `${x.player} ${x.market} ${Math.round(Number(x.probability) * 100)}% at ${x.app}` }));
-  const rows = state.quotes.filter(q => (!rule.sport || q.sport === rule.sport) && (!rule.event || q.event.toLowerCase().includes(rule.event.toLowerCase())) && (!rule.market || q.market.toLowerCase().includes(rule.market.toLowerCase())) && (!rule.liveOnly || q.live));
-  const observation = q => state.history.filter(h => h.quoteId === q.id).at(-1)?.id || q.id;
-  if (rule.kind === 'price') return rows.filter(q => decimal(q.odds) >= decimal(rule.threshold)).map(q => ({ id: observation(q), label: `${q.side} ${oddsLabel(q.odds)} at ${q.book}` }));
-  if (rule.kind === 'ev') {
-    const ids = new Set(evRows(state.quotes, rule.liveOnly ? true : null, state.suite?.settings?.devigMethod || 'multiplicative').filter(x => x.ev >= Number(rule.threshold) / 100).map(x => x.quote.id));
-    return rows.filter(q => ids.has(q.id)).map(q => ({ id: observation(q), label: `${q.side} at ${q.book}` }));
+/**
+ * Current matches for one alert rule: [{ id, label }]. A match's id is its selection's stable id (a
+ * line move's snapshot for movement rules), so a rule fires when a price newly meets it, not on every
+ * rescrape. `settings` are the member's pricing settings: EV rules price exactly as the Positive EV
+ * board does, caps included. `available` decides which prices are current.
+ */
+export function alertMatches(rule, state, { settings = {}, available = fresh } = {}) {
+  const lower = value => String(value ?? '').toLowerCase(), named = (values, text) => values.some(value => lower(value).includes(lower(text)));
+  if (rule.kind === 'fantasy-new') {
+    // A goblin or demon line without its multiplier, or a part-game line, has no comparable hit rate.
+    const market = x => !rule.market || lower(x.market) === lower(rule.market) || lower(x.market).startsWith(lower(rule.market) + ' ');
+    return (state.dfs || []).filter(x => knownProbability(x.probability) && x.period !== 'part' && (!['goblin', 'demon'].includes(x.oddsType) || Number(x.payoutMultiplier) > 0)
+      && (!rule.sport || x.sport === rule.sport) && (!rule.event || named([x.event], rule.event)) && market(x) && (!rule.liveOnly || x.live)
+      && (!Number.isFinite(Number(rule.threshold)) || Number(x.probability) * 100 >= Number(rule.threshold)))
+      .map(x => ({ id: x.id, label: `${x.player} ${x.side} ${x.line} ${x.market} · ${(Number(x.probability) * 100).toFixed(1)}% fair at ${x.app}` }));
   }
-  if (rule.kind === 'movement') return rows.flatMap(q => {
-    const observations = state.history.filter(h => h.quoteId === q.id);
-    if (observations.length < 2) return [];
-    const previous = observations.at(-2), current = observations.at(-1);
-    const change = Math.abs(Number(current.line) - Number(previous.line));
-    return Number.isFinite(change) && change >= Number(rule.threshold) && change > 0 ? [{ id: current.id, label: `${q.market} ${previous.line} → ${current.line} at ${q.book}` }] : [];
-  });
+  const quotes = (state.quotes || []).filter(q => available(q) && (!rule.sport || q.sport === rule.sport) && (!rule.event || named([q.displayEvent, q.event], rule.event))
+    && (!rule.market || named([q.displayMarket, q.market], rule.market)) && (!rule.liveOnly || q.live));
+  const label = q => `${q.player ? q.player + ' ' : ''}${q.selection || q.side}${q.line !== '' && q.line != null ? ' ' + q.line : ''} ${oddsLabel(q.odds)} · ${q.displayMarket || q.market} · ${q.displayEvent || q.event} at ${q.book}`;
+  if (rule.kind === 'price') return quotes.filter(q => decimal(q.odds) >= decimal(rule.threshold)).map(q => ({ id: q.id, label: label(q) }));
+  if (rule.kind === 'ev') {
+    const all = state.quotes || [], markets = marketRowsOf(all);
+    const rows = new Map(computeAdvancedEv(all, settings).filter(row => row.ev >= Number(rule.threshold) / 100 && plausibleEv(row, markets, settings, available)).map(row => [row.quote.id, row]));
+    return quotes.filter(q => rows.has(q.id)).map(q => ({ id: q.id, label: `${label(q)} · ${signed(rows.get(q.id).ev)} EV` }));
+  }
+  if (rule.kind === 'movement') {
+    // A moved line is a new selection id; its series id follows the book's line (see normalizeFeed).
+    const series = new Map();
+    for (const item of state.history || []) { const key = item.seriesId || item.quoteId; if (!series.has(key)) series.set(key, []); series.get(key).push(item); }
+    return quotes.flatMap(q => {
+      const observations = series.get(q.seriesId || q.id) || [];
+      if (observations.length < 2) return [];
+      const previous = observations.at(-2), current = observations.at(-1), change = Math.abs(Number(current.line) - Number(previous.line));
+      return Number.isFinite(change) && change >= Number(rule.threshold) && change > 0 ? [{ id: current.id, label: `${label(q)} · line ${previous.line} → ${current.line}` }] : [];
+    });
+  }
   return [];
 }
 

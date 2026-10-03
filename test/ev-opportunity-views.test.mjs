@@ -8,7 +8,7 @@ import * as views from '../public/ev-secondary-views.js';
 import {wagerCard} from '../public/ev-bet-card.js';
 import {boardIcon,bookLogo,startLabel,selectionText,renderBetPanel} from '../public/ev-board.js';
 import {leagueMark,teamMark} from '../public/sports-identity.js';
-import {constrainedArb,middleOutcomes} from '../public/ev-advanced-math.js';
+import {constrainedArb,middleOutcomes,devig} from '../public/ev-advanced-math.js';
 import {TOOL_FILTER_DEFAULTS,oddsWithin} from '../public/ev-filters.js';
 
 const source = await fs.readFile(new URL('../public/ev.js',import.meta.url),'utf8');
@@ -17,10 +17,10 @@ const quote = (id, overrides={}) => ({id,sport:'NBA',event:'Home & Away',market:
 
 function render(name,quotes,extra={},args='') {
   const notice={dataset:{},textContent:''};
-  const context=vm.createContext({...core,...views,wagerCard,boardIcon,bookLogo,startLabel,leagueMark,teamMark,selectionText,renderBetPanel,constrainedArb,middleOutcomes,
+  const context=vm.createContext({...core,...views,wagerCard,boardIcon,bookLogo,startLabel,leagueMark,teamMark,selectionText,renderBetPanel,constrainedArb,middleOutcomes,devig,
     suite:{quoteVisible:()=>true,settings:()=>({}),displayOdds:core.oddsLabel},sharpSort:'liquidity',sportsbookNames:[],
     preserveLiveOrder:false,state:{quotes},quotes:()=>quotes,eligibleQuotes:items=>items,hasApiSnapshot:()=>false,
-    sportsbookSelected:()=>true,bookAvailable:()=>true,marketType:'',sport:'',bookmaker:'',search:'',
+    sportsbookSelected:()=>true,bookAvailable:()=>true,quotePassesDesign:()=>true,designSort:'recommended',marketType:'',sport:'',bookmaker:'',search:'',
     designFilters:{minEdge:0},stake:100,flatMultiplier:1,bankroll:5000,expandedSharpKey:'',sharpSelectedBook:'',sharpFiltersOpen:false,
     esc:views.toolEsc,fmtLine:value=>views.toolEsc(value),age:()=> 'Just now',$:()=>notice,
     localStorage:{getItem:()=> '1000'},filterText:()=>true,
@@ -36,7 +36,7 @@ function render(name,quotes,extra={},args='') {
 }
 
 test('arbitrage rows retain both quote actions and calculated stakes, with no demo framing',()=>{
-  const quotes=[quote('first'),quote('hedge',{side:'Under',book:'FanDuel',odds:-105})];
+  const quotes=[quote('first'),quote('hedge',{side:'Under',book:'FanDuel',odds:-105}),quote('first-under',{side:'Under',odds:-150}),quote('hedge-over',{side:'Over',book:'FanDuel',odds:-125})];
   const before=structuredClone(quotes);
   const {$,notice,detail,context}=render('renderArb',quotes,{},'false');
   const row=$('.evb-row[data-pair-row="first|hedge"]');
@@ -48,7 +48,7 @@ test('arbitrage rows retain both quote actions and calculated stakes, with no de
   assert.equal(row.find('[data-pair-open-both]').attr('data-pair-open-both'),'first|hedge');
   assert.equal(row.find('[data-pair-toggle]').attr('aria-expanded'),'false');
   assert.equal(row.children('td').length,4);
-  const allocation=constrainedArb(quotes,5000),plan=constrainedArb(quotes,100*allocation.actualTotal/allocation.stakes[0]);
+  const legs=quotes.slice(0,2),allocation=constrainedArb(legs,5000),plan=constrainedArb(legs,100*allocation.actualTotal/allocation.stakes[0]);
   assert.equal(row.find('.arb-pill').text(),(plan.margin*100).toFixed(2)+'%');
   assert.equal(row.find('.arb-leg-a .arb-stake strong').text(),core.money(plan.stakes[0]));
   assert.equal(row.find('.arb-leg-b .arb-stake strong').text(),core.money(plan.stakes[1]));
@@ -80,7 +80,9 @@ test('arbitrage rows retain both quote actions and calculated stakes, with no de
 test('middle rows keep unequal lines, both stakes and the possible one-side loss',()=>{
   const quotes=[quote('over',{type:'total',market:'Game total',player:'',line:43.5,odds:-110}),
     quote('under',{type:'total',market:'Game total',player:'',side:'Under',line:45.5,book:'FanDuel',odds:-110})];
-  const {$,detail}=render('renderMiddles',quotes),row=$('.evb-row[data-pair-row="over|under"]'),plan=constrainedArb(quotes.map(q=>({odds:q.odds})),100);
+  const otherSides=[quote('over-under',{type:'total',market:'Game total',player:'',side:'Under',line:43.5,odds:-110}),
+    quote('under-over',{type:'total',market:'Game total',player:'',line:45.5,book:'FanDuel',odds:-110})];
+  const {$,detail}=render('renderMiddles',[...quotes,...otherSides]),row=$('.evb-row[data-pair-row="over|under"]'),plan=constrainedArb(quotes.map(q=>({odds:q.odds})),100);
   assert.equal(row.length,1);
   assert.equal(row.find('.pair-leg-a strong').text(),'Over 43.5');
   assert.equal(row.find('.pair-leg-b strong').text(),'Under 45.5');
@@ -97,7 +99,8 @@ test('middle rows keep unequal lines, both stakes and the possible one-side loss
 
 test('low-hold rows stay sorted by combined margin with both book prices inspectable',()=>{
   const quotes=[quote('expensive-a',{event:'Higher hold',odds:-110}),quote('expensive-b',{event:'Higher hold',side:'Under',book:'FanDuel',odds:-110}),
-    quote('tight-a'),quote('tight-b',{side:'Under',book:'FanDuel',odds:-105})];
+    quote('expensive-a2',{event:'Higher hold',side:'Under',odds:-110}),quote('expensive-b2',{event:'Higher hold',book:'FanDuel',odds:-110}),
+    quote('tight-a'),quote('tight-b',{side:'Under',book:'FanDuel',odds:-105}),quote('tight-a2',{side:'Under',odds:-150}),quote('tight-b2',{book:'FanDuel',odds:-125})];
   const {$,detail}=render('renderHolds',quotes),rows=$('.evb-row[data-pair-row]');
   assert.equal(rows.length,2);
   assert.equal(rows.first().attr('data-wager-id'),'tight-a');

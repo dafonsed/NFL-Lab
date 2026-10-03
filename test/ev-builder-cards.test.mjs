@@ -9,6 +9,8 @@ import {wagerCard} from '../public/ev-bet-card.js';
 import {canonicalPlatform, isContestPlatform, PREDICTION_PLATFORMS} from '../public/platform-catalog.js';
 import {TOOL_FILTER_DEFAULTS, oddsWithin} from '../public/ev-filters.js';
 import {withStandardPaytables, paytableSource, breakEven, standardPayout, payoutFactor, payoutKnown} from '../public/dfs-workspace.js';
+import {selectionText, startLabel} from '../public/ev-board.js';
+import {computeAdvancedEv, evCapFor} from '../public/ev-advanced-math.js';
 
 const source=await fs.readFile(new URL('../public/ev.js',import.meta.url),'utf8');
 const quote=(id,extra={})=>({id,sport:'NBA',event:'BOS vs NYK',player:'Player <One>',market:'Points',type:'prop',side:'Over',line:20.5,book:'FanDuel',odds:120,ts:'2026-09-25T10:00:00Z',...extra});
@@ -22,8 +24,8 @@ function render(name,extra={}) {
     qName:q=>q.player+' '+q.side+' '+q.line,origin:()=>'<span class="ev-status">Manual</span>',
     table:(head,rows)=>`<table><thead><tr>${head.map(text=>`<th>${views.toolEsc(text)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`,
     button:(label,attrs='')=>`<button type="button" ${attrs}>${label}</button>`,action:()=>'',
-    toolFilters:{...TOOL_FILTER_DEFAULTS},oddsWithin,filteredEmpty:fallback=>fallback,sportsbookSelected:()=>true,sport:'',ARB_SANITY_LIMIT:.15,
-    breakEven,standardPayout,payoutFactor,payoutKnown,suite:{settings:()=>({devigMethod:'multiplicative'})},...extra});
+    toolFilters:{...TOOL_FILTER_DEFAULTS},oddsWithin,filteredEmpty:fallback=>fallback,sportsbookSelected:()=>true,sport:'',ARB_SANITY_LIMIT:.15,feedContracts:[],optimizerVisibleCount:40,startLabel,slipNotice:'',
+    breakEven,standardPayout,payoutFactor,payoutKnown,selectionText,computeAdvancedEv,evCapFor,suite:{settings:()=>({devigMethod:'multiplicative'})},...extra});
   // Parlay computes fair odds from every quote for the sport (quoteSource), not only the listed ones.
   context.quoteSource ??= () => context.state?.quotes ?? context.quotes?.() ?? [];
   // Standard payouts layer under saved tables (public/dfs-workspace.js).
@@ -37,7 +39,9 @@ function render(name,extra={}) {
 
 test('promotion cards keep the selected price and opposing hedge connected to the calculator',()=>{
   const a=quote('promo-a'),b=quote('hedge-b',{side:'Under',book:'DraftKings',odds:-110});
-  const {$}=render('renderPromo',{quotes:()=>[a,b],fresh:()=>true,promoInput:{kind:'bonus',stake:100,promoOdds:150,hedgeOdds:-130,boost:50}});
+  // Each book prices both sides, as real books do (one-sided prices never pair).
+  const others=[quote('promo-a-under',{side:'Under',odds:-150}),quote('hedge-b-over',{book:'DraftKings',odds:-110})];
+  const {$}=render('renderPromo',{quotes:()=>[a,b,...others],fresh:()=>true,promoInput:{kind:'bonus',stake:100,promoOdds:150,hedgeOdds:-130,boost:50}});
   const card=$('.evc-promo .evc-card[data-wager-id="promo-promo-a"]');
   const plan=core.promoConversion({kind:'bonus',stake:100,promoOdds:120,hedgeOdds:-110,boost:0});
   assert.equal(card.find('.evc-metric strong').text(),core.percent(plan.conversion),'pairs are scored at the current promotion settings');
@@ -54,7 +58,7 @@ test('promotion cards keep the selected price and opposing hedge connected to th
 test('parlay leg cards retain selection state and the actual offered price',()=>{
   const a=quote('a'),b=quote('b',{event:'NYK vs DEN',player:'Player Two'});
   const {$}=render('renderParlay',{state:{quotes:[a,b]},quotes:()=>[a,b],parlayIds:['a'],parlayVisibleCount:40,
-    fairProbability:()=>.55,evRows:()=>[{quote:a,fair:.55,ev:.21},{quote:b,fair:.5,ev:.1}]});
+    computeAdvancedEv:()=>[{quote:a,fair:.55,ev:.21,consensus:{books:[{},{}]}},{quote:b,fair:.5,ev:.1,consensus:{books:[{},{}]}}]});
   const card=$('.evc-parlay .evc-card[data-wager-id="parlay-a"]');
   assert.equal(card.find('.evc-pick .evb-price').text(),'+120');
   assert.equal($('.evc-board [data-parlay="a"]').attr('aria-pressed'),'true');

@@ -5,14 +5,17 @@
 const DB = 'sportslab-ev', STORE = 'cache', KEY = 'quotes';
 const LEGACY_KEY = 'sportslab-ev-quote-cache-v1';
 
+// One connection for the page (a new one per read and write was never closed).
+let connection = null;
 function open() {
-  return new Promise((resolve, reject) => {
+  connection ||= new Promise((resolve, reject) => {
     if (!globalThis.indexedDB) return reject(new Error('IndexedDB is unavailable.'));
     const request = indexedDB.open(DB, 1);
     request.onupgradeneeded = () => request.result.createObjectStore(STORE);
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => { request.result.onversionchange = () => { request.result.close(); connection = null; }; resolve(request.result); };
     request.onerror = () => reject(request.error);
-  });
+  }).catch(error => { connection = null; throw error; });
+  return connection;
 }
 
 /** Resolves to { quotes, history, apiSyncedAt } or null. Never rejects. */
@@ -41,14 +44,29 @@ export async function writeQuoteCache(value) {
   } catch { return false; }
 }
 
-/** Saves at most once per `interval` ms, plus immediately when the page is being hidden. */
-export function createThrottledCacheWriter(getValue, { interval = 30_000 } = {}) {
-  let last = 0, timer = null;
-  const flush = () => { clearTimeout(timer); timer = null; last = Date.now(); return writeQuoteCache(getValue()); };
+/**
+ * Saves at most once per `interval` ms (the snapshot is ~30 MB, so not every sync), and right away when
+ * the tab is hidden or closed. The first save waits a full interval: saving at page load wrote an empty
+ * workspace over the cached prices before they were read. `getValue` returning null skips the save
+ * (nothing synced yet). `onResult(saved)` reports failed saves (quota, private mode).
+ */
+export function createThrottledCacheWriter(getValue, { interval = 300_000, onResult = () => {} } = {}) {
+  let last = Date.now(), timer = null;
+  const flush = async () => {
+    clearTimeout(timer); timer = null;
+    const value = getValue();
+    if (!value) return false;
+    last = Date.now();
+    const saved = await writeQuoteCache(value);
+    onResult(saved);
+    return saved;
+  };
   const schedule = () => {
     if (timer) return;
     timer = setTimeout(flush, Math.max(0, last + interval - Date.now()));
   };
-  globalThis.addEventListener?.('pagehide', () => { if (timer) void flush(); });
+  const hide = () => { if (timer) void flush(); };
+  globalThis.addEventListener?.('pagehide', hide);
+  globalThis.document?.addEventListener?.('visibilitychange', () => { if (globalThis.document.visibilityState === 'hidden') hide(); });
   return { schedule, flush };
 }

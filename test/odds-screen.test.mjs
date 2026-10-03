@@ -94,9 +94,10 @@ test('grid rows keep both sides and show every sportsbook price in its own colum
   // Every row has the same cell count so inline analysis rows can span the grid.
   assert.equal(first.children().length,$('tbody tr.os-row').last().children().length);
   assert.equal(first.children().length,$('thead th').length);
-  assert.equal(first.find('.os-best-cell strong').text(),'2.10');
-  assert.equal(first.find('.os-average strong').text(),'2.05');
-  assert.deepEqual(first.find('.os-book-cell').toArray().map(cell => $(cell).find('b').text()),['2.10','2.00']);
+  // Decimal prices use three places, as everywhere else in the workspace.
+  assert.equal(first.find('.os-best-cell strong').text(),'2.100');
+  assert.equal(first.find('.os-average strong').text(),'2.050');
+  assert.deepEqual(first.find('.os-book-cell').toArray().map(cell => $(cell).find('b').text()),['2.100','2.000']);
   assert.deepEqual(first.find('.os-book-cell').toArray().map(cell => $(cell).attr('data-open-quote')),['a','b']);
   assert.ok(first.find('.os-book-cell').first().hasClass('is-best'));
   assert.equal($('.os-book-cell.is-worst').length,0,'two prices never mark a worst price');
@@ -252,8 +253,11 @@ test('account odds default controls prices until the user saves an explicit disp
   const initial = load(createOddsScreen(options).render());
   assert.equal(initial('#os-format option[selected]').attr('value'), 'american');
   assert.equal(initial('.os-best-cell strong').text(), '+110');
-  const storage = { getItem: () => '{"format":"decimal"}' };
+  const storage = { getItem: () => '{"format":"decimal","formatChosen":true}' };
   const saved = load(createOddsScreen({ ...options, storage }).render());
   assert.equal(saved('#os-format option[selected]').attr('value'), 'decimal');
-  assert.equal(saved('.os-best-cell strong').text(), '2.10');
+  assert.equal(saved('.os-best-cell strong').text(), '2.100');
+  // Older saves stored whatever format was showing with every change; they don't override the member's.
+  const legacy = load(createOddsScreen({ ...options, storage: { getItem: () => '{"format":"decimal"}' } }).render());
+  assert.equal(legacy('.os-best-cell strong').text(), '+110');
 });

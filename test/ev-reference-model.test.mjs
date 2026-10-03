@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import vm from 'node:vm';
 import * as core from '../public/ev-core.js';
+import {consensusPrice,devig} from '../public/ev-advanced-math.js';
 
 const source=await fs.readFile(new URL('../public/ev.js',import.meta.url),'utf8');
 const functions=['comparisonForQuote','evReferenceModel'].map(name=>{
@@ -11,7 +12,8 @@ const functions=['comparisonForQuote','evReferenceModel'].map(name=>{
 }).join('\n');
 const quote=(id,book,side,odds,extra={})=>({id,book,side,odds,sport:'NFL',event:'ARI vs SEA',market:'Passing yards',player:'Quarterback',type:'prop',line:249.5,live:false,ts:new Date().toISOString(),...extra});
 function modelFor(rows,index=0){
-  const context=vm.createContext({...core,active:'ev-pre',state:{quotes:rows,history:[]},quoteSource:()=>rows,
+  // comparisonForQuote prices with the suite's settings, as the Positive EV row detail does.
+  const context=vm.createContext({...core,consensusPrice,devig,suite:{settings:()=>({devigMethod:'multiplicative'}),quoteVisible:()=>true},active:'ev-pre',state:{quotes:rows,history:[]},quoteSource:()=>rows,
     bookAvailable:()=>true,sportsbookNames:['FanDuel','DraftKings'],brandMark:()=>'',fmtLine:String,
     oddsDemoHistory:()=>[],bankroll:5000,kelly:.25,age:()=> 'Just now',esc:String,
     quote:rows[index]});
@@ -21,7 +23,7 @@ function modelFor(rows,index=0){
 test('reference cards keep consensus probability distinct from the selected sportsbook offer',()=>{
   const rows=[quote('offer','FanDuel','Over',140),quote('offer-under','FanDuel','Under',-155),quote('ref','DraftKings','Over',-110),quote('ref-under','DraftKings','Under',-110)];
   const model=modelFor(rows);
-  assert.equal(model.fairOdds,'-100');
+  assert.equal(model.fairOdds,'+100','even money is +100');
   assert.equal(model.fairMark,'','consensus does not acquire an offered-book logo');
   assert.equal(model.probability,'50.0%');
   assert.equal(model.selection,'Quarterback Over 249.5');
