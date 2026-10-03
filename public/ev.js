@@ -1,8 +1,8 @@
 import { browserAlertsControl, deliverAlerts, toggleBrowserAlerts } from './alert-delivery.js?v=1';
 import { wagerCard } from './ev-bet-card.js';
 import { renderEvBoard, renderEvBoardDetail, renderBetPanel, boostedOffer, boardIcon, bookLogo, startLabel, selectionText } from './ev-board.js?v=7';
-import { createEvSuite, EV_SUITE_TOOLS } from './ev-suite.js?v=local-suite-6';
-import { computeAdvancedEv, consensusPrice, constrainedArb, middleOutcomes, devig, evCapFor } from './ev-advanced-math.js';
+import { createEvSuite, EV_SUITE_TOOLS } from './ev-suite.js?v=local-suite-7';
+import { computeAdvancedEv, consensusPrice, constrainedArb, middleOutcomes, devig } from './ev-advanced-math.js';
 import { readSuiteState, writeSuiteState } from './ev-suite-storage.js?v=2';
 import { installMobileWorkspace, quoteRevision, preserveReadingOrder } from './ev-mobile.js';
 import { accountStorage as localStorage, accountReady, getAccountPreferences, accountSyncState } from './account-sync.js';
@@ -23,7 +23,7 @@ import { inlineBetCard as betComparisonCard, bindInlineComparison as bindCompari
 import { openArbCalculator } from './arb-calculator.js?v=2';
 import { openLineHistory, buildLineSeries } from './line-history.js?v=1';
 import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource, breakEven, payoutFactor, payoutKnown } from './dfs-workspace.js?v=24';
-import { createOddsScreen } from './odds-screen.js?v=10';
+import { createOddsScreen } from './odds-screen.js?v=11';
 
 import {readSportsbookState, saveSportsbookState, sportsbookAvailable, availableSportsbookQuotes, STATE_CHANGE_EVENT} from './sportsbook-availability.js';
 
@@ -182,7 +182,7 @@ let editing = null;
 // Published standard payouts fill in until the member saves their own table for an app and size.
 const paytables = () => withStandardPaytables(state.paytables, apiPaytables);
 const dfsWorkspace = createDfsWorkspace({onDeleteSlip:id=>{state.slips=state.slips.filter(slip=>slip.id!==id);commit();},getState:()=>({...state,quotes:eligibleQuotes(state.quotes),bookAvailable,paytables:paytables(),devigMethod:suite.settings().devigMethod,payoutSource:(app,size)=>paytableSource(state.paytables,app,size,apiPaytables),dfsLoading:dfsLoading&&!dfsLoaded}),redraw:()=>redrawDfsBoard(),onSave:slip=>{state.slips.push(slip);commit();},onConfigure:picks=>{fantasyIds=picks.map(item=>item.id);fantasyApp=picks[0].app;setTool('slip');}});
-const oddsScreen = createOddsScreen({storage:localStorage,defaultFormat:getAccountPreferences().oddsFormat,getSettings:()=>suite.settings(),getQuotes:()=>eligibleQuotes(oddsQuotes()),getSportsbookState:()=>sportsbookState,onAllSportsbooks:()=>{const saved=saveSportsbookState('');document.dispatchEvent(new CustomEvent(STATE_CHANGE_EVENT,{detail:{state:'',saved}}));},brandMark,redraw:()=>render(),onSport:value=>{sport=value;history.replaceState(history.state,'',`${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}#odds`);}});
+const oddsScreen = createOddsScreen({storage:localStorage,defaultFormat:getAccountPreferences().oddsFormat,getSettings:()=>suite.settings(),getQuotes:()=>eligibleQuotes(oddsQuotes()),getReferenceQuotes:oddsQuotes,getSportsbookState:()=>sportsbookState,onAllSportsbooks:()=>{const saved=saveSportsbookState('');document.dispatchEvent(new CustomEvent(STATE_CHANGE_EVENT,{detail:{state:'',saved}}));},brandMark,redraw:()=>render(),onSport:value=>{sport=value;history.replaceState(history.state,'',`${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}#odds`);}});
 const suite = createEvSuite({
   getState:()=>state, save:persist, redraw:render, navigate:key=>setTool(key==='tracker'&&!accountSyncState().userId?'ledger':key), getTool:()=>active,
   nativeViews:['ev-pre','ev-live','arb-pre','arb-live','middles','odds','sharp','parlay'],
@@ -418,17 +418,18 @@ function renderKeepingView() {
 // Email delivery runs on the server (lib/accounts/alert-mailer.mjs) for signed-in accounts that turn it on here.
 function emailAlertsControl() {
   const on = state.alertEmail === true;
-  return `<div class="browser-alerts email-alerts" data-state="${on ? 'on' : 'off'}"><button type="button" data-email-alerts aria-pressed="${on}">${on ? 'Email alerts on' : 'Email me new matches'}</button><small>${on ? 'New matches are emailed to your account address (checked on a schedule; each match is sent once).' : 'Get new matches by email, even when VisualOdds is closed.'}</small></div>`;
+  return `<div class="browser-alerts email-alerts" data-state="${on ? 'on' : 'off'}"><button type="button" data-email-alerts aria-pressed="${on}">${on ? 'Email alerts on' : 'Email me new matches'}</button><small>${on ? 'New price, EV and fantasy matches are emailed to your account address (checked once a day; each match is sent once). Line-movement rules are checked only while VisualOdds is open.' : 'Get new price, EV and fantasy matches by email once a day, even when VisualOdds is closed. Line-movement rules are checked only while VisualOdds is open.'}</small></div>`;
 }
-// The member's alert rules against current prices on their books. Only current matches are remembered,
-// so a price that newly meets a rule fires once and the list stays as small as the matches (it lives in
-// the account document beside tracked bets).
-const alertState = () => ({ ...state, quotes: eligibleQuotes(state.quotes) });
+// The member's alert rules against current prices on their books. EV is priced from every book, as on
+// the Positive EV board; only the offered price must be at a book available in the member's state. Only
+// current matches are remembered, so a price that newly meets a rule fires once and the list stays as
+// small as the matches (it lives in the account document beside tracked bets).
+const alertOptions = () => ({ settings: suite.settings(), offered: q => bookAvailable(q.book) });
 function evaluateAlerts() {
-  const fresh = [], current = alertState(), settings = suite.settings();
+  const fresh = [], options = alertOptions();
   for (const rule of state.alerts) {
     if (rule.enabled === false) continue;
-    const matched = alertMatches(rule, current, { settings });
+    const matched = alertMatches(rule, state, options);
     const seen = new Set(rule.seen || []);
     for (const match of matched) if (!seen.has(match.id)) {
       state.notifications.unshift({ id: uid(), ruleId: rule.id, message: `${rule.kind === 'fantasy-new' ? 'New fantasy prop' : rule.kind === 'ev' ? 'EV threshold' : rule.kind === 'movement' ? 'Line movement' : 'Price threshold'}: ${match.label}`, ts: now(), read: false });
@@ -1332,9 +1333,13 @@ function renderPromo() {
 
 function renderParlay() {
   const selected = parlayIds.map(id=>state.quotes.find(q=>q.id===id)).filter(q=>q&&bookAvailable(q.book));
-  const settings = suite.settings(), priced = new Map(computeAdvancedEv(eligibleQuotes(quoteSource()), settings).map(row => [row.quote.id, row]));
-  // Legs are priced exactly as on Positive EV; an EV above its sanity cap is a data error, not a leg.
-  const usable = row => row && !row.estimated && row.ev <= evCapFor(row, settings);
+  // Legs are priced exactly as on Positive EV (every book is a reference; only the legs' own books must be
+  // available in the member's state); an EV above its sanity cap is a data error, not a leg. Every leg gets
+  // its fair chance, not only +EV ones: the minimum/maximum EV settings filter the Positive EV board, and
+  // here the Leg EV filter ("Any" includes negative legs) chooses which legs are listed.
+  const settings = suite.settings(), priced = new Map(computeAdvancedEv(quoteSource(), { ...settings, minEvPercent: null, maxEvPercent: null }).map(row => [row.quote.id, row]));
+  // As on the board, a game line counts only from a book pricing both of its sides.
+  const markets = marketRowsOf(quoteSource()), usable = row => row && !row.estimated && plausibleEv(row, markets, settings);
   const legs = selected.map(q=>({...q,probability:usable(priced.get(q.id))?priced.get(q.id).fair:NaN}));
   const result = parlay(legs);
   const valid = result && Number.isFinite(result.ev) && new Set(selected.map(q=>q.book)).size===1;
@@ -1742,7 +1747,7 @@ function saveForm(event) {
   if (type === 'dfs' || type === 'contract') record.ts = now();
   if (type === 'alert') {
     record.enabled = previous?.enabled ?? true;
-    record.seen = previous?.seen || alertMatches(record, alertState(), { settings: suite.settings() }).map(x => x.id);
+    record.seen = previous?.seen || alertMatches(record, state, alertOptions()).map(x => x.id);
   }
   if (id && !fromFeed) state[key] = state[key].map(x => x.id === id ? record : x);
   else state[key].push(record);

@@ -10,7 +10,7 @@ import {canonicalPlatform, isContestPlatform, PREDICTION_PLATFORMS} from '../pub
 import {TOOL_FILTER_DEFAULTS, oddsWithin} from '../public/ev-filters.js';
 import {withStandardPaytables, paytableSource, breakEven, standardPayout, payoutFactor, payoutKnown} from '../public/dfs-workspace.js';
 import {selectionText, startLabel} from '../public/ev-board.js';
-import {computeAdvancedEv, evCapFor} from '../public/ev-advanced-math.js';
+import {computeAdvancedEv, evCapFor, suiteSettings} from '../public/ev-advanced-math.js';
 
 const source=await fs.readFile(new URL('../public/ev.js',import.meta.url),'utf8');
 const quote=(id,extra={})=>({id,sport:'NBA',event:'BOS vs NYK',player:'Player <One>',market:'Points',type:'prop',side:'Over',line:20.5,book:'FanDuel',odds:120,ts:'2026-09-25T10:00:00Z',...extra});
@@ -66,6 +66,25 @@ test('parlay leg cards retain selection state and the actual offered price',()=>
   assert.equal(card.find('.evc-meter b').text(),'55.0%');
   assert.ok(card.hasClass('is-pinned'),'legs in the ticket stay highlighted');
   assert.equal($('[data-parlay-remove="a"]').length,1,'selected ticket remains editable');
+});
+
+test('parlay legs get a fair chance whatever their EV; the Leg EV filter decides which are listed',()=>{
+  const ts=new Date().toISOString();
+  // Two games, each priced at FanDuel and DraftKings.
+  const side=(game,book,s,odds)=>quote(`${book}-${s}${game}`,{book,side:s,odds,ts,event:game?'NYK vs DEN':'BOS vs NYK',eventId:game?'NBA:nyk vs den':'NBA:bos vs nyk',player:game?'Player Two':'Player One'});
+  const market=game=>[side(game,'FanDuel','Over',-130),side(game,'FanDuel','Under',100),side(game,'DraftKings','Over',-110),side(game,'DraftKings','Under',-110)];
+  const quotes=[...market(''),...market('2')];
+  const settings=suiteSettings({});
+  // One FanDuel ticket: a -11.5% leg and a 0% leg from different games.
+  const listed=legEv=>render('renderParlay',{state:{quotes},quotes:()=>quotes,parlayIds:['FanDuel-Over','FanDuel-Under2'],parlayVisibleCount:40,
+    toolFilters:{...TOOL_FILTER_DEFAULTS,legEv},suite:{settings:()=>settings}}).$;
+  // FanDuel's Over at -130 is about -11.5% EV against DraftKings' even market: listed under "Any", not "Positive".
+  const any=listed('');
+  assert.equal(any('.evc-board [data-parlay="FanDuel-Over"]').length,1);
+  assert.equal(listed('0')('.evc-board [data-parlay="FanDuel-Over"]').length,0);
+  // Both legs in the ticket carry a fair chance, so the parlay prices.
+  assert.doesNotMatch(any('#ev-parlay-ticket').text(),/Fair —|NaN/);
+  assert.match(any('.ev-parlay-summary').text(),/decimal/);
 });
 
 test('optimizer cards pair only legs above break-even, keep payout rules and both pick IDs',()=>{

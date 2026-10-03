@@ -100,3 +100,15 @@ test('props from books naming one stat differently share a row and a tab', () =>
   assert.equal($('.os-tab').last().attr('data-os-tab'),'prop:receiving yards');
   assert.equal($('tbody tr.os-row').length,2);
 });
+
+test('the fair column is priced from every book, not only the books the member’s state or columns show', () => {
+  const all = [...pair('DraftKings',-150,130), ...pair('BetMGM',-110,-110)];
+  const shown = all.filter(quote => quote.book !== 'BetMGM');
+  const home = book => devig(book === 'DraftKings' ? [implied(-150),implied(130)] : [implied(-110),implied(-110)],'multiplicative')[0];
+  const $ = rows(shown,{getReferenceQuotes:()=>all});
+  assert.equal($('[data-os-book="BetMGM"]').length,0,'BetMGM is not a column');
+  // The home side is listed last.
+  assert.match(fairTitle($), new RegExp(`no-vig fair ${american((home('DraftKings') + home('BetMGM')) / 2).replace('+','\\+')}$`));
+  // Without separate reference prices the shown books are the reference.
+  assert.match(fairTitle(rows(shown)), new RegExp(`no-vig fair ${american(home('DraftKings')).replace('+','\\+')}$`));
+});

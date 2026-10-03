@@ -121,6 +121,21 @@ function normalQuantile(p) {
 /** Devig methods the fair-value settings offer. Multiplicative is the default. */
 export const DEVIG_METHODS = Object.freeze(['multiplicative', 'additive', 'power', 'probit']);
 
+/** Pricing & filter settings before the member saves any. */
+export const SUITE_SETTING_DEFAULTS = Object.freeze({ minSharpBooks:1,maxVigPercent:20,devigMethod:'multiplicative',bookRules:[],liquidityWeighting:false,allowProjection:false,liveMaxAgeSeconds:90,pregameMaxAgeSeconds:900,minEvPercent:0,maxEvPercent:null,minArbPercent:0,maxArbPercent:null,minOdds:null,maxOdds:null,minLiquidity:0,minAvailableStake:0,league:'',market:'',side:'',gameStatus:'',region:'',oddsFormat:'american',cardTap:'expand',hideTaken:false,showHidden:false,arbMode:'arbs',autoRefresh:0 });
+
+/**
+ * A member's saved settings over the defaults, as every tool (and the alert email job) uses them.
+ * Pregame prices expire after 15 minutes (the feed rescrapes every few). A saved value equal to the
+ * old 24-hour default is treated as unset, so it moves to the new default.
+ */
+export function suiteSettings(saved) {
+  const own = saved && typeof saved === 'object' && !Array.isArray(saved) ? { ...saved } : {};
+  if (Number(own.pregameMaxAgeSeconds) === 86400) delete own.pregameMaxAgeSeconds;
+  if (!DEVIG_METHODS.includes(own.devigMethod)) delete own.devigMethod;
+  return { ...SUITE_SETTING_DEFAULTS, bookRules: [], ...own };
+}
+
 /** American odds → the book's implied probability, vig included: -140 → 140/240 = 58.33%, +118 → 100/218 = 45.87%. */
 export function americanToImpliedProbability(odds) {
   const n = Number(odds);

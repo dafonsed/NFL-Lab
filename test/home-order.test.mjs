@@ -4,7 +4,8 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import { sortProfiles } from '../public/player-order.js';
 import { finite, selectGames, summarize, recentChange } from '../public/research-data.js';
-import { computeAdvancedEv, evCapFor } from '../public/ev-advanced-math.js';
+import { computeAdvancedEv } from '../public/ev-advanced-math.js';
+import { plausibleEv, marketRowsOf } from '../public/ev-core.js';
 import { permanentDemoWorkspace } from './fixtures/ev-preview.js';
 
 // Exercise the dashboard's real ranking helpers (the pure block in home.js),
@@ -13,7 +14,7 @@ async function helpers() {
   const source = await readFile(new URL('../public/home.js', import.meta.url), 'utf8');
   const block = source.match(/\/\/ <dashboard-data>[^\n]*\n([\s\S]*?)\/\/ <\/dashboard-data>/)?.[1];
   assert.ok(block, 'home.js keeps its pure dashboard-data block');
-  const context = vm.createContext({ Intl, Date, Math, Number, String, Set, finite, selectGames, summarize, recentChange, sortProfiles, computeAdvancedEv, evCapFor });
+  const context = vm.createContext({ Intl, Date, Math, Number, String, Set, finite, selectGames, summarize, recentChange, sortProfiles, computeAdvancedEv, plausibleEv, marketRowsOf });
   vm.runInContext(block + '\nglobalThis.api = { greeting, topPicks, hotTrends, topEvRows, evSelection, evSummary, normalizeGames, orderGames, americanOdds, dashboardEvRows };', context);
   return context.api;
 }
@@ -69,17 +70,20 @@ test('+EV preview rows are titled with the selection and event, never a side cod
   assert.equal(evSelection({ ...base, type: 'prop', side: 'over', selection: 'Over', player: 'Josh Downs', line: 52.5, displayMarket: 'Receiving Yards' }).title, 'Josh Downs Over 52.5');
 });
 
-test('+EV preview hides EV above the shared feed-error caps', async () => {
+test('+EV preview hides what the Positive EV page hides: feed-error EV, one-sided game lines, books outside the state', async () => {
   const { dashboardEvRows } = await helpers();
-  const now = Date.parse('2026-10-03T06:00:00Z'), ts = new Date(now - 60_000).toISOString(), startTime = '2026-10-04T17:00:00.000Z';
+  const now = Date.now(), ts = new Date(now - 60_000).toISOString(), startTime = new Date(now + 86_400_000).toISOString();
   const quote = (book, side, odds) => ({ id: book + side, sport: 'NFL', event: 'A @ B', eventId: 'a@b', market: 'moneyline', marketId: 'moneyline|a@b', type: 'moneyline', side, book, odds, ts, startTime, source: 'local-api' });
-  // One reference book: +300 against a -110 / -110 coin flip is +100% EV, a feed error rather than a bet.
-  const quotes = [quote('FanDuel', 'home', 300), quote('DraftKings', 'home', -110), quote('DraftKings', 'away', -110), quote('BetMGM', 'home', 104)];
-  const settings = { minSharpBooks: 1, maxVigPercent: 20, devigMethod: 'multiplicative', bookRules: [], pregameMaxAgeSeconds: 900, minEvPercent: 0, maxEvPercent: null, now };
+  // DraftKings' -110 / -110 coin flip is the only reference. FanDuel's +300 is +100% EV, a feed error rather
+  // than a bet; BetMGM's +104 is +4%; Caesars posts +104 without its other side.
+  const quotes = [quote('DraftKings', 'home', -110), quote('DraftKings', 'away', -110), quote('FanDuel', 'home', 300), quote('FanDuel', 'away', -450),
+    quote('BetMGM', 'home', 104), quote('BetMGM', 'away', -125), quote('Caesars', 'home', 104)];
+  const settings = { minSharpBooks: 1, maxVigPercent: 20, devigMethod: 'multiplicative', bookRules: [{ book: 'DraftKings', weight: 1, enabled: true }], pregameMaxAgeSeconds: 900, minEvPercent: 0, maxEvPercent: null, now };
   const ids = rows => plain(rows.map(row => row.quote.id)).sort();
-  assert.deepEqual(ids(computeAdvancedEv(quotes, settings)), ['BetMGMhome', 'FanDuelhome']);
-  assert.deepEqual(ids(dashboardEvRows(quotes, settings)), ['BetMGMhome'], '+4% passes the 10% single-book cap, +100% does not');
+  assert.deepEqual(ids(computeAdvancedEv(quotes, settings)), ['BetMGMhome', 'Caesarshome', 'FanDuelhome']);
+  assert.deepEqual(ids(dashboardEvRows(quotes, settings)), ['BetMGMhome'], '+4% passes the 10% single-book cap, +100% does not; one-sided Caesars is hidden');
   assert.deepEqual(ids(dashboardEvRows(quotes, { ...settings, maxEvPercent: 150 })), ['BetMGMhome', 'FanDuelhome'], 'a saved maximum replaces the caps');
+  assert.deepEqual(ids(dashboardEvRows(quotes, { ...settings, maxEvPercent: 150 }, book => book !== 'BetMGM')), ['FanDuelhome'], 'books outside the member’s state are not offered');
 });
 
 test('schedule sources normalize to one game shape with live games first', async () => {

@@ -256,9 +256,10 @@ export function sharpMatches(quotes, minimum = 1000) {
  * Current matches for one alert rule: [{ id, label }]. A match's id is its selection's stable id (a
  * line move's snapshot for movement rules), so a rule fires when a price newly meets it, not on every
  * rescrape. `settings` are the member's pricing settings: EV rules price exactly as the Positive EV
- * board does, caps included. `available` decides which prices are current.
+ * board does, from every book, caps included. `available` decides which prices are current and
+ * `offered` which books a matched price may be at (the member's state).
  */
-export function alertMatches(rule, state, { settings = {}, available = fresh } = {}) {
+export function alertMatches(rule, state, { settings = {}, available = fresh, offered = () => true } = {}) {
   const lower = value => String(value ?? '').toLowerCase(), named = (values, text) => values.some(value => lower(value).includes(lower(text)));
   if (rule.kind === 'fantasy-new') {
     // A goblin or demon line without its multiplier, or a part-game line, has no comparable hit rate.
@@ -268,7 +269,7 @@ export function alertMatches(rule, state, { settings = {}, available = fresh } =
       && (!Number.isFinite(Number(rule.threshold)) || Number(x.probability) * 100 >= Number(rule.threshold)))
       .map(x => ({ id: x.id, label: `${x.player} ${x.side} ${x.line} ${x.market} · ${(Number(x.probability) * 100).toFixed(1)}% fair at ${x.app}` }));
   }
-  const quotes = (state.quotes || []).filter(q => available(q) && (!rule.sport || q.sport === rule.sport) && (!rule.event || named([q.displayEvent, q.event], rule.event))
+  const quotes = (state.quotes || []).filter(q => available(q) && offered(q) && (!rule.sport || q.sport === rule.sport) && (!rule.event || named([q.displayEvent, q.event], rule.event))
     && (!rule.market || named([q.displayMarket, q.market], rule.market)) && (!rule.liveOnly || q.live));
   const label = q => `${q.player ? q.player + ' ' : ''}${q.selection || q.side}${q.line !== '' && q.line != null ? ' ' + q.line : ''} ${oddsLabel(q.odds)} · ${q.displayMarket || q.market} · ${q.displayEvent || q.event} at ${q.book}`;
   if (rule.kind === 'price') return quotes.filter(q => decimal(q.odds) >= decimal(rule.threshold)).map(q => ({ id: q.id, label: label(q) }));
