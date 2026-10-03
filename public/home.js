@@ -229,7 +229,7 @@ async function evPanel() {
   // last 15 minutes, the panel loads the feed itself rather than showing old prices as current value.
   const cache = await readQuoteCache();
   const fresh = cache && Date.now() - Date.parse(cache.apiSyncedAt || 0) < 15 * 60_000;
-  const feed = fresh ? null : await import('./ev-feed-normalize.js?v=25').then(m => m.loadFeed('/api/ev/quotes', new Date().toISOString(), {price:false})).catch(() => null);
+  const feed = fresh ? null : await import('./ev-feed-normalize.js?v=26').then(m => m.loadFeed('/api/ev/quotes', new Date().toISOString(), {price:false})).catch(() => null);
   const source = fresh ? cache.quotes : feed?.ok ? feed.quotes : [];
   const quotes = source.filter(quote => quote?.source === 'local-api' && !isDemoRecord(quote));
   const code = sport === 'soccer' ? 'Soccer' : label;
