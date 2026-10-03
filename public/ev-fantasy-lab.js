@@ -1,4 +1,4 @@
-import {consensusPrice,projectProbability,quoteAvailable} from './ev-advanced-math.js?v=2';
+import {consensusPrice,projectProbability,quoteAvailable} from './ev-advanced-math.js';
 import {withStandardPaytables} from './dfs-workspace.js?v=24';
 import {canonicalPlatform} from './platform-catalog.js';
 

@@ -1,5 +1,5 @@
-import { quoteAvailable, marketIdentity } from './ev-advanced-math.js?v=2';
-import { decimal, implied, money, oddsLabel } from './ev-core.js?v=6';
+import { quoteAvailable, marketIdentity } from './ev-advanced-math.js';
+import { decimal, implied, money, oddsLabel } from './ev-core.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
 const validNumber = value => value !== '' && value !== null && value !== undefined && Number.isFinite(Number(value));

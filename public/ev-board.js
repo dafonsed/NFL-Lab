@@ -2,7 +2,7 @@
 // book-by-book price grid. Rendering only; ev.js supplies data and handlers.
 import { platformAsset } from './platform-catalog.js';
 import { leagueMark } from './sports-identity.js';
-import { probabilityToAmerican, money, percent } from './ev-core.js?v=6';
+import { probabilityToAmerican, money, percent } from './ev-core.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icons = {

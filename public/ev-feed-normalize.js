@@ -2,10 +2,10 @@
 // wrong, while `selection_name` names the real pick ("Over 44.5", "Dallas Cowboys +3.0"), so sides
 // and spread lines are rebuilt from the selection. Records that can't be trusted are skipped and
 // counted instead of failing the whole snapshot. Pure functions: the page and the tests share them.
-import { decimal, implied, marketKey, familyKey } from './ev-core.js?v=6';
+import { decimal, implied, marketKey, familyKey } from './ev-core.js';
 import { canonicalPlatform, isFantasyPlatform } from './platform-catalog.js';
-import { DEFAULT_SHARP_WEIGHTS, SHARP_MAX_VIG_PERCENT, devig } from './ev-advanced-math.js?v=2';
-import { matchedEventKey, dropInconsistentListings } from './ev-event-match.js?v=4';
+import { DEFAULT_SHARP_WEIGHTS, SHARP_MAX_VIG_PERCENT, devig } from './ev-advanced-math.js';
+import { matchedEventKey, dropInconsistentListings } from './ev-event-match.js';
 
 const MAJOR = { NFL: 'NFL', MLB: 'MLB', NBA: 'NBA', WNBA: 'WNBA', NHL: 'NHL', SOCCER: 'Soccer' };
 // `americanfootball` holds Central American soccer clubs in today's feed, so it is not relabeled
