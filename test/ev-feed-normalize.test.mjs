@@ -497,3 +497,28 @@ test('games filed as football whose lines are hockey, baseball or basketball sho
   assert.equal(sportOf('Spencer Shrader', 'FG Made'), 'NFL', 'a real football game keeps its label');
   assert.ok(picks.filter(p => p.sport !== 'NFL').every(p => p.matchSport === 'NFL'), 'matching keeps the feed sport');
 });
+
+test('books naming a player or stat differently still match the pick\'em line', async () => {
+  const { dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date().toISOString(), start = new Date(Date.now() + 3_600_000).toISOString();
+  const pairs = [
+    // [PrizePicks player, PrizePicks stat, book player, book stat]
+    ['Luther Burden III', 'Receptions', 'Luther Burden', 'Total Receptions'],
+    ['Marvin Harrison Jr.', 'Receiving Yards', 'Marvin Harrison', 'Rec Yds'],
+    ['Stephen Curry', '3-PT Made', 'Stephen Curry', 'Threes'],
+    ['Stephen Curry', '3-PT Made', 'Stephen Curry', '3-Pointers Made'],
+    ['Tarik Skubal', 'Pitcher Strikeouts', 'Tarik Skubal', 'Strikeouts'],
+    ['Juuse Saros', 'Goalie Saves', 'Juuse Saros', 'Saves'],
+    ['Saquon Barkley', 'Rush Attempts', 'Saquon Barkley', 'Carries'],
+    ['Jared Goff', 'INT', 'Jared Goff', 'Interceptions Thrown'],
+    ['Nikola Jokic', 'Pts+Rebs+Asts', 'Nikola Jokić', 'Points + Rebounds + Assists'],
+  ];
+  for (const [ppPlayer, ppStat, bookPlayer, bookStat] of pairs) {
+    const quotes = ['over', 'under'].map(side => ({ book: 'BetMGM', side, odds: -110, sport: 'NFL', player: bookPlayer, market: bookStat, line: 4.5, eventId: 'NFL:book game', ts, startTime: start }));
+    const [pick] = dfsPicks([{ book: 'PrizePicks', sport: 'NFL', player: ppPlayer, market: ppStat, line: 4.5, side: 'over', eventId: 'NFL:pp game', ts, startTime: start }], quotes);
+    assert.ok(Math.abs(pick.probability - 0.5) < 1e-12, `${ppPlayer} ${ppStat} matches ${bookPlayer} ${bookStat}`);
+  }
+  // Different stats still don't match.
+  const hits = ['over', 'under'].map(side => ({ book: 'BetMGM', side, odds: -110, sport: 'MLB', player: 'Tarik Skubal', market: 'Hits Allowed', line: 4.5, eventId: 'MLB:g', ts, startTime: start }));
+  assert.equal(dfsPicks([{ book: 'PrizePicks', sport: 'MLB', player: 'Tarik Skubal', market: 'Pitcher Strikeouts', line: 4.5, side: 'over', eventId: 'MLB:p', ts, startTime: start }], hits)[0].probability, null);
+});
