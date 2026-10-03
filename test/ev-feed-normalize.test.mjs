@@ -564,3 +564,72 @@ test('initials, nicknames and FanDuel ladder names match the pick\'em line', asy
   const { quotes } = normalizeFeed(ladder.map(([market, line], i) => ({ id: `l${i}`, sport: 'nba', event: 'Knicks @ Celtics', market: 'prop', propMarket: market, player: 'Jalen Brunson', line, side: 'over', book: 'FanDuel', odds: -150, ts, type: 'prop', selection_name: `Jalen Brunson Over ${line} ${market}`, startTime: start })), { syncedAt: ts });
   assert.deepEqual(quotes.map(quote => [quote.market, quote.line, quote.side]), ladder.map(([, , market, line]) => [market, line, 'over']));
 });
+
+test('a line a book moved or a DFS app pulled leaves the feed once the newer one is 5+ minutes ahead', async () => {
+  const { normalizeFeed } = await import('../public/ev-feed-normalize.js');
+  const now = Date.now(), ago = minutes => new Date(now - minutes * 60_000).toISOString(), start = new Date(now + 86_400_000).toISOString();
+  const prop = (id, book, line, side, minutes, extra = {}) => ({ id, sport: 'nfl', event: 'Giants @ Saints', market: 'prop', propMarket: 'Receiving Yards', player: 'Darius Slayton', line, side, book, odds: -110, ts: ago(minutes), type: 'prop', selection_name: `Darius Slayton ${side === 'over' ? 'Over' : 'Under'} ${line} Receiving Yards`, startTime: start, ...extra });
+  const { quotes, picks } = normalizeFeed([
+    // DraftKings moved 13.5 -> 14.5 six minutes ago; FanDuel's alt line refreshed with its main line.
+    prop('a', 'DraftKings', 13.5, 'over', 6), prop('b', 'DraftKings', 13.5, 'under', 6), prop('c', 'DraftKings', 14.5, 'over', 0.5), prop('d', 'DraftKings', 14.5, 'under', 0.5),
+    prop('e', 'FanDuel', 13.5, 'over', 0.5), prop('f', 'FanDuel', 13.5, 'under', 0.5), prop('g', 'FanDuel', 19.5, 'over', 0.5), prop('h', 'FanDuel', 19.5, 'under', 0.5),
+    // PrizePicks pulled one line of the game eight minutes ago.
+    prop('p1', 'PrizePicks', 13.5, 'over', 0.5, { event: 'NYG @ NO', market: 'Receiving Yards', propMarket: undefined }), prop('p2', 'PrizePicks', 3.5, 'over', 8, { event: 'NYG @ NO', market: 'Receptions', propMarket: undefined }),
+  ], { syncedAt: new Date(now).toISOString() });
+  assert.deepEqual(quotes.filter(q => q.book === 'DraftKings').map(q => q.line), [14.5, 14.5]);
+  assert.deepEqual(quotes.filter(q => q.book === 'FanDuel').map(q => q.line), [13.5, 13.5, 19.5, 19.5]);
+  assert.deepEqual(picks.map(p => p.line), [13.5]);
+});
+
+test('exchange prices that add up to well under 100% are not shown or devigged', async () => {
+  const { dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date().toISOString(), start = new Date(Date.now() + 3_600_000).toISOString();
+  const pair = (book, over, under) => [['over', over], ['under', under]].map(([side, odds]) => ({ book, side, odds, exchange: book === 'Novig', player: 'Isaiah Davis', market: 'Rushing Yards', line: 20.5, eventId: 'NFL:jets @ bears', ts, startTime: start }));
+  const pick = { book: 'PrizePicks', sport: 'NFL', player: 'Isaiah Davis', market: 'Rush Yards', line: 20.5, side: 'over', eventId: 'NFL:nyj @ chi', ts, startTime: start };
+  const [bad] = dfsPicks([pick], [...pair('Novig', 122, 133), ...pair('FanDuel', -110, -110)]);
+  assert.deepEqual(bad.bookLines.map(line => line.book), ['FanDuel']);
+  const [good] = dfsPicks([pick], pair('Novig', -105, 101));
+  assert.deepEqual(good.probabilityBooks, ['Novig']);
+});
+
+test('DFS lines take their sport from league codes and from the app\'s other lines for the game', async () => {
+  const { normalizeDfsRecords } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date().toISOString(), start = new Date(Date.now() + 3_600_000).toISOString();
+  const row = (sport, event, player, market) => ({ id: `${event}${player}${market}`, sport, event, player, market, line: 10.5, side: 'higher', app: 'PrizePicks', ts, startTime: start });
+  const { picks } = normalizeDfsRecords([
+    row('other', 'CS2', 'Legacy MAPS 1-2', 'MAPS 1-2 Kills'), row('mma', 'BAD', 'Viktor Axelsen', 'Points'), row('mlb', 'KBO', 'Kim Do-yeong', 'Hits'),
+    row('other', 'PGA', 'Thomas Detry', 'Strokes'), row('nwsl', 'POR @ KC', 'Sophia Wilson', 'Shots'),
+    row('nfl', 'MICH @ MINN', 'Justice Haynes', 'Rush Yards'), row('other', 'MICH @ MINN', 'Bryce Underwood', 'Pass Yards'),
+  ], { syncedAt: ts });
+  const sport = player => picks.find(p => p.player === player);
+  assert.deepEqual(['Legacy MAPS 1-2', 'Viktor Axelsen', 'Kim Do-yeong', 'Thomas Detry'].map(p => sport(p).sport), ['Esports', 'Badminton', 'KBO', 'Golf']);
+  assert.deepEqual([sport('Sophia Wilson').sport, sport('Sophia Wilson').league], ['Soccer', 'NWSL']);
+  assert.equal(sport('Bryce Underwood').sport, 'NCAAF');
+});
+
+test('1st-half and 1st-quarter lines sent under the full-game stat are marked and not priced', async () => {
+  const { dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date().toISOString(), start = new Date(Date.now() + 3_600_000).toISOString();
+  const pp = (player, line, oddsType) => ({ book: 'PrizePicks', sport: 'NFL', player, market: 'Pass Yards', line, side: 'over', eventId: 'NFL:ind @ was', ts, startTime: start, ...(oddsType ? { oddsType } : {}) });
+  const book = (player, line, over, under) => [['over', over], ['under', under]].map(([side, odds]) => ({ book: 'FanDuel', side, odds, player, market: 'Passing Yards', line, eventId: 'NFL:colts @ commanders', ts, startTime: start }));
+  const quotes = [...book('Marcus Mariota', 211.5, -110, -110), ...book('Marcus Mariota', 98.5, -2000, 900), ...book('Daniel Jones', 224.5, -112, -108), ...book('Daniel Jones', 112.5, -5000, 1500)];
+  const picks = dfsPicks([pp('Marcus Mariota', 211.5), pp('Marcus Mariota', 98.5), pp('Marcus Mariota', 40.5), pp('Marcus Mariota', 229.5, 'demon'), pp('Marcus Mariota', 94.5, 'goblin'),
+    // Daniel Jones: only his 1H (112.5) and 1Q (48.5) standard lines are listed; 199.5 is a full-game demon.
+    pp('Daniel Jones', 112.5), pp('Daniel Jones', 48.5), pp('Daniel Jones', 199.5, 'demon')], quotes).filter(p => p.side === 'Over');
+  const part = player => picks.filter(p => p.player === player && p.period === 'part').map(p => p.line).sort((a, b) => b - a);
+  assert.deepEqual(part('Marcus Mariota'), [98.5, 94.5, 40.5]);
+  assert.deepEqual(part('Daniel Jones'), [112.5, 48.5]);
+  const at = (player, line) => picks.find(p => p.player === player && p.line === line);
+  assert.ok(Math.abs(at('Marcus Mariota', 211.5).probability - 0.5) < 1e-12);
+  assert.equal(at('Marcus Mariota', 98.5).probability, null);
+  assert.equal(at('Marcus Mariota', 98.5).bookLines, undefined);
+});
+
+test('season-long entries without a player name are dropped from the quote feed too', async () => {
+  const { normalizeFeed } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date().toISOString(), start = new Date(Date.now() + 86_400_000).toISOString();
+  const row = (id, player) => ({ id, sport: 'nba', event: 'NBASZN', market: 'Points Per Game', player, line: 22.5, side: 'over', book: 'PrizePicks', ts, type: 'prop', selection_name: `${player} Over 22.5`, startTime: start });
+  const { picks, skipped } = normalizeFeed([row('a', '2026-2027 Season'), row('b', 'Nikola Jokic')], { syncedAt: ts });
+  assert.deepEqual(picks.map(p => p.player), ['Nikola Jokic']);
+  assert.equal(skipped.invalid, 1);
+});

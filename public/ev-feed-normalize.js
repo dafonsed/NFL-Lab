@@ -11,7 +11,7 @@ const MAJOR = { NFL: 'NFL', MLB: 'MLB', NBA: 'NBA', WNBA: 'WNBA', NHL: 'NHL', SO
 // `americanfootball` holds Central American soccer clubs in today's feed, so it is not relabeled
 // as football; `other` and `unknown` carry no usable sport.
 // Soccer league codes become Soccer, with the league kept (see SOCCER_LEAGUES).
-const SOCCER_LEAGUES = { epl: 'EPL', mls: 'MLS', laliga: 'La Liga', seriea: 'Serie A', bundesliga: 'Bundesliga', ligue1: 'Ligue 1', ucl: 'Champions League', uel: 'Europa League' };
+const SOCCER_LEAGUES = { epl: 'EPL', mls: 'MLS', nwsl: 'NWSL', laliga: 'La Liga', seriea: 'Serie A', bundesliga: 'Bundesliga', ligue1: 'Ligue 1', ucl: 'Champions League', uel: 'Europa League' };
 const SPORT_NAMES = { ...Object.fromEntries(Object.keys(SOCCER_LEAGUES).map(code => [code, 'Soccer'])), tennis: 'Tennis', mma: 'MMA', boxing: 'Boxing', snooker: 'Snooker', darts: 'Darts', golf: 'Golf', cricket: 'Cricket', rugby: 'Rugby', ncaaf: 'NCAAF', ncaab: 'NCAAB', americanfootball: 'Other', other: 'Other', unknown: 'Other' };
 export const MARKET_NAMES = { moneyline: 'Moneyline', spread: 'Spread', total: 'Total', 'three-way': 'Match result (1X2)', prop: 'Player prop', alternate: 'Alternate line', future: 'Future' };
 
@@ -286,6 +286,21 @@ const wholeMinute = ts => { const date = new Date(ts); return date.getUTCSeconds
 // every few minutes, so a pregame price not seen for 15 minutes is no longer offered.
 export const FEED_MAX_AGE_MS = 15 * 60_000;
 
+// The API also keeps a line after the book moves it (DraftKings Rec Yards 13.5 -> 14.5 leaves the
+// 13.5 prices in the feed) or after a DFS app pulls it. A book rescrapes all of a player's stat at
+// once and a DFS app all of a game, so a record 5+ minutes behind the newest one in its group
+// (`groupOf`; null = not checked) is no longer offered.
+const REPLACED_MS = 5 * 60_000;
+function dropReplaced(list, groupOf, skipped) {
+  const newest = new Map(), groups = list.map(groupOf);
+  list.forEach((item, i) => { const ts = Date.parse(item.ts); if (groups[i] != null && !(newest.get(groups[i]) >= ts)) newest.set(groups[i], ts); });
+  return list.filter((item, i) => {
+    if (groups[i] == null || newest.get(groups[i]) - Date.parse(item.ts) <= REPLACED_MS) return true;
+    skipped.stale += 1;
+    return false;
+  });
+}
+
 // Stable ids: the API's ids change on every scrape, which would close open rows, drop parlay legs
 // and restart line history each time. One selection (book, market, line, side) keeps one id.
 function stableId(text) {
@@ -344,8 +359,13 @@ export function normalizeFeed(records, { syncedAt = new Date().toISOString(), cl
     return true;
   });
   // Pick'em lines (a DFS app plus a player) are not sportsbook prices; they become DFS picks.
-  const picks = relabelDfsSports(quotes.filter(quote => quote.player && isFantasyPlatform(quote.book)));
-  quotes = quotes.filter(quote => !(quote.player && isFantasyPlatform(quote.book)));
+  const pickem = quote => quote.player && isFantasyPlatform(quote.book);
+  // Season-long entries carry the season where the player goes ("2026-2027 Season"), so whose line it
+  // is isn't known (normalizeDfsRecords skips them too).
+  const seasonLabel = quote => SEASON_LABEL.test(quote.player) && (skipped.invalid += 1);
+  const picks = relabelDfsSports(dropReplaced(quotes.filter(quote => pickem(quote) && !seasonLabel(quote)), pick => JSON.stringify([pick.book, pick.eventId]), skipped));
+  quotes = dropReplaced(quotes.filter(quote => !pickem(quote)), quote => quote.player && quote.type === 'prop' && !quote.live && !quote.ageUnknown
+    ? JSON.stringify([quote.book, quote.eventId, playerName(quote.player), propMarket(quote.market, quote.player)]) : null, skipped);
   // Older copies of one selection (the API keeps them with new ids), and one book listing a game
   // twice, keep only the freshest price. This runs before the listing check so a stale copy can't
   // pair with a current one.
@@ -442,6 +462,8 @@ const propKey = (eventId, player, market, line) => JSON.stringify([eventId, play
 // A DFS pick is a pregame, full-game line, so it is priced only from pregame, full-game quotes. A
 // book's game must start within 12 hours of the pick's; one starting within 2 hours is that game.
 const SAME_GAME_MS = 12 * 3_600_000, CLOSE_START_MS = 2 * 3_600_000;
+// Sports where pick'em apps post part-game (1st half, 1st quarter) lines.
+const PERIOD_SPORTS = new Set(['NFL', 'NCAAF', 'NBA', 'WNBA', 'NCAAB']);
 const pickSide = side => DFS_SIDES[String(side ?? '').toLowerCase()] || '';
 export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplicative' } = {}) {
   // Sportsbook prices per player prop. Each book keeps its own Over and Under (books that mirror one
@@ -497,6 +519,36 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
       if (!prior || fresher(pick, prior)) latest.set(key, { ...pick, side: each, id: `local-api:${stableId(key)}` });
     }
   }
+  // PrizePicks posts NFL stats for the 1st half and 1st quarter too, and the feed sends them under the
+  // same name as the full game (Marcus Mariota "Pass Yards" 211.5, 98.5 and 40.5). An app has one
+  // full-game standard line per player and stat: the highest, unless it's under 70% of the books'
+  // main line (then the full-game line isn't listed). The other standard lines, and goblins and
+  // demons nearest them, are part-game lines; full-game sportsbook prices can't price those.
+  const mainLines = new Map();
+  for (const [key, books] of markets) {
+    const [, player, stat, line] = JSON.parse(key), id = JSON.stringify([player, stat]);
+    for (const book of books.values()) {
+      if (!(book.over > 0 && book.under > 0)) continue;
+      const evenness = Math.abs(book.over / (book.over + book.under) - 0.5);
+      if (!(mainLines.get(id)?.evenness <= evenness)) mainLines.set(id, { line, evenness });
+    }
+  }
+  const partGame = new Set(), statLines = new Map();
+  for (const pick of latest.values()) {
+    if (!PERIOD_SPORTS.has(pick.sport) || /^[A-Z]{2,4}$/.test(String(pick.player).trim()) || !(Number(pick.line) > 0)) continue;
+    const key = JSON.stringify([pick.book, pick.eventId, playerStat(pick.player, pick.market)]);
+    if (!statLines.has(key)) statLines.set(key, []);
+    statLines.get(key).push(pick);
+  }
+  for (const group of statLines.values()) {
+    const standard = [...new Set(group.filter(pick => !['goblin', 'demon'].includes(pick.oddsType)).map(pick => Number(pick.line)))].sort((a, b) => b - a);
+    if (standard.length < 2) continue;
+    const main = mainLines.get(playerStat(group[0].player, group[0].market))?.line;
+    const full = main > 0 && standard[0] < 0.7 * main ? null : standard[0];
+    const anchors = [...standard.map(line => ({ line, full: line === full })), ...(full === null && main > 0 ? [{ line: main, full: true }] : [])];
+    const gap = (line, anchor) => Math.abs(Math.log(line / anchor.line));
+    for (const pick of group) if (!anchors.reduce((best, anchor) => gap(Number(pick.line), anchor) < gap(Number(pick.line), best) ? anchor : best).full) partGame.add(pick);
+  }
   // PrizePicks sets a payout multiplier per goblin or demon projection. One value on (nearly) every
   // goblin or demon line of an app is a default, not that pick's multiplier (on 2 Oct 2026 the feed
   // sent 0.7 for all 6,080 goblins and 1.55 for all 16,183 demons, which showed +25% demon "edges"),
@@ -517,7 +569,9 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
   return [...latest.values()].map(pick => {
     // Every sportsbook with this exact player, stat and line (one side or both), for the comparison;
     // the fair probability uses those that price both sides with a margin.
-    const listed = [...(marketFor(pick)?.values() || [])];
+    // An exchange's prices only count as a market when both sides are there and add up to about 100%
+    // or more: Novig sent prop pairs adding to 63-96% (+257 Over and +186 Under), which no one can bet.
+    const listed = partGame.has(pick) ? [] : [...marketFor(pick).values()].filter(book => !book.exchange || book.over + book.under >= 0.98);
     const books = listed
       // A sportsbook pair whose implied probabilities sum to 100.5% or less has no margin to remove:
       // the feed built the Under from the Over (DraftKings and Fanatics milestone props, Oct 2026).
@@ -536,7 +590,7 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
       id: pick.id, app: pick.book, sport: pick.sport, ...(pick.matchSport ? { matchSport: pick.matchSport } : {}), league: pick.league, event: names.get(pick.eventId) || pick.event, eventId: pick.eventId,
       player: pick.player, ...(pick.team ? { team: pick.team } : {}), market: pick.market, line: pick.line, side: pick.side === 'under' ? 'Under' : 'Over',
       ...(pick.oddsType ? { oddsType: pick.oddsType } : pick.book === 'PrizePicks' ? { oddsType: 'standard' } : {}),
-      ...(realMultiplier(pick) ? { payoutMultiplier: realMultiplier(pick) } : {}),
+      ...(realMultiplier(pick) ? { payoutMultiplier: realMultiplier(pick) } : {}), ...(partGame.has(pick) ? { period: 'part' } : {}),
       probability, probabilityBooks: books.map(book => book.book), probabilityMethod: method,
       ...(books.length ? { probabilitySources: books.map(book => ({ book: book.book, over: book.overOdds, under: book.underOdds })) } : {}),
       ...(listed.length ? { bookLines: listed.map(book => ({ book: book.book, ...(Number.isFinite(book.overOdds) ? { over: book.overOdds } : {}), ...(Number.isFinite(book.underOdds) ? { under: book.underOdds } : {}), ...(book.exchange ? { exchange: true } : {}) })) } : {}),
@@ -575,7 +629,7 @@ export function createDfsPricer() {
       let hash = 0x811c9dc5;
       for (const pick of priced) {
         const prices = (pick.bookLines || []).map(line => `${line.book}${line.over ?? ''}/${line.under ?? ''}`).join(',');
-        const text = `${pick.id}|${pick.line}|${pick.probability}|${pick.oddsType || ''}|${pick.payoutMultiplier || ''}|${pick.startTime || ''}|${pick.event || ''}|${prices};`;
+        const text = `${pick.id}|${pick.line}|${pick.probability}|${pick.oddsType || ''}|${pick.payoutMultiplier || ''}|${pick.period || ''}|${pick.startTime || ''}|${pick.event || ''}|${prices};`;
         for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
       }
       const fingerprint = `${priced.length}:${hash >>> 0}`;
@@ -629,6 +683,15 @@ const SEASON_LABEL = /^\d{4}(-\d{2,4})? season$/i;
 // some NHL) under NBA. A market basketball doesn't have moves all of that player's lines to the
 // sport it belongs to, so "Points" for an NHL forward follows his "Shots On Goal".
 const BASKETBALL = new Set(['NBA', 'WNBA', 'NCAAB']);
+// PrizePicks names leagues without a matchup by code ("CS2", "PGA", "NBASZN" for season-long NBA)
+// where the game goes; the feed files most of them as Other and some under the wrong sport
+// (badminton "BAD" as MMA, KBO as MLB). The code says the sport.
+const LEAGUE_CODES = {
+  NFL: 'NFL', CFB: 'NCAAF', NBA: 'NBA', NBASZN: 'NBA', WNBA: 'WNBA', CBB: 'NCAAB', MLB: 'MLB', NHL: 'NHL', KBO: 'KBO', NPB: 'NPB',
+  CS2: 'Esports', LOL: 'Esports', R6: 'Esports', DOTA2: 'Esports', VAL: 'Esports', COD: 'Esports', HALO: 'Esports', APEX: 'Esports', RL: 'Esports',
+  PGA: 'Golf', EUROGOLF: 'Golf', LIVGOLF: 'Golf', LPGA: 'Golf', NASCAR: 'Motorsports', F1: 'Motorsports', INDYCAR: 'Motorsports', MOTOGP: 'Motorsports',
+  DARTS: 'Darts', TT: 'Table Tennis', BAD: 'Badminton', UFC: 'MMA', MMA: 'MMA', BOXING: 'Boxing', TENNIS: 'Tennis', SOCCER: 'Soccer', CRICKET: 'Cricket',
+};
 // The feed files college football as NFL and the WNBA as NBA. PrizePicks names games by team
 // abbreviation ("PITT @ VT", "DAL @ GSV"): a game with a team that isn't an NFL abbreviation is
 // college, and one with a WNBA-only abbreviation is WNBA.
@@ -641,9 +704,13 @@ const abbreviations = event => { const teams = participantsOf(event); return tea
  */
 function relabelDfsSports(picks) {
   const relabel = (pick, sport) => { if (sport && sport !== pick.sport) { pick.matchSport ??= pick.sport; pick.sport = sport; } };
-  const key = pick => `${pick.book}|${propName(pick.player)}`, sports = new Map();
+  const key = pick => `${pick.book}|${propName(pick.player)}`, sports = new Map(), byLeague = new Set();
   for (const pick of picks) {
-    if (!BASKETBALL.has(pick.sport)) continue;
+    const league = LEAGUE_CODES[String(pick.event ?? '').trim().toUpperCase()];
+    if (league) { relabel(pick, league); byLeague.add(pick); }
+  }
+  for (const pick of picks) {
+    if (byLeague.has(pick) || !BASKETBALL.has(pick.sport)) continue;
     const sport = NOT_BASKETBALL.find(([pattern]) => pattern.test(String(pick.market).toLowerCase()))?.[1];
     if (sport) sports.set(key(pick), sport);
   }
@@ -651,13 +718,14 @@ function relabelDfsSports(picks) {
   // NHL, MLB and NWSL games as NFL ("SEA @ EDM" Shots On Goal, "CWS @ CLE" Total Bases).
   const gameSports = new Map(), footballGames = new Set();
   for (const pick of picks) {
-    if (!FOOTBALL.has(pick.sport)) continue;
+    if (byLeague.has(pick) || !FOOTBALL.has(pick.sport)) continue;
     const market = String(pick.market).toLowerCase();
     if (FOOTBALL_MARKETS.test(market)) { footballGames.add(pick.eventId); continue; }
     const sport = NOT_FOOTBALL.find(([pattern]) => pattern.test(market))?.[1];
     if (sport && !gameSports.has(pick.eventId)) gameSports.set(pick.eventId, sport);
   }
   for (const pick of picks) {
+    if (byLeague.has(pick)) continue;
     if (BASKETBALL.has(pick.sport) && sports.has(key(pick))) { relabel(pick, sports.get(key(pick))); continue; }
     if (FOOTBALL.has(pick.sport) && gameSports.has(pick.eventId) && !footballGames.has(pick.eventId)) {
       const sport = gameSports.get(pick.eventId);
@@ -669,6 +737,11 @@ function relabelDfsSports(picks) {
     if (pick.sport === 'NFL' && teams.some(team => !NFL_TEAMS.has(team))) relabel(pick, 'NCAAF');
     else if (pick.sport === 'NBA' && teams.some(team => WNBA_ONLY_TEAMS.has(team))) relabel(pick, 'WNBA');
   }
+  // Lines the feed sends without a sport ("MICH @ MINN" Rush Yards as Other) take the sport of the
+  // app's other lines for that game.
+  const gameSport = new Map();
+  for (const pick of picks) if (pick.sport && pick.sport !== 'Other' && pick.event) gameSport.set(`${pick.book}|${pick.event}`, pick.sport);
+  for (const pick of picks) if (pick.sport === 'Other') relabel(pick, gameSport.get(`${pick.book}|${pick.event}`));
   return picks;
 }
 const FOOTBALL = new Set(['NFL', 'NCAAF']);
@@ -718,7 +791,7 @@ export function normalizeDfsRecords(records, { syncedAt = new Date().toISOString
       ...(text(raw, 'team') ? { team: text(raw, 'team') } : {}), ...lineType(raw),
     });
   }
-  return { picks: relabelDfsSports(picks), skipped };
+  return { picks: relabelDfsSports(dropReplaced(picks, pick => JSON.stringify([pick.book, pick.eventId]), skipped)), skipped };
 }
 
 /** The quote API's payout tables (GET /site/dfs/payouts) → { app: { size: [return by hits] } } (power play: all picks must hit). */
