@@ -387,9 +387,28 @@ export function normalizeFeed(records, { syncedAt = new Date().toISOString(), cl
 const propName = value => String(value ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 // "Player Points", "Points", "Pts" and "points (incl. OT)" for one player compare as one market.
 const PROP_WORDS = { pass: 'passing', rush: 'rushing', rec: 'receiving', yds: 'yards', yd: 'yards', td: 'touchdowns', tds: 'touchdowns', pts: 'points', reb: 'rebounds', rebs: 'rebounds', ast: 'assists', asts: 'assists', stl: 'steals', blk: 'blocks', '3pm': 'threes', '3pt': 'threes', so: 'strikeouts', ks: 'strikeouts', att: 'attempts', comp: 'completions', cmp: 'completions', sog: 'shots on goal' };
-const propMarket = (market, player) => propName(market).replace(propName(player), '').replace(/\b(player|total|o u|over under|incl ot|alt)\b/g, ' ')
-  .split(/\s+/).filter(Boolean).map(word => PROP_WORDS[word] || word).join(' ');
-const propKey = (eventId, player, market, line) => JSON.stringify([eventId, propName(player), propMarket(market, player), Number(line)]);
+// Books differ on name suffixes ("Luther Burden III" / "Luther Burden").
+const NAME_SUFFIXES = /\b(jr|sr|ii|iii|iv)\b/g;
+const playerName = value => propName(value).replace(NAME_SUFFIXES, ' ').replace(/\s+/g, ' ').trim();
+// The same stat written different ways: "3-PT Made" = "Threes" = "3-Pointers Made", "Pitcher
+// Strikeouts" = "Strikeouts", "Goalie Saves" = "Saves", "Carries" = "Rush Attempts", "INT" =
+// "Interceptions", "Earned Runs Allowed" = "Earned Runs".
+const STAT_PHRASES = [
+  [/\b(3 ?pt|3 ?pointers?|three pointers?|3 ?pm|threes)( made)?\b/g, 'threes'],
+  [/\b(player|pitcher|goalie)\b/g, ' '],
+  [/\bbatter\b/g, 'hitter'],
+  [/\bcarries\b/g, 'rush attempts'],
+  [/\binterceptions thrown\b/g, 'interceptions'],
+  [/\bint\b/g, 'interceptions'],
+  [/\bearned runs allowed\b/g, 'earned runs'],
+  [/\bpra\b/g, 'points rebounds assists'],
+];
+const propMarket = (market, player) => {
+  let stat = ` ${propName(market).replace(NAME_SUFFIXES, ' ').replace(/\s+/g, ' ')} `.replace(` ${playerName(player)} `, ' ');
+  for (const [pattern, replacement] of STAT_PHRASES) stat = stat.replace(pattern, replacement);
+  return stat.replace(/\b(total|o u|over under|incl ot|alt)\b/g, ' ').split(/\s+/).filter(Boolean).map(word => PROP_WORDS[word] || word).join(' ');
+};
+const propKey = (eventId, player, market, line) => JSON.stringify([eventId, playerName(player), propMarket(market, player), Number(line)]);
 
 /**
  * DFS picks in the shape the DFS tools use. A pick's fair probability comes only from sportsbook
@@ -408,7 +427,7 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
   // The feed's sport labels disagree across books (FanDuel files NFL props as NCAAF or soccer), so the
   // fallback matches on player and stat alone; one game per player and stat, and the start-time
   // check, keep it from crossing games.
-  const playerStat = (player, market) => JSON.stringify([propName(player), propMarket(market, player)]);
+  const playerStat = (player, market) => JSON.stringify([playerName(player), propMarket(market, player)]);
   const add = (map, key, value) => { if (!map.has(key)) map.set(key, new Set()); map.get(key).add(value); };
   const markets = new Map(), bookGames = new Map(), gameStart = new Map();
   for (const quote of quotes) {
@@ -509,7 +528,7 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
  */
 export function createDfsPricer() {
   let quotes = [], names = new Map(), quotePicks = [], propPicks = [], last = '';
-  const lineKey = pick => JSON.stringify([pick.book, propName(pick.player), propMarket(pick.market, pick.player), Number(pick.line), pickSide(pick.side)]);
+  const lineKey = pick => JSON.stringify([pick.book, playerName(pick.player), propMarket(pick.market, pick.player), Number(pick.line), pickSide(pick.side)]);
   const merged = () => {
     const lines = new Map();
     for (const pick of quotePicks) lines.set(lineKey(pick), pick);
