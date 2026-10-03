@@ -522,3 +522,45 @@ test('books naming a player or stat differently still match the pick\'em line', 
   const hits = ['over', 'under'].map(side => ({ book: 'BetMGM', side, odds: -110, sport: 'MLB', player: 'Tarik Skubal', market: 'Hits Allowed', line: 4.5, eventId: 'MLB:g', ts, startTime: start }));
   assert.equal(dfsPicks([{ book: 'PrizePicks', sport: 'MLB', player: 'Tarik Skubal', market: 'Pitcher Strikeouts', line: 4.5, side: 'over', eventId: 'MLB:p', ts, startTime: start }], hits)[0].probability, null);
 });
+
+test('each sportsbook is matched to the pick by its own game, however it names or files it', async () => {
+  const { dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date().toISOString(), at = hours => new Date(Date.now() + hours * 3_600_000).toISOString();
+  const pair = (book, eventId, over, under, startTime, line = 1.5) => [['over', over], ['under', under]].map(([side, odds]) => ({ book, side, odds, player: 'Daniel Jones', market: 'Pass TDs', line, eventId, ts, startTime }));
+  const pick = { book: 'PrizePicks', sport: 'NFL', player: 'Daniel Jones', market: 'Pass TDs', line: 1.5, side: 'over', eventId: 'NFL:ind @ was', ts, startTime: at(40) };
+  // FanDuel files the game as NFL "Colts @ Commanders", DraftKings as NCAAF with city codes.
+  const books = [...pair('FanDuel', 'NFL:colts @ commanders', 120, -150, at(40)), ...pair('DraftKings', 'NCAAF:ind colts @ was commanders', 115, -145, at(40))];
+  const [priced] = dfsPicks([pick], books);
+  assert.deepEqual(priced.probabilityBooks.sort(), ['DraftKings', 'FanDuel']);
+
+  // A book listing the player in two games picks the one starting with the pick's game ...
+  const twoGames = [...pair('FanDuel', 'NFL:colts @ commanders', 120, -150, at(40)), ...pair('FanDuel', 'NFL:colts @ texans', 300, -400, at(44))];
+  assert.deepEqual(dfsPicks([pick], twoGames)[0].probabilitySources, [{ book: 'FanDuel', over: 120, under: -150 }]);
+  // ... and is left out when both start near it, or when its only game is more than 12 hours off.
+  const unclear = [...pair('FanDuel', 'NFL:colts @ commanders', 120, -150, at(40.5)), ...pair('FanDuel', 'NFL:colts @ texans', 300, -400, at(39.5))];
+  assert.equal(dfsPicks([pick], unclear)[0].bookLines, undefined);
+  assert.equal(dfsPicks([pick], pair('FanDuel', 'NFL:colts @ commanders', 120, -150, at(64)))[0].bookLines, undefined);
+});
+
+test('initials, nicknames and FanDuel ladder names match the pick\'em line', async () => {
+  const { dfsPicks, normalizeFeed } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date().toISOString(), start = new Date(Date.now() + 3_600_000).toISOString();
+  const pairs = [
+    ['D.J. Moore', 'Receptions', 'DJ Moore', 'Receptions'],
+    ['T.J. Hockenson', 'Receiving Yards', 'TJ Hockenson', 'Receiving Yds'],
+    ['Cam Skattebo', 'Rush Yards', 'Cameron Skattebo', 'Rushing Yards'],
+    ['Kenny Gainwell', 'Rush Attempts', 'Kenneth Gainwell', 'Rush Attempts'],
+    ['Tyson Bagent', 'Pass Completions', 'Tyson Bagent', 'Completions'],
+    ['Jayson Tatum', '3-PT Made', 'Jayson Tatum', 'Jayson Tatum - Made Threes'],
+    ['Shai Gilgeous-Alexander', 'Pts+Rebs+Asts', 'Shai Gilgeous-Alexander', 'S Gilgeous-Alexander - Pts + Reb + Ast'],
+  ];
+  for (const [ppPlayer, ppStat, bookPlayer, bookStat] of pairs) {
+    const quotes = ['over', 'under'].map(side => ({ book: 'FanDuel', side, odds: -110, player: bookPlayer, market: bookStat, line: 4.5, eventId: 'NFL:book game', ts, startTime: start }));
+    const [pick] = dfsPicks([{ book: 'PrizePicks', sport: 'NFL', player: ppPlayer, market: ppStat, line: 4.5, side: 'over', eventId: 'NFL:pp game', ts, startTime: start }], quotes);
+    assert.ok(Math.abs(pick.probability - 0.5) < 1e-12, `${ppPlayer} ${ppStat} matches ${bookPlayer} ${bookStat}`);
+  }
+  // FanDuel ladders ("To Score 20+ Points" at line 20, Over only) are Over 19.5 on the stat.
+  const ladder = [['To Score 20+ Points', 20, 'Points', 19.5], ['To Record 2+ Hits + Runs + RBIs', 2, 'Hits + Runs + RBIs', 1.5], ['To Hit 2+ Home Runs', 2, 'Home Runs', 1.5], ['4+ Made Threes', 4, 'Made Threes', 3.5]];
+  const { quotes } = normalizeFeed(ladder.map(([market, line], i) => ({ id: `l${i}`, sport: 'nba', event: 'Knicks @ Celtics', market: 'prop', propMarket: market, player: 'Jalen Brunson', line, side: 'over', book: 'FanDuel', odds: -150, ts, type: 'prop', selection_name: `Jalen Brunson Over ${line} ${market}`, startTime: start })), { syncedAt: ts });
+  assert.deepEqual(quotes.map(quote => [quote.market, quote.line, quote.side]), ladder.map(([, , market, line]) => [market, line, 'over']));
+});
