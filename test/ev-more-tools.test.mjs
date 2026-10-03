@@ -9,6 +9,7 @@ import {evToolUrl} from '../public/ev-tool-catalog.js';
 import * as views from '../public/ev-secondary-views.js';
 import * as core from '../public/ev-core.js';
 import {selectionText} from '../public/ev-board.js';
+import * as catalog from '../public/platform-catalog.js';
 import {TOOL_FILTER_DEFAULTS, oddsWithin} from '../public/ev-filters.js';
 import {withStandardPaytables, paytableSource, standardPayout, payoutFactor, payoutKnown} from '../public/dfs-workspace.js';
 
@@ -104,4 +105,21 @@ test('filtering available fantasy picks preserves the selected ticket and payout
   assert.equal($('.tool-selected-item').length,2);
   assert.equal($('.tool-receipt-value').text(),'$9.90');
   assert.equal($('[data-tool-clear]').text(),'Clear filters');
+});
+
+// Both alert views render with unread alerts, count them, and mark them read once seen.
+test('alert views render, count unread alerts and mark them read', async () => {
+  const source=await fs.readFile(new URL('../public/ev.js',import.meta.url),'utf8');
+  const slice=name=>{const start=source.indexOf(`function ${name}(`);return source.slice(start,source.indexOf('\nfunction ',start+1));};
+  for (const [name,kind] of [['renderFantasyAlerts','fantasy-new'],['renderLineAlerts','price']]) {
+    const notifications=[{id:'n1',ruleId:'r1',message:'New match',ts:new Date().toISOString(),read:false}];
+    const state={alerts:[{id:'r1',kind,threshold:55,enabled:true,market:'Points'}],notifications,history:[],dfs:[],quotes:[]};
+    const context=vm.createContext({...catalog,...views,...core,state,sport:'',search:'',visible:()=>true,filterText:()=>true,esc:views.toolEsc,fmtLine:String,
+      browserAlertsControl:()=>'',emailAlertsControl:()=>'',action:()=>'',button:(label,attrs='')=>`<button ${attrs}>${label}</button>`,
+      table:(head,rows)=>`<table>${rows.join('')}</table>`,historySeries:()=>new Map(),DFS_PLATFORMS:catalog.FANTASY_PLATFORMS,feedSports:()=>['NFL']});
+    const html=vm.runInContext(`${slice('renderNotifications')}\n${slice(name)}\n${name}()`,context);
+    assert.match(html,/Unread alerts|Unread/,name);
+    assert.match(html,/>1</,`${name} counts the unread alert`);
+    assert.equal(notifications[0].read,true,`${name} marks seen alerts read`);
+  }
 });
