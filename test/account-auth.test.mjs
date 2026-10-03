@@ -191,7 +191,9 @@ test('expired verification and recovery links cannot change account state', asyn
 test('real route policy keeps tools public but denies customer admin access and administrators without MFA', async t => {
   const app = await fixture(t), account = await app.verified();
   assert.ok(![401, 403].includes((await account.client.request('/api/ev/quotes')).status), 'Tools no longer require a plan.');
-  assert.ok(![401, 403].includes((await account.client.request('/api/ev/quotes', {}, { method: 'POST' })).status), 'The EV API is public.');
+  // The account layer doesn't gate /api/ev; the EV proxy is GET-only and answers writes with 405
+  // before any upstream request (test/ev-api-config.test.mjs).
+  assert.ok(![401, 403].includes((await account.client.request('/api/ev/quotes', {}, { method: 'POST' })).status), 'The EV API is not plan-gated.');
   assert.equal((await account.client.request('/api/admin/accounts')).status, 403);
   const user = (await account.client.request('/api/auth/get-session')).body.user;
   await app.system.db.updateTable('user').set({ role: 'owner' }).where('id', '=', user.id).execute();
@@ -296,34 +298,75 @@ test('Google sign-in stays off without credentials and requires consent to creat
   assert.equal((await on.client().request('/api/auth/sign-in/social', { provider: 'github' })).status, 400, 'unconfigured providers are refused');
 });
 
-test('alert emails: baseline first, then each new match is emailed once', async t => {
+test('alert emails read the feed once per run: baseline first, then each new match is emailed once', async t => {
   const { system, verified, messages, outbox } = await fixture(t);
   const { runAlertEmails, currentMatches } = await import('../lib/accounts/alert-mailer.mjs');
   await verified('alerts@example.test');
-  const user = await system.db.selectFrom('user').select(['id']).where('email', '=', 'alerts@example.test').executeTakeFirstOrThrow();
-  const quote = (id, odds) => ({ id, sport: 'NFL', event: 'Bills at Dolphins', market: 'Spread', type: 'spread', line: -3.5, side: 'BUF', book: 'FanDuel', odds, live: false, ts: new Date().toISOString() });
-  const save = async workbench => {
+  await verified('second@example.test');
+  const idOf = async email => (await system.db.selectFrom('user').select(['id']).where('email', '=', email).executeTakeFirstOrThrow()).id;
+  const [first, second] = [await idOf('alerts@example.test'), await idOf('second@example.test')];
+  const quote = (id, odds) => ({ id, sport: 'NFL', event: 'Bills at Dolphins', market: 'Spread', type: 'spread', line: -3.5, side: 'BUF', book: 'FanDuel', odds, live: false, ts: new Date().toISOString(), source: 'local-api' });
+  const save = async (userId, workbench) => {
     const value = JSON.stringify({ storage: { 'sportslab-ev-workbench-v1': JSON.stringify(workbench) } });
-    await system.db.insertInto('accountData').values({ userId: user.id, kind: 'bets', value, version: 1, updatedAt: new Date().toISOString() })
+    await system.db.insertInto('accountData').values({ userId, kind: 'bets', value, version: 1, updatedAt: new Date().toISOString() })
       .onConflict(c => c.columns(['userId', 'kind']).doUpdateSet({ value })).execute();
   };
   const rule = { id: 'r1', kind: 'price', sport: 'NFL', threshold: 100, enabled: true };
-  const base = { alertEmail: true, alerts: [rule], history: [], dfs: [] };
-  await save({ ...base, quotes: [quote('q1', 110)] });
-  assert.equal(currentMatches({ ...base, quotes: [quote('q1', 110)] }).length, 1);
+  // The page saves the workbench without feed prices, so the job reads the feed itself.
+  const base = { alertEmail: true, alerts: [rule], quotes: [], history: [], dfs: [] };
+  await save(first, base);
+  assert.equal(currentMatches(base).length, 0, 'a saved workbench holds no prices');
+  let feed = [quote('q1', 110)], loads = 0;
+  const run = () => runAlertEmails(system, { loadQuotes: async () => { loads += 1; return feed; } });
+  const totals = values => ({ checked: 0, emailed: 0, baselined: 0, skipped: 0, failed: 0, ...values });
 
   const before = outbox.length;
-  assert.deepEqual(await runAlertEmails(system), { checked: 1, emailed: 0, baselined: 1 }, 'existing matches are recorded, not emailed');
-  await save({ ...base, quotes: [quote('q1', 110), quote('q2', 125)] });
-  assert.deepEqual(await runAlertEmails(system), { checked: 1, emailed: 1, baselined: 0 });
-  assert.deepEqual(await runAlertEmails(system), { checked: 1, emailed: 0, baselined: 0 }, 'the same match is never sent twice');
+  assert.deepEqual(await run(), totals({ checked: 1, baselined: 1 }), 'existing matches are recorded, not emailed');
+  feed = [quote('q1', 110), quote('q2', 125)];
+  assert.deepEqual(await run(), totals({ checked: 1, emailed: 1 }));
+  assert.deepEqual(await run(), totals({ checked: 1 }), 'the same match is never sent twice');
   await messages();
   const sent = outbox.slice(before).filter(message => /alert/i.test(message.subject));
   assert.equal(sent.length, 1);
   assert.equal(sent[0].to, 'alerts@example.test');
+  assert.match(sent[0].text || sent[0].html || '', /Price threshold: .*\+125.* at FanDuel/);
 
-  await save({ ...base, alertEmail: false, quotes: [quote('q3', 140)] });
-  assert.equal((await runAlertEmails(system)).checked, 0, 'turning email alerts off stops checks');
+  await save(second, base);
+  loads = 0;
+  assert.deepEqual(await run(), totals({ checked: 2, baselined: 1 }));
+  assert.equal(loads, 1, 'one feed read for every member');
+  // One member's failed delivery doesn't stop the others, and is not retried into a duplicate.
+  feed = [...feed, quote('q3', 140)];
+  const send = system.mail.send;
+  system.mail.send = async message => { if (message.to === 'alerts@example.test') throw new Error('delivery failed'); return send.call(system.mail, message); };
+  t.mock.method(console, 'error', () => {});
+  try { assert.deepEqual(await run(), totals({ checked: 2, emailed: 1, failed: 1 })); }
+  finally { system.mail.send = send; }
+  assert.deepEqual(await run(), totals({ checked: 2 }));
+  // A feed outage skips price rules this run instead of baselining against an empty feed.
+  assert.deepEqual(await runAlertEmails(system, { loadQuotes: async () => { throw new Error('feed down'); } }), totals({ skipped: 2 }));
+
+  await save(first, { ...base, alertEmail: false });
+  await save(second, { ...base, alertEmail: false });
+  loads = 0;
+  assert.equal((await run()).checked, 0, 'turning email alerts off stops checks');
+  assert.equal(loads, 0, 'no feed read when nobody needs it');
+});
+
+test('alert emails see the feed as the site distributes it: suppressed books removed, records cleaned', async t => {
+  const { system, verified } = await fixture(t);
+  const { loadAlertQuotes } = await import('../lib/accounts/alert-mailer.mjs');
+  const { setMarketControl, sourceControlKey } = await import('../lib/admin-market-controls.mjs');
+  await verified('staff@example.test');
+  const actor = (await system.db.selectFrom('user').select(['id']).where('email', '=', 'staff@example.test').executeTakeFirstOrThrow()).id;
+  const now = new Date();
+  const start = new Date(now.getTime() + 86_400_000).toISOString();
+  // Upstream-shaped records (as GET /quotes sends them): both sides of one game at two books.
+  const raw = ['Book A', 'Book B'].flatMap(book => [['home', -120], ['away', 100]].map(([side, odds]) => ({ id: `${book}-${side}`, sport: 'nfl', event: 'Buffalo Bills @ Miami Dolphins', eventId: 'buffalo bills @ miami dolphins', market: 'moneyline', type: 'moneyline', side, book, odds, live: false, ts: now.toISOString(), startTime: start })));
+  const books = async () => [...new Set((await loadAlertQuotes(system, { now: () => now, readQuotes: async () => raw })).map(quote => quote.book))].sort();
+  assert.deepEqual(await books(), ['Book A', 'Book B']);
+  await setMarketControl({ system, actorId: actor, body: { kind: 'source', key: sourceControlKey('Book B'), blocked: true, expectedVersion: 0, reason: 'Suppress incorrect source prices' }, loadQuotes: async () => raw });
+  assert.deepEqual(await books(), ['Book A']);
 });
 
 test('referral links credit new accounts once, never existing or self sign-ups', async t => {

@@ -89,7 +89,7 @@ function clvChart(bets) {
   const average = rows.reduce((sum, row) => sum + row.clv, 0) / rows.length;
   const beat = rows.filter(row => row.clv > 0).length;
   return `<div class="ta-clv-bars" role="img" aria-label="Closing line value for your last ${rows.length} tickets with closing odds; average ${average.toFixed(2)}%">${rows.map(row => `<i class="${row.clv >= 0 ? 'is-pos' : 'is-neg'}" style="--h:${(Math.abs(row.clv) / max * 50).toFixed(1)}%" title="${esc(row.bet.date)} · ${esc(row.bet.selection)} · ${row.clv >= 0 ? '+' : ''}${row.clv.toFixed(2)}%"></i>`).join('')}<span class="ta-clv-zero"></span></div>
-    <p class="ta-note"><strong class="${average >= 0 ? 'is-pos' : 'is-neg'}">${average >= 0 ? '+' : ''}${average.toFixed(2)}% average CLV</strong> · beat the close on ${beat} of ${rows.length} tickets</p>`;
+    <p class="ta-note"><strong class="${average >= 0 ? 'is-pos' : 'is-neg'}">${average >= 0 ? '+' : ''}${average.toFixed(2)}% average price CLV</strong> · beat the close on ${beat} of ${rows.length} tickets</p>`;
 }
 
 function table(rows, display, unit, emptyText) {

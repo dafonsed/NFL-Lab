@@ -31,6 +31,7 @@ const settlement = quote => stable({
   pushRule: quote?.pushRule ?? null
 });
 const eventIdentity = quote => JSON.stringify([identifier(quote?.sport), identifier(quote?.league || quote?.sport), identifier(quote?.eventId || quote?.event)]);
+const CLOCK_SKEW_MS = 5000;
 
 // Spreads are keyed by the signed handicap of one stable participant. A team
 // without an identifiable opponent is kept separate rather than matched by |line|.
@@ -78,7 +79,8 @@ export function quoteAvailable(quote, settings = {}, now = Date.now()) {
   // Defaults: live 90 s, pregame 15 min. Feed books rescrape every few minutes, so an older pregame
   // price is one the book has stopped offering.
   const maximumAge = ageSetting == null ? live(quote) ? 90 : 900 : number(ageSetting);
-  if (!Number.isFinite(observed) || !(maximumAge > 0) || observed > now || now - observed > maximumAge * 1000) return false;
+  // A stamp a few seconds ahead is clock skew between the feed and this device, not a future price.
+  if (!Number.isFinite(observed) || !(maximumAge > 0) || observed > now + CLOCK_SKEW_MS || now - observed > maximumAge * 1000) return false;
   for (const field of ['expiresAt', 'expiry', 'expiryTime']) if (valuePresent(quote[field])) {
     const expires = timestamp(quote[field]);
     if (!Number.isFinite(expires) || expires <= now) return false;
@@ -88,7 +90,12 @@ export function quoteAvailable(quote, settings = {}, now = Date.now()) {
     if (!Number.isFinite(starts) || starts <= now) return false;
   }
   for (const field of ['maxStake', 'maxBet']) if (valuePresent(quote[field]) && !(number(quote[field]) > 0)) return false;
-  if (quote.exchange && valuePresent(quote.liquidity) && !(number(quote.liquidity) > 0)) return false;
+  // Unknown exchange depth (no liquidity field) is not a reason to drop a price; a known amount below
+  // the member's minimum is.
+  if (quote.exchange && valuePresent(quote.liquidity)) {
+    const liquidity = number(quote.liquidity), minimum = valuePresent(settings.minLiquidity) ? number(settings.minLiquidity) : 0;
+    if (!(liquidity >= 0) || liquidity < minimum) return false;
+  }
   return true;
 }
 
@@ -181,6 +188,20 @@ function matchesScope(rule, quote) {
 /** Smallest margin (%) a sportsbook market needs before it is devigged into a fair price. */
 export const MIN_BOOK_VIG_PERCENT = 0.5;
 export const DEFAULT_SHARP_WEIGHTS = Object.freeze({ pinnacle: 3, betfair: 3, 'betfair exchange': 3, circa: 3, 'circa sports': 3 });
+/** A default sharp weight counts only on a sharp-margin market: Pinnacle's 10–18% MMA holds are not sharp prices. */
+export const SHARP_MAX_VIG_PERCENT = 6;
+/** An exchange's two sides sit near 100%; a pair implying less than this can't both be live prices (Novig sent 63–96%). */
+export const MIN_EXCHANGE_IMPLIED_SUM = 0.98;
+// The feed files different games under one name; a known start this far from the priced quote's is another game.
+const REFERENCE_START_WINDOW_MS = 3 * 3600_000;
+const priceFamily = quote => name(quote?.priceFamily || quote?.book);
+// References come from other price families (a mirror of the offered book's platform would price it
+// against itself) and from the same game.
+function referenceRow(quote, row) {
+  if (name(row.book) === name(quote.book) || priceFamily(row) === priceFamily(quote)) return false;
+  const starts = timestamp(quote.startTime), rowStarts = timestamp(row.startTime);
+  return !(Number.isFinite(starts) && Number.isFinite(rowStarts) && Math.abs(starts - rowStarts) > REFERENCE_START_WINDOW_MS);
+}
 function referenceRules(quote, quotes, settings) {
   const configured = Array.isArray(settings.bookRules) && settings.bookRules.length ? settings.bookRules : null;
   const rules = new Map();
@@ -190,7 +211,7 @@ function referenceRules(quote, quotes, settings) {
       .sort((a, b) => a.specificity - b.specificity || a.order - b.order);
     for (const rule of selected) rules.set(name(rule.book), { ...rule, weight: rule.weight == null ? 1 : number(rule.weight) });
   } else {
-    for (const row of quotes) if (name(row?.book)) rules.set(name(row.book), { book: row.book, enabled: true, required: false, weight: DEFAULT_SHARP_WEIGHTS[name(row.book)] || 1 });
+    for (const row of quotes) if (name(row?.book)) rules.set(name(row.book), { book: row.book, enabled: true, required: false, weight: 1, sharpWeight: DEFAULT_SHARP_WEIGHTS[name(row.book)] || 1 });
   }
   // The offered book is never used to manufacture its own reference price.
   if (!rules.get(name(quote.book))?.required) rules.delete(name(quote.book));
@@ -227,22 +248,24 @@ function completeBook(quote, rows, rule, settings) {
   const records = sides.map(side => candidates.filter(row => selection(row) === side).sort((a, b) => timestamp(b.ts) - timestamp(a.ts))[0]);
   if (records.some(row => !row)) return null;
   const raw = records.map(row => 1 / effectiveDecimal(row));
-  const vigPercent = (raw.reduce((total, probability) => total + probability, 0) - 1) * 100;
+  const impliedSum = raw.reduce((total, probability) => total + probability, 0), vigPercent = (impliedSum - 1) * 100;
+  const exchange = records.some(record => record.exchange === true);
   // A sportsbook market with no margin isn't a priced two-sided market: the feed built one side from
   // the other (DraftKings and Fanatics milestone props, Oct 2026). Exchanges can legitimately sit at 0%.
-  if (!records.some(record => record.exchange === true) && vigPercent <= MIN_BOOK_VIG_PERCENT) return null;
+  if (!exchange && vigPercent <= MIN_BOOK_VIG_PERCENT) return null;
+  if (exchange && !(impliedSum >= MIN_EXCHANGE_IMPLIED_SUM)) return null;
   const maximumVig = valuePresent(settings.maxVigPercent) ? number(settings.maxVigPercent) : Infinity;
   if (!Number.isFinite(vigPercent) || !(maximumVig >= 0) || vigPercent > maximumVig) return null;
   const fair = devig(raw, settings.devigMethod || 'multiplicative');
   if (!fair.length) return null;
-  const exchange = records.some(record => record.exchange === true);
   const liquidityValues = records.map(record => number(record.liquidity));
   const liquidity = exchange && liquidityValues.every(value => value > 0) ? Math.min(...liquidityValues) : NaN;
   const unit = valuePresent(settings.liquidityWeightUnit) ? number(settings.liquidityWeightUnit) : 1000;
   if (settings.liquidityWeighting && exchange && (!(liquidity > 0) || !(unit > 0))) return null;
+  const baseWeight = rule.sharpWeight > 1 && vigPercent <= SHARP_MAX_VIG_PERCENT ? rule.sharpWeight : rule.weight;
   // Exchange weight is proportional to the least liquid side, in $1,000 units.
-  const weight = rule.weight * (settings.liquidityWeighting && exchange ? liquidity / unit : 1);
-  return { book: rule.book, family: records[0].priceFamily || rule.book, probability: fair[sides.indexOf(selection(quote))], weight, configuredWeight: rule.weight,
+  const weight = baseWeight * (settings.liquidityWeighting && exchange ? liquidity / unit : 1);
+  return { book: rule.book, family: records[0].priceFamily || rule.book, probability: fair[sides.indexOf(selection(quote))], weight, configuredWeight: baseWeight,
     vigPercent, liquidity, exchange, quoteIds: records.map(record => record.id).filter(valuePresent), sides, probabilities: fair };
 }
 
@@ -275,12 +298,24 @@ export function consensusPrice(quote, allQuotes, settings = {}, index = null) {
   const failure = reason => ({ probability: NaN, fair: NaN, books: [], bookCount: 0, requiredMissing: [], method: settings.devigMethod || 'multiplicative', reason, estimated: false });
   const now = Number.isFinite(settings.now) ? settings.now : Date.now();
   if (!quoteAvailable(quote, settings, now) || !Array.isArray(allQuotes)) return failure('The offered quote is unavailable or invalid.');
-  const identity = marketIdentity(quote), book = name(quote.book);
-  const rows = index ? (index.get(identity) || []).filter(row => name(row.book) !== book)
-    : allQuotes.filter(row => quoteAvailable(row, settings, now) && name(row.book) !== book && marketIdentity(row) === identity);
+  const identity = marketIdentity(quote);
+  const rows = index ? (index.get(identity) || []).filter(row => referenceRow(quote, row))
+    : allQuotes.filter(row => referenceRow(quote, row) && quoteAvailable(row, settings, now) && marketIdentity(row) === identity);
   const rules = referenceRules(quote, rows, settings);
   const books = [...rules.values()].map(rule => completeBook(quote, rows, rule, settings)).filter(Boolean);
   return combine(onePerFamily(books), rules, settings);
+}
+
+/**
+ * The market's own no-vig fair probability for `quote`'s side, for price screens: every complete book
+ * in `rows` counts, the offered book included (consensusPrice leaves the offered price family out because
+ * it prices that one offer). `rows` are current prices already grouped to the quote's market identity;
+ * as in consensusPrice, each book needs every outcome, mirrors count once and default sharp weights apply.
+ */
+export function marketFairPrice(quote, rows, settings = {}) {
+  const game = Array.isArray(rows) && quote ? rows.filter(row => referenceRow({ ...quote, book: '', priceFamily: '' }, row)) : [];
+  const rules = referenceRules({ ...quote, book: '' }, game, settings);
+  return combine(onePerFamily([...rules.values()].map(rule => completeBook(quote, game, rule, settings)).filter(Boolean)), rules, settings);
 }
 
 // Books that mirror one odds platform (priceFamily) count as a single reference, averaged.
@@ -299,9 +334,9 @@ function onePerFamily(books) {
 export function projectProbability(target, allQuotes, settings = {}, familyIndex = null) {
   const now = Number.isFinite(settings.now) ? settings.now : Date.now();
   if (!Array.isArray(allQuotes) || !target || !['over', 'under'].includes(selection(target)) || !Number.isFinite(lineNumber(target))) return null;
-  const family = marketIdentity(target, false), targetLine = lineNumber(target), book = name(target.book);
-  const rows = familyIndex ? (familyIndex.get(family) || []).filter(row => name(row.book) !== book)
-    : allQuotes.filter(row => quoteAvailable(row, settings, now) && name(row.book) !== book && marketIdentity(row, false) === family);
+  const family = marketIdentity(target, false), targetLine = lineNumber(target);
+  const rows = familyIndex ? (familyIndex.get(family) || []).filter(row => referenceRow(target, row))
+    : allQuotes.filter(row => referenceRow(target, row) && quoteAvailable(row, settings, now) && marketIdentity(row, false) === family);
   const rules = referenceRules(target, rows, settings), books = [], provenance = [];
   for (const rule of rules.values()) {
     if (rule.enabled === false || !(rule.weight > 0)) continue;
@@ -336,7 +371,8 @@ export function projectProbability(target, allQuotes, settings = {}, familyIndex
   return Number.isFinite(result.probability) ? { ...result, estimate: true, label: 'Interpolated fair-probability estimate', provenance } : null;
 }
 
-function passesFilters(quote, settings) {
+/** The member's Scope settings (league, market, side, game state, region, liquidity, odds range). */
+export function passesFilters(quote, settings) {
   for (const field of ['league', 'market', 'side']) if (valuePresent(settings[field]) && name(settings[field]) !== 'all'
     && name(settings[field]) !== name(field === 'league' ? quote.league || quote.sport : quote[field])) return false;
   if (valuePresent(settings.gameStatus) && name(settings.gameStatus) !== 'all') {
@@ -356,6 +392,12 @@ function passesFilters(quote, settings) {
   }
   return true;
 }
+
+// Without a saved maximum EV, a larger return is treated as a feed error (a mislabeled or stale price):
+// 25%, or 10% when one book sets the fair price. Every page that lists EV rows shares these caps.
+export const EV_SANITY_LIMIT = .25, EV_SINGLE_BOOK_LIMIT = .10;
+export const evCapFor = (row, settings = {}) => settings?.maxEvPercent === '' || settings?.maxEvPercent == null
+  ? (row?.consensus?.books?.length || 0) <= 1 ? EV_SINGLE_BOOK_LIMIT : EV_SANITY_LIMIT : Infinity;
 
 export function computeAdvancedEv(allQuotes, settings = {}) {
   if (!Array.isArray(allQuotes)) return [];
@@ -491,27 +533,59 @@ export function advancedParlay(legs, { jointProbability, offeredDecimal } = {}) 
     priceBasis: explicitPrice ? 'Entered combined price' : 'Product of entered leg prices', legs };
 }
 
-function comparableClv(bet) {
+/** Price CLV, vig included: booked decimal / closing decimal − 1 for the same side (decimal odds in, fraction out). */
+export function priceClv(bookedDecimal, closingDecimal) {
+  const booked = number(bookedDecimal), closing = number(closingDecimal);
+  return booked > 1 && closing > 1 ? booked / closing - 1 : NaN;
+}
+
+/**
+ * No-vig CLV: the booked payout against the closing market's fair probability for the same side,
+ * bookedDecimal × devig([implied(close), implied(other close)…], method)[0] − 1. Needs the closing price
+ * of every other outcome (one value for a two-way market); NaN otherwise.
+ */
+export function noVigClv(bookedDecimal, closingDecimal, otherClosingDecimals, method = 'multiplicative') {
+  const booked = number(bookedDecimal), others = (Array.isArray(otherClosingDecimals) ? otherClosingDecimals : [otherClosingDecimals]).map(number);
+  if (!(booked > 1) || !others.length || others.some(value => !(value > 1)) || !(number(closingDecimal) > 1)) return NaN;
+  const fair = devig([1 / number(closingDecimal), ...others.map(value => 1 / value)], method);
+  return fair.length ? booked * fair[0] - 1 : NaN;
+}
+
+// A closing record counts only when it is the booked selection's own pregame close.
+function sameClose(open, close, side = selection(open)) {
+  if (!close || close.live === true || marketIdentity(open) !== marketIdentity(close) || selection(close) !== side) return false;
+  if (!identifier(open.eventId || open.event) || !identifier(open.marketId || open.market) || !selection(open)) return false;
+  return !(valuePresent(open.startTime) && (!Number.isFinite(timestamp(open.startTime)) || !Number.isFinite(timestamp(close.ts)) || timestamp(close.ts) > timestamp(open.startTime)));
+}
+
+/**
+ * Comparable CLV of a tracked bet as { price, noVig } fractions (NaN when not comparable). Price CLV is
+ * vig included; no-vig CLV also needs the other side's close (closeOtherQuote, or flat closeOtherOdds).
+ */
+export function comparableClv(bet, method = 'multiplicative') {
+  const none = { price: NaN, noVig: NaN };
+  if (!bet || typeof bet !== 'object') return none;
   const open = bet.quote || bet, close = bet.closeQuote || bet.closingQuote;
-  if (open.live === true) return NaN;
-  let closeOdds;
+  if (open.live === true) return none;
+  let closeOdds, otherOdds;
   if (close) {
-    if (close.live === true || marketIdentity(open) !== marketIdentity(close) || selection(open) !== selection(close)) return NaN;
-    if (!identifier(open.eventId || open.event) || !identifier(open.marketId || open.market) || !selection(open)) return NaN;
-    if (valuePresent(open.startTime) && (!Number.isFinite(timestamp(open.startTime)) || !Number.isFinite(timestamp(close.ts)) || timestamp(close.ts) > timestamp(open.startTime))) return NaN;
+    if (!sameClose(open, close)) return none;
     closeOdds = close.odds;
+    const other = bet.closeOtherQuote || bet.closingOtherQuote;
+    if (other && selection(other) !== selection(open) && sameClose(open, other, selection(other))) otherOdds = other.odds;
   } else {
     // Flat closing fields are accepted only with an explicit comparability mark,
     // or a separately recorded closing line exactly matching the booked line.
-    if (bet.closeComparable !== true && !(own(bet, 'closeLine') && Number.isFinite(lineNumber(open)) && number(bet.closeLine) === lineNumber(open))) return NaN;
-    if (thresholdMarket(open) && (!Number.isFinite(lineNumber(open)) || !own(bet, 'closeLine') || number(bet.closeLine) !== lineNumber(open))) return NaN;
+    if (bet.closeComparable !== true && !(own(bet, 'closeLine') && Number.isFinite(lineNumber(open)) && number(bet.closeLine) === lineNumber(open))) return none;
+    if (thresholdMarket(open) && (!Number.isFinite(lineNumber(open)) || !own(bet, 'closeLine') || number(bet.closeLine) !== lineNumber(open))) return none;
     if (bet.closeLive === true || valuePresent(bet.closeSide) && name(bet.closeSide) !== selection(open)
       || valuePresent(bet.closeMarket) && name(bet.closeMarket) !== name(open.market)
-      || valuePresent(bet.closeEventId) && identifier(bet.closeEventId) !== identifier(open.eventId)) return NaN;
+      || valuePresent(bet.closeEventId) && identifier(bet.closeEventId) !== identifier(open.eventId)) return none;
     closeOdds = bet.closeOdds;
+    otherOdds = bet.closeOtherOdds;
   }
   const booked = americanDecimal(bet.odds ?? open.odds), closing = americanDecimal(closeOdds);
-  return Number.isFinite(booked) && Number.isFinite(closing) ? booked / closing - 1 : NaN;
+  return { price: priceClv(booked, closing), noVig: valuePresent(otherOdds) ? noVigClv(booked, closing, americanDecimal(otherOdds), method) : NaN };
 }
 
 function betResult(bet) {
@@ -535,7 +609,7 @@ function dateKey(value) {
   return key;
 }
 
-const aggregate = label => ({ label, count: 0, settled: 0, wins: 0, losses: 0, pushes: 0, voids: 0, profit: 0, risked: 0, openExposure: 0, clvTotal: 0, clvCount: 0 });
+const aggregate = label => ({ label, count: 0, settled: 0, wins: 0, losses: 0, pushes: 0, voids: 0, profit: 0, risked: 0, openExposure: 0, clvTotal: 0, clvCount: 0, noVigClvTotal: 0, noVigClvCount: 0 });
 function addAggregate(target, row) {
   target.count++;
   if (row.open) target.openExposure += row.stake;
@@ -547,14 +621,18 @@ function addAggregate(target, row) {
     if (row.result === 'void') target.voids++;
   }
   if (Number.isFinite(row.clv)) { target.clvTotal += row.clv; target.clvCount++; }
+  if (Number.isFinite(row.noVigClv)) { target.noVigClvTotal += row.noVigClv; target.noVigClvCount++; }
 }
+// averageClv is price CLV (vig included); averageNoVigClv covers only bets with the other side's close.
 function finishAggregate(value) {
-  const { clvTotal, ...rest } = value;
+  const { clvTotal, noVigClvTotal, ...rest } = value, averageClv = value.clvCount ? clvTotal / value.clvCount : NaN;
   return { ...rest, profit: roundMoney(value.profit), risked: roundMoney(value.risked), openExposure: roundMoney(value.openExposure),
-    roi: value.risked > 0 ? value.profit / value.risked : NaN, averageClv: value.clvCount ? clvTotal / value.clvCount : NaN };
+    roi: value.risked > 0 ? value.profit / value.risked : NaN, averageClv, averagePriceClv: averageClv,
+    averageNoVigClv: value.noVigClvCount ? noVigClvTotal / value.noVigClvCount : NaN };
 }
 
-export function performanceSummary(bets) {
+// settings.devigMethod sets the no-vig CLV method (the member's fair-value setting).
+export function performanceSummary(bets, settings = {}) {
   const total = aggregate('All bets'), dimensions = ['sport', 'league', 'market', 'book', 'tool', 'tag'];
   const groups = Object.fromEntries(dimensions.map(dimension => [dimension, new Map()]));
   const daily = new Map(), monthly = new Map(), validBets = [], seen = new Set();
@@ -566,7 +644,8 @@ export function performanceSummary(bets) {
     if (!(stake > 0) || !open && !['win', 'loss', 'push', 'void', 'settled', 'cashout'].includes(result)) { excluded++; continue; }
     const profit = open ? 0 : resultProfit(bet, result, stake);
     if (!Number.isFinite(profit) || result === 'win' && profit < 0 || result === 'loss' && profit > 0 || profit < -stake - 1e-8) { excluded++; continue; }
-    const row = { bet, stake, result, open, profit, risked: open || ['push', 'void'].includes(result) ? 0 : stake, clv: comparableClv(bet) };
+    const clv = comparableClv(bet, settings?.devigMethod || 'multiplicative');
+    const row = { bet, stake, result, open, profit, risked: open || ['push', 'void'].includes(result) ? 0 : stake, clv: clv.price, priceClv: clv.price, noVigClv: clv.noVig };
     validBets.push(row); addAggregate(total, row);
     for (const dimension of dimensions) {
       const tags = Array.isArray(bet.tags) ? bet.tags.map(tag => text(typeof tag === 'string' ? tag : tag?.name || tag?.label || tag?.id)).filter(Boolean) : text(bet.tag) ? [text(bet.tag)] : [];

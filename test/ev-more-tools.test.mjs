@@ -8,6 +8,7 @@ import {MORE_TOOLS,SECONDARY_TOOLS} from '../public/ev-tool-catalog.js';
 import {evToolUrl} from '../public/ev-tool-catalog.js';
 import * as views from '../public/ev-secondary-views.js';
 import * as core from '../public/ev-core.js';
+import {selectionText} from '../public/ev-board.js';
 import {TOOL_FILTER_DEFAULTS, oddsWithin} from '../public/ev-filters.js';
 import {withStandardPaytables, paytableSource, standardPayout, payoutFactor, payoutKnown} from '../public/dfs-workspace.js';
 
@@ -60,7 +61,7 @@ test('promo view balances outcomes and never applies a disabled cash boost to a 
   const source=await fs.readFile(new URL('../public/ev.js',import.meta.url),'utf8');
   const start=source.indexOf('function renderPromo()');
   const end=source.indexOf('\nfunction ',start+1);
-  const context=vm.createContext({...views,...core,promoInput:{kind:'bonus',stake:100,promoOdds:150,hedgeOdds:-130,boost:50},eligibleQuotes:x=>x,quotes:()=>[],toolFilters:{...TOOL_FILTER_DEFAULTS},oddsWithin,filteredEmpty:fallback=>fallback,esc:views.toolEsc,money:n=>'$'+n.toFixed(2),percent:n=>(n*100).toFixed(1)+'%',action:()=>'',button:()=>''});
+  const context=vm.createContext({...views,...core,selectionText,promoInput:{kind:'bonus',stake:100,promoOdds:150,hedgeOdds:-130,boost:50},eligibleQuotes:x=>x,quotes:()=>[],toolFilters:{...TOOL_FILTER_DEFAULTS},oddsWithin,filteredEmpty:fallback=>fallback,esc:views.toolEsc,money:n=>'$'+n.toFixed(2),percent:n=>(n*100).toFixed(1)+'%',action:()=>'',button:()=>''});
   const $=load(vm.runInContext(source.slice(start,end)+'\nrenderPromo()',context));
   assert.equal($('.tool-receipt-value').text(),'$84.78');
   assert.deepEqual($('.tool-receipt dd').map((_,el)=>$(el).text()).get(),['$65.22','$65.22','65.2%']);
@@ -96,7 +97,7 @@ test('filtering available fantasy picks preserves the selected ticket and payout
   const source=await fs.readFile(new URL('../public/ev.js',import.meta.url),'utf8');
   const start=source.indexOf('function renderSlip()'), end=source.indexOf('\nfunction ',start+1);
   const dfs=[{id:'a',app:'PrizePicks',player:'First player',probability:.6,side:'Over',line:10,market:'Points'},{id:'b',app:'PrizePicks',player:'Second player',probability:.55,side:'Under',line:20,market:'Points'}];
-  const context=vm.createContext({...views,...core,state:{dfs,paytables:{PrizePicks:{2:[0,0,3]}}},fantasyApp:'PrizePicks',fantasyIds:['a','b'],fantasyStake:10,slipVisibleCount:40,dfs:()=>[],isContestPlatform:()=>false,esc:views.toolEsc,fmtLine:String,money:n=>'$'+n.toFixed(2),percent:n=>(n*100).toFixed(1)+'%',signed:n=>(n*100).toFixed(1)+'%',action:()=>'',button:(label,attrs)=>`<button ${attrs}>${label}</button>`});
+  const context=vm.createContext({...views,...core,state:{dfs,paytables:{PrizePicks:{2:[0,0,3]}}},fantasyApp:'PrizePicks',fantasyIds:['a','b'],fantasyStake:10,slipVisibleCount:40,slipNotice:'',startLabel:()=>'',dfs:()=>[],isContestPlatform:()=>false,esc:views.toolEsc,fmtLine:String,money:n=>'$'+n.toFixed(2),percent:n=>(n*100).toFixed(1)+'%',signed:n=>(n*100).toFixed(1)+'%',action:()=>'',button:(label,attrs)=>`<button ${attrs}>${label}</button>`});
   // Standard payouts layer under saved tables (public/dfs-workspace.js).
   context.apiPaytables={};context.paytables=()=>withStandardPaytables(context.state.paytables,context.apiPaytables);context.paytableSource=paytableSource;context.standardPayout=standardPayout;context.payoutFactor=payoutFactor;context.payoutKnown=payoutKnown;
   const $=load(vm.runInContext(source.slice(start,end)+'\nrenderSlip()',context));

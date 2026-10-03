@@ -2,10 +2,10 @@
 // wrong, while `selection_name` names the real pick ("Over 44.5", "Dallas Cowboys +3.0"), so sides
 // and spread lines are rebuilt from the selection. Records that can't be trusted are skipped and
 // counted instead of failing the whole snapshot. Pure functions: the page and the tests share them.
-import { decimal, implied, marketKey } from './ev-core.js?v=3';
+import { decimal, implied, marketKey, familyKey } from './ev-core.js?v=6';
 import { canonicalPlatform, isFantasyPlatform } from './platform-catalog.js';
-import { DEFAULT_SHARP_WEIGHTS, devig } from './ev-advanced-math.js';
-import { matchedEventKey, dropInconsistentListings } from './ev-event-match.js?v=3';
+import { DEFAULT_SHARP_WEIGHTS, SHARP_MAX_VIG_PERCENT, devig } from './ev-advanced-math.js?v=2';
+import { matchedEventKey, dropInconsistentListings } from './ev-event-match.js?v=4';
 
 const MAJOR = { NFL: 'NFL', MLB: 'MLB', NBA: 'NBA', WNBA: 'WNBA', NHL: 'NHL', SOCCER: 'Soccer' };
 // `americanfootball` holds Central American soccer clubs in today's feed, so it is not relabeled
@@ -32,7 +32,7 @@ export function knownSport(raw) {
 /** "Away @ Home" → { away, home }; "A vs B" keeps the listed order as home/away. */
 export function participantsOf(event) {
   const text = String(event ?? '');
-  let parts = text.split(/\s+@\s+/);
+  let parts = text.split(/\s+(?:@|at)\s+/);
   if (parts.length === 2) return { away: parts[0].trim(), home: parts[1].trim() };
   parts = text.split(/\s+(?:vs\.?|v)\s+/i);
   if (parts.length === 2) return { home: parts[0].trim(), away: parts[1].trim() };
@@ -50,8 +50,20 @@ export function matchParticipant(name, participants) {
   // Words both teams share ("Los", "Angeles", "Manchester") can't tell them apart.
   const words = tokens(name).filter(word => !(away.has(word) && home.has(word)));
   const score = side => words.filter(word => side.has(word)).length;
-  const a = score(away), h = score(home);
-  return a > h ? 'away' : h > a ? 'home' : null;
+  const a = score(away), h = score(home), side = a > h ? 'away' : h > a ? 'home' : null;
+  if (!side) return null;
+  // One shared word (a city, nickname or first name) isn't a match when each name also has words the
+  // other lacks: "Rhode Island Rams" isn't the Los Angeles Rams, "Alhambra, Aaron" isn't Aaron Bowen.
+  // City codes ("LA Rams", "NY Yankees") don't count as missing words.
+  const own = tokens(participants[side]), other = side === 'away' ? home : away, picked = tokens(name);
+  const codes = new Set(String(participants[side]).split(/\s+/).filter(word => /^[A-Z]{2,4}$/.test(word)).map(word => word.toLowerCase()));
+  const pickExtra = picked.filter(word => !own.includes(word) && !other.has(word) && !/^\d+$/.test(word));
+  const teamExtra = own.filter(word => !picked.includes(word) && !codes.has(word));
+  if (pickExtra.length && teamExtra.length) return null;
+  // "Last, First": the surname must be the participant's.
+  const comma = String(name).indexOf(',');
+  if (comma > 0 && !tokens(String(name).slice(0, comma)).some(word => own.includes(word))) return null;
+  return side;
 }
 
 // A selection for a different bet: a bare yes/no/tie, a total, or a pair ("A/B", "Cowboys / Tie")
@@ -60,7 +72,9 @@ export function matchParticipant(name, participants) {
 // ("Team 11+", "Pittsburgh Panthers (13+)") and fight round or method props ("Sonny Hardy in Rd 9")
 // are other markets too, even when the name matches a participant.
 const otherMarket = (selection, event) => /^(yes|no|tie|draw)$/i.test(selection.trim()) || /^(over|under)\b/i.test(selection) || (selection.includes('/') && !String(event).includes('/'))
-  || /\b\d+\s*[:-]\s*\d+\b/.test(selection) || /\s\d+\+$/.test(selection.trim()) || /\(\d+\+?\)$/.test(selection.trim())
+  || /\b\d+\s*[:-]\s*\d+\b/.test(selection) || /\s\d+\+$/.test(selection.trim()) || /\(\d{1,2}\+?\)$/.test(selection.trim())
+  // Combos ("Lehecka, Jiri & Over 22.5") price two outcomes at once.
+  || /&\s*(over|under|yes|no)\b/i.test(selection) || /\b(over|under)\s+\d/i.test(selection)
   || /\b(in\s+rd\.?\s*\d+|in\s+round\s+\d+|by\s+(ko|tko|submission|decision|points))\b/i.test(selection);
 const signedTail = /^(.*?)\s*([+-]\d+(?:\.\d+)?)$/;
 
@@ -81,7 +95,7 @@ export function repairSelection({ type, side, line, selection, event }) {
   }
   if (type === 'moneyline' || type === 'three-way') {
     // Kambi soccer sends 1X2 outcomes as a two-way moneyline.
-    const outcome = { '1': 'home', x: 'draw', '2': 'away', draw: 'draw' }[sel.toLowerCase()];
+    const outcome = { '1': 'home', x: 'draw', '2': 'away', draw: 'draw', tie: 'draw' }[sel.toLowerCase()];
     if (outcome) return { type: 'three-way', side: outcome, line: '', selection: outcome === 'draw' ? 'Draw' : '', verified: true, outcomes: 3 };
     if (otherMarket(sel, event) || signedTail.test(sel)) return null;
     const matched = matchParticipant(sel, participants);
@@ -138,6 +152,14 @@ function propIdentity(raw) {
   // Milestone props send the threshold ("5+") as the player: "Tommy Tremble - ALT Longest Reception".
   const milestone = split > 0 && /^\d+(\.\d+)?\+$/.test(player) ? player : '';
   if ((milestone || /^(over|under)\s+\d+(\.\d+)?$/i.test(player)) && split > 0) { player = market.slice(0, split).trim(); market = market.slice(split + 3).trim(); }
+  else if (split > 0 && player) {
+    const before = market.slice(0, split).trim(), after = market.slice(split + 3).trim(), last = value => nameWords(value).split(' ').pop();
+    // A team prop names the stat where the player goes and the team after the dash ("Total Touchdowns -
+    // IND Colts"); otherwise the player comes first and the stat after it.
+    const teamProp = nameWords(before) === nameWords(player) && /\b(touchdowns|points|goals|yards|runs|hits)\b/i.test(before) && /\b[A-Z]{2,4}\b/.test(after);
+    if (teamProp) { player = after; market = before; }
+    else if (last(before) && last(before) === last(player)) market = after;
+  }
   return { market, player, milestone };
 }
 
@@ -185,17 +207,33 @@ export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
   let outcomes = raw.outcomes == null || raw.outcomes === '' ? (type === 'three-way' ? 3 : '') : Number(raw.outcomes);
   if (outcomes !== '' && (!Number.isInteger(outcomes) || outcomes < 2 || outcomes > 64)) return { skip: 'invalid' };
   const event = text(raw, 'event');
-  const repaired = repairSelection({ type, side: text(raw, 'side'), line, selection: text(raw, 'selection_name'), event });
+  // Exchanges (ProphetX, Kalshi, Polymarket) send every outcome as "home" with no selection name, and
+  // the price is often the other participant's (ProphetX "Zverev" +526 was Shang's price), so the side
+  // can't be known.
+  if (raw.exchange === true && ['moneyline', 'spread'].includes(type) && !text(raw, 'selection_name')) return { skip: 'mislabeled' };
+  // A moneyline with a line is another market sent as one (race-to-25 lines, "& Over 22.5" combos).
+  if (['moneyline', 'three-way'].includes(type) && line !== '' && line !== 0) return { skip: 'mislabeled' };
+  // Game lines need two teams; a single name ("Tottenham", "Over 3.0") can't say which side is which.
+  if (['moneyline', 'spread', 'total'].includes(type) && !participantsOf(event) && !(Number(outcomes) > 2)) return { skip: 'mislabeled' };
+  // Novig sends team moneylines as props: player "IOWA", stat "moneyline", Over 0 = that team wins.
+  const teamMoneyline = type === 'prop' && /^moneyline$/i.test(text(raw, 'propMarket')) && (line === '' || line === 0);
+  if (teamMoneyline) {
+    const team = matchParticipant(text(raw, 'player'), participantsOf(event)), over = /^(over|yes)$/i.test(text(raw, 'side'));
+    if (!team) return { skip: 'mislabeled' };
+    type = 'moneyline'; line = '';
+    raw = { ...raw, side: over ? team : team === 'home' ? 'away' : 'home', selection_name: '', player: '', propMarket: '' };
+  }
+  const repaired = teamMoneyline ? { type, side: raw.side, line, selection: '', verified: true } : repairSelection({ type, side: text(raw, 'side'), line, selection: text(raw, 'selection_name'), event });
   if (!repaired) return { skip: 'mislabeled' };
   ({ type, line } = repaired);
   if (repaired.outcomes) outcomes = repaired.outcomes;
   if (['spread', 'total', 'alternate'].includes(type) && line === '') return { skip: 'invalid' };
   const sport = sportName(text(raw, 'sport')) || 'Other';
   const matched = matchedEventKey(sport, event);
-  const eventId = matched ? `${sport}:${matched}` : text(raw, 'eventId') || `${sport}:${event.toLowerCase()}`;
-  const liquidity = Number(raw.liquidity);
+  const eventId = matched ? `${sport}:${matched}` : `${sport}:${text(raw, 'eventId') || event.toLowerCase()}`;
+  const liquidity = raw.liquidity == null || raw.liquidity === '' ? NaN : Number(raw.liquidity);
   const start = Date.parse(text(raw, 'startTime') || text(raw, 'start_time'));
-  const identity = propIdentity(raw), { player, milestone } = identity;
+  const identity = teamMoneyline ? { market: 'moneyline', player: '', milestone: '' } : propIdentity(raw), { player, milestone } = identity;
   const asOverUnder = type === 'prop' && !fantasy ? milestoneAsOverUnder(identity.market, milestone, repaired.side) : null;
   const market = asOverUnder?.market || identity.market;
   if (asOverUnder) line = asOverUnder.line;
@@ -204,15 +242,16 @@ export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
     // A player prop's market is its stat: one player's Rebounds 8.5 and Assists 8.5 at a book are two
     // markets, not two copies of one. A milestone that couldn't be read as Over/Under carries no
     // line, so its threshold ("5+", "10+") is part of the market too.
-    eventId, marketId: type === 'prop' ? `prop|${eventId}|${propName(market)}${milestone && !asOverUnder ? `|${milestone}` : ''}` : matched ? `${type}|${eventId}` : text(raw, 'marketId') || `${type}|${eventId}`,
-    playerId: text(raw, 'playerId') || text(raw, 'player_id'), player, period: text(raw, 'period') || 'full', league: text(raw, 'league') || SOCCER_LEAGUES[text(raw, 'sport').toLowerCase()] || '',
+    eventId, marketId: type === 'prop' ? `prop|${eventId}|${propMarket(market, player)}${milestone && !asOverUnder ? `|${milestone}` : ''}` : `${type}|${eventId}`,
+    // Books spell one player differently ("Cam" / "Cameron Skattebo"); the normalized name pairs them.
+    playerId: text(raw, 'playerId') || text(raw, 'player_id') || (player ? playerName(player) : ''), player, period: text(raw, 'period') || 'full', league: text(raw, 'league') || SOCCER_LEAGUES[text(raw, 'sport').toLowerCase()] || '',
     startTime: Number.isFinite(start) ? new Date(start).toISOString() : '',
     // Pick'em apps say higher/lower or more/less for Over/Under.
     type, line, side: asOverUnder?.side || (fantasy && DFS_SIDES[repaired.side]) || repaired.side,
     selection: asOverUnder ? (asOverUnder.side === 'over' ? 'Over' : 'Under') : milestone || repaired.selection, sideVerified: repaired.verified,
     book: canonicalPlatform(text(raw, 'book')), odds: Number.isFinite(decimal(odds)) ? odds : null, outcomes,
     ...(text(raw, 'team') ? { team: text(raw, 'team') } : {}), ...lineType(raw), live: raw.live === true, exchange: raw.exchange === true,
-    liquidity: Number.isFinite(liquidity) ? Math.max(0, liquidity) : 0,
+    ...(Number.isFinite(liquidity) ? { liquidity: Math.max(0, liquidity) } : {}),
     // Feed times use the server's clock; shift them onto this device's clock.
     ts: new Date(observed - clockOffsetMs).toISOString(), source: 'local-api',
     // Optional fields the tools already use when the feed sends them: links, limits, suspension.
@@ -228,6 +267,7 @@ export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
  * odds, so books that match on at least 70% of 30+ shared prices get one `priceFamily`.
  * Independent books match on 10-30% in the live feed.
  */
+const PLATFORM_FAMILIES = [['BetRivers', 'Desert Diamond Sports', 'Bally Bet']];
 export function markPriceFamilies(quotes, { minShared = 30, minIdentical = 0.7 } = {}) {
   const prices = new Map();
   for (const quote of quotes) {
@@ -245,10 +285,14 @@ export function markPriceFamilies(quotes, { minShared = 30, minIdentical = 0.7 }
     }
   }
   const parent = new Map(), root = book => { while (parent.has(book) && parent.get(book) !== book) book = parent.get(book); return book; };
+  const union = (x, y) => { const [a, b] = [root(x), root(y)]; if (a !== b) parent.set(a < b ? b : a, a < b ? a : b); };
+  // Kambi's skins are one platform whatever today's overlap (BetRivers and Desert Diamond matched on
+  // 70.1% of shared prices on 3 Oct 2026, a hair over the threshold, since state pricing differs by cents).
+  const present = new Set(quotes.map(quote => quote.book));
+  for (const group of PLATFORM_FAMILIES) { const books = group.filter(book => present.has(book)); for (const book of books.slice(1)) union(books[0], book); }
   for (const [key, pair] of pairs) {
     if (pair.shared < minShared || pair.same / pair.shared < minIdentical) continue;
-    const [a, b] = key.split('\u0000').map(root);
-    if (a !== b) parent.set(a < b ? b : a, a < b ? a : b);
+    union(...key.split('\u0000'));
   }
   for (const quote of quotes) { const family = root(quote.book); if (family !== quote.book) quote.priceFamily = family; }
   return quotes;
@@ -269,11 +313,27 @@ export function markAlternateLines(quotes) {
     if (!lines.has(line)) lines.set(line, []);
     lines.get(line).push(quote);
   }
-  const evenness = odds => { const value = Number(odds); return Math.abs((value > 0 ? 100 / (value + 100) : -value / (-value + 100)) - 0.5); };
-  for (const lines of ladders.values()) {
+  // Books that list one line list their main line; their median is the line the market agrees on. A
+  // ladder's main line is the one nearest it. Scoring a one-sided ladder by price alone picked
+  // Fanatics' total 7.5 as main where every book had 48.5.
+  const marketOf = key => { const [, ...rest] = JSON.parse(key); return JSON.stringify(rest); }, agreed = new Map();
+  for (const [key, lines] of ladders) if (lines.size === 1) { const market = marketOf(key); if (!agreed.has(market)) agreed.set(market, []); agreed.get(market).push([...lines.keys()][0]); }
+  const median = list => [...list].sort((a, b) => a - b)[Math.floor(list.length / 2)];
+  const chance = odds => { const value = Number(odds); return value > 0 ? 100 / (value + 100) : -value / (-value + 100); };
+  // Without that, a line priced on both sides nearest an even split, half-points first.
+  const evenness = group => {
+    const sides = [...new Set(group.map(q => q.side))];
+    if (sides.length === 2) { const [a, b] = sides.map(side => chance(group.find(q => q.side === side).odds)); return Math.abs(a / (a + b) - 0.5); }
+    return 1 + Math.abs(chance(group[0].odds) - 0.5);
+  };
+  for (const [key, lines] of ladders) {
     if (lines.size < 2) continue;
+    const reference = agreed.get(marketOf(key));
     let main = null, best = Infinity;
-    for (const [line, group] of lines) { const score = group.reduce((sum, q) => sum + evenness(q.odds), 0) / group.length; if (score < best) { best = score; main = line; } }
+    for (const [line, group] of lines) {
+      const score = (reference ? Math.abs(line - median(reference)) * 10 : 0) + evenness(group) + (Number.isInteger(line) ? 0.05 : 0);
+      if (score < best) { best = score; main = line; }
+    }
     for (const [line, group] of lines) if (line !== main) group.forEach(quote => { quote.alt = true; });
   }
   return quotes;
@@ -312,6 +372,46 @@ const selectionKey = quote => JSON.stringify([quote.book, marketKey(quote), quot
 // Known observation times beat unknown ones; then the newest price wins.
 const fresher = (a, b) => Boolean(a.ageUnknown) !== Boolean(b.ageUnknown) ? !a.ageUnknown : Date.parse(a.ts) > Date.parse(b.ts);
 
+// A record naming a team for a game: 'named' when the name is one of the event's teams, 'unnamed' when
+// it is neither; null for anything else (no name, 1X2 codes, other markets).
+function teamPick(raw) {
+  const type = text(raw, 'market').toLowerCase() === '1x2' ? 'three-way' : text(raw, 'type').toLowerCase(), selection = text(raw, 'selection_name'), event = text(raw, 'event');
+  if (!['moneyline', 'spread', 'three-way'].includes(type) || !selection || /^(1|2|x|tie|draw)$/i.test(selection)) return null;
+  const name = type === 'spread' ? signedTail.exec(selection)?.[1] ?? selection : selection, participants = participantsOf(event);
+  if (!participants || otherMarket(name, event)) return null;
+  return matchParticipant(name, participants) ? 'named' : 'unnamed';
+}
+
+/**
+ * A book's ladder of lines for one selection must get harder as the line does: an Over at a higher
+ * total, or a spread giving more points, can't be likelier. Fanatics mixes half, quarter and team lines
+ * into its full-game spreads and totals (Colts -3.5 at +165 between -3 at -145 and -4 at -110), and one
+ * player's alternate yardage with another's. The longest consistent run of each ladder (2-point
+ * tolerance) is kept; the rest are dropped.
+ */
+function dropNonMonotoneLadders(quotes, skipped) {
+  const ladders = new Map();
+  for (const quote of quotes) {
+    if (!['spread', 'total', 'prop'].includes(quote.type) || quote.line === '' || !['over', 'under', 'home', 'away'].includes(quote.side)) continue;
+    const key = JSON.stringify([quote.book, quote.eventId, quote.type, quote.period || 'full', quote.side, quote.player || '', quote.market, Boolean(quote.live)]);
+    if (!ladders.has(key)) ladders.set(key, []);
+    ladders.get(key).push(quote);
+  }
+  const bad = new Set();
+  for (const list of ladders.values()) {
+    if (new Set(list.map(quote => quote.line)).size < 3) continue;
+    // Easiest line first: lowest Over, highest Under, most points on a spread.
+    const harder = list[0].side === 'under' || list[0].type === 'spread' ? -1 : 1, sorted = [...list].sort((a, b) => harder * (a.line - b.line)), chance = sorted.map(quote => implied(quote.odds));
+    const length = chance.map(() => 1), previous = chance.map(() => -1);
+    for (let i = 0; i < chance.length; i++) for (let j = 0; j < i; j++) if (chance[i] <= chance[j] + 0.02 && length[j] + 1 > length[i]) { length[i] = length[j] + 1; previous[i] = j; }
+    const keep = new Set();
+    for (let at = length.indexOf(Math.max(...length)); at >= 0; at = previous[at]) keep.add(sorted[at]);
+    for (const quote of sorted) if (!keep.has(quote)) bad.add(quote);
+  }
+  skipped.inconsistent += bad.size;
+  return quotes.filter(quote => !bad.has(quote));
+}
+
 /**
  * Full snapshot → { quotes, dfs, skipped: { invalid, mislabeled, duplicate, stale, started, inconsistent } }.
  * Some books send the game start as `ts`; for those, `ts` becomes the start time, the price's age
@@ -321,10 +421,31 @@ export function normalizeFeed(records, { syncedAt = new Date().toISOString(), cl
   const skipped = { invalid: 0, mislabeled: 0, duplicate: 0, stale: 0, started: 0, inconsistent: 0 };
   const now = Date.parse(syncedAt);
   let quotes = [];
+  // A book's game whose team picks never name either team carries another game's name (the feed filed
+  // Memphis prices under "Denver Broncos @ San Francisco 49ers"); its totals and props belong to that
+  // other game too, so the whole listing goes.
+  // A moneyline listing with a "Yes"/"No" outcome is a yes/no prop (Fanatics ["Detroit Lions" -150,
+  // "No" +280]), not the game's moneyline, so its team record goes as well.
+  const listing = (book, event, start) => JSON.stringify([book, event, Date.parse(start) || '']), teamPicks = new Map(), yesNo = new Set();
   for (const raw of Array.isArray(records) ? records : []) {
-    const result = normalizeRecord(raw, { clockOffsetMs });
+    const result = normalizeRecord(raw, { clockOffsetMs }), verdict = teamPick(raw), key = listing(canonicalPlatform(text(raw, 'book')), text(raw, 'event'), text(raw, 'startTime') || text(raw, 'start_time'));
+    if (verdict) { const tally = teamPicks.get(key) || { named: 0, unnamed: 0 }; tally[verdict] += 1; teamPicks.set(key, tally); }
+    if (text(raw, 'type').toLowerCase() === 'moneyline' && /^(yes|no)$/i.test(text(raw, 'selection_name'))) yesNo.add(key);
     if (result.skip) skipped[result.skip] += 1; else quotes.push(result);
   }
+  quotes = quotes.filter(quote => {
+    const key = listing(quote.book, quote.event, quote.startTime), tally = teamPicks.get(key);
+    return (!tally || tally.named > 0) && !(quote.type === 'moneyline' && yesNo.has(key)) || (skipped.mislabeled += 1, false);
+  });
+  // A book whose unconfirmed game-line sides are (nearly) all one value labels every outcome alike.
+  const unconfirmed = quote => !quote.sideVerified && ['moneyline', 'spread'].includes(quote.type), sideCounts = new Map();
+  for (const quote of quotes.filter(unconfirmed)) { const counts = sideCounts.get(quote.book) || new Map(); counts.set(quote.side, (counts.get(quote.side) || 0) + 1); sideCounts.set(quote.book, counts); }
+  const oneSided = new Set([...sideCounts].filter(([, counts]) => { const total = [...counts.values()].reduce((a, b) => a + b, 0); return total >= 10 && Math.max(...counts.values()) / total >= 0.95; }).map(([book]) => book));
+  quotes = quotes.filter(quote => !(oneSided.has(quote.book) && unconfirmed(quote)) || (skipped.mislabeled += 1, false));
+  // A soccer match has a draw: a two-way moneyline there is an incomplete three-way market (comparing
+  // it as two-way showed live J-League "arbs" of 16-147%).
+  const drawn = new Set(quotes.filter(quote => quote.type === 'three-way').map(quote => quote.eventId));
+  for (const quote of quotes) if (quote.type === 'moneyline' && (quote.sport === 'Soccer' || drawn.has(quote.eventId))) Object.assign(quote, { type: 'three-way', outcomes: 3, marketId: `three-way|${quote.eventId}`, displayMarket: MARKET_NAMES['three-way'] });
   // Ladder props a book prices on one side at whole numbers ("Receiving Yards" 20, 25, 30 with only an
   // Over) are N+ milestones: Over N - 0.5 on that stat. A whole number priced both ways is a real
   // line with a push and stays as it is.
@@ -345,11 +466,34 @@ export function normalizeFeed(records, { syncedAt = new Date().toISOString(), cl
       quote.ts = new Date(now).toISOString(); quote.ageUnknown = true;
     }
   }
-  // Any book's start time applies to the whole game, so started games drop for every book.
-  const startOf = new Map();
-  for (const quote of quotes) if (quote.startTime && !startOf.has(quote.eventId)) startOf.set(quote.eventId, quote.startTime);
+  // Books disagree on a game's start (FanDuel stamps some games 16:00 on the scrape day; the feed files
+  // other days' games under one name). Each book votes once per hour; where 2+ books agree, a price
+  // starting 6+ hours from them belongs to another game or carries a placeholder and goes, and prices
+  // within 2 hours take the agreed start, so every book shows one kickoff.
+  const startOf = new Map(), byEvent = new Map();
+  for (const quote of quotes) {
+    if (!quote.startTime || isFantasyPlatform(quote.book)) continue;
+    const hours = byEvent.get(quote.eventId) || new Map(), hour = Math.round(Date.parse(quote.startTime) / 3_600_000);
+    if (!hours.has(hour)) hours.set(hour, new Map());
+    if (!hours.get(hour).has(quote.book)) hours.get(hour).set(quote.book, quote.startTime);
+    byEvent.set(quote.eventId, hours);
+  }
+  for (const [eventId, hours] of byEvent) {
+    const [hour, books] = [...hours].sort((a, b) => b[1].size - a[1].size || a[0] - b[0])[0], times = new Map();
+    for (const time of books.values()) times.set(time, (times.get(time) || 0) + 1);
+    startOf.set(eventId, { start: [...times].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0], books: books.size, hour });
+  }
   quotes = quotes.filter(quote => {
-    if (!quote.startTime && startOf.has(quote.eventId)) quote.startTime = startOf.get(quote.eventId);
+    const agreed = startOf.get(quote.eventId);
+    if (!agreed || !quote.startTime || isFantasyPlatform(quote.book) || agreed.books < 2) return true;
+    const gap = Math.abs(Date.parse(quote.startTime) - Date.parse(agreed.start)), own = byEvent.get(quote.eventId).get(Math.round(Date.parse(quote.startTime) / 3_600_000));
+    if (gap > 6 * 3_600_000 && own.size < agreed.books) { skipped.inconsistent += 1; return false; }
+    if (gap <= 2 * 3_600_000) quote.startTime = agreed.start;
+    return true;
+  });
+  for (const quote of quotes) if (quote.startTime && !startOf.has(quote.eventId)) startOf.set(quote.eventId, { start: quote.startTime });
+  quotes = quotes.filter(quote => {
+    if (!quote.startTime && startOf.has(quote.eventId)) quote.startTime = startOf.get(quote.eventId).start;
     // A price marked live for a game that a book says starts later is a pregame price (the feed
     // flagged Sunday's Betr moneylines live on Friday).
     if (quote.live && quote.startTime && Date.parse(quote.startTime) > now + 5 * 60_000) quote.live = false;
@@ -369,31 +513,57 @@ export function normalizeFeed(records, { syncedAt = new Date().toISOString(), cl
   // Older copies of one selection (the API keeps them with new ids), and one book listing a game
   // twice, keep only the freshest price. This runs before the listing check so a stale copy can't
   // pair with a current one.
-  const newest = (list, keyOf) => {
+  // One book quoting one selection at two prices in the same scrape is listing two markets under one
+  // name (Fanatics "Aces" moneylines at -105, -130 and +320): neither price can be trusted.
+  const conflicted = new Set();
+  const newest = (list, keyOf, conflicts = false) => {
     const kept = new Map();
     for (const quote of list) {
       const key = keyOf(quote), prior = kept.get(key);
-      if (!prior) kept.set(key, quote);
-      else { skipped.duplicate += 1; if (fresher(quote, prior)) kept.set(key, quote); }
+      if (!prior) { kept.set(key, quote); continue; }
+      skipped.duplicate += 1;
+      if (conflicts && !quote.ageUnknown && !prior.ageUnknown && Math.abs(Date.parse(quote.ts) - Date.parse(prior.ts)) < 5_000 && Number(quote.odds) !== Number(prior.odds)) conflicted.add(key);
+      if (fresher(quote, prior)) kept.set(key, quote);
     }
-    return [...kept.values()];
+    return [...kept.entries()].filter(([key]) => !conflicted.has(key) || (skipped.inconsistent += 1, false)).map(([, quote]) => quote);
   };
-  quotes = newest(newest(quotes, quote => quote.id), selectionKey);
+  quotes = dropNonMonotoneLadders(newest(newest(quotes, quote => quote.id), selectionKey, true), skipped);
   const checked = dropInconsistentListings(quotes, marketKey);
   skipped.inconsistent += checked.dropped;
   quotes = checked.kept;
   for (const quote of quotes) { quote.feedId = quote.id; quote.id = `local-api:${stableId(selectionKey(quote))}`; }
   markPriceFamilies(quotes);
   markAlternateLines(quotes);
-  // One name per team and game: the fullest any book uses ("Dallas Cowboys", not "DAL Cowboys"),
-  // from both event names and verified selections, so every row and book says the same thing.
-  const teamNames = new Map();
-  const offer = (eventId, side, name) => { const key = `${eventId}|${side}`; if (name && name.length > (teamNames.get(key) || '').length) teamNames.set(key, name); };
-  for (const quote of [...quotes, ...picks]) {
-    const teams = participantsOf(quote.event);
-    if (teams) { offer(quote.eventId, 'away', teams.away); offer(quote.eventId, 'home', teams.home); }
-    if (quote.sideVerified && ['home', 'away'].includes(quote.side)) offer(quote.eventId, quote.side, quote.selection);
+  // Price history follows a book's line as it moves: a moved line is a new selection id, so a series is
+  // the book, the market without its line, and the side. On a ladder only the main line is followed.
+  const seriesKey = quote => JSON.stringify([quote.book, familyKey(quote), quote.side]), seriesSize = new Map();
+  for (const quote of quotes) seriesSize.set(seriesKey(quote), (seriesSize.get(seriesKey(quote)) || 0) + 1);
+  for (const quote of quotes) quote.seriesId = seriesSize.get(seriesKey(quote)) === 1 || ['spread', 'total'].includes(quote.type) && !quote.alt ? `local-api:${stableId(seriesKey(quote))}` : quote.id;
+  // One name per team and game, so every row and book says the same thing: the name most books use in
+  // their event names (the fuller one on a tie, "Dallas Cowboys" over "DAL Cowboys"), without notes in
+  // brackets ("(TBD)", pitchers). A selection name only fills a side no event name covers, and only a
+  // plain, confirmed one: taking the longest selection once renamed an NFL game "Rhode Island Rams @
+  // Philadelphia Eagles" and a match "Lehecka, Jiri & Over 22.5 @ Ugo Humbert".
+  const votes = new Map();
+  const vote = (eventId, side, name, book) => {
+    const clean = String(name ?? '').replace(/\s*\([^)]*\)/g, '').trim(), key = `${eventId}|${side}`;
+    if (!clean) return;
+    if (!votes.has(key)) votes.set(key, new Map());
+    const names = votes.get(key);
+    if (!names.has(clean)) names.set(clean, new Set());
+    names.get(clean).add(book);
+  };
+  for (const item of [...quotes, ...picks]) { const teams = participantsOf(item.event); if (teams) { vote(item.eventId, 'away', teams.away, item.book); vote(item.eventId, 'home', teams.home, item.book); } }
+  for (const quote of quotes) if (quote.sideVerified && ['home', 'away'].includes(quote.side) && !votes.has(`${quote.eventId}|${quote.side}`) && quote.selection && !/[,&\d]/.test(quote.selection)) vote(quote.eventId, quote.side, quote.selection, quote.book);
+  const teamNames = new Map([...votes].map(([key, names]) => [key, [...names].sort((a, b) => b[1].size - a[1].size || b[0].length - a[0].length)[0][0]]));
+  // A confirmed selection that spells out the same name ("Dallas Cowboys" for "Cowboys") fills it out.
+  for (const quote of quotes) {
+    const key = `${quote.eventId}|${quote.side}`, base = teamNames.get(key), name = String(quote.selection ?? '').trim();
+    if (quote.sideVerified && base && name.length > base.length && !/[,&\d()]/.test(name) && tokens(base).every(word => tokens(name).includes(word))) teamNames.set(key, name);
   }
+  // A side is named after a team only when it is confirmed, or its book also prices the other side.
+  const priced = new Set(quotes.map(quote => `${quote.book}|${marketKey(quote)}|${quote.side}`));
+  const named = quote => quote.sideVerified || priced.has(`${quote.book}|${marketKey(quote)}|${quote.side === 'home' ? 'away' : 'home'}`);
   // Every app's DFS picks and every book's quotes for one game share this display name.
   const names = new Map();
   const displayName = item => { const away = teamNames.get(`${item.eventId}|away`), home = teamNames.get(`${item.eventId}|home`); return away && home ? `${away} @ ${home}` : item.event; };
@@ -401,7 +571,7 @@ export function normalizeFeed(records, { syncedAt = new Date().toISOString(), cl
   for (const quote of quotes) {
     const away = teamNames.get(`${quote.eventId}|away`), home = teamNames.get(`${quote.eventId}|home`);
     quote.displayEvent = names.get(quote.eventId);
-    if (['home', 'away'].includes(quote.side) && away && home && (!quote.selection || matchParticipant(quote.selection, { away, home }) === quote.side)) quote.selection = quote.side === 'away' ? away : home;
+    if (['home', 'away'].includes(quote.side) && away && home && named(quote) && (!quote.selection || matchParticipant(quote.selection, { away, home }) === quote.side)) quote.selection = quote.side === 'away' ? away : home;
     if (!quote.selection) quote.selection = { over: 'Over', under: 'Under', draw: 'Draw' }[quote.side] || quote.side;
   }
   // `price: false` leaves pricing to a pricer that also has the DFS props feed (createDfsPricer).
@@ -465,7 +635,7 @@ const SAME_GAME_MS = 12 * 3_600_000, CLOSE_START_MS = 2 * 3_600_000;
 // Sports where pick'em apps post part-game (1st half, 1st quarter) lines.
 const PERIOD_SPORTS = new Set(['NFL', 'NCAAF', 'NBA', 'WNBA', 'NCAAB']);
 const pickSide = side => DFS_SIDES[String(side ?? '').toLowerCase()] || '';
-export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplicative' } = {}) {
+export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplicative', minBooks = 1, maxVigPercent } = {}) {
   // Sportsbook prices per player prop. Each book keeps its own Over and Under (books that mirror one
   // platform are averaged after devigging, so one book's Over is never paired with another's Under).
   const playerStat = (player, market) => JSON.stringify([playerName(player), propMarket(market, player)]);
@@ -542,9 +712,12 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
   }
   for (const group of statLines.values()) {
     const standard = [...new Set(group.filter(pick => !['goblin', 'demon'].includes(pick.oddsType)).map(pick => Number(pick.line)))].sort((a, b) => b - a);
-    if (standard.length < 2) continue;
+    if (!standard.length) continue;
+    // Under 70% of the books' main line, and 3+ units below it: a 1H line (Jonathan Taylor Rush Yards 42.5
+    // with FanDuel's main at 90.5). Small counts (Receptions 1.5 against 2.5) can differ that much legitimately.
     const main = mainLines.get(playerStat(group[0].player, group[0].market))?.line;
-    const full = main > 0 && standard[0] < 0.7 * main ? null : standard[0];
+    const full = main > 0 && standard[0] < 0.7 * main && main - standard[0] >= 3 ? null : standard[0];
+    if (full === standard[0] && standard.length < 2) continue;
     const anchors = [...standard.map(line => ({ line, full: line === full })), ...(full === null && main > 0 ? [{ line: main, full: true }] : [])];
     const gap = (line, anchor) => Math.abs(Math.log(line / anchor.line));
     for (const pick of group) if (!anchors.reduce((best, anchor) => gap(Number(pick.line), anchor) < gap(Number(pick.line), best) ? anchor : best).full) partGame.add(pick);
@@ -565,7 +738,9 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
     return [key, total >= 20 && count / total >= 0.9 ? value : NaN];
   }));
   const realMultiplier = pick => pick.payoutMultiplier && pick.payoutMultiplier !== placeholder.get(`${pick.book}|${pick.oddsType}`) ? pick.payoutMultiplier : null;
-  const weight = name => DEFAULT_SHARP_WEIGHTS[String(name).toLowerCase()] || 1;
+  // A sharp book's extra weight only on a low-margin market, as in consensusPrice: a 10%-hold "Pinnacle"
+  // market isn't a sharp price.
+  const weight = book => (book.over + book.under - 1) * 100 <= SHARP_MAX_VIG_PERCENT && DEFAULT_SHARP_WEIGHTS[String(book.book).toLowerCase()] || 1;
   return [...latest.values()].map(pick => {
     // Every sportsbook with this exact player, stat and line (one side or both), for the comparison;
     // the fair probability uses those that price both sides with a margin.
@@ -575,16 +750,19 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
     const books = listed
       // A sportsbook pair whose implied probabilities sum to 100.5% or less has no margin to remove:
       // the feed built the Under from the Over (DraftKings and Fanatics milestone props, Oct 2026).
-      .filter(book => Number.isFinite(book.over) && Number.isFinite(book.under) && (book.exchange || book.over + book.under > 1.005))
+      .filter(book => Number.isFinite(book.over) && Number.isFinite(book.under) && (book.exchange || book.over + book.under > 1.005)
+        // The member's maximum margin (Pricing settings) applies here as in every other tool.
+        && !(Number(maxVigPercent) >= 0 && maxVigPercent !== '' && maxVigPercent != null && (book.over + book.under - 1) * 100 > Number(maxVigPercent)))
       .map(book => ({ ...book, fairOver: devig([book.over, book.under], method)[0] })).filter(book => Number.isFinite(book.fairOver));
     const families = new Map();
     for (const book of books) { if (!families.has(book.family)) families.set(book.family, []); families.get(book.family).push(book); }
     let total = 0, sum = 0;
     for (const group of families.values()) {
-      const each = Math.max(...group.map(book => weight(book.book)));
+      const each = Math.max(...group.map(weight));
       total += each; sum += each * group.reduce((value, book) => value + book.fairOver, 0) / group.length;
     }
-    const over = total ? sum / total : NaN;
+    // Fewer qualifying books (price families) than the member's minimum: no fair probability.
+    const over = total && families.size >= Math.max(1, Number(minBooks) || 1) ? sum / total : NaN;
     const probability = Number.isFinite(over) ? (pick.side === 'over' ? over : 1 - over) : null;
     return {
       id: pick.id, app: pick.book, sport: pick.sport, ...(pick.matchSport ? { matchSport: pick.matchSport } : {}), league: pick.league, event: names.get(pick.eventId) || pick.event, eventId: pick.eventId,
@@ -607,13 +785,20 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
  */
 export function createDfsPricer() {
   let quotes = [], names = new Map(), quotePicks = [], propPicks = [], last = '';
-  const lineKey = pick => JSON.stringify([pick.book, playerName(pick.player), propMarket(pick.market, pick.player), Number(pick.line), pickSide(pick.side)]);
-  const merged = () => {
-    const lines = new Map();
-    for (const pick of quotePicks) lines.set(lineKey(pick), pick);
+  // The game is part of a line's identity: Byron Murphy Jr. (MIA) and Byron Murphy II (LAC) normalize to
+  // one name.
+  const lineKey = pick => JSON.stringify([pick.book, pick.eventId, playerName(pick.player), propMarket(pick.market, pick.player), Number(pick.line), pickSide(pick.side)]);
+  const statKey = pick => JSON.stringify([pick.book, pick.eventId, playerName(pick.player), propMarket(pick.market, pick.player)]);
+  const merged = now => {
+    // The quote snapshot refreshes every few seconds and the props feed every minute: where the snapshot
+    // has a player's stat, its lines stand (a moved line would otherwise show at both numbers).
+    const lines = new Map(), current = pick => (pick.live || !(Date.parse(pick.startTime) <= now)) && !(now - Date.parse(pick.ts) > FEED_MAX_AGE_MS);
+    const listed = new Set(quotePicks.map(statKey));
+    for (const pick of quotePicks) if (current(pick)) lines.set(lineKey(pick), pick);
     for (const pick of propPicks) {
+      if (!current(pick)) continue;
       const key = lineKey(pick), prior = lines.get(key);
-      if (!prior) lines.set(key, pick);
+      if (!prior) { if (!listed.has(statKey(pick))) lines.set(key, pick); }
       // A goblin or demon flag from either feed sticks: those lines don't pay the standard table.
       else if (['goblin', 'demon'].includes(pick.oddsType) && !['goblin', 'demon'].includes(prior.oddsType)) lines.set(key, { ...prior, oddsType: pick.oddsType, ...(pick.payoutMultiplier ? { payoutMultiplier: pick.payoutMultiplier } : {}) });
       else if (pick.payoutMultiplier && !prior.payoutMultiplier) lines.set(key, { ...prior, payoutMultiplier: pick.payoutMultiplier });
@@ -623,9 +808,13 @@ export function createDfsPricer() {
   return {
     setQuotes(result) { quotes = result.quotes || []; names = result.names || new Map(); quotePicks = result.picks || []; },
     setProps(picks) { propPicks = picks || []; },
-    /** Priced picks, or null when they are the same as the last call's. */
-    price(method = 'multiplicative') {
-      const priced = dfsPicks(merged(), quotes, names, { method });
+    /**
+     * Priced picks, or null when they are the same as the last call's (`force` sends them anyway: the
+     * page didn't receive the last answer). Started games and lines neither feed has refreshed in 15
+     * minutes are left out even when one feed hasn't answered since.
+     */
+    price(method = 'multiplicative', { now = Date.now(), force = false, minBooks = 1, maxVigPercent } = {}) {
+      const priced = dfsPicks(merged(now), quotes, names, { method, minBooks, maxVigPercent });
       let hash = 0x811c9dc5;
       for (const pick of priced) {
         const prices = (pick.bookLines || []).map(line => `${line.book}${line.over ?? ''}/${line.under ?? ''}`).join(',');
@@ -633,7 +822,7 @@ export function createDfsPricer() {
         for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
       }
       const fingerprint = `${priced.length}:${hash >>> 0}`;
-      if (fingerprint === last) return null;
+      if (fingerprint === last && !force) return null;
       last = fingerprint;
       return priced;
     },
@@ -641,12 +830,12 @@ export function createDfsPricer() {
 }
 
 /** One feed request (kind 'quotes' or 'dfs') through a pricer: the page gets quotes and/or priced DFS picks. */
-export async function loadAndPrice(pricer, { kind = 'quotes', url, syncedAt, apps = [], method = 'multiplicative' } = {}) {
+export async function loadAndPrice(pricer, { kind = 'quotes', url, syncedAt, apps = [], method = 'multiplicative', minBooks = 1, maxVigPercent, force = false } = {}) {
   const result = kind === 'dfs' ? await loadDfsFeed(url, syncedAt, apps, { method, price: false }) : await loadFeed(url, syncedAt, { method, price: false });
   if (!result.ok) return result;
   if (kind === 'dfs') pricer.setProps(result.picks); else pricer.setQuotes(result);
   const { picks, names, ...rest } = result;
-  const dfs = pricer.price(method);
+  const dfs = pricer.price(method, { now: Date.parse(syncedAt) || Date.now(), force, minBooks, maxVigPercent });
   return dfs ? { ...rest, dfs } : rest;
 }
 
@@ -661,13 +850,20 @@ export async function loadFeed(url, syncedAt = new Date().toISOString(), { metho
     const serverNow = Date.parse(response.headers.get('Date') || ''), offset = Number.isFinite(serverNow) ? serverNow - Date.now() : 0;
     let payload;
     try { payload = await response.json(); }
-    catch { return { ok: false, kind: 'unreadable', status: response.status }; }
+    catch (error) {
+      // A connection dropped or slowed mid-download is a network problem or a timeout, worth retrying.
+      if (error?.name === 'TimeoutError' || error?.name === 'AbortError') return { ok: false, kind: 'timeout' };
+      if (error?.name !== 'SyntaxError') return { ok: false, kind: 'network', message: String(error?.message || '') };
+      return { ok: false, kind: 'unreadable', status: response.status };
+    }
     if (!response.ok) return { ok: false, kind: 'http', status: response.status, payload, retryAfter: response.headers.get('Retry-After') };
     const records = Array.isArray(payload) ? payload : payload?.quotes;
     if (!Array.isArray(records)) return { ok: false, kind: 'shape' };
     if (payload?.complete === false || payload?.partial === true || payload?.next_cursor) return { ok: false, kind: 'partial' };
     const { quotes, dfs, picks, names, skipped } = normalizeFeed(records, { syncedAt, clockOffsetMs: Math.abs(offset) > 5_000 ? offset : 0, method, price });
-    return { ok: true, quotes, ...(price ? { dfs } : { picks, names }), skipped, total: records.length };
+    // The proxy names when it fetched the snapshot it served and flags held-over or partial ones.
+    const snapshotAt = typeof payload?.snapshotAt === 'string' && Number.isFinite(Date.parse(payload.snapshotAt)) ? payload.snapshotAt : '';
+    return { ok: true, quotes, ...(price ? { dfs } : { picks, names }), skipped, total: records.length, ...(snapshotAt ? { snapshotAt } : {}), ...(payload?.stale === true ? { stale: true } : {}), ...(payload?.warmingUp === true ? { warmingUp: true } : {}) };
   } catch (error) {
     return { ok: false, kind: error?.name === 'TimeoutError' ? 'timeout' : 'network', message: String(error?.message || '') };
   }
@@ -707,7 +903,8 @@ function relabelDfsSports(picks) {
   const key = pick => `${pick.book}|${propName(pick.player)}`, sports = new Map(), byLeague = new Set();
   for (const pick of picks) {
     const league = LEAGUE_CODES[String(pick.event ?? '').trim().toUpperCase()];
-    if (league) { relabel(pick, league); byLeague.add(pick); }
+    // Every series in a league shares the league code as its event; the start time tells them apart.
+    if (league) { relabel(pick, league); byLeague.add(pick); if (pick.startTime && !String(pick.eventId).includes('|')) pick.eventId = `${pick.eventId}|${pick.startTime}`; }
   }
   for (const pick of picks) {
     if (byLeague.has(pick) || !BASKETBALL.has(pick.sport)) continue;
@@ -737,6 +934,11 @@ function relabelDfsSports(picks) {
     if (pick.sport === 'NFL' && teams.some(team => !NFL_TEAMS.has(team))) relabel(pick, 'NCAAF');
     else if (pick.sport === 'NBA' && teams.some(team => WNBA_ONLY_TEAMS.has(team))) relabel(pick, 'WNBA');
   }
+  // Football lines the feed files under another sport in a football game (VAN @ UGA passing yards as
+  // NHL, LOU @ NCST as NWSL) take the game's football label.
+  const footballLabels = new Map();
+  for (const pick of picks) if (FOOTBALL.has(pick.sport) && FOOTBALL_MARKETS.test(String(pick.market).toLowerCase())) footballLabels.set(`${pick.book}|${pick.event}|${pick.startTime}`, pick.sport);
+  for (const pick of picks) { const sport = footballLabels.get(`${pick.book}|${pick.event}|${pick.startTime}`); if (sport && !FOOTBALL.has(pick.sport) && FOOTBALL_MARKETS.test(String(pick.market).toLowerCase())) relabel(pick, sport); }
   // Lines the feed sends without a sport ("MICH @ MINN" Rush Yards as Other) take the sport of the
   // app's other lines for that game.
   const gameSport = new Map();
@@ -814,6 +1016,8 @@ export function payoutTables(records) {
  * request leaves some apps out (DraftKings Pick6 only comes back with ?app=), so each app named in
  * `apps` that is missing from it is requested on its own.
  */
+// Apps the API answered with no lines are asked again after 10 minutes, not every minute.
+const emptyApps = new Map();
 export async function loadDfsFeed(url, syncedAt = new Date().toISOString(), apps = [], { method = 'multiplicative', price = true } = {}) {
   const read = async target => {
     const response = await fetch(target, { cache: 'no-store', signal: AbortSignal.timeout(30_000) });
@@ -826,8 +1030,9 @@ export async function loadDfsFeed(url, syncedAt = new Date().toISOString(), apps
     const base = await read(url);
     if (!base.ok) return base;
     const present = new Set(base.records.map(raw => canonicalPlatform(text(raw, 'app') || text(raw, 'book'))));
-    const missing = [...new Set(apps)].filter(app => app && !present.has(canonicalPlatform(app)));
+    const missing = [...new Set(apps)].filter(app => app && !present.has(canonicalPlatform(app)) && !(emptyApps.get(app) > Date.now()));
     const extra = await Promise.all(missing.map(app => read(`${url}${url.includes('?') ? '&' : '?'}app=${encodeURIComponent(app)}`).catch(() => ({ ok: false }))));
+    missing.forEach((app, i) => { if (extra[i].ok && !extra[i].records.length) emptyApps.set(app, Date.now() + 600_000); else emptyApps.delete(app); });
     const seen = new Set(), records = [];
     for (const raw of [base.records, ...extra.filter(result => result.ok).map(result => result.records)].flat()) {
       const id = text(raw, 'id');

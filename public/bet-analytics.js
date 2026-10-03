@@ -1,4 +1,4 @@
-import { betReturns, summarizeBets } from './bet-utils.js';
+import { betReturns, summarizeBets } from './bet-utils.js?v=4';
 
 export function shiftMonth(month, delta) {
   const [year, index] = month.split('-').map(Number);

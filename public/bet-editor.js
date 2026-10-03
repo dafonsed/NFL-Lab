@@ -1,4 +1,4 @@
-import { SPORTS } from './bet-utils.js';
+import { SPORTS } from './bet-utils.js?v=4';
 import { gameKey,playerEligible,playerMarkets,findPlayers,formatLegTarget } from './bet-legs.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const leagues={'eng.1':'Premier League','esp.1':'La Liga','ger.1':'Bundesliga','ita.1':'Serie A','fra.1':'Ligue 1','usa.1':'MLS','uefa.champions':'Champions League'};

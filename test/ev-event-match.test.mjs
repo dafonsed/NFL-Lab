@@ -15,10 +15,14 @@ test('the same game gets one key whatever each book calls it', () => {
   assert.notEqual(matchedEventKey('NFL', 'Dolphins @ Bengals'), keys[0], 'home and away stay distinct');
 });
 
-test('only safe sports and "@" names are matched', () => {
+test('only safe sports and two-team names are matched', () => {
   assert.equal(matchedEventKey('MLB', 'NY Mets @ MIA Marlins'), null, 'MLB series repeat on back-to-back days');
   assert.equal(matchedEventKey('tennis', 'A Player @ B Player'), null);
-  assert.equal(matchedEventKey('NBA', 'Celtics vs Nuggets'), null, '"vs" does not say which team is home');
+  // Fanatics names prop events "Home v Away": they key like the books' "Away @ Home" names.
+  assert.equal(matchedEventKey('NFL', 'Washington Commanders v Indianapolis Colts'), matchedEventKey('NFL', 'IND Colts @ WAS Commanders'));
+  assert.equal(matchedEventKey('NBA', 'Celtics vs Nuggets'), 'nuggets @ celtics');
+  assert.equal(matchedEventKey('MLB', 'Atlanta Braves (TBD) @ Los Angeles Dodgers (T Skubal)'), null);
+  assert.equal(matchedEventKey('NHL', 'Utah Mammoth (TBD) @ Columbus Blue Jackets'), 'mammoth @ jackets', 'notes in brackets are not part of a name');
   assert.equal(matchedEventKey('NFL', 'Bengals'), null);
 });
 

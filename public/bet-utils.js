@@ -1,5 +1,6 @@
 import { canonicalPlatform } from './platform-catalog.js';
 import { validateLeg, ticketSettlement, LEG_RESULTS, legState, formatLegTarget } from './bet-legs.js';
+import { priceClv, noVigClv } from './ev-advanced-math.js?v=2';
 export const BET_STORAGE_KEY = 'nfl-lab.personal-bets.v1';
 export const SPORTS = ['NFL', 'MLB', 'NBA', 'WNBA', 'NHL', 'Soccer', 'Other'];
 export const STATUSES = { open: 'Open', won: 'Won', lost: 'Lost', push: 'Push', void: 'Void', cashed: 'Cashed out' };
@@ -36,7 +37,11 @@ export function validateBet(input) {
   if (input.oddsFormat === 'american' && (!Number.isInteger(odds) || Math.abs(odds) < 100 || Math.abs(odds) > 100000)) throw new Error('American odds must be a whole number from +100 to +100000 or −100 to −100000.');
   if (input.oddsFormat === 'decimal' && (odds <= 1 || odds > 1001)) throw new Error('Decimal odds must be greater than 1 and no more than 1001.');
   const closingOdds = input.closingOdds === '' || input.closingOdds == null ? null : Number(input.closingOdds);
-  if (closingOdds !== null && (!Number.isFinite(closingOdds) || input.oddsFormat === 'american' && (!Number.isInteger(closingOdds) || Math.abs(closingOdds) < 100 || Math.abs(closingOdds) > 100000) || input.oddsFormat === 'decimal' && (closingOdds <= 1 || closingOdds > 1001))) throw new Error('Enter valid closing odds in the selected format.');
+  const validClose = value => Number.isFinite(value) && (input.oddsFormat !== 'american' || Number.isInteger(value) && Math.abs(value) >= 100 && Math.abs(value) <= 100000) && (input.oddsFormat !== 'decimal' || value > 1 && value <= 1001);
+  if (closingOdds !== null && !validClose(closingOdds)) throw new Error('Enter valid closing odds in the selected format.');
+  // The other side's closing price, when recorded, gives a no-vig CLV.
+  const closingOtherOdds = input.closingOtherOdds === '' || input.closingOtherOdds == null ? null : Number(input.closingOtherOdds);
+  if (closingOtherOdds !== null && (closingOdds === null || !validClose(closingOtherOdds))) throw new Error('Enter valid closing odds for the other side in the selected format.');
   const legs=input.legs===undefined?[]:input.legs;
   if(!Array.isArray(legs)||legs.length>20)throw new Error('Use up to 20 legs per ticket.');
   if(legs.length&&(input.type==='single'&&legs.length!==1||input.type==='parlay'&&legs.length<2))throw new Error('A single needs one leg; a parlay needs at least two.');
@@ -51,7 +56,7 @@ export function validateBet(input) {
   if (!Number.isFinite(boost) || boost < 0 || boost > 500) throw new Error('Enter a profit boost from 0% to 500%.');
   return {
     selection, book, market, ...(event ? { event } : {}), tool, tags, notes, sport: input.sport, type: input.type, date: input.date,
-    odds, closingOdds, oddsFormat: input.oddsFormat, stake: amount(input.stake, 'Stake'), status,
+    odds, closingOdds, ...(closingOtherOdds !== null ? { closingOtherOdds } : {}), oddsFormat: input.oddsFormat, stake: amount(input.stake, 'Stake'), status,
     cashout: status === 'cashed' ? amount(input.cashout, 'Cash-out return', true) : null,
     legs:validatedLegs,settlement,
     ...(freeBet ? { freeBet: true } : {}), ...(boost ? { boost: Math.round(boost * 100) / 100 } : {}),
@@ -60,9 +65,19 @@ export function validateBet(input) {
 }
 
 const decimalOdds = (odds, format) => format === 'decimal' ? odds : odds > 0 ? 1 + odds / 100 : 1 + 100 / Math.abs(odds);
+// CLV in percent, with the definitions the /ev/tracker Performance view uses (ev-advanced-math.js).
+/** Price CLV, vig included: booked payout / closing payout of the same side − 1. Null without closing odds. */
 export function closingLineValue(bet) {
   if (bet.closingOdds == null) return null;
-  return (decimalOdds(bet.odds, bet.oddsFormat) / decimalOdds(bet.closingOdds, bet.oddsFormat) - 1) * 100;
+  const value = priceClv(decimalOdds(bet.odds, bet.oddsFormat), decimalOdds(bet.closingOdds, bet.oddsFormat));
+  return Number.isFinite(value) ? value * 100 : null;
+}
+export const priceClosingLineValue = closingLineValue;
+/** No-vig CLV: booked payout × the close's devigged probability − 1. Null unless the other side's close is recorded. */
+export function noVigClosingLineValue(bet, method = 'multiplicative') {
+  if (bet.closingOdds == null || bet.closingOtherOdds == null) return null;
+  const value = noVigClv(decimalOdds(bet.odds, bet.oddsFormat), decimalOdds(bet.closingOdds, bet.oddsFormat), decimalOdds(bet.closingOtherOdds, bet.oddsFormat), method);
+  return Number.isFinite(value) ? value * 100 : null;
 }
 
 // Round each ticket to cents before adding it to the ledger.
@@ -117,7 +132,7 @@ export function writeBets(storage, bets) {
 export function betsCsv(bets) {
   // Quoting alone does not prevent spreadsheet formula execution.
   const cell = value => typeof value === 'number' ? String(value) : '"' + String(value ?? '').replace(/^[\s]*[=+@-]/, match => "'" + match).replaceAll('"', '""') + '"';
-  const rows = [['Date', 'Sport', 'Market', 'Source', 'Tags', 'Type', 'Bet', 'Sportsbook', 'Odds format', 'Odds', 'Closing odds', 'CLV %', 'Stake USD', 'Result', 'Return USD', 'Profit USD', 'Notes', 'Legs', 'Ticket settlement', 'Free bet', 'Boost %']];
+  const rows = [['Date', 'Sport', 'Market', 'Source', 'Tags', 'Type', 'Bet', 'Sportsbook', 'Odds format', 'Odds', 'Closing odds', 'Price CLV %', 'Stake USD', 'Result', 'Return USD', 'Profit USD', 'Notes', 'Legs', 'Ticket settlement', 'Free bet', 'Boost %']];
   for (const bet of bets) {
     const result = betReturns(bet);
     rows.push([bet.date, bet.sport, bet.market, bet.tool, (bet.tags || []).join(', '), bet.type, bet.selection, bet.book, bet.oddsFormat, bet.odds, bet.closingOdds, closingLineValue(bet)?.toFixed(2), bet.stake, STATUSES[bet.status], result.returned, result.profit, bet.notes,(bet.legs||[]).map((l,i)=>`${i+1}. ${l.label} | ${formatLegTarget(l)} | ${l.matchup} | ${l.date} | ${LEG_RESULTS[legState(l)]} | Actual: ${l.observation?.actual??'—'} | ${l.observation?.sourceUrl||'Manual'}`).join('\n'),bet.settlement||'manual', bet.freeBet ? 'Yes' : 'No', bet.boost || 0]);

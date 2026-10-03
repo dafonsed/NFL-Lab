@@ -13,7 +13,8 @@ test('market math calculates no-vig EV from other complete books', () => {
   assert.ok(evRows(state.quotes,false).some(x => x.quote.id === offer.id && x.ev > 0));
   assert.ok(evRows(state.quotes,false).some(x => x.quote.market === 'Point spread'));
   assert.ok(Number.isNaN(decimal(99)));
-  assert.equal(probabilityToAmerican(.5),-100);
+  // Even money is +100, as books quote it.
+  assert.equal(probabilityToAmerican(.5),100);
   assert.equal(probabilityToAmerican(.4),150);
   const incompleteFuture = [{...offer,type:'future',side:'Arizona'},{...offer,id:'other',type:'future',side:'Seattle'}];
   assert.ok(Number.isNaN(fairProbability(incompleteFuture[0],incompleteFuture)));
@@ -65,9 +66,11 @@ test('bonus conversion, fantasy paytable and CLV use stated payout rules', () =>
 });
 
 test('movement alerts identify a new line snapshot', () => {
-  const quote = {id:'q',event:'A vs B',market:'Total',side:'Over',book:'Book A',odds:-110,line:44.5,live:false};
+  const quote = {id:'q',sport:'NFL',event:'A vs B',market:'Total',side:'Over',book:'Book A',odds:-110,line:44.5,live:false,ts:new Date().toISOString()};
   const state = {quotes:[quote],history:[{id:'h1',quoteId:'q',line:44.5},{id:'h2',quoteId:'q',line:45.5}],dfs:[]};
-  assert.deepEqual(alertMatches({kind:'movement',event:'',market:'',threshold:1,liveOnly:false},state),[{id:'h2',label:'Total 44.5 → 45.5 at Book A'}]);
+  assert.deepEqual(alertMatches({kind:'movement',event:'',market:'',threshold:1,liveOnly:false},state),[{id:'h2',label:'Over 44.5 -110 · Total · A vs B at Book A · line 44.5 → 45.5'}]);
+  // A price that is no longer current doesn't alert.
+  assert.deepEqual(alertMatches({kind:'movement',event:'',market:'',threshold:1,liveOnly:false},{...state,quotes:[{...quote,ts:new Date(Date.now()-3_600_000).toISOString()}]}),[]);
 });
 
 test('sharp screen returns only the best sportsbook price that improves on the exchange', () => {

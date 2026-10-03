@@ -40,7 +40,7 @@ import { renderOddsApiPage } from './lib/odds-api-page.mjs';
 import { handleEvApi } from './lib/ev-api-proxy.mjs';
 import { accountRuntime } from './lib/accounts/runtime.mjs';
 import { accountJson, enforceAccountAccess } from './lib/accounts/http.mjs';
-import { readMarketControls } from './lib/admin-market-controls.mjs';
+import { readMarketControlsWithFallback } from './lib/admin-market-controls.mjs';
 import { sendPublicResponse } from './lib/http-compression.mjs';
 
 const publicDir = fileURLToPath(new URL('./public/', import.meta.url));
@@ -81,6 +81,8 @@ const allowApiRequest = createIpLimiter({ max: 240, windowMs: 60_000 });
 // few open tabs while stopping a runaway client from hammering the upstream API.
 const allowEvRequest = createIpLimiter({ max: 120, windowMs: 60_000 });
 const allowRefresh = createRefreshGate({ windowMs: 60_000 });
+// Same test as accountRuntime(): configured account services that failed to start are not "no accounts".
+const accountsConfigured = () => Boolean(process.env.BETTER_AUTH_SECRET && process.env.BETTER_AUTH_URL);
 function json(res, data, status = 200) { return sendPublicResponse(res.req, res, JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } }); }
 export const server = http.createServer(async (req, res) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -112,7 +114,9 @@ export const server = http.createServer(async (req, res) => {
     const trackerRedirect = legacyBetTrackerUrl(url);
     if (trackerRedirect) { res.writeHead(308, { Location: trackerRedirect, 'Cache-Control': 'no-cache' }); return res.end(); }
     if (url.pathname.startsWith('/api/ev/') && !allowEvRequest(clientIp(req))) { res.setHeader('Retry-After', '30'); return json(res, { error: 'Too many price requests. Prices resume shortly.', code: 'RATE_LIMITED', retryable: true }, 429); }
-    if (url.pathname.startsWith('/api/ev/')) return await handleEvApi(req, res, url, { loadControls: async () => { try { return await readMarketControls(accounts.system.db); } catch { return []; } } });
+    // Distribution controls fail closed: a database error is a 503, never an unfiltered snapshot. Only a
+    // server with no account services configured (so no controls can exist) serves without them.
+    if (url.pathname.startsWith('/api/ev/')) return await handleEvApi(req, res, url, { loadControls: accounts ? () => readMarketControlsWithFallback(accounts.system.db) : accountsConfigured() ? async () => { throw new Error('Account services are unavailable.'); } : null });
     if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, { error: 'Method not allowed.' }, 405);
     const helpRequest = resolveHelpCenterRequest(url, { host });
     if (helpRequest) {

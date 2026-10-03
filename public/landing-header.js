@@ -1,6 +1,6 @@
 import { accountStorage as localStorage, accountReady } from './account-sync.js';
 await accountReady;
-import { BET_STORAGE_KEY, betReturns, readBets, summarizeBets } from './bet-utils.js';
+import { BET_STORAGE_KEY, betReturns, readBets, summarizeBets } from './bet-utils.js?v=4';
 import { demoRecord } from './landing-demo-bets.js?v=2';
 
 const dollars = amount => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);

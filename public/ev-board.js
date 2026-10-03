@@ -2,7 +2,7 @@
 // book-by-book price grid. Rendering only; ev.js supplies data and handlers.
 import { platformAsset } from './platform-catalog.js';
 import { leagueMark } from './sports-identity.js';
-import { probabilityToAmerican, money, percent } from './ev-core.js?v=3';
+import { probabilityToAmerican, money, percent } from './ev-core.js?v=6';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icons = {
@@ -52,7 +52,7 @@ export const selectionText = quote => {
 // The Bet button only appears when the feed supplied a link for this price.
 export const hasBetLink = quote => Boolean(quote.betUrl || quote.eventUrl || quote.prefillUrl || (quote.links && Object.keys(quote.links).length));
 
-const sortHeader = (label, key, sort, extra = '') => `<th scope="col" ${extra} aria-sort="${sort === key ? 'descending' : 'none'}"><button type="button" data-sort="${key}" class="evb-sort${sort === key ? ' is-active' : ''}">${label}<span aria-hidden="true">${sort === key ? '↓' : '↕'}</span></button></th>`;
+const sortHeader = (label, key, sort, extra = '') => `<th scope="col" ${extra} aria-sort="${sort === key ? key === 'event' || key === 'start' ? 'ascending' : 'descending' : 'none'}"><button type="button" data-sort="${key}" class="evb-sort${sort === key ? ' is-active' : ''}">${label}<span aria-hidden="true">${sort === key ? '↓' : '↕'}</span></button></th>`;
 
 // ctx: { rows:[{quote,fair,ev}], total, live, sort, openId, oddsLabel, stake(fair,odds), flags, kellyLabel, detail(quote) }
 export function renderEvBoard(ctx) {
@@ -60,7 +60,7 @@ export function renderEvBoard(ctx) {
   const maxEv = Math.max(...rows.map(row => row.ev).filter(Number.isFinite), 0.0001);
   const body = rows.map(({quote:q, fair, ev, consensus}) => {
     const fairBooks = [...new Set((consensus?.books || []).map(book => book.book))];
-    const open = openId === q.id, flags = ctx.flags(q.id), stake = ctx.stake(fair, q.odds);
+    const open = openId === q.id, flags = ctx.flags(q.id), stake = ctx.stake(fair, q.odds, q);
     const width = Math.max(6, Math.min(100, ev / maxEv * 100));
     const tier = ev >= .05 ? 'high' : ev >= .02 ? 'mid' : 'low';
     const sportKey = String(q.sport || '').toLowerCase();
@@ -69,7 +69,7 @@ export function renderEvBoard(ctx) {
     return `<tr class="evb-row${open ? ' is-open' : ''}${flags.pin ? ' is-pinned' : ''}" data-evb-row="${esc(q.id)}" data-wager-id="${esc(q.id)}">
       <td class="evb-ev" data-tier="${tier}"><strong>${(ev * 100).toFixed(2)}%</strong><span class="evb-ev-bar" aria-hidden="true"><i style="width:${width.toFixed(1)}%"></i></span>${flags.pin ? `<small class="evb-pin">${boardIcon('pin', 12)}Pinned</small>` : ''}</td>
       <td class="evb-event"><small>${esc(startLabel(q))}</small><strong>${esc(q.displayEvent || q.event)}</strong><span class="evb-league">${leagueMark(sportKey) || ''}<span>${esc(q.sport)}${q.league && q.league !== q.sport ? ` · ${esc(q.league)}` : ''}</span></span></td>
-      <td class="evb-market"><span>${esc(market)}</span>${q.live ? '<small class="evb-live-dot">Live</small>' : ''}</td>
+      <td class="evb-market"><span>${esc(market)}</span>${q.alt ? '<small class="evb-alt" title="An alternate line, not the book’s main line">Alt line</small>' : ''}${q.live ? '<small class="evb-live-dot">Live</small>' : ''}</td>
       <td class="evb-bet"><span class="evb-book-logo">${bookLogo(q.book, 30)}</span><span><strong>${esc(selectionText(q))}</strong><small class="evb-bet-market">${esc(market)}</small><small>${esc(q.book)}${Number(q.liquidity) > 0 ? ` · ${money(Number(q.liquidity))} avail.` : ''}</small></span></td>
       <td class="evb-odds"><span class="evb-price">${esc(oddsLabel(q.odds))}</span><small>Fair ${esc(fairOdds)}</small></td>
       <td class="evb-prob"${fairBooks.length ? ` title="Fair price from ${esc(fairBooks.join(', '))}"` : ''}><strong>${Number.isFinite(fair) ? percent(fair) : '—'}</strong><small>${fairBooks.length ? `Fair from ${fairBooks.length} ${fairBooks.length === 1 ? 'book' : 'books'}` : 'No-vig'}</small></td>
@@ -111,7 +111,8 @@ export function boostedOffer(odds, fair, boostPercent) {
   const decimal = american >= 100 ? 1 + american / 100 : american <= -100 ? 1 - 100 / american : NaN;
   if (!(boost > 0) || !Number.isFinite(decimal)) return null;
   const boosted = 1 + (decimal - 1) * (1 + boost / 100);
-  return { decimal:boosted, american:boosted >= 2 ? (boosted - 1) * 100 : -100 / (boosted - 1), ev:Number.isFinite(fair) ? fair * boosted - 1 : NaN };
+  // Whole American odds, as books quote them (+108, not +108.33333333333334).
+  return { decimal:boosted, american:Math.round(boosted >= 2 ? (boosted - 1) * 100 : -100 / (boosted - 1)), ev:Number.isFinite(fair) ? fair * boosted - 1 : NaN };
 }
 
 export function renderEvBoardDetail(ctx, quote, fair) {

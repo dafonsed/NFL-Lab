@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import { sortProfiles } from '../public/player-order.js';
 import { finite, selectGames, summarize, recentChange } from '../public/research-data.js';
-import { computeAdvancedEv } from '../public/ev-advanced-math.js';
+import { computeAdvancedEv, evCapFor } from '../public/ev-advanced-math.js';
 import { permanentDemoWorkspace } from './fixtures/ev-preview.js';
 
 // Exercise the dashboard's real ranking helpers (the pure block in home.js),
@@ -13,8 +13,8 @@ async function helpers() {
   const source = await readFile(new URL('../public/home.js', import.meta.url), 'utf8');
   const block = source.match(/\/\/ <dashboard-data>[^\n]*\n([\s\S]*?)\/\/ <\/dashboard-data>/)?.[1];
   assert.ok(block, 'home.js keeps its pure dashboard-data block');
-  const context = vm.createContext({ Intl, Date, Math, Number, String, Set, finite, selectGames, summarize, recentChange, sortProfiles });
-  vm.runInContext(block + '\nglobalThis.api = { greeting, topPicks, hotTrends, topEvRows, evSelection, evSummary, normalizeGames, orderGames, americanOdds };', context);
+  const context = vm.createContext({ Intl, Date, Math, Number, String, Set, finite, selectGames, summarize, recentChange, sortProfiles, computeAdvancedEv, evCapFor });
+  vm.runInContext(block + '\nglobalThis.api = { greeting, topPicks, hotTrends, topEvRows, evSelection, evSummary, normalizeGames, orderGames, americanOdds, dashboardEvRows };', context);
   return context.api;
 }
 
@@ -58,6 +58,28 @@ test('+EV preview shows positive pregame prices and varies books', async () => {
   assert.ok(new Set(top.map(r => r.quote.book)).size >= 4, 'books vary');
   assert.equal(summary.best, Math.max(...rows.filter(r => !r.quote.live).map(r => r.ev)));
   assert.match(evSelection(top[0].quote).title, /^(Aaron Judge|Shohei Ohtani|Bryce Harper) (Over|Under) 1\.5$/);
+});
+
+test('+EV preview rows are titled with the selection and event, never a side code', async () => {
+  const { evSelection } = await helpers();
+  const base = { event: 'Indianapolis Colts @ Washington Commanders', displayEvent: 'Colts @ Commanders', sport: 'NFL' };
+  assert.deepEqual(plain(evSelection({ ...base, type: 'moneyline', side: 'home', selection: 'Washington Commanders', line: '', market: 'moneyline', displayMarket: 'Moneyline' })),
+    { title: 'Washington Commanders', detail: 'Moneyline', event: 'Colts @ Commanders' });
+  assert.equal(evSelection({ ...base, type: 'spread', side: 'away', selection: 'Indianapolis Colts', line: 3.5 }).title, 'Indianapolis Colts +3.5');
+  assert.equal(evSelection({ ...base, type: 'prop', side: 'over', selection: 'Over', player: 'Josh Downs', line: 52.5, displayMarket: 'Receiving Yards' }).title, 'Josh Downs Over 52.5');
+});
+
+test('+EV preview hides EV above the shared feed-error caps', async () => {
+  const { dashboardEvRows } = await helpers();
+  const now = Date.parse('2026-10-03T06:00:00Z'), ts = new Date(now - 60_000).toISOString(), startTime = '2026-10-04T17:00:00.000Z';
+  const quote = (book, side, odds) => ({ id: book + side, sport: 'NFL', event: 'A @ B', eventId: 'a@b', market: 'moneyline', marketId: 'moneyline|a@b', type: 'moneyline', side, book, odds, ts, startTime, source: 'local-api' });
+  // One reference book: +300 against a -110 / -110 coin flip is +100% EV, a feed error rather than a bet.
+  const quotes = [quote('FanDuel', 'home', 300), quote('DraftKings', 'home', -110), quote('DraftKings', 'away', -110), quote('BetMGM', 'home', 104)];
+  const settings = { minSharpBooks: 1, maxVigPercent: 20, devigMethod: 'multiplicative', bookRules: [], pregameMaxAgeSeconds: 900, minEvPercent: 0, maxEvPercent: null, now };
+  const ids = rows => plain(rows.map(row => row.quote.id)).sort();
+  assert.deepEqual(ids(computeAdvancedEv(quotes, settings)), ['BetMGMhome', 'FanDuelhome']);
+  assert.deepEqual(ids(dashboardEvRows(quotes, settings)), ['BetMGMhome'], '+4% passes the 10% single-book cap, +100% does not');
+  assert.deepEqual(ids(dashboardEvRows(quotes, { ...settings, maxEvPercent: 150 })), ['BetMGMhome', 'FanDuelhome'], 'a saved maximum replaces the caps');
 });
 
 test('schedule sources normalize to one game shape with live games first', async () => {

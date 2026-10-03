@@ -633,3 +633,17 @@ test('season-long entries without a player name are dropped from the quote feed 
   assert.deepEqual(picks.map(p => p.player), ['Nikola Jokic']);
   assert.equal(skipped.invalid, 1);
 });
+
+test('books that put the player before the stat keep the player; team props keep the team', async () => {
+  const { normalizeFeed } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date().toISOString(), start = new Date(Date.now() + 86_400_000).toISOString();
+  const prop = (id, player, propMarket, side, line, odds) => ({ id, sport: 'nfl', event: 'Indianapolis Colts @ Washington Commanders', market: 'prop', propMarket, player, line, side, book: 'FanDuel', odds, ts, type: 'prop', selection_name: `${player} ${side === 'over' ? 'Over' : 'Under'} ${line} ${propMarket}`, startTime: start });
+  const { quotes } = normalizeFeed([
+    prop('a', 'Daniel Jones', 'Daniel Jones - Passing TDs', 'over', 1.5, -102), prop('b', 'Daniel Jones', 'Daniel Jones - Passing TDs', 'under', 1.5, -130),
+    prop('c', 'Total Touchdowns', 'Total Touchdowns - IND Colts', 'over', 2.5, 110), prop('d', 'Total Touchdowns', 'Total Touchdowns - IND Colts', 'under', 2.5, -140),
+  ], { syncedAt: ts });
+  const jones = quotes.filter(q => q.player === 'Daniel Jones');
+  assert.deepEqual(jones.map(q => [q.market, q.side, q.line]), [['Passing TDs', 'over', 1.5], ['Passing TDs', 'under', 1.5]]);
+  assert.equal(quotes.filter(q => q.player === 'IND Colts' && q.market === 'Total Touchdowns').length, 2);
+  assert.equal(new Set(jones.map(q => q.marketId)).size, 1, 'both sides form one market');
+});

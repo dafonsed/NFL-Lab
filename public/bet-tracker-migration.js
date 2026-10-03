@@ -1,4 +1,4 @@
-import { BET_STORAGE_KEY, SPORTS, readBets, validateBet } from './bet-utils.js?v=3';
+import { BET_STORAGE_KEY, SPORTS, readBets, validateBet } from './bet-utils.js?v=4';
 
 export const LEGACY_EV_STORAGE_KEY = 'sportslab-ev-workbench-v1';
 

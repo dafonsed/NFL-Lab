@@ -10,11 +10,11 @@ import {playerPortrait, teamMark} from './sports-identity.js';
 import {icon} from './ui-icons.js';
 import {sportTools, betTrackerUrl, SPORTS} from './navigation.js';
 import {evToolUrl} from './ev-tool-catalog.js';
-import {computeAdvancedEv} from './ev-advanced-math.js';
+import {computeAdvancedEv, evCapFor, DEVIG_METHODS} from './ev-advanced-math.js?v=2';
 import {isDemoRecord} from './ev-workspace-clean.js?v=1';
-import {readQuoteCache} from './ev-quote-cache.js?v=1';
+import {readQuoteCache} from './ev-quote-cache.js?v=3';
 import {platformAsset, platformLabel} from './platform-catalog.js';
-import {readBets, summarizeBets, betReturns} from './bet-utils.js?v=3';
+import {readBets, summarizeBets, betReturns} from './bet-utils.js?v=4';
 
 const $ = s => document.querySelector(s), params = new URLSearchParams(location.search);
 const put = (selector, html) => { const node = $(selector); if (node) node.innerHTML = html; };
@@ -26,7 +26,19 @@ const zone = sport === 'mlb' ? 'America/New_York' : 'America/Phoenix';
 const today = new Intl.DateTimeFormat('en-CA', {timeZone:zone, year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date());
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const tools = new Set(sport === 'all' ? [] : sportTools(sport).map(t => t.key));
-const EV_SETTINGS = {minSharpBooks:1, maxVigPercent:20, devigMethod:'multiplicative', bookRules:[], liveMaxAgeSeconds:90, pregameMaxAgeSeconds:900, minEvPercent:0};
+const EV_SETTINGS = {minSharpBooks:1, maxVigPercent:20, devigMethod:'multiplicative', bookRules:[], liveMaxAgeSeconds:90, pregameMaxAgeSeconds:900, minEvPercent:0, maxEvPercent:null};
+// The member's fair-value settings from the +EV workspace, read as ev-suite.js settings() reads them, so the
+// preview prices like the Positive EV page. Its board filters (league, odds range) stay on that page.
+const FAIR_VALUE_SETTINGS = ['minSharpBooks', 'maxVigPercent', 'devigMethod', 'bookRules', 'liquidityWeighting', 'liquidityWeightUnit', 'liveMaxAgeSeconds', 'pregameMaxAgeSeconds', 'maxEvPercent'];
+// Loaded on demand: the storage module waits for account sync, which must not hold up the first paint.
+async function memberEvSettings() {
+  let saved = {};
+  try { const {readSuiteState} = await import('./ev-suite-storage.js?v=2'); const settings = readSuiteState()?.settings; if (settings && typeof settings === 'object') saved = settings; } catch { /* Unreadable saved settings fall back to the defaults. */ }
+  const picked = Object.fromEntries(FAIR_VALUE_SETTINGS.filter(key => saved[key] !== undefined).map(key => [key, saved[key]]));
+  if (Number(picked.pregameMaxAgeSeconds) === 86400) delete picked.pregameMaxAgeSeconds;
+  if (!DEVIG_METHODS.includes(picked.devigMethod)) delete picked.devigMethod;
+  return {...EV_SETTINGS, ...picked};
+}
 const stats = {games:null, props:null, ev:null, edge:null};
 let slateDate = today;
 
@@ -109,10 +121,18 @@ function topEvRows(rows, count = 5) {
   return picked.sort((a, b) => b.ev - a.ev || prop(a) - prop(b));
 }
 
+// Rows are titled with the feed's selection ("Over", a team, "Draw"), not its side code ("home"); props lead with the player.
 function evSelection(quote) {
-  const line = finite(quote.line), lineText = line === null ? '' : ' ' + (quote.type === 'spread' && line > 0 ? '+' : '') + line;
-  if (quote.type === 'prop' && quote.player) return {title:`${quote.player} ${quote.side}${lineText}`, detail:quote.displayMarket || quote.market};
-  return {title:`${quote.side}${lineText}`, detail:quote.market};
+  const line = finite(quote.line), spread = quote.type === 'spread' || quote.type === 'alternate' && !/^(over|under)$/i.test(quote.side);
+  const lineText = line === null ? '' : ' ' + (spread && line > 0 ? '+' : '') + line;
+  const pick = String(quote.selection || quote.side || '').trim();
+  return {title:`${quote.player ? quote.player + ' ' : ''}${pick}${lineText}`, detail:quote.displayMarket || quote.market, event:quote.displayEvent || quote.event};
+}
+
+// EV above the shared sanity caps (evCapFor: 25%, 10% with one reference book, unless the member saved a
+// maximum) is a feed error, as on the Positive EV page.
+function dashboardEvRows(quotes, settings) {
+  return computeAdvancedEv(quotes, settings).filter(row => row.ev <= evCapFor(row, settings));
 }
 
 function evSummary(rows) {
@@ -197,13 +217,15 @@ function count(key, value) {
 // ---------------------------------------------------------------- +EV preview
 async function evPanel() {
   if (!$('#hd-ev')) return;
-  // The +EV page caches feed quotes in IndexedDB (public/ev-quote-cache.js). Prices older than
-  // 15 minutes are not shown as current value.
+  // The +EV page caches feed quotes in IndexedDB (public/ev-quote-cache.js). Without a cache from the
+  // last 15 minutes, the panel loads the feed itself rather than showing old prices as current value.
   const cache = await readQuoteCache();
   const fresh = cache && Date.now() - Date.parse(cache.apiSyncedAt || 0) < 15 * 60_000;
-  const quotes = fresh ? cache.quotes.filter(quote => quote?.source === 'local-api' && !isDemoRecord(quote)) : [];
+  const feed = fresh ? null : await import('./ev-feed-normalize.js?v=25').then(m => m.loadFeed('/api/ev/quotes', new Date().toISOString(), {price:false})).catch(() => null);
+  const source = fresh ? cache.quotes : feed?.ok ? feed.quotes : [];
+  const quotes = source.filter(quote => quote?.source === 'local-api' && !isDemoRecord(quote));
   const code = sport === 'soccer' ? 'Soccer' : label;
-  const rows = computeAdvancedEv(sport === 'all' ? quotes : quotes.filter(q => (q.league || q.sport) === code || q.sport === code), EV_SETTINGS);
+  const rows = dashboardEvRows(sport === 'all' ? quotes : quotes.filter(q => (q.league || q.sport) === code || q.sport === code), await memberEvSettings());
   const summary = evSummary(rows), top = topEvRows(rows, 5);
   setStat('ev', summary.count); setStat('edge', summary.best === null ? null : summary.best * 100);
   booksPanel(rows);
@@ -211,7 +233,7 @@ async function evPanel() {
   const href = evToolUrl('ev-pre', sport);
   put('#hd-ev', top.length ? `<ul class="hd-list">${top.map(({quote, ev, fair}) => {
     const s = evSelection(quote);
-    return `<li><a class="hd-row hd-ev-row" href="${esc(href)}"><span class="hd-ev-value"><strong>+${(ev * 100).toFixed(1)}%</strong><small>EV</small></span><span class="hd-row-main"><strong>${esc(s.title)}</strong><small>${esc(s.detail)} · ${esc(quote.event)}</small></span><span class="hd-row-side"><small class="hd-fair">Fair ${pct(fair, 1)}</small>${oddsPill(quote.odds, quote.book)}</span></a></li>`;
+    return `<li><a class="hd-row hd-ev-row" href="${esc(href)}"><span class="hd-ev-value"><strong>+${(ev * 100).toFixed(1)}%</strong><small>EV</small></span><span class="hd-row-main"><strong>${esc(s.title)}</strong><small>${esc(s.detail)} · ${esc(s.event)}</small></span><span class="hd-row-side"><small class="hd-fair">Fair ${pct(fair, 1)}</small>${oddsPill(quote.odds, quote.book)}</span></a></li>`;
   }).join('')}</ul><p class="hd-panel-foot">${summary.count} positive ${summary.count === 1 ? 'price' : 'prices'} across ${new Set(rows.filter(r => r.ev > 0 && !r.quote.live).map(r => r.quote.book)).size} books</p>`
     : empty('No positive EV prices yet', `Positive EV prices for ${label} appear here once the odds feed syncs.`, `<a class="hd-cta" href="${esc(href)}">Open Positive EV <span aria-hidden="true">→</span></a>`));
 }

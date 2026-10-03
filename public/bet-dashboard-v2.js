@@ -1,5 +1,5 @@
 import { monthAnalytics, shiftMonth } from './bet-analytics.js';
-import { betReturns, summarizeBets } from './bet-utils.js';
+import { betReturns, summarizeBets } from './bet-utils.js?v=4';
 import { icon } from './ui-icons.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

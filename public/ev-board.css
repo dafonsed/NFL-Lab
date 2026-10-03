@@ -67,6 +67,7 @@
 #ev-view .evb-market>span{color:var(--evb-sub);font-size:14px}
 #ev-view .evb-market .evb-live-dot{display:inline-flex;align-items:center;gap:6px;margin-top:6px;color:#ff8f7a}
 #ev-view .evb-live-dot::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+#ev-view .evb-market .evb-alt{display:inline-flex;margin-top:6px;margin-right:8px;color:#f2c46d}
 
 #ev-view .evb-bet{min-width:210px}
 #ev-view td.evb-bet{display:table-cell}
