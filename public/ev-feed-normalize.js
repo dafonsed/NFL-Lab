@@ -151,7 +151,11 @@ const MILESTONE_MARKETS = [
   [/^(?:player )?to score (\d+)(?:\+| or more) touchdowns$/i, () => 'Anytime TDs'],
   [/^player to score (\d+)\+ goals$/i, () => 'Goals'],
   [/^player to record (\d+)\+ shots on goal$/i, () => 'Shots On Goal'],
-  [/^(\d+)\+ (points|assists|goals)$/i, match => match[2][0].toUpperCase() + match[2].slice(1).toLowerCase()],
+  [/^(\d+)\+ (points|assists|goals|rebounds|made threes)$/i, match => match[2]],
+  // FanDuel ladders: "To Score 20+ Points", "To Record 2+ Hits + Runs + RBIs", "To Hit 2+ Home Runs".
+  [/^(?:player )?to score (\d+)\+ points$/i, () => 'Points'],
+  [/^(?:player )?to record (\d+)\+ (hits \+ runs \+ rbis|hits|total bases|rbis|runs|stolen bases|rebounds|assists|points|strikeouts)$/i, match => match[2]],
+  [/^(?:player )?to hit (\d+)\+ home runs$/i, () => 'Home Runs'],
 ];
 const MILESTONE_SIDES = { over: 'over', yes: 'over', under: 'under', no: 'under' };
 function milestoneAsOverUnder(market, milestone, side) {
@@ -387,14 +391,26 @@ export function normalizeFeed(records, { syncedAt = new Date().toISOString(), cl
 const propName = value => String(value ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 // "Player Points", "Points", "Pts" and "points (incl. OT)" for one player compare as one market.
 const PROP_WORDS = { pass: 'passing', rush: 'rushing', rec: 'receiving', yds: 'yards', yd: 'yards', td: 'touchdowns', tds: 'touchdowns', pts: 'points', reb: 'rebounds', rebs: 'rebounds', ast: 'assists', asts: 'assists', stl: 'steals', blk: 'blocks', '3pm': 'threes', '3pt': 'threes', so: 'strikeouts', ks: 'strikeouts', att: 'attempts', comp: 'completions', cmp: 'completions', sog: 'shots on goal' };
-// Books differ on name suffixes ("Luther Burden III" / "Luther Burden").
+// Books differ on name suffixes ("Luther Burden III" / "Luther Burden") and initials ("D.J. Moore" /
+// "DJ Moore").
 const NAME_SUFFIXES = /\b(jr|sr|ii|iii|iv)\b/g;
-const playerName = value => propName(value).replace(NAME_SUFFIXES, ' ').replace(/\s+/g, ' ').trim();
-// The same stat written different ways: "3-PT Made" = "Threes" = "3-Pointers Made", "Pitcher
+const nameWords = value => propName(value).replace(NAME_SUFFIXES, ' ').replace(/\b([a-z]) +(?=[a-z]\b)/g, '$1').replace(/\s+/g, ' ').trim();
+// ... and on short first names ("Cam Ward" / "Cameron Ward", "Kenny Gainwell" / "Kenneth Gainwell").
+const NICKNAMES = {
+  cam: 'cameron', chig: 'chigoziem', chris: 'christopher', dan: 'daniel', danny: 'daniel', dave: 'david', ken: 'kenneth', kenny: 'kenneth',
+  matt: 'matthew', mike: 'michael', mitch: 'mitchell', nate: 'nathan', nathaniel: 'nathan', nick: 'nicholas', nicolas: 'nicholas',
+  zach: 'zachary', zack: 'zachary', josh: 'joshua', jake: 'jacob', alex: 'alexander', will: 'william', bill: 'william', billy: 'william',
+  rob: 'robert', robbie: 'robert', bob: 'robert', bobby: 'robert', tony: 'anthony', joe: 'joseph', joey: 'joseph', ben: 'benjamin',
+  sam: 'samuel', tom: 'thomas', tommy: 'thomas', tim: 'timothy', pat: 'patrick', greg: 'gregory', jim: 'james', jimmy: 'james',
+  drew: 'andrew', andy: 'andrew', gabe: 'gabriel', jon: 'jonathan', steph: 'stephen', jeff: 'jeffrey', fred: 'frederick',
+};
+const playerName = value => nameWords(value).replace(/^\S+/, first => NICKNAMES[first] || first);
+// The same stat written different ways: "3-PT Made" = "Threes" = "Made Threes", "Pitcher
 // Strikeouts" = "Strikeouts", "Goalie Saves" = "Saves", "Carries" = "Rush Attempts", "INT" =
 // "Interceptions", "Earned Runs Allowed" = "Earned Runs".
 const STAT_PHRASES = [
   [/\b(3 ?pt|3 ?pointers?|three pointers?|3 ?pm|threes)( made)?\b/g, 'threes'],
+  [/\bmade threes\b/g, 'threes'],
   [/\b(player|pitcher|goalie)\b/g, ' '],
   [/\bbatter\b/g, 'hitter'],
   [/\bcarries\b/g, 'rush attempts'],
@@ -403,10 +419,16 @@ const STAT_PHRASES = [
   [/\bearned runs allowed\b/g, 'earned runs'],
   [/\bpra\b/g, 'points rebounds assists'],
 ];
+// A stat some books name without its kind ("Completions" is Pass Completions).
+const BARE_STATS = { completions: 'passing completions' };
 const propMarket = (market, player) => {
-  let stat = ` ${propName(market).replace(NAME_SUFFIXES, ' ').replace(/\s+/g, ' ')} `.replace(` ${playerName(player)} `, ' ');
+  // "S Gilgeous-Alexander - Pts + Reb + Ast": the player before the dash, however abbreviated.
+  const name = nameWords(player), dash = String(market ?? '').lastIndexOf(' - ');
+  if (dash > 0 && nameWords(String(market).slice(0, dash)).split(' ').pop() === name.split(' ').pop()) market = String(market).slice(dash + 3);
+  let stat = ` ${nameWords(market)} `.replace(` ${name} `, ' ');
   for (const [pattern, replacement] of STAT_PHRASES) stat = stat.replace(pattern, replacement);
-  return stat.replace(/\b(total|o u|over under|incl ot|alt)\b/g, ' ').split(/\s+/).filter(Boolean).map(word => PROP_WORDS[word] || word).join(' ');
+  stat = stat.replace(/\b(total|o u|ou|over under|incl ot|alt)\b/g, ' ').split(/\s+/).filter(Boolean).map(word => PROP_WORDS[word] || word).join(' ');
+  return BARE_STATS[stat] || stat;
 };
 const propKey = (eventId, player, market, line) => JSON.stringify([eventId, playerName(player), propMarket(market, player), Number(line)]);
 
@@ -417,46 +439,49 @@ const propKey = (eventId, player, market, line) => JSON.stringify([eventId, play
  * weighted, mirrored books once). A probability the API sends with a DFS line is never used. Without
  * a two-sided sportsbook market the fair probability stays empty.
  */
-// A DFS pick is a pregame, full-game line, so it is priced only from pregame, full-game quotes; when
-// the books name the game differently, their game must start within 12 hours of the pick's.
-const SAME_GAME_MS = 12 * 3_600_000;
+// A DFS pick is a pregame, full-game line, so it is priced only from pregame, full-game quotes. A
+// book's game must start within 12 hours of the pick's; one starting within 2 hours is that game.
+const SAME_GAME_MS = 12 * 3_600_000, CLOSE_START_MS = 2 * 3_600_000;
 const pickSide = side => DFS_SIDES[String(side ?? '').toLowerCase()] || '';
 export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplicative' } = {}) {
   // Sportsbook prices per player prop. Each book keeps its own Over and Under (books that mirror one
   // platform are averaged after devigging, so one book's Over is never paired with another's Under).
-  // The feed's sport labels disagree across books (FanDuel files NFL props as NCAAF or soccer), so the
-  // fallback matches on player and stat alone; one game per player and stat, and the start-time
-  // check, keep it from crossing games.
   const playerStat = (player, market) => JSON.stringify([playerName(player), propMarket(market, player)]);
   const add = (map, key, value) => { if (!map.has(key)) map.set(key, new Set()); map.get(key).add(value); };
-  const markets = new Map(), bookGames = new Map(), gameStart = new Map();
+  const markets = new Map(), bookGames = new Map(), statBooks = new Map(), gameStart = new Map();
   for (const quote of quotes) {
     const side = pickSide(quote.side);
     if (!quote.player || !side || quote.live || String(quote.period || 'full').toLowerCase() !== 'full' || !Number.isFinite(implied(quote.odds))) continue;
-    const key = propKey(quote.eventId, quote.player, quote.market, quote.line);
-    add(bookGames, playerStat(quote.player, quote.market), quote.eventId);
-    const start = Date.parse(quote.startTime);
-    if (Number.isFinite(start) && !gameStart.has(quote.eventId)) gameStart.set(quote.eventId, start);
+    const key = propKey(quote.eventId, quote.player, quote.market, quote.line), stat = playerStat(quote.player, quote.market);
+    add(bookGames, JSON.stringify([quote.book, stat]), quote.eventId);
+    add(statBooks, stat, quote.book);
+    const start = Date.parse(quote.startTime), game = JSON.stringify([quote.book, quote.eventId]);
+    if (Number.isFinite(start) && !gameStart.has(game)) gameStart.set(game, start);
     if (!markets.has(key)) markets.set(key, new Map());
     const books = markets.get(key), book = books.get(quote.book) || { book: quote.book, family: quote.priceFamily || quote.book, exchange: quote.exchange === true };
     const ts = Date.parse(quote.ts) || 0;
     if (!(book[`${side}Ts`] > ts)) Object.assign(book, { [side]: implied(quote.odds), [`${side}Odds`]: Number(quote.odds), [`${side}Ts`]: ts });
     books.set(quote.book, book);
   }
-  // Books name one game differently (PrizePicks "DAL @ GSV", Fanatics "Dallas Wings @ Golden State
-  // Valkyries"). A pick whose event finds no market falls back to the same sport, player, stat and
-  // line, but only when the player has the stat in one game at the books and in one game on that
-  // DFS app, starting near the pick's game; a player listed in two games is never guessed.
+  // Every book names and files games its own way (PrizePicks "IND @ WAS", FanDuel "Colts @
+  // Commanders", one book's NFL game is another's NCAAF), so each book is matched on its own: its
+  // game for this player and stat with the pick's event, else the one starting within 2 hours of the
+  // pick, else its only game within 12 hours when the app lists the player in one game too. A player
+  // a book lists in two games near the pick's start is never guessed.
   const appGames = new Map();
   for (const pick of picks) add(appGames, JSON.stringify([pick.book, playerStat(pick.player, pick.market)]), pick.eventId);
   const marketFor = pick => {
-    const exact = markets.get(propKey(pick.eventId, pick.player, pick.market, pick.line));
-    if (exact) return exact;
-    const stat = playerStat(pick.player, pick.market), games = bookGames.get(stat);
-    if (games?.size !== 1 || appGames.get(JSON.stringify([pick.book, stat]))?.size !== 1) return undefined;
-    const [game] = games, start = gameStart.get(game), pickStart = Date.parse(pick.startTime);
-    if (Number.isFinite(start) && Number.isFinite(pickStart) && Math.abs(start - pickStart) > SAME_GAME_MS) return undefined;
-    return markets.get(propKey(game, pick.player, pick.market, pick.line));
+    const stat = playerStat(pick.player, pick.market), pickStart = Date.parse(pick.startTime), found = new Map();
+    const appOneGame = appGames.get(JSON.stringify([pick.book, stat]))?.size === 1;
+    for (const book of statBooks.get(stat) || []) {
+      const gap = game => { const start = gameStart.get(JSON.stringify([book, game])); return Number.isFinite(start) && Number.isFinite(pickStart) ? Math.abs(start - pickStart) : null; };
+      const near = [...bookGames.get(JSON.stringify([book, stat]))].filter(game => !(gap(game) > SAME_GAME_MS));
+      const close = near.filter(game => gap(game) !== null && gap(game) <= CLOSE_START_MS);
+      const game = near.includes(pick.eventId) ? pick.eventId : close.length === 1 ? close[0] : near.length === 1 && appOneGame ? near[0] : null;
+      const entry = game && markets.get(propKey(game, pick.player, pick.market, pick.line))?.get(book);
+      if (entry) found.set(book, entry);
+    }
+    return found;
   };
   // A pick'em line can be played either way at the same number: a standard line the feed sends as
   // More only is also listed as Less. Goblin and demon lines are More only.
