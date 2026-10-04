@@ -534,9 +534,10 @@ function unifyEvents(quotes) {
 // Isaiah Likely under Jets @ Bears, and Yankees hitters under an "MLB" Packers @ Buccaneers). A player
 // plays one game at a time: when 2+ other books price him in exactly one other game of the sport within
 // a day, none of them in this book's game, and they price a stat this book prices for him, the book's
-// props for him move to that game.
+// props for him there go. They aren't moved to his game: the player is often wrong too (Fanatics'
+// "Isaiah Likely" yards ladder had 40+ at +900 and 100+ at +400, two players' prices in one ladder).
 const PROP_GAME_MS = 24 * 3_600_000;
-function relocateMisfiledProps(quotes) {
+function dropMisfiledProps(quotes, skipped) {
   const props = quotes.filter(quote => quote.type === 'prop' && quote.player && !quote.live && !isFantasyPlatform(quote.book) && quote.marketId.startsWith(`prop|${quote.eventId}|`));
   const statOf = quote => quote.marketId.slice(`prop|${quote.eventId}|`.length);
   const players = new Map(), games = new Map();
@@ -547,7 +548,7 @@ function relocateMisfiledProps(quotes) {
     byGame.set(quote.eventId, byBook); byBook.set(quote.book, stats); stats.add(statOf(quote));
     if (!games.has(quote.eventId) && quote.startTime) games.set(quote.eventId, quote);
   }
-  const moves = new Map();
+  const misfiled = new Set();
   for (const [key, byGame] of players) {
     if (byGame.size < 2) continue;
     for (const [game, byBook] of byGame) for (const [book, stats] of byBook) {
@@ -558,15 +559,11 @@ function relocateMisfiledProps(quotes) {
       if (others.length < 2 || !others.some(([, theirs]) => [...stats].some(stat => theirs.has(stat)))) continue;
       const from = games.get(game), to = games.get(target);
       if (!to || (from && Math.abs(Date.parse(from.startTime) - Date.parse(to.startTime)) > PROP_GAME_MS)) continue;
-      moves.set(`${key}|${game}|${book}`, to);
+      misfiled.add(`${key}|${game}|${book}`);
     }
   }
-  if (!moves.size) return;
-  for (const quote of props) {
-    const to = moves.get(`${quote.sport}|${quote.playerId}|${quote.eventId}|${quote.book}`);
-    if (!to) continue;
-    Object.assign(quote, { marketId: `prop|${to.eventId}|${statOf(quote)}`, eventId: to.eventId, event: to.event, startTime: to.startTime });
-  }
+  const checked = new Set(props);
+  return quotes.filter(quote => !checked.has(quote) || !misfiled.has(`${quote.sport}|${quote.playerId}|${quote.eventId}|${quote.book}`) || (skipped.mislabeled += 1, false));
 }
 
 // One game's player spelled two ways by different books ("Jeremiah" / "Jeremiyah Love", "Andrew" /
@@ -598,6 +595,60 @@ function unifyPlayerSpellings(quotes) {
     }
   }
   for (const quote of quotes) { const to = renamed.get(`${quote.eventId}|${quote.playerId}`); if (to) Object.assign(quote, to); }
+}
+
+// A price far from what the other books agree on for the same player, line and side is another bet's
+// price: Fanatics "ALT Passing Touchdowns" sent Josh Allen 2+ (Over 1.5) at +114 while FanDuel,
+// DraftKings and Pinnacle had -152 to -167 (and Fanatics' own app -170). A pregame price 12+ points of
+// implied chance off the median of 2+ other books (mirrored books once) that agree within 8 points goes.
+// A book's group of prices (its alternate or main lines of one market type) failing that check on 30%+
+// of the prices it could be checked on, at 8+ checks, goes entirely, since its unchecked prices are as
+// likely wrong: Fanatics' ALT ladders failed 13 of 24 on 4 Oct 2026 (every other book about 1 in 400).
+// Live and exchange prices aren't checked (they move between scrapes, and exchanges price differently).
+const OUTLIER_GAP = 0.12, AGREEMENT = 0.08, BAD_GROUP_SHARE = 0.3, BAD_GROUP_MIN = 8;
+const priceGroup = quote => `${quote.book}|${quote.type}|${quote.alt || /^alt\b/i.test(quote.market) || /^alt\b/i.test(quote.displayMarket || '') ? 'alt' : 'main'}`;
+function dropPriceOutliers(quotes, skipped) {
+  const checked = quote => !quote.live && !quote.exchange && !isFantasyPlatform(quote.book) && Number.isFinite(implied(quote.odds));
+  const markets = new Map();
+  for (const quote of quotes.filter(checked)) {
+    const key = `${marketKey(quote)}|${quote.side}`;
+    if (!markets.has(key)) markets.set(key, []);
+    markets.get(key).push(quote);
+  }
+  const median = list => { const sorted = [...list].sort((a, b) => a - b), mid = sorted.length >> 1; return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2; };
+  const family = quote => quote.priceFamily || quote.book, bad = new Set(), checks = new Map(), fails = new Map();
+  for (const list of markets.values()) {
+    const byFamily = new Map();
+    for (const quote of list) { if (!byFamily.has(family(quote))) byFamily.set(family(quote), []); byFamily.get(family(quote)).push(implied(quote.odds)); }
+    if (byFamily.size < 3) continue;
+    for (const quote of list) {
+      const others = [...byFamily].filter(([name]) => name !== family(quote)).map(([, chances]) => median(chances));
+      if (others.length < 2 || Math.max(...others) - Math.min(...others) > AGREEMENT) continue;
+      const group = priceGroup(quote);
+      checks.set(group, (checks.get(group) || 0) + 1);
+      if (Math.abs(implied(quote.odds) - median(others)) > OUTLIER_GAP) { bad.add(quote); fails.set(group, (fails.get(group) || 0) + 1); }
+    }
+  }
+  // With one other book, a price only its book quotes on one side (a ladder rung) that is 15+ points off
+  // a book pricing both sides of the line at a real margin goes (Fanatics Isaiah Davis Over 9.5 receiving
+  // yards at -264 against FanDuel's -113 / -113).
+  const games = new Map();
+  for (const quote of quotes.filter(checked)) { const key = marketKey(quote); if (!games.has(key)) games.set(key, []); games.get(key).push(quote); }
+  for (const list of games.values()) {
+    const names = [...new Set(list.map(family))];
+    if (names.length !== 2) continue;
+    for (const quote of list) {
+      const own = list.filter(other => family(other) === family(quote)), rest = list.filter(other => family(other) !== family(quote));
+      if (own.some(other => other.side !== quote.side)) continue;
+      const sides = [...new Set(rest.map(other => other.side))];
+      if (sides.length !== 2 || !sides.includes(quote.side) || quote.type === 'three-way') continue;
+      const margin = sides.reduce((sum, side) => sum + implied(rest.find(other => other.side === side).odds), 0);
+      const match = rest.find(other => other.side === quote.side);
+      if (margin >= 1 && margin <= 1.25 && Math.abs(implied(quote.odds) - implied(match.odds)) > 0.15) bad.add(quote);
+    }
+  }
+  const badGroups = new Set([...checks].filter(([group, count]) => count >= BAD_GROUP_MIN && (fails.get(group) || 0) / count >= BAD_GROUP_SHARE).map(([group]) => group));
+  return quotes.filter(quote => !(bad.has(quote) || badGroups.has(priceGroup(quote))) || (skipped.inconsistent += 1, false));
 }
 
 /**
@@ -643,7 +694,7 @@ export function normalizeFeed(records, { syncedAt = new Date().toISOString(), cl
     }
   }
   unifyEvents(quotes);
-  relocateMisfiledProps(quotes);
+  quotes = dropMisfiledProps(quotes, skipped);
   unifyPlayerSpellings(quotes);
   // A soccer match has a draw: a two-way moneyline there is an incomplete three-way market (comparing
   // it as two-way showed live J-League "arbs" of 16-147%).
@@ -727,6 +778,7 @@ export function normalizeFeed(records, { syncedAt = new Date().toISOString(), cl
   for (const quote of quotes) { quote.feedId = quote.id; quote.id = `local-api:${stableId(selectionKey(quote))}`; }
   markPriceFamilies(quotes);
   markAlternateLines(quotes);
+  quotes = dropPriceOutliers(quotes, skipped);
   // Price history follows a book's line as it moves: a moved line is a new selection id, so a series is
   // the book, the market without its line, and the side. On a ladder only the main line is followed.
   const seriesKey = quote => JSON.stringify([quote.book, familyKey(quote), quote.side]), seriesSize = new Map();
