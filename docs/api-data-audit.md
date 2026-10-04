@@ -25,7 +25,8 @@ source brings that data back.
    Fanatics files listings under other games (an Akita Northern Happinets spread under "Leicester City
    (W) @ Sunderland (W)", a WNBA spread under Braves @ Dodgers) and events named "Over 10.0"; Pinnacle
    still sends players as "Name Total".
-6. New fields `fresh` and `age_seconds` are read: a price with `fresh: false` is dropped.
+6. `fresh` turns false about a minute after a scrape (FanDuel props 62 seconds old), so the site doesn't
+   use it; pregame prices still expire 15 minutes after their `ts`.
 
 ## 1. Sides and selections
 1. **Exchanges send no outcome.** All ProphetX (81), Kalshi (46) and Polymarket (33) records have
