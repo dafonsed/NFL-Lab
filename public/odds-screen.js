@@ -140,8 +140,9 @@ export function buildOddsBoard(records, books, now = Date.now(), settings = {}) 
 }
 
 // getSettings returns the member's +EV settings (suite.settings()): price ages, fair-value method and
-// book rules, and the workspace odds format.
-export function createOddsScreen({ getQuotes, brandMark, onSport, redraw, storage, defaultFormat = 'american', getSettings = () => ({}), getSportsbookState = () => '', onAllSportsbooks = () => {} }) {
+// book rules, and the workspace odds format. getQuotes are the prices to show (the member's state
+// applied); getReferenceQuotes are every book's prices, which the fair column is priced from.
+export function createOddsScreen({ getQuotes, getReferenceQuotes = getQuotes, brandMark, onSport, redraw, storage, defaultFormat = 'american', getSettings = () => ({}), getSportsbookState = () => '', onAllSportsbooks = () => {} }) {
   // marketFilter: null = default tab (Main markets when present), '' = All markets, else a group or market name.
   // chosenFormat is a format picked on this screen; otherwise prices follow the member's workspace odds format.
   let eventFilter = '', marketFilter = null, query = '', chosenFormat = null, expanded = false;
@@ -249,6 +250,15 @@ export function createOddsScreen({ getQuotes, brandMark, onSport, redraw, storag
     // The first cell of each game carries its start time and collapse toggle; later rows leave it
     // blank so every row keeps the same cell count (inline analysis rows span them all).
     const columns = 4 + books.length;
+    // Fair value is priced from every current book at the line, as the +EV tools price it: the member's
+    // state and hidden columns limit which prices are shown, not the consensus.
+    const references = new Map();
+    for (const quote of getReferenceQuotes()) {
+      if (quote.depthOnly || (sport && quote.sport && quote.sport !== sport) || !currentPrice(quote, renderNow, renderSettings)) continue;
+      const key = identity(quote);
+      if (!references.has(key)) references.set(key, []);
+      references.get(key).push(quote);
+    }
     const rows = groups.map(event => {
       const q = event.first;
       const sportKey = String(q.sport || '').toLowerCase();
@@ -269,7 +279,7 @@ export function createOddsScreen({ getQuotes, brandMark, onSport, redraw, storag
           // books at this exact line, mirrors once, sharp weights, their devig method. A market missing an
           // outcome (two of a 1X2's three) has none.
           const anchor = row.best || current[0];
-          const fair = anchor ? marketFairPrice(anchor, currentQuotes.filter(quote => identity(quote) === identity(anchor)), renderSettings).probability : NaN;
+          const fair = anchor ? marketFairPrice(anchor, references.get(identity(anchor)) || [], renderSettings).probability : NaN;
           return {...row, current, reference, fair, key:JSON.stringify([market.key,row.side]),
             worstDecimal:worst != null && worst < row.bestDecimal ? worst : null,
             name:reference?.selection || row.side,

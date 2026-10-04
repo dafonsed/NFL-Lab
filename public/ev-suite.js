@@ -1,6 +1,6 @@
 import { decimal, implied, money, percent, signed, oddsLabel, probabilityToAmerican, fractionalKellyStake, arbitrageRows, middleRows, fantasySlip, plausibleEv, marketRowsOf } from './ev-core.js';
 import { startsWithin, oddsWithin } from './ev-filters.js?v=2';
-import { DEVIG_METHODS, quoteAvailable, passesFilters, marketIdentity, consensusPrice, computeAdvancedEv, projectProbability, constrainedArb, middleOutcomes, advancedParlay, performanceSummary } from './ev-advanced-math.js';
+import { DEVIG_METHODS, SUITE_SETTING_DEFAULTS as defaults, suiteSettings, quoteAvailable, passesFilters, marketIdentity, consensusPrice, computeAdvancedEv, projectProbability, constrainedArb, middleOutcomes, advancedParlay, performanceSummary } from './ev-advanced-math.js';
 import { readBets, writeBets, validateBet, betReturns } from './bet-utils.js?v=4';
 import { createEvOperations } from './ev-operations.js?v=2';
 import { createEvMarketViews } from './ev-market-views.js?v=2';
@@ -20,7 +20,6 @@ export const EV_SUITE_TOOLS = [
   ['Workspace','connections','Coverage & account','Data health, account preferences, issue reports, and connection readiness.']
 ];
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const defaults = { minSharpBooks:1,maxVigPercent:20,devigMethod:'multiplicative',bookRules:[],liquidityWeighting:false,allowProjection:false,liveMaxAgeSeconds:90,pregameMaxAgeSeconds:900,minEvPercent:0,maxEvPercent:null,minArbPercent:0,maxArbPercent:null,minOdds:null,maxOdds:null,minLiquidity:0,minAvailableStake:0,league:'',market:'',side:'',gameStatus:'',region:'',oddsFormat:'american',cardTap:'expand',hideTaken:false,showHidden:false,arbMode:'arbs',autoRefresh:0 };
 const num = value => value === '' || value == null ? null : Number.isFinite(Number(value)) ? Number(value) : null;
 // Without a saved maximum, returns above 15% are hidden as data errors, as on the Arbitrage board.
 const ARB_DEFAULT_MAX_PERCENT = 15, MIDDLE_ROWS = 100;
@@ -50,9 +49,7 @@ export function createEvSuite(host) {
     for(const key of ['presets','watchRules','alertLog','reports','builderIds'])if(!Array.isArray(s[key]))s[key]=[];
     return s;
   }
-  // Pregame prices expire after 15 minutes (the feed rescrapes every few). A saved value equal to the
-  // old 24-hour default is treated as unset, so it moves to the new default.
-  const settings = () => { const saved = {...root().settings}; if (Number(saved.pregameMaxAgeSeconds) === 86400) delete saved.pregameMaxAgeSeconds; if (!DEVIG_METHODS.includes(saved.devigMethod)) delete saved.devigMethod; return {...defaults,...saved}; };
+  const settings = () => suiteSettings(root().settings);
   function save(redraw=true) {host.setBuilderIds?.([...root().builderIds]);if(host.save()===false)throw Error('Changes remain in this open workspace, but could not be saved. Export your records before leaving.');if(redraw)host.redraw();}
   const operations=createEvOperations({getState:host.getState,save:()=>save(false),redraw:host.redraw,navigate:host.navigate});
   const markets=createEvMarketViews({getState:host.getState,save:()=>save(false),redraw:host.redraw,navigate:host.navigate,getSettings:settings});
@@ -135,7 +132,7 @@ export function createEvSuite(host) {
   }
   function renderParlay() {
     const {legs,config,result}=parlayModel();
-    const candidates=computeAdvancedEv(host.getState().quotes,settings()).filter(r=>quoteVisible(r.quote)&&contextMatch(r.quote)&&!root().builderIds.includes(r.quote.id));
+    const pool=host.getState().quotes,markets=marketRowsOf(pool),candidates=computeAdvancedEv(pool,settings()).filter(r=>r.ev>0&&plausibleEv(r,markets,settings())&&quoteVisible(r.quote)&&contextMatch(r.quote)&&!root().builderIds.includes(r.quote.id));
     return `<div class="evx-workspace">${panel('Build a parlay',`${table(['Leg','Book / odds','Fair probability',''],legs.map(({quote:q,probability})=>`<tr><td>${esc(label(q))}</td><td>${esc(q.book)} ${displayOdds(q.odds)}</td><td>${percent(probability)}</td><td>${btn('Remove','parlay-remove',q.id)}${btn('Bet link','link',q.id)}</td></tr>`))}<form data-suite-form="parlay-options"><div class="evx-fields">${field('Stake','stake',config.stake||10,'number','min="0.01" step="0.01" required')}${field('Actual combined decimal odds (optional)','offeredDecimal',config.offeredDecimal,'number','min="1.0001" step="any"')}${field('Joint win probability, 0–1 (optional)','jointProbability',config.jointProbability,'number','min="0" max="1" step="any"')}</div><button type="submit">Calculate parlay</button></form>${result?`<div class="evx-stats"><div><span>Combined odds</span><strong>${result.payout.toFixed(3)}</strong></div><div><span>Win probability</span><strong>${percent(result.probability)}</strong></div><div><span>Expected return</span><strong>${signed(result.ev)}</strong></div><div><span>Expected profit</span><strong>${money(result.ev*Number(config.stake||10))}</strong></div></div><p class="evx-note">${esc(result.probabilityBasis)}. ${esc(result.priceBasis)}.</p>${btn('Track parlay','parlay-track')}${btn('Open supported slip link','parlay-link')}`:'<p class="evx-note">Choose at least two distinct legs. Related legs need a supplied joint probability and actual combined price. Legs from different books need an actual combined price from the destination book.</p>'}`,'Independent-leg estimates assume outcomes do not affect each other. Same-event and tagged correlations are flagged.')}${panel('Qualifying +EV legs',table(['Selection','Book / price','EV',''],candidates.map(r=>`<tr><td>${esc(label(r.quote))}</td><td>${esc(r.quote.book)} ${displayOdds(r.quote.odds)}</td><td>${signed(r.ev)}</td><td>${btn('Add leg','parlay-add',r.quote.id)}</td></tr>`)))}</div>`;
   }
   function renderAlerts() {

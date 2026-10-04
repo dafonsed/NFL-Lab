@@ -10,7 +10,8 @@ import {playerPortrait, teamMark} from './sports-identity.js';
 import {icon} from './ui-icons.js';
 import {sportTools, betTrackerUrl, SPORTS} from './navigation.js';
 import {evToolUrl} from './ev-tool-catalog.js';
-import {computeAdvancedEv, evCapFor, DEVIG_METHODS} from './ev-advanced-math.js';
+import {computeAdvancedEv, DEVIG_METHODS} from './ev-advanced-math.js';
+import {plausibleEv, marketRowsOf} from './ev-core.js';
 import {isDemoRecord} from './ev-workspace-clean.js?v=1';
 import {readQuoteCache} from './ev-quote-cache.js?v=3';
 import {platformAsset, platformLabel} from './platform-catalog.js';
@@ -38,6 +39,11 @@ async function memberEvSettings() {
   if (Number(picked.pregameMaxAgeSeconds) === 86400) delete picked.pregameMaxAgeSeconds;
   if (!DEVIG_METHODS.includes(picked.devigMethod)) delete picked.devigMethod;
   return {...EV_SETTINGS, ...picked};
+}
+// Books available in the member's state, as the Positive EV page offers them (every book still prices).
+async function memberBooks() {
+  try { const {readSportsbookState, sportsbookAvailable} = await import('./sportsbook-availability.js'); const state = readSportsbookState(); return book => sportsbookAvailable(book, state); }
+  catch { return () => true; }
 }
 const stats = {games:null, props:null, ev:null, edge:null};
 let slateDate = today;
@@ -129,10 +135,12 @@ function evSelection(quote) {
   return {title:`${quote.player ? quote.player + ' ' : ''}${pick}${lineText}`, detail:quote.displayMarket || quote.market, event:quote.displayEvent || quote.event};
 }
 
-// EV above the shared sanity caps (evCapFor: 25%, 10% with one reference book, unless the member saved a
-// maximum) is a feed error, as on the Positive EV page.
-function dashboardEvRows(quotes, settings) {
-  return computeAdvancedEv(quotes, settings).filter(row => row.ev <= evCapFor(row, settings));
+// Priced and vetted as on the Positive EV page: EV above the shared sanity caps (25%, 10% with one
+// reference book, unless the member saved a maximum) is a feed error, a game line counts only from a book
+// pricing both of its sides (plausibleEv), and only prices at `offered` books (the member's state) show.
+function dashboardEvRows(quotes, settings, offered = () => true) {
+  const markets = marketRowsOf(quotes);
+  return computeAdvancedEv(quotes, settings).filter(row => offered(row.quote.book) && plausibleEv(row, markets, settings));
 }
 
 function evSummary(rows) {
@@ -221,11 +229,11 @@ async function evPanel() {
   // last 15 minutes, the panel loads the feed itself rather than showing old prices as current value.
   const cache = await readQuoteCache();
   const fresh = cache && Date.now() - Date.parse(cache.apiSyncedAt || 0) < 15 * 60_000;
-  const feed = fresh ? null : await import('./ev-feed-normalize.js?v=25').then(m => m.loadFeed('/api/ev/quotes', new Date().toISOString(), {price:false})).catch(() => null);
+  const feed = fresh ? null : await import('./ev-feed-normalize.js?v=26').then(m => m.loadFeed('/api/ev/quotes', new Date().toISOString(), {price:false})).catch(() => null);
   const source = fresh ? cache.quotes : feed?.ok ? feed.quotes : [];
   const quotes = source.filter(quote => quote?.source === 'local-api' && !isDemoRecord(quote));
   const code = sport === 'soccer' ? 'Soccer' : label;
-  const rows = dashboardEvRows(sport === 'all' ? quotes : quotes.filter(q => (q.league || q.sport) === code || q.sport === code), await memberEvSettings());
+  const rows = dashboardEvRows(sport === 'all' ? quotes : quotes.filter(q => (q.league || q.sport) === code || q.sport === code), await memberEvSettings(), await memberBooks());
   const summary = evSummary(rows), top = topEvRows(rows, 5);
   setStat('ev', summary.count); setStat('edge', summary.best === null ? null : summary.best * 100);
   booksPanel(rows);

@@ -647,3 +647,124 @@ test('books that put the player before the stat keep the player; team props keep
   assert.equal(quotes.filter(q => q.player === 'IND Colts' && q.market === 'Total Touchdowns').length, 2);
   assert.equal(new Set(jones.map(q => q.marketId)).size, 1, 'both sides form one market');
 });
+
+// One shape for the cross-book tests below: a record as the quote API sends it.
+const feedRecord = (id, extra) => ({ id, side: 'over', live: false, ts: new Date().toISOString(), startTime: new Date(Date.now() + 86_400_000).toISOString(), ...extra });
+const propRecord = (id, book, event, player, propMarket, side, line, odds, extra = {}) => feedRecord(id, { sport: 'nfl', event, market: 'prop', type: 'prop', propMarket, player, side, line, odds, book, selection_name: `${player} ${side === 'over' ? 'Over' : 'Under'} ${line} ${propMarket}`, ...extra });
+const pair = (id, book, event, player, stat, line, over, under, extra) => [propRecord(`${id}o`, book, event, player, stat, 'over', line, over, extra), propRecord(`${id}u`, book, event, player, stat, 'under', line, under, extra)];
+
+test('Pinnacle props ("Davante Adams Total", stat in the player) join every book\'s same line', async () => {
+  const { marketIdentity } = await import('../public/ev-advanced-math.js');
+  const game = 'Los Angeles Rams @ Philadelphia Eagles', short = 'LA Rams @ PHI Eagles';
+  const { quotes, dfs } = normalizeFeed([
+    ...pair('pin', 'Pinnacle', game, 'Davante Adams Total', 'Receptions', 4.5, -120, -104),
+    ...pair('dk', 'DraftKings', short, 'Davante Adams', 'Receptions', 4.5, -123, -104),
+    ...pair('fd', 'FanDuel', game, 'Davante Adams', 'Davante Adams - Total Receptions', 4.5, -130, -102),
+    // The stat inside the player ("Total Touchdown Passes", sent as both) and split across both ("Total Field" + "Goals").
+    ...pair('pin2', 'Pinnacle', game, 'Matthew Stafford Total Touchdown Passes', 'Matthew Stafford Total Touchdown Passes', 1.5, -150, 120),
+    ...pair('dk2', 'DraftKings', short, 'Matthew Stafford', 'Passing TDs', 1.5, -155, 125),
+    ...pair('pin3', 'Pinnacle', game, 'Jake Elliott Total Field', 'Goals', 1.5, -130, 100),
+    feedRecord('pp', { sport: 'nfl', event: 'LA @ PHI', market: 'Receptions', type: 'prop', player: 'Davante Adams', line: 4.5, side: 'over', book: 'PrizePicks', selection_name: 'Davante Adams Over 4.5' }),
+  ]);
+  const adams = quotes.filter(q => q.player === 'Davante Adams');
+  assert.equal(adams.length, 6);
+  assert.equal(new Set(adams.map(q => marketIdentity(q))).size, 1, 'one market at three books');
+  assert.deepEqual(quotes.filter(q => q.book === 'Pinnacle').map(q => q.player).sort(), ['Davante Adams', 'Davante Adams', 'Jake Elliott', 'Jake Elliott', 'Matthew Stafford', 'Matthew Stafford']);
+  assert.equal(new Set(quotes.filter(q => q.player === 'Matthew Stafford').map(q => marketIdentity(q))).size, 1, 'Touchdown Passes = Passing TDs');
+  assert.equal(quotes.find(q => q.player === 'Jake Elliott').marketId.split('|').pop(), 'field goals');
+  // The pick'em line is priced from all three books, Pinnacle included.
+  assert.deepEqual([...dfs.find(p => p.player === 'Davante Adams').probabilityBooks].sort(), ['DraftKings', 'FanDuel', 'Pinnacle']);
+});
+
+test('part-game stats compare however a book writes the period', () => {
+  const game = 'Tennessee Titans @ Baltimore Ravens';
+  const { quotes } = normalizeFeed([
+    ...pair('dk', 'DraftKings', 'TEN Titans @ BAL Ravens', 'Zay Flowers', 'Rec Yards 1Q', 14.5, -115, -115),
+    propRecord('fan', 'Fanatics', game, 'Zay Flowers', 'Receiving Yards 1st Quarter', 'over', 14.5, -105),
+    ...pair('fd', 'FanDuel', game, 'Zay Flowers', 'Zay Flowers - 1st Half Receiving Yds', 30.5, -110, -120),
+    ...pair('dk2', 'DraftKings', 'TEN Titans @ BAL Ravens', 'Zay Flowers', 'Rec Yards 1H', 30.5, -112, -118),
+  ]);
+  const ids = line => [...new Set(quotes.filter(q => q.line === line).map(q => q.marketId))];
+  assert.deepEqual(ids(14.5), ['prop|NFL:titans @ ravens|receiving yards 1q']);
+  assert.deepEqual(ids(30.5), ['prop|NFL:titans @ ravens|receiving yards 1h']);
+});
+
+test('one game named differently by each book is one game; other games stay apart', () => {
+  const at = hours => new Date(Date.now() + hours * 3_600_000).toISOString();
+  const ml = (id, book, sport, event, side, odds, start, selection) => feedRecord(id, { sport, event, market: 'moneyline', type: 'moneyline', side, odds, book, startTime: start, selection_name: selection });
+  const game = (id, book, sport, event, away, home, start) => [ml(`${id}a`, book, sport, event, 'away', 120, start, away), ml(`${id}h`, book, sport, event, 'home', -140, start, home)];
+  const code = (id, sport, event, team, start) => feedRecord(id, { sport, event, market: 'prop', type: 'prop', propMarket: 'moneyline', player: team, line: 0, side: 'over', odds: 118, book: 'Novig', selection_name: team, startTime: start });
+  const { quotes } = normalizeFeed([
+    // MLB: listed pitchers, city codes, a code-only exchange, and FanDuel filing the game as NCAAF.
+    ...game('pin', 'Pinnacle', 'mlb', 'San Diego Padres @ Milwaukee Brewers', 'San Diego Padres', 'Milwaukee Brewers', at(5)),
+    ...game('fd', 'FanDuel', 'ncaaf', 'San Diego Padres (R Ray) @ Milwaukee Brewers (J Misiorowski)', 'San Diego Padres', 'Milwaukee Brewers', at(5)),
+    ...game('br', 'BetRivers', 'mlb', 'SD Padres @ MIL Brewers', 'SD Padres', 'MIL Brewers', at(5)),
+    code('nv', 'mlb', 'SD @ MIL', 'SD', at(5)),
+    // The same teams the next day are the next game of the series.
+    ...game('next', 'theScore Bet', 'mlb', 'Padres @ Brewers', 'Padres', 'Brewers', at(29)),
+    // College: school names / with mascots. Georgia State isn't Georgia.
+    ...game('c1', 'FanDuel', 'ncaaf', 'Vanderbilt @ Georgia', 'Vanderbilt', 'Georgia', at(3)),
+    ...game('c2', 'Fanatics', 'ncaaf', 'Vanderbilt Commodores @ Georgia Bulldogs', 'Vanderbilt Commodores', 'Georgia Bulldogs', at(3)),
+    ...game('c3', 'Pinnacle', 'ncaaf', 'Troy @ Georgia State', 'Troy', 'Georgia State', at(3)),
+    // NFL by code only.
+    ...game('n1', 'DraftKings', 'nfl', 'IND Colts @ WAS Commanders', 'IND Colts', 'WAS Commanders', at(26)),
+    code('n2', 'nfl', 'IND @ WAS', 'IND', at(26)),
+    // Women's sides only match women's sides.
+    ...game('w1', 'BetRivers', 'soccer', 'Barcelona (W) @ Real Madrid (W)', 'Barcelona (W)', 'Real Madrid (W)', at(4)),
+    ...game('w2', 'Pinnacle', 'soccer', 'Barcelona @ Real Madrid', 'Barcelona', 'Real Madrid', at(4)),
+  ]);
+  const games = book => [...new Set(quotes.filter(q => q.book === book).map(q => q.eventId))];
+  const today = quotes.find(q => q.book === 'BetRivers' && q.event.startsWith('SD')).eventId;
+  for (const book of ['FanDuel', 'Novig']) assert.ok(games(book).includes(today), book);
+  assert.ok(games('Pinnacle').includes(today));
+  assert.notEqual(games('theScore Bet')[0], today, 'the next game of the series stays apart');
+  assert.equal(quotes.find(q => q.book === 'FanDuel' && q.eventId === today).sport, 'MLB', 'the sport most books give');
+  assert.equal(new Set(quotes.filter(q => /georgia/i.test(q.event) && !/state/i.test(q.event)).map(q => q.eventId)).size, 1);
+  assert.notEqual(quotes.find(q => /georgia state/i.test(q.event)).eventId, quotes.find(q => q.book === 'FanDuel' && /georgia/i.test(q.event)).eventId);
+  assert.equal(new Set(quotes.filter(q => /colts|ind @/i.test(q.event)).map(q => q.eventId)).size, 1);
+  assert.equal(new Set(quotes.filter(q => /barcelona/i.test(q.event)).map(q => q.eventId)).size, 2);
+  // Markets follow the game: every book's moneyline for today's MLB game is one market.
+  assert.equal(new Set(quotes.filter(q => q.eventId === today && q.type === 'moneyline').map(q => q.marketId)).size, 1);
+});
+
+test('a book\'s props filed under another game move to the game the other books price the player in', () => {
+  const real = 'Arizona Cardinals @ New York Giants', wrong = 'New York Jets @ Chicago Bears';
+  const { quotes } = normalizeFeed([
+    ...pair('fd', 'FanDuel', real, 'Isaiah Likely', 'Isaiah Likely - Receiving Yds', 39.5, -115, -115),
+    ...pair('dk', 'DraftKings', 'ARI Cardinals @ NY Giants', 'Isaiah Likely', 'Rec Yards', 39.5, -112, -118),
+    propRecord('fan', 'Fanatics', wrong, 'Isaiah Likely', 'Receiving Yards', 'over', 39.5, 100),
+    // A player only one book prices stays where it is.
+    propRecord('fan2', 'Fanatics', wrong, 'Rome Odunze', 'Receiving Yards', 'over', 59.5, 100),
+  ]);
+  assert.equal(new Set(quotes.filter(q => q.player === 'Isaiah Likely').map(q => q.marketId)).size, 1);
+  assert.equal(quotes.find(q => q.player === 'Rome Odunze').eventId, 'NFL:jets @ bears');
+});
+
+test('one player spelled two ways in a game is one player; an event named like a selection is skipped', () => {
+  const game = 'Arizona Cardinals @ New York Giants';
+  const { quotes, skipped } = normalizeFeed([
+    ...pair('pin', 'Pinnacle', game, 'Jeremiah Love Total', 'Rushing Yards', 64.5, -115, -115),
+    ...pair('dk', 'DraftKings', 'ARI Cardinals @ NY Giants', 'Jeremiyah Love', 'Rush Yards', 64.5, -110, -120),
+    ...pair('fd', 'FanDuel', game, 'Jeremiyah Love', 'Jeremiyah Love - Rushing Yds', 64.5, -114, -114),
+    feedRecord('junk', { sport: 'mlb', event: 'Over 3.0', market: 'spread', type: 'spread', side: 'home', odds: -220, book: 'Fanatics', selection_name: 'San Diego Padres +2.5' }),
+  ]);
+  const love = quotes.filter(q => /love/i.test(q.player));
+  assert.deepEqual([...new Set(love.map(q => q.player))], ['Jeremiyah Love']);
+  assert.equal(new Set(love.map(q => q.marketId + q.playerId)).size, 1);
+  assert.equal(skipped.mislabeled, 1);
+});
+
+test('Onyx team spreads sent as props become spreads; its game totals, which don\'t say which side is the Over, are skipped', () => {
+  const game = 'Alabama @ Mississippi State';
+  const onyx = (id, player, propMarket, line, odds) => feedRecord(id, { sport: 'ncaaf', event: game, market: 'prop', type: 'prop', propMarket, player, line, side: 'over', odds, book: 'Onyx', selection_name: `${player} Over ${line} ${propMarket}` });
+  const { quotes, skipped } = normalizeFeed([
+    onyx('a', 'Alabama', 'spread', -5.5, -110), onyx('b', 'Mississippi State', 'spread', 5.5, -110),
+    onyx('c', 'Alabama', 'total', 60.5, -115), onyx('d', 'Mississippi State', 'total', 60.5, -105),
+    feedRecord('fa', { sport: 'ncaaf', event: game, market: 'spread', type: 'spread', side: 'away', line: -5.5, odds: -112, book: 'FanDuel', selection_name: 'Alabama -5.5' }),
+    feedRecord('fh', { sport: 'ncaaf', event: game, market: 'spread', type: 'spread', side: 'home', line: 5.5, odds: -108, book: 'FanDuel', selection_name: 'Mississippi State +5.5' }),
+  ]);
+  const spreads = quotes.filter(q => q.book === 'Onyx');
+  assert.deepEqual(spreads.map(q => [q.type, q.side, q.line]).sort(), [['spread', 'away', -5.5], ['spread', 'home', 5.5]]);
+  assert.equal(new Set(quotes.map(q => q.marketId)).size, 1, 'one spread market with FanDuel');
+  assert.equal(skipped.mislabeled, 2);
+});

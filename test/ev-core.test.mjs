@@ -73,6 +73,19 @@ test('movement alerts identify a new line snapshot', () => {
   assert.deepEqual(alertMatches({kind:'movement',event:'',market:'',threshold:1,liveOnly:false},{...state,quotes:[{...quote,ts:new Date(Date.now()-3_600_000).toISOString()}]}),[]);
 });
 
+test('EV alerts price from every book; only the matched price must be at an offered book', () => {
+  const ts = new Date().toISOString();
+  const line = (book, side, odds) => ({id:`${book}-${side}`,sport:'NFL',event:'A @ B',eventId:'NFL:a @ b',market:'moneyline',marketId:'moneyline|NFL:a @ b',type:'moneyline',side,book,odds,live:false,ts});
+  const quotes = [line('Pinnacle','away',-110),line('Pinnacle','home',-110),line('DraftKings','away',-110),line('DraftKings','home',-110),line('BetMGM','away',120),line('BetMGM','home',-130),line('FanDuel','away',120),line('FanDuel','home',-130)];
+  const rule = {kind:'ev',threshold:5};
+  const books = matches => matches.map(match => match.id.split('-')[0]).sort();
+  assert.deepEqual(books(alertMatches(rule,{quotes})),['BetMGM','FanDuel']);
+  // A member whose state has BetMGM only: Pinnacle and DraftKings still set the fair price.
+  assert.deepEqual(books(alertMatches(rule,{quotes},{offered:q => q.book === 'BetMGM'})),['BetMGM']);
+  // Removing the reference books first (the old behavior) would leave BetMGM with no fair price.
+  assert.deepEqual(alertMatches(rule,{quotes:quotes.filter(q => q.book === 'BetMGM')}),[]);
+});
+
 test('sharp screen returns only the best sportsbook price that improves on the exchange', () => {
   const matches = sharpMatches(exampleWorkspace().quotes,1000);
   const prop = matches.find(x => x.exchange.market === 'Kyler Murray passing yards' && x.exchange.side === 'Over');

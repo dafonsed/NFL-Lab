@@ -87,6 +87,24 @@ test('quotes prefer FanDuel, validate game/period/market and reject ambiguous na
   const dup=publicPayload();dup.markets.push({...dup.markets[0]});assert.equal(parseMlbQuotes(dup,event,'hits',quoteMeta,game).length,0);
   assert.equal(parseMlbQuotes(publicPayload(),event,'hr',quoteMeta,game).length,0);
 });
+test('a book whose line and price disagree is never the posted line',()=>{
+  // As the public comparison sent them on 3 Oct 2026: BetMGM's "0.5" carries a higher line's price.
+  const entry=(value,over,under)=>({value,available:true,over,under});
+  const row=(id,last,comparison)=>({id:`mlb.888.0.${id}.bases`,stat:'total bases',player:{first_name:'Test',last_name:last,team:{key:'TOR'}},comparison});
+  const books=Object.fromEntries(['draftkings','betmgm','caesars','fanatics','bet365'].map(key=>[key,{name:key==='betmgm'?'BetMGM':key[0].toUpperCase()+key.slice(1),states:['AZ']}]));
+  const payload={event:{sport:'mlb',home:{key:'BAL'},away:{key:'TOR'}},books,markets:[
+    row(1,'Olson',{betmgm:entry(0.5,155,-210),caesars:entry(1.5,133,-179),bet365:entry(1.5,160,-220)}),
+    row(2,'Adell',{draftkings:entry(1.5,142,-191),betmgm:entry(0.5,140,-190),caesars:entry(0.5,-164,123),fanatics:entry(0.5,-155,110),bet365:entry(1.5,165,-225)}),
+    row(3,'Meidroth',{betmgm:entry(0.5,115,-155),caesars:entry(0.5,-190,135),fanatics:entry(0.5,-155,110),bet365:entry(1.5,170,-230)}),
+    row(4,'Pham',{betmgm:entry(0.5,175,-235),caesars:entry(0.5,-127,-105),fanatics:entry(0.5,110,-155),bet365:entry(1.5,300,-450)}),
+  ]};
+  const lines=Object.fromEntries(parseMlbQuotes(payload,event,'tb',quoteMeta,game).map(q=>[q.player.split(' ')[1],[q.line,q.bookmaker,q.prices.over.american]]));
+  assert.deepEqual(lines.Olson,[1.5,'Caesars',133],'BetMGM 0.5 at +155 is the 1.5 price');
+  assert.deepEqual(lines.Adell,[1.5,'Draftkings',142],'DraftKings first; its 1.5 is a real line');
+  assert.deepEqual(lines.Meidroth,[0.5,'Caesars',-190]);
+  assert.deepEqual(lines.Pham,[0.5,'Caesars',-127],'only the entry furthest from the others goes');
+  assert.ok(Object.values(lines).every(([,book])=>book!=='BetMGM'));
+});
 test('line archive preserves the pregame capture through a postgame refresh',async t=>{
   const dir=await temp(t),props=new MlbProps({dir});const pre=parseMlbQuotes(publicPayload(),event,'hits',quoteMeta,game)[0];await props.preserve(100,'hits',[pre]);
   const post={...pre,line:2.5,basis:'published_archive',fetchedAt:'2026-09-22T06:00:00Z'};const [saved]=await props.preserve(100,'hits',[post]);assert.equal(saved.line,1.5);assert.equal(saved.basis,'captured_pregame');

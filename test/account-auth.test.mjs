@@ -353,6 +353,31 @@ test('alert emails read the feed once per run: baseline first, then each new mat
   assert.equal(loads, 0, 'no feed read when nobody needs it');
 });
 
+test('alert emails match as the page does: member books, member pricing settings, no movement rules', async () => {
+  const { currentMatches, sportsbookStateFrom, EMAILED_RULE_KINDS } = await import('../lib/accounts/alert-mailer.mjs');
+  const { normalizeFeed } = await import('../public/ev-feed-normalize.js');
+  const ts = new Date().toISOString(), start = new Date(Date.now() + 86_400_000).toISOString();
+  // One game: Pinnacle and DraftKings price it evenly, BetMGM and FanDuel offer Buffalo at +120 (about 6% EV).
+  const price = (book, side, odds) => ({ id: `${book}-${side}`, sport: 'nfl', event: 'Buffalo Bills @ Miami Dolphins', eventId: 'buffalo bills @ miami dolphins', market: 'moneyline', type: 'moneyline', side, book, odds, live: false, ts, startTime: start });
+  const { quotes } = normalizeFeed([
+    price('Pinnacle', 'away', -110), price('Pinnacle', 'home', -110), price('DraftKings', 'away', -110), price('DraftKings', 'home', -110),
+    price('BetMGM', 'away', 120), price('BetMGM', 'home', -130), price('FanDuel', 'away', 120), price('FanDuel', 'home', -130),
+  ], { syncedAt: ts });
+  const books = matches => [...new Set(matches.map(match => match.line.match(/ at (.+?)(?: · |$)/)[1]))].sort();
+  const ev = { id: 'ev', kind: 'ev', threshold: 5, enabled: true };
+  const state = { alertEmail: true, alerts: [ev], dfs: [] };
+  assert.deepEqual(books(currentMatches(state, quotes)), ['BetMGM', 'FanDuel'], 'without a state every book counts');
+  // Nevada: BetMGM is offered there, FanDuel isn't, and Pinnacle stays a reference although it isn't listed.
+  assert.deepEqual(books(currentMatches(state, quotes, { sportsbookState: 'NV' })), ['BetMGM']);
+  // The member's saved settings apply: with four reference books required, three aren't enough.
+  assert.equal(currentMatches({ ...state, suite: { settings: { minSharpBooks: 4 } } }, quotes).length, 0);
+  // Movement rules need the price history only the page keeps, so they are never emailed.
+  assert.deepEqual(EMAILED_RULE_KINDS, ['price', 'ev', 'fantasy-new']);
+  assert.equal(currentMatches({ ...state, alerts: [{ id: 'm', kind: 'movement', threshold: 0.5, enabled: true }] }, quotes).length, 0);
+  assert.equal(sportsbookStateFrom(JSON.stringify({ storage: { 'sportslab-sportsbook-state-v1': 'NV' } })), 'NV');
+  assert.equal(sportsbookStateFrom('not json'), '');
+});
+
 test('alert emails see the feed as the site distributes it: suppressed books removed, records cleaned', async t => {
   const { system, verified } = await fixture(t);
   const { loadAlertQuotes } = await import('../lib/accounts/alert-mailer.mjs');

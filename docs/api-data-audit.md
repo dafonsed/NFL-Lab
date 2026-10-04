@@ -35,6 +35,25 @@ source brings that data back.
    FanDuel puts the player in the market name ("Laquon Treadwell - Total Receptions").
 4. **Record ids reused across selections.** 2,852 Fanatics ids changed event, sport, odds or side
    between two snapshots 9 minutes apart; a ProphetX id moved from a tennis match to a J-League game.
+5. **No shared game or player ids** (cross-book check of the 15:00 UTC snapshot). `eventId` is each
+   book's own game name lowercased, so one game arrives under several ids: "San Diego Padres (R Ray) @
+   Milwaukee Brewers (J Misiorowski)" (FanDuel, Fanatics), "SD Padres @ MIL Brewers" (BetRivers, Desert
+   Diamond, Bally), "San Diego Padres @ Milwaukee Brewers" (the rest), "SD @ MIL" (Novig); college games
+   with and without mascots ("Vanderbilt Commodores @ Georgia Bulldogs" / "Vanderbilt @ Georgia");
+   tennis as "Jacquet, Kyrian" (Fanatics) and "Kyrian Jacquet". The site now matches these by team
+   names and start time; a shared game id from the API would make that exact.
+6. **Pinnacle player names carry "Total" and sometimes the stat.** 471 of 623 Pinnacle prop players
+   are sent as "Davante Adams Total"; others as "Lamar Jackson Total Touchdown Passes" (also sent as
+   the stat), "Jason Myers Total Field" + "Goals", "Victor Wembanyama Total Pts & Rebs & Asts". Pinnacle
+   spells some players differently from every other book ("Jeremiah Love" / "Jeremiyah Love", "Andrew"
+   / "Andres Borregales"). Before the site handled this, none of Pinnacle's 1,100 prop lines matched
+   another book's.
+7. **Props filed under another game.** Fanatics sent the Giants' Isaiah Likely and Jameis Winston under
+   "Jets @ Bears", and Yankees hitters (Trent Grisham, Andrew Rasmussen) under an `mlb` "Green Bay
+   Packers @ Tampa Bay Buccaneers". Fanatics also sends events named "Over 3.0" / "Over 7.5" holding a
+   game's spreads and totals ("San Diego Padres +2.5"); the site drops those.
+8. **Part-game stats named differently**: DraftKings "Rec Yards 1Q", Fanatics "Receiving Yards 1st
+   Quarter", FanDuel "1st Half Receiving Yds". Props carry no `period`.
 
 ## 3. Sport and league labels
 - J-League and A-League tagged `epl`; USL tagged `nwsl`; Swedish, Finnish and KHL hockey tagged
@@ -42,6 +61,12 @@ source brings that data back.
   table tennis tagged `soccer`; KBO tagged `mlb` or `tennis`; badminton tagged `mma`; esports, golf,
   NASCAR and F1 tagged `other`; some college games with no sport.
 - PrizePicks events for leagues without matchups are the league code ("CS2", "PGA", "NBASZN").
+- Major-league games under another sport: FanDuel's Yankees @ Rays as `ncaaf` (264 records),
+  Fanatics' Braves @ Dodgers as `nba` (154), NFL games as `mma`, `mlb`, `ncaaf`, `soccer` and `other`;
+  Fanatics' Memphis @ Charlotte (college) as `nfl`; Fanatics' Liberty @ Dream (WNBA) as `nba` and
+  Onyx's as `ncaaf`; Novig's Florida @ Missouri as `nhl` and Indiana @ Rutgers as `nfl`. Where other
+  books list the same game, the site files it under their sport; a game only one book lists keeps the
+  feed's label.
 
 ## 4. Ladders and lines
 1. **Fanatics spread and total ladders mix markets.** 19 of 22 spread and 47 of 53 total ladders
