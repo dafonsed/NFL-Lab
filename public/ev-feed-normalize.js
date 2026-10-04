@@ -235,7 +235,18 @@ export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
     type = 'moneyline'; line = '';
     raw = { ...raw, side: over ? team : team === 'home' ? 'away' : 'home', selection_name: '', player: '', propMarket: '' };
   }
-  const repaired = teamMoneyline ? { type, side: raw.side, line, selection: '', verified: true } : repairSelection({ type, side: text(raw, 'side'), line, selection: text(raw, 'selection_name'), event });
+  // Onyx sends whole-game lines the same way. A spread: player "Alabama", stat "spread", Over -5.5 =
+  // Alabama -5.5 (Under = the other team +5.5). A game total comes as "Alabama Over 60.5 total" and
+  // "Mississippi State Over 60.5 total", which doesn't say which record is the Over, so it is skipped.
+  const gameProp = type === 'prop' && /^(spread|total)$/i.test(text(raw, 'propMarket')) ? matchParticipant(text(raw, 'player'), participantsOf(event)) : null;
+  if (gameProp && /^total$/i.test(text(raw, 'propMarket'))) return { skip: 'mislabeled' };
+  const teamSpread = Boolean(gameProp) && line !== '' && /^(over|under)$/i.test(text(raw, 'side'));
+  if (teamSpread) {
+    const over = /^over$/i.test(text(raw, 'side'));
+    type = 'spread'; line = over ? line : -line;
+    raw = { ...raw, side: over ? gameProp : gameProp === 'home' ? 'away' : 'home', selection_name: '', player: '', propMarket: '' };
+  }
+  const repaired = teamMoneyline || teamSpread ? { type, side: raw.side, line, selection: '', verified: true } : repairSelection({ type, side: text(raw, 'side'), line, selection: text(raw, 'selection_name'), event });
   if (!repaired) return { skip: 'mislabeled' };
   ({ type, line } = repaired);
   if (repaired.outcomes) outcomes = repaired.outcomes;

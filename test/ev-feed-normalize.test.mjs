@@ -753,3 +753,18 @@ test('one player spelled two ways in a game is one player; an event named like a
   assert.equal(new Set(love.map(q => q.marketId + q.playerId)).size, 1);
   assert.equal(skipped.mislabeled, 1);
 });
+
+test('Onyx team spreads sent as props become spreads; its game totals, which don\'t say which side is the Over, are skipped', () => {
+  const game = 'Alabama @ Mississippi State';
+  const onyx = (id, player, propMarket, line, odds) => feedRecord(id, { sport: 'ncaaf', event: game, market: 'prop', type: 'prop', propMarket, player, line, side: 'over', odds, book: 'Onyx', selection_name: `${player} Over ${line} ${propMarket}` });
+  const { quotes, skipped } = normalizeFeed([
+    onyx('a', 'Alabama', 'spread', -5.5, -110), onyx('b', 'Mississippi State', 'spread', 5.5, -110),
+    onyx('c', 'Alabama', 'total', 60.5, -115), onyx('d', 'Mississippi State', 'total', 60.5, -105),
+    feedRecord('fa', { sport: 'ncaaf', event: game, market: 'spread', type: 'spread', side: 'away', line: -5.5, odds: -112, book: 'FanDuel', selection_name: 'Alabama -5.5' }),
+    feedRecord('fh', { sport: 'ncaaf', event: game, market: 'spread', type: 'spread', side: 'home', line: 5.5, odds: -108, book: 'FanDuel', selection_name: 'Mississippi State +5.5' }),
+  ]);
+  const spreads = quotes.filter(q => q.book === 'Onyx');
+  assert.deepEqual(spreads.map(q => [q.type, q.side, q.line]).sort(), [['spread', 'away', -5.5], ['spread', 'home', 5.5]]);
+  assert.equal(new Set(quotes.map(q => q.marketId)).size, 1, 'one spread market with FanDuel');
+  assert.equal(skipped.mislabeled, 2);
+});

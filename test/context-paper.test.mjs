@@ -8,7 +8,7 @@ import { observedWeather,selectWeather,WeatherStore } from '../lib/weather.mjs';
 import { mlbOpponent,teamGameRows } from '../lib/mlb/context.mjs';
 import { nflOpponent } from '../lib/nfl-context.mjs';
 import { MlbAvailability } from '../lib/mlb/availability.mjs';
-import { quotePrices,settlePaper,PaperStore } from '../lib/paper.mjs';
+import { quotePrices,settlePaper,PaperStore,postedLine,consistentEntries } from '../lib/paper.mjs';
 import { forecast } from '../lib/forecast.mjs';
 import { attachMlbForecast } from '../lib/mlb/forecast.mjs';
 import { SourceStore } from '../lib/source.mjs';
@@ -99,4 +99,25 @@ test('context coefficients cannot change projections inside the model-developmen
   const sample=Array.from({length:10},(_,i)=>({season:2024,week:i+1,date:`2024-09-${String(i+1).padStart(2,'0')}`,attempts:30,passing_tds:2}));
   const f=forecast({sample,target:{season:2024,week:11,date:'2024-11-01'},market:'pass_tds',position:'QB',artifact:{trainingSeason:2024,contextModels:{'pass_tds:QB':{enabled:true,coefficients:[10,0,0]}}},context:{opponent:{available:true,rate:2,leagueRate:1}}});
   assert.equal(f.point,2);assert.equal(f.probability,null);assert.ok(f.reasons.some(r=>r.includes('overlaps')));
+});
+
+test('posted lines skip entries priced for another line and keep the preferred book otherwise', () => {
+  const entry = (book, line, over, under) => ({ book, line, value: { over, under } });
+  // Strikeouts: BetMGM's 8.5 at +120 can't sit beside 6.5 near even at four books.
+  const ks = [entry('fanduel', 6.5, -108, -118), entry('draftkings', 6.5, -117, -109), entry('betmgm', 8.5, 120, -160), entry('caesars', 6.5, -107, -121), entry('bet365', 6.5, 100, -135)];
+  assert.deepEqual(consistentEntries(ks, { discrete: true }).map(e => e.book), ['fanduel', 'draftkings', 'caesars', 'bet365']);
+  assert.equal(postedLine(ks, { discrete: true }).book, 'fanduel');
+  // Receptions: bet365's 1.5 at -185 while four books have the Over at +150 to +168.
+  const rec = [entry('fanduel', 1.5, 168, -230), entry('draftkings', 1.5, 159, -206), entry('caesars', 1.5, 166, -225), entry('bet365', 1.5, -185, 145)];
+  assert.equal(consistentEntries(rec, { discrete: true }).some(e => e.book === 'bet365'), false);
+  // Yards: books a yard apart near even are all real lines, and FanDuel's stands.
+  const yards = [entry('fanduel', 8.5, -104, -122), entry('draftkings', 9.5, -110, -114), entry('betmgm', 7.5, -120, -110), entry('caesars', 8.5, -110, -118)];
+  assert.equal(consistentEntries(yards).length, 4);
+  assert.deepEqual([postedLine(yards).book, postedLine(yards).line], ['fanduel', 8.5]);
+  // A count stat where more books agree on another line uses that line.
+  const tb = [entry('draftkings', 1.5, 105, -139), entry('betmgm', 0.5, -160, 120), entry('caesars', 0.5, -170, 125), entry('fanatics', 0.5, -165, 125)];
+  assert.deepEqual([postedLine(tb, { discrete: true }).book, postedLine(tb, { discrete: true }).line, postedLine(tb, { discrete: true }).books], ['betmgm', 0.5, 3]);
+  // Two books that disagree with nothing to settle it: no line rather than a wrong one.
+  assert.equal(postedLine([entry('betmgm', 0.5, 175, -235), entry('caesars', 0.5, -190, 135)], { discrete: true }), null);
+  assert.equal(postedLine([]), null);
 });
