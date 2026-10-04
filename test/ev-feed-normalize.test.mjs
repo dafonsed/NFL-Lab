@@ -727,17 +727,55 @@ test('one game named differently by each book is one game; other games stay apar
   assert.equal(new Set(quotes.filter(q => q.eventId === today && q.type === 'moneyline').map(q => q.marketId)).size, 1);
 });
 
-test('a book\'s props filed under another game move to the game the other books price the player in', () => {
+test('a book\'s props filed under another game than the other books price the player in are dropped, not moved', () => {
   const real = 'Arizona Cardinals @ New York Giants', wrong = 'New York Jets @ Chicago Bears';
-  const { quotes } = normalizeFeed([
+  const { quotes, skipped } = normalizeFeed([
     ...pair('fd', 'FanDuel', real, 'Isaiah Likely', 'Isaiah Likely - Receiving Yds', 39.5, -115, -115),
     ...pair('dk', 'DraftKings', 'ARI Cardinals @ NY Giants', 'Isaiah Likely', 'Rec Yards', 39.5, -112, -118),
-    propRecord('fan', 'Fanatics', wrong, 'Isaiah Likely', 'Receiving Yards', 'over', 39.5, 100),
+    // Fanatics' "Isaiah Likely" ladder under Jets @ Bears mixed another player's prices (40+ at +900).
+    propRecord('fan', 'Fanatics', wrong, 'Isaiah Likely', 'Receiving Yards', 'over', 39.5, 900),
     // A player only one book prices stays where it is.
     propRecord('fan2', 'Fanatics', wrong, 'Rome Odunze', 'Receiving Yards', 'over', 59.5, 100),
   ]);
-  assert.equal(new Set(quotes.filter(q => q.player === 'Isaiah Likely').map(q => q.marketId)).size, 1);
+  assert.deepEqual([...new Set(quotes.filter(q => q.player === 'Isaiah Likely').map(q => q.book))].sort(), ['DraftKings', 'FanDuel']);
+  assert.equal(skipped.mislabeled, 1);
   assert.equal(quotes.find(q => q.player === 'Rome Odunze').eventId, 'NFL:jets @ bears');
+});
+
+test('a price far from what the other books agree on is dropped, and so is a book\'s price group that keeps failing', () => {
+  const game = 'New England Patriots @ Buffalo Bills', short = 'NE Patriots @ BUF Bills';
+  const fanatics = (id, player, stat, line, odds) => propRecord(id, 'Fanatics', game, player, stat, 'over', line, odds);
+  const qbs = ['Josh Allen', 'Drake Maye', 'Joe Burrow', 'Jared Goff', 'Bo Nix', 'Brock Purdy', 'Sam Darnold', 'Jalen Hurts'];
+  const { quotes, skipped } = normalizeFeed([
+    // As on 4 Oct 2026: Fanatics "ALT Passing Touchdowns" 2+ (Over 1.5) for Josh Allen at +114; FanDuel,
+    // DraftKings and Pinnacle -152 to -167.
+    ...pair('fd', 'FanDuel', game, 'Josh Allen', 'Josh Allen - Passing TDs', 1.5, -164, 125),
+    ...pair('dk', 'DraftKings', short, 'Josh Allen', 'Pass TDs', 1.5, -167, 131),
+    ...pair('pin', 'Pinnacle', game, 'Josh Allen Total Touchdown Passes', 'Josh Allen Total Touchdown Passes', 1.5, -152, 121),
+    fanatics('fa', 'Josh Allen', 'ALT Passing Touchdowns', 2, 114),
+  ]);
+  const overs = list => list.filter(q => q.player === 'Josh Allen' && q.side === 'over').map(q => [q.book, q.odds]).sort();
+  assert.deepEqual(overs(quotes), [['DraftKings', -167], ['FanDuel', -164], ['Pinnacle', -152]]);
+  assert.equal(skipped.inconsistent, 1);
+  // A price within a few points of the others stays.
+  const close = normalizeFeed([
+    ...pair('fd1', 'FanDuel', game, 'Josh Allen', 'Josh Allen - Passing TDs', 1.5, -164, 125),
+    ...pair('dk1', 'DraftKings', short, 'Josh Allen', 'Pass TDs', 1.5, -167, 131),
+    fanatics('fm', 'Josh Allen', 'Passing Touchdowns', 1.5, -160),
+  ]);
+  assert.deepEqual(overs(close.quotes), [['DraftKings', -167], ['FanDuel', -164], ['Fanatics', -160]]);
+  // A group failing on 30%+ of 8+ checks goes whole, its uncheckable prices included: here every
+  // checkable Fanatics ALT price is far off, and one ALT price nothing else prices goes with them.
+  const records = qbs.flatMap((qb, i) => [
+    ...pair(`f${i}`, 'FanDuel', game, qb, `${qb} - Passing TDs`, 1.5, -150, 120),
+    ...pair(`d${i}`, 'DraftKings', short, qb, 'Pass TDs', 1.5, -155, 125),
+    fanatics(`a${i}`, qb, 'ALT Passing Touchdowns', 2, 300),
+  ]);
+  const group = normalizeFeed([...records, fanatics('lone', 'Taysom Hill', 'ALT Passing Touchdowns', 2, 400)]);
+  assert.equal(group.quotes.filter(q => q.book === 'Fanatics').length, 0);
+  // With only one other book: a one-sided rung 15+ points off a two-sided market goes.
+  const single = normalizeFeed([...pair('fd2', 'FanDuel', game, 'Isaiah Davis', 'Isaiah Davis - Receiving Yds', 9.5, -113, -113), fanatics('fs', 'Isaiah Davis', 'Receiving Yards', 9.5, -264)]);
+  assert.deepEqual(single.quotes.map(q => q.book), ['FanDuel', 'FanDuel']);
 });
 
 test('one player spelled two ways in a game is one player; an event named like a selection is skipped', () => {

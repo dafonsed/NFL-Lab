@@ -25,7 +25,13 @@ source brings that data back.
    Fanatics files listings under other games (an Akita Northern Happinets spread under "Leicester City
    (W) @ Sunderland (W)", a WNBA spread under Braves @ Dodgers) and events named "Over 10.0"; Pinnacle
    still sends players as "Name Total".
-6. `fresh` turns false about a minute after a scrape (FanDuel props 62 seconds old), so the site doesn't
+6. **Fanatics ALT ladders carry other bets' prices.** "ALT Passing Touchdowns" Josh Allen 2+ (Over 1.5) at
+   +114 while FanDuel, DraftKings and Pinnacle were -152 to -167 and Fanatics' own app -170; Isaiah
+   Davis 2+ receptions at -320 against FanDuel and DraftKings near even. 13 of 24 checkable ALT prices
+   were 12+ points off every other book (other books: about 1 in 400), so the site drops Fanatics' ALT
+   ladders while they fail that often. Fanatics' "Isaiah Likely" yards ladder under Jets @ Bears had 40+
+   at +900 and 100+ at +400: two players' prices in one ladder.
+7. `fresh` turns false about a minute after a scrape (FanDuel props 62 seconds old), so the site doesn't
    use it; pregame prices still expire 15 minutes after their `ts`.
 
 ## 1. Sides and selections
