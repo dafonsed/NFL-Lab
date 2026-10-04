@@ -20,8 +20,13 @@ export function sportName(raw) {
   const upper = text.toUpperCase();
   if (MAJOR[upper]) return MAJOR[upper];
   const known = SPORT_NAMES[text.toLowerCase()];
+  // A place sent as the sport (Onyx tennis as "tokyo,-japan") says nothing about the sport.
+  if (!known && text.includes(',')) return 'Other';
   return known || (text ? text[0].toUpperCase() + text.slice(1).toLowerCase() : '');
 }
+
+// A start time as ISO text, or as epoch seconds or milliseconds (Betr sends "1791075600000").
+const startTimeOf = value => { const time = String(value ?? '').trim(); return /^\d{13}$/.test(time) ? Number(time) : /^\d{10}$/.test(time) ? Number(time) * 1000 : Date.parse(time); };
 
 /** A sport name from a URL or menu ("tennis" → "Tennis"), or '' when it isn't one the feed uses. */
 export function knownSport(raw) {
@@ -216,6 +221,9 @@ export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
   let outcomes = raw.outcomes == null || raw.outcomes === '' ? (type === 'three-way' ? 3 : '') : Number(raw.outcomes);
   if (outcomes !== '' && (!Number.isInteger(outcomes) || outcomes < 2 || outcomes > 64)) return { skip: 'invalid' };
   const event = text(raw, 'event');
+  // A pick'em app's game lines (Betr Picks team "moneylines" at +1892 live) aren't sportsbook prices;
+  // the DFS tools use its player picks.
+  if (isFantasyPlatform(text(raw, 'book')) && !fantasy) return { skip: 'mislabeled' };
   // An event named like a selection ("Over 3.0", from Fanatics, holding a Padres spread) doesn't say
   // which game its prices are for.
   if (/^(over|under)\s+\d/i.test(event)) return { skip: 'mislabeled' };
@@ -255,7 +263,7 @@ export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
   const matched = matchedEventKey(sport, event);
   const eventId = matched ? `${sport}:${matched}` : `${sport}:${text(raw, 'eventId') || event.toLowerCase()}`;
   const liquidity = raw.liquidity == null || raw.liquidity === '' ? NaN : Number(raw.liquidity);
-  const start = Date.parse(text(raw, 'startTime') || text(raw, 'start_time'));
+  const start = startTimeOf(text(raw, 'startTime') || text(raw, 'start_time'));
   const identity = teamMoneyline ? { market: 'moneyline', player: '', milestone: '' } : propIdentity(raw), { player, milestone } = identity;
   const asOverUnder = type === 'prop' && !fantasy ? milestoneAsOverUnder(identity.market, milestone, repaired.side) : null;
   const market = asOverUnder?.market || identity.market;
@@ -277,6 +285,8 @@ export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
     ...(Number.isFinite(liquidity) ? { liquidity: Math.max(0, liquidity) } : {}),
     // Feed times use the server's clock; shift them onto this device's clock.
     ts: new Date(observed - clockOffsetMs).toISOString(), source: 'local-api',
+    // The API says when it no longer considers a price current (`fresh: false`).
+    ...(raw.fresh === false ? { apiStale: true } : {}),
     // Optional fields the tools already use when the feed sends them: links, limits, suspension.
     ...Object.fromEntries(['betUrl', 'eventUrl', 'prefillUrl'].filter(key => usableLink(text(raw, key))).map(key => [key, text(raw, key)])),
     ...(raw.links && typeof raw.links === 'object' && !Array.isArray(raw.links) ? { links: raw.links } : {}),
@@ -682,7 +692,7 @@ export function normalizeFeed(records, { syncedAt = new Date().toISOString(), cl
     if (quote.live && quote.startTime && Date.parse(quote.startTime) > now + 5 * 60_000) quote.live = false;
     if (!quote.live && quote.startTime && Date.parse(quote.startTime) <= now) { skipped.started += 1; return false; }
     // Pregame prices the API hasn't refreshed in 15 minutes are markets the book no longer offers.
-    if (!quote.live && !quote.ageUnknown && now - Date.parse(quote.ts) > FEED_MAX_AGE_MS) { skipped.stale += 1; return false; }
+    if (!quote.live && !quote.ageUnknown && now - Date.parse(quote.ts) > FEED_MAX_AGE_MS || quote.apiStale) { skipped.stale += 1; return false; }
     return true;
   });
   // Pick'em lines (a DFS app plus a player) are not sportsbook prices; they become DFS picks.
@@ -1177,7 +1187,7 @@ export function normalizeDfsRecords(records, { syncedAt = new Date().toISOString
     if (DFS_NON_PROPS.has(market.toLowerCase()) || SEASON_LABEL.test(player) || line <= 0) { skipped.notProps += 1; continue; }
     if (now - ts > FEED_MAX_AGE_MS) { skipped.stale += 1; continue; }
     // A pregame line for a game that has started can't be entered any more.
-    const start = Date.parse(text(raw, 'startTime') || text(raw, 'start_time'));
+    const start = startTimeOf(text(raw, 'startTime') || text(raw, 'start_time'));
     if (raw.live !== true && Number.isFinite(start) && start <= now) { skipped.started += 1; continue; }
     const sport = sportName(text(raw, 'sport')), event = text(raw, 'event');
     const matched = matchedEventKey(sport, event);

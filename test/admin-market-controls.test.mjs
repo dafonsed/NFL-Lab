@@ -203,6 +203,22 @@ test('a provider snapshot over 50,000 quotes is served instead of rejected', asy
   assert.equal(result.body.count, 60_000);
 });
 
+test('an upstream request that fails without an answer is tried once more', async t => {
+  t.mock.method(console, 'error', () => {});
+  let calls = 0;
+  // One instance refuses the connection, the next answers.
+  const flapping = async () => { calls += 1; if (calls === 1) throw new TypeError('fetch failed'); return new Response(JSON.stringify({ quotes })); };
+  const first = await proxy('/api/ev/quotes', { fetcher: flapping, loadControls: async () => [] });
+  assert.equal(first.status, 200);
+  assert.equal(first.body.stale, false);
+  assert.equal(calls, 2);
+  // A 503 that asks for a wait isn't retried at once.
+  let waits = 0;
+  const busy = async () => { waits += 1; return new Response('busy', { status: 503, headers: { 'retry-after': '20' } }); };
+  assert.equal((await proxy('/api/ev/site/dfs/payouts', { fetcher: busy, loadControls: async () => [] })).status, 503);
+  assert.equal(waits, 1);
+});
+
 test('one failed provider refresh serves the last complete snapshot for up to a minute', async t => {
   t.mock.timers.enable({ apis: ['Date'], now: 1_000_000 });
   t.mock.method(console, 'error', () => {});
@@ -213,7 +229,7 @@ test('one failed provider refresh serves the last complete snapshot for up to a 
   const retried = await proxy('/api/ev/quotes', { fetcher: flaky, loadControls: async () => [] });
   assert.equal(retried.status, 200, 'the previous snapshot covers a momentary upstream error');
   assert.equal(retried.body.count, quotes.length);
-  assert.equal(calls, 2);
+  assert.equal(calls, 3, 'the failed refresh was tried once more first');
   t.mock.timers.tick(61_000);
   assert.equal((await proxy('/api/ev/quotes', { fetcher: flaky, loadControls: async () => [] })).status, 503, 'a snapshot over a minute old is not served');
 });
