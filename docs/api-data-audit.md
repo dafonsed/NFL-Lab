@@ -6,6 +6,27 @@ taken 2026-10-03 06:17 UTC. The site now detects and drops or labels each proble
 them shows as a wrong price, but every dropped record is data the site can't use. Fixing them at the
 source brings that data back.
 
+## 0. API 2.0.0 (checked 4 Oct 2026, 03:00–03:20 UTC)
+1. **Instances disagree.** Repeated calls through the site's proxy got different answers within
+   seconds: /quotes 503, 200 (17,068 records, 13 books), 503, 503, 200 (8,093, 14 books), then 6,100
+   with four books; /site/health 503, 404, 200, 200, 404; /site/status reported 8,010 total quotes with
+   Fanatics idle while /quotes returned 8,359 Fanatics records. More than one process (or an old
+   version) answers on the API's address, each with its own data. The site retries a failed request
+   once and holds the fuller snapshot for up to 10 minutes, but every visitor still sees whichever
+   instance answered.
+2. **DFS:** /site/dfs/props returns `[]` (with and without `app`/`sport`) and /site/status shows
+   prizepicks, dk_pick6, sleeper, betr and dabble idle with 0 items; no PrizePicks records are in /quotes.
+3. **Betr Picks team "moneylines"** (a live Blues moneyline at +1892) arrive as sportsbook prices; the
+   site skips game lines from pick'em apps. Their `startTime` is epoch milliseconds as text
+   ("1791075600000"); every other book sends ISO times.
+4. **Onyx sends a place as the sport** ("tokyo,-japan", "beijing,-china") for tennis; FanDuel sends
+   `unknown` for some college games.
+5. **Still open from 3 Oct:** Polymarket, Kalshi and ProphetX send no `selection_name` (all skipped);
+   Fanatics files listings under other games (an Akita Northern Happinets spread under "Leicester City
+   (W) @ Sunderland (W)", a WNBA spread under Braves @ Dodgers) and events named "Over 10.0"; Pinnacle
+   still sends players as "Name Total".
+6. New fields `fresh` and `age_seconds` are read: a price with `fresh: false` is dropped.
+
 ## 1. Sides and selections
 1. **Exchanges send no outcome.** All ProphetX (81), Kalshi (46) and Polymarket (33) records have
    `side: "home"` and no `selection_name`. The price is often the other participant's: ProphetX
