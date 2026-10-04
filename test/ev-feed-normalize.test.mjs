@@ -826,3 +826,17 @@ test('API v2 records: epoch start times, pick\'em game lines, place names as spo
   assert.equal(skipped.stale, 0, 'fresh: false alone drops nothing');
   assert.equal(quotes.find(q => q.book === 'Pinnacle').sport, 'Other');
 });
+
+test('a pick sent without its game, start or sport takes them from the sportsbook game it is priced from', async () => {
+  const game = 'Indianapolis Colts @ Washington Commanders', start = new Date(Date.now() + 86_400_000).toISOString();
+  const { normalizeDfsRecords } = await import('../public/ev-feed-normalize.js');
+  const pricer = (await import('../public/ev-feed-normalize.js')).createDfsPricer();
+  const feed = normalizeFeed([...pair('fd', 'FanDuel', game, 'Jonathan Taylor', 'Jonathan Taylor - Rushing Yds', 89.5, -114, -114, { startTime: start })], { price: false });
+  pricer.setQuotes(feed);
+  // As Underdog sends them on 4 Oct 2026: sport "other", no event, no start time.
+  const { picks } = normalizeDfsRecords([{ id: 'u1', app: 'Underdog', sport: 'other', event: '', startTime: '', player: 'Jonathan Taylor', market: 'Rushing Yards', line: 89.5, side: 'higher', odds_type: 'standard', payout_multiplier: 1, ts: new Date().toISOString() }]);
+  pricer.setProps(picks);
+  const [over] = pricer.price('multiplicative', { now: Date.now() }).filter(p => p.side === 'Over');
+  assert.ok(Math.abs(over.probability - 0.5) < 1e-9);
+  assert.deepEqual([over.sport, over.event, over.startTime], ['NFL', 'Indianapolis Colts @ Washington Commanders', start]);
+});

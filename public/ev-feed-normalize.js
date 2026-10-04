@@ -897,7 +897,7 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
   // platform are averaged after devigging, so one book's Over is never paired with another's Under).
   const playerStat = (player, market) => JSON.stringify([playerName(player), propMarket(market, player)]);
   const add = (map, key, value) => { if (!map.has(key)) map.set(key, new Set()); map.get(key).add(value); };
-  const markets = new Map(), bookGames = new Map(), statBooks = new Map(), gameStart = new Map();
+  const markets = new Map(), bookGames = new Map(), statBooks = new Map(), gameStart = new Map(), gameInfo = new Map();
   for (const quote of quotes) {
     const side = pickSide(quote.side);
     if (!quote.player || !side || quote.live || String(quote.period || 'full').toLowerCase() !== 'full' || !Number.isFinite(implied(quote.odds))) continue;
@@ -906,6 +906,7 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
     add(statBooks, stat, quote.book);
     const start = Date.parse(quote.startTime), game = JSON.stringify([quote.book, quote.eventId]);
     if (Number.isFinite(start) && !gameStart.has(game)) gameStart.set(game, start);
+    if (!gameInfo.has(quote.eventId)) gameInfo.set(quote.eventId, { sport: quote.sport, startTime: quote.startTime });
     if (!markets.has(key)) markets.set(key, new Map());
     const books = markets.get(key), book = books.get(quote.book) || { book: quote.book, family: quote.priceFamily || quote.book, exchange: quote.exchange === true };
     const ts = Date.parse(quote.ts) || 0;
@@ -920,7 +921,7 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
   const appGames = new Map();
   for (const pick of picks) add(appGames, JSON.stringify([pick.book, playerStat(pick.player, pick.market)]), pick.eventId);
   const marketFor = pick => {
-    const stat = playerStat(pick.player, pick.market), pickStart = Date.parse(pick.startTime), found = new Map();
+    const stat = playerStat(pick.player, pick.market), pickStart = Date.parse(pick.startTime), found = Object.assign(new Map(), { games: new Set() });
     const appOneGame = appGames.get(JSON.stringify([pick.book, stat]))?.size === 1;
     for (const book of statBooks.get(stat) || []) {
       const gap = game => { const start = gameStart.get(JSON.stringify([book, game])); return Number.isFinite(start) && Number.isFinite(pickStart) ? Math.abs(start - pickStart) : null; };
@@ -928,7 +929,7 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
       const close = near.filter(game => gap(game) !== null && gap(game) <= CLOSE_START_MS);
       const game = near.includes(pick.eventId) ? pick.eventId : close.length === 1 ? close[0] : near.length === 1 && appOneGame ? near[0] : null;
       const entry = game && markets.get(propKey(game, pick.player, pick.market, pick.line))?.get(book);
-      if (entry) found.set(book, entry);
+      if (entry) { found.set(book, entry); found.games.add(game); }
     }
     return found;
   };
@@ -1003,7 +1004,14 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
     // the fair probability uses those that price both sides with a margin.
     // An exchange's prices only count as a market when both sides are there and add up to about 100%
     // or more: Novig sent prop pairs adding to 63-96% (+257 Over and +186 Under), which no one can bet.
-    const listed = partGame.has(pick) ? [] : [...marketFor(pick).values()].filter(book => !book.exchange || book.over + book.under >= 0.98);
+    const matched = partGame.has(pick) ? null : marketFor(pick), listed = matched ? [...matched.values()].filter(book => !book.exchange || book.over + book.under >= 0.98) : [];
+    // An app that sends no game, start or sport (Underdog files NFL picks as "other" with neither) takes
+    // them from the one sportsbook game every matched book prices the player in, so the pick shows under
+    // its sport and game. A sport the app does name is kept.
+    const game = matched?.games.size === 1 ? [...matched.games][0] : null, info = game && gameInfo.get(game);
+    const sport = info && (!pick.sport || pick.sport === 'Other') ? info.sport : pick.sport;
+    const event = names.get(pick.eventId) || pick.event || (info ? names.get(game) || '' : '');
+    const startTime = pick.startTime || info?.startTime || '';
     const books = listed
       // A sportsbook pair whose implied probabilities sum to 100.5% or less has no margin to remove:
       // the feed built the Under from the Over (DraftKings and Fanatics milestone props, Oct 2026).
@@ -1022,14 +1030,14 @@ export function dfsPicks(picks, quotes, names = new Map(), { method = 'multiplic
     const over = total && families.size >= Math.max(1, Number(minBooks) || 1) ? sum / total : NaN;
     const probability = Number.isFinite(over) ? (pick.side === 'over' ? over : 1 - over) : null;
     return {
-      id: pick.id, app: pick.book, sport: pick.sport, ...(pick.matchSport ? { matchSport: pick.matchSport } : {}), league: pick.league, event: names.get(pick.eventId) || pick.event, eventId: pick.eventId,
+      id: pick.id, app: pick.book, sport, ...(pick.matchSport ? { matchSport: pick.matchSport } : {}), league: pick.league, event, eventId: pick.eventId,
       player: pick.player, ...(pick.team ? { team: pick.team } : {}), market: pick.market, line: pick.line, side: pick.side === 'under' ? 'Under' : 'Over',
       ...(pick.oddsType ? { oddsType: pick.oddsType } : pick.book === 'PrizePicks' ? { oddsType: 'standard' } : {}),
       ...(realMultiplier(pick) ? { payoutMultiplier: realMultiplier(pick) } : {}), ...(partGame.has(pick) ? { period: 'part' } : {}),
       probability, probabilityBooks: books.map(book => book.book), probabilityMethod: method,
       ...(books.length ? { probabilitySources: books.map(book => ({ book: book.book, over: book.overOdds, under: book.underOdds })) } : {}),
       ...(listed.length ? { bookLines: listed.map(book => ({ book: book.book, ...(Number.isFinite(book.overOdds) ? { over: book.overOdds } : {}), ...(Number.isFinite(book.underOdds) ? { under: book.underOdds } : {}), ...(book.exchange ? { exchange: true } : {}) })) } : {}),
-      ts: pick.ts, startTime: pick.startTime, live: pick.live, source: 'local-api',
+      ts: pick.ts, startTime, live: pick.live, source: 'local-api',
     };
   });
 }
