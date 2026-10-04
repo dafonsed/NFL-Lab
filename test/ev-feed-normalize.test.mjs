@@ -769,7 +769,7 @@ test('Onyx team spreads sent as props become spreads; its game totals, which don
   assert.equal(skipped.mislabeled, 2);
 });
 
-test('API v2 records: epoch start times, pick\'em game lines, place names as sports and the fresh flag', () => {
+test('API v2 records: epoch start times, pick\'em game lines, place names as sports; the fresh flag is not a cutoff', () => {
   const at = new Date(Math.floor(Date.now() / 1000) * 1000 + 3 * 3_600_000), ms = String(at.getTime()), seconds = String(at.getTime() / 1000);
   const ml = (id, book, side, odds, extra = {}) => feedRecord(id, { sport: 'nhl', event: 'St. Louis Blues @ Colorado Avalanche', market: 'moneyline', type: 'moneyline', side, odds, book, selection_name: side === 'away' ? 'St. Louis Blues' : 'Colorado Avalanche', ...extra });
   const { quotes, skipped } = normalizeFeed([
@@ -777,14 +777,14 @@ test('API v2 records: epoch start times, pick\'em game lines, place names as spo
     ml('c', 'FanDuel', 'away', 145, { startTime: seconds }), ml('d', 'FanDuel', 'home', -165, { startTime: seconds }),
     // Betr Picks is a pick'em app: its team "moneylines" aren't sportsbook prices.
     ml('e', 'Betr', 'away', 1892, { startTime: ms }),
-    // A price the API says is no longer current.
-    ml('f', 'BetMGM', 'away', 400, { startTime: ms, fresh: false }),
+    // The API flags prices fresh: false a minute after a scrape; a minute-old price is still current.
+    ml('f', 'BetMGM', 'away', 155, { startTime: ms, fresh: false, age_seconds: 62 }),
     feedRecord('g', { sport: 'tokyo,-japan', event: 'Arthur Fils @ Valentin Vacherot', market: 'moneyline', type: 'moneyline', side: 'away', odds: 120, book: 'Pinnacle', selection_name: 'Arthur Fils' }),
   ]);
   const start = at.getTime();
   assert.deepEqual([...new Set(quotes.filter(q => q.sport === 'NHL').map(q => Date.parse(q.startTime)))], [start], 'epoch milliseconds and seconds read as one kickoff');
-  assert.deepEqual([...new Set(quotes.map(q => q.book))].sort(), ['DraftKings', 'FanDuel', 'Pinnacle']);
+  assert.deepEqual([...new Set(quotes.map(q => q.book))].sort(), ['BetMGM', 'DraftKings', 'FanDuel', 'Pinnacle']);
   assert.equal(skipped.mislabeled, 1, 'the Betr Picks game line');
-  assert.equal(skipped.stale, 1, 'the price marked fresh: false');
+  assert.equal(skipped.stale, 0, 'fresh: false alone drops nothing');
   assert.equal(quotes.find(q => q.book === 'Pinnacle').sport, 'Other');
 });

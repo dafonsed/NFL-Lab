@@ -2,7 +2,7 @@
 // the DFS lines from both against the latest sportsbook quotes. Both downloads are several MB; doing
 // this in the page froze scrolling and typing on every refresh. The page receives ready-to-use
 // records, and DFS picks only when they changed (see fetchFeed in ev.js).
-import { loadAndPrice, createDfsPricer } from './ev-feed-normalize.js?v=27';
+import { loadAndPrice, createDfsPricer } from './ev-feed-normalize.js?v=28';
 
 const pricer = createDfsPricer();
 self.onmessage = async ({ data }) => {

@@ -285,8 +285,6 @@ export function normalizeRecord(raw, { clockOffsetMs = 0 } = {}) {
     ...(Number.isFinite(liquidity) ? { liquidity: Math.max(0, liquidity) } : {}),
     // Feed times use the server's clock; shift them onto this device's clock.
     ts: new Date(observed - clockOffsetMs).toISOString(), source: 'local-api',
-    // The API says when it no longer considers a price current (`fresh: false`).
-    ...(raw.fresh === false ? { apiStale: true } : {}),
     // Optional fields the tools already use when the feed sends them: links, limits, suspension.
     ...Object.fromEntries(['betUrl', 'eventUrl', 'prefillUrl'].filter(key => usableLink(text(raw, key))).map(key => [key, text(raw, key)])),
     ...(raw.links && typeof raw.links === 'object' && !Array.isArray(raw.links) ? { links: raw.links } : {}),
@@ -691,8 +689,10 @@ export function normalizeFeed(records, { syncedAt = new Date().toISOString(), cl
     // flagged Sunday's Betr moneylines live on Friday).
     if (quote.live && quote.startTime && Date.parse(quote.startTime) > now + 5 * 60_000) quote.live = false;
     if (!quote.live && quote.startTime && Date.parse(quote.startTime) <= now) { skipped.started += 1; return false; }
-    // Pregame prices the API hasn't refreshed in 15 minutes are markets the book no longer offers.
-    if (!quote.live && !quote.ageUnknown && now - Date.parse(quote.ts) > FEED_MAX_AGE_MS || quote.apiStale) { skipped.stale += 1; return false; }
+    // Pregame prices the API hasn't refreshed in 15 minutes are markets the book no longer offers. The
+    // API's own `fresh` flag isn't used: it turns false about a minute after a scrape (FanDuel props 62
+    // seconds old on 4 Oct 2026), long before a pregame price stops being offered.
+    if (!quote.live && !quote.ageUnknown && now - Date.parse(quote.ts) > FEED_MAX_AGE_MS) { skipped.stale += 1; return false; }
     return true;
   });
   // Pick'em lines (a DFS app plus a player) are not sportsbook prices; they become DFS picks.
