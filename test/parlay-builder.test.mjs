@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { HALF_LIFE, TREND_WEIGHT, TREND_CAP, MODEL_WEIGHT, MODEL_CAP, PRICE_CALIBRATION, evaluateSide, qualifyingSides, buildParlay, relaxations, legReasons, legSummary, slateMargins, record, toAmerican, toDecimal, impliedChance } from '../public/parlay-builder.js';
+import { HALF_LIFE, BASE_WEIGHT, FAR_LINE, evaluateSide, qualifyingSides, buildParlay, relaxations, legReasons, legSummary, slateBaseRates, weightedTrend, record, toAmerican, toDecimal } from '../public/parlay-builder.js';
 import { boardLegs, createParlayPool } from '../lib/parlay-pool.mjs';
 import { requiredFeature } from '../lib/accounts/entitlements.mjs';
 import { productTools, sportDestination, workspaceProduct } from '../public/navigation.js';
@@ -9,61 +9,48 @@ import { siteContext } from '../lib/site-layout.mjs';
 
 const NOW = Date.parse('2026-10-05T12:00:00Z'), LATER = '2026-10-06T00:15:00.000Z';
 const history = (values, { home = 1, opponent = 'LV', versus = [] } = {}) => values.map((value, i) => [`2026-09-${String(28 - i).padStart(2, '0')}`, value, home, versus.includes(i) ? 1 : 0, opponent]);
-const leg = (overrides = {}) => ({ id: 'g1:p1:rec_yds', key: 'nfl:g1:p1:rec_yds', player: 'Player One', playerId: 'p1', team: 'NO', opponent: 'ATL', position: 'WR', gameId: 'g1', game: 'ATL @ NO', home: true, start: LATER, market: 'rec_yds', line: 50.5, book: 'FanDuel', books: 3, over: -110, under: -110, projection: null, model: null, status: 'Active', concern: false, lineup: null, matchup: null, pitcher: null, games: history([60, 70, 40, 80, 55, 65, 30, 90, 75, 52]), ...overrides });
+const leg = (overrides = {}) => ({ id: 'g1:p1:rec_yds', key: 'nfl:g1:p1:rec_yds', player: 'Player One', playerId: 'p1', team: 'NO', opponent: 'ATL', position: 'WR', gameId: 'g1', game: 'ATL @ NO', home: true, start: LATER, market: 'rec_yds', line: 50.5, book: 'FanDuel', books: 3, over: -110, under: -110, projection: null, status: 'Active', concern: false, lineup: null, matchup: null, pitcher: null, games: history([60, 70, 40, 80, 55, 65, 30, 90, 75, 52]), ...overrides });
 
 test('odds conversions', () => {
   assert.equal(toDecimal(-110).toFixed(4), '1.9091');
   assert.equal(toDecimal(150), 2.5);
   assert.equal(toAmerican(2.5), 150);
   assert.equal(toAmerican(1.5), -200);
-  assert.equal(impliedChance(-200).toFixed(4), '0.6667');
 });
 
-test('a side starts from the calibrated price; the trend moves it at most TREND_WEIGHT × TREND_CAP, the model by MODEL_WEIGHT of its gap', () => {
-  const c = evaluateSide(leg({ model: { over: 0.6, under: 0.4 } }), 'over', { window: '10' });
+test('the expected hit rate blends recency-weighted games with the slate base rate, worth BASE_WEIGHT games', () => {
+  const c = evaluateSide(leg(), 'over', { window: '10', base: () => 0.45 });
   // 8 of 10 over 50.5 (misses: 40 and 30 at positions 2 and 6).
   assert.deepEqual([c.recent.hits, c.recent.n, c.recent.rate], [8, 10, 0.8]);
   let weight = 0, hits = 0;
   [1, 1, 0, 1, 1, 1, 0, 1, 1, 1].forEach((hit, i) => { const w = 0.5 ** (i / HALF_LIFE); weight += w; hits += w * hit; });
   assert.ok(Math.abs(c.trend - hits / weight) < 1e-12);
-  assert.ok(Math.abs(c.market - 0.5) < 1e-12, 'a -110/-110 line is 50% no-vig');
-  assert.equal(c.priced, 0.5, 'no calibration without a sport');
-  assert.ok(Math.abs(c.trendShift - TREND_WEIGHT * TREND_CAP) < 1e-12, 'a hot trend is capped');
-  assert.ok(Math.abs(c.modelShift - MODEL_WEIGHT * Math.min(0.1, MODEL_CAP)) < 1e-12, 'the model gap is capped too');
-  assert.ok(Math.abs(c.chance - (0.5 + TREND_WEIGHT * TREND_CAP + MODEL_WEIGHT * Math.min(0.1, MODEL_CAP))) < 1e-12);
-  assert.ok(Math.abs(c.ev - (c.chance * toDecimal(-110) - 1)) < 1e-12);
-  assert.ok(Math.abs(c.gap - 0.3) < 1e-12);
-  // A cold record pulls the other way by no more than the cap.
-  const under = evaluateSide(leg(), 'under');
-  assert.equal(under.recent.hits, 2);
-  assert.ok(Math.abs(under.chance - (0.5 - TREND_WEIGHT * TREND_CAP)) < 1e-12);
-  assert.equal(evaluateSide(leg({ under: null }), 'under'), null);
-  // MLB: favorites hit more often than their no-vig price; one-sided prices overstate.
-  const [a, b] = PRICE_CALIBRATION.mlb.two, fav = evaluateSide(leg({ over: -200, under: 165, games: [] }), 'over', { sport: 'mlb' });
-  assert.ok(Math.abs(fav.priced - 1 / (1 + Math.exp(-(a + b * Math.log(fav.market / (1 - fav.market)))))) < 1e-12);
-  assert.ok(fav.priced > fav.market && fav.chance === fav.priced, 'no games: the calibrated price alone');
-  const single = evaluateSide(leg({ under: null, games: [] }), 'over', { sport: 'mlb' });
-  assert.ok(single.priced < single.market, 'an MLB one-sided price is marked down');
-  const nfl = evaluateSide(leg({ over: -200, under: 165, games: [] }), 'over', { sport: 'nfl' });
-  assert.equal(nfl.priced, nfl.market, 'other sports use the price as is');
+  assert.ok(Math.abs(c.chance - (hits + BASE_WEIGHT * 0.45) / (weight + BASE_WEIGHT)) < 1e-12);
+  assert.equal(c.baseRate, 0.45);
+  assert.ok(c.chance > 0.45 && c.chance < 0.8, 'between the slate rate and the raw trend');
+  // A longer record pulls further from the base rate than a short one with the same hit rate.
+  const short = evaluateSide(leg({ games: history([60, 70, 80, 90, 55]) }), 'over', { base: () => 0.45 });
+  const long = evaluateSide(leg({ games: history(Array(20).fill(60)) }), 'over', { base: () => 0.45 });
+  assert.ok(long.chance > short.chance);
+  assert.equal(evaluateSide(leg({ under: null }), 'under'), null, 'a side needs a posted price for the payout');
+  assert.deepEqual(weightedTrend([], 1, 'over'), { rate: null, weight: 0 });
 });
 
-test('a one-sided price loses the margin two-sided lines of its market carry on the same slate', () => {
-  const twoSided = [-120, -115, -110].map((o, i) => leg({ id: 'x' + i, over: o, under: -110 }));
-  const margin = slateMargins([...twoSided, leg({ id: 'single', under: null })]);
-  const median = impliedChance(-115) + impliedChance(-110);
-  assert.ok(Math.abs(margin('rec_yds') - median) < 1e-12);
-  const c = evaluateSide(leg({ under: null }), 'over', { margin });
-  assert.equal(c.twoSided, false);
-  assert.ok(Math.abs(c.market - impliedChance(-110) / median) < 1e-12);
-  assert.equal(slateMargins([])('rec'), 1.05);
+test('the slate base rate is the market-and-side average, else the side average, else 50%', () => {
+  const recs = ['a', 'b', 'c', 'd', 'e'].map(id => leg({ id, games: history([60, 60, 60, 60, 40]) }));
+  const base = slateBaseRates([...recs, leg({ id: 'r', market: 'rec', line: 4.5, games: history([1, 1, 1, 1, 1]) })]);
+  const overRate = weightedTrend(recs[0].games, 50.5, 'over').rate;
+  assert.ok(Math.abs(base('rec_yds', 'over') - overRate) < 1e-12);
+  // Only one 'rec' leg: falls back to every Over on the slate.
+  assert.ok(Math.abs(base('rec', 'over') - 5 * overRate / 6) < 1e-12);
+  assert.equal(slateBaseRates([])('rec', 'under'), 0.5);
 });
 
 test('pushes count against the hit rate, as on the Trends table', () => {
   assert.deepEqual(record(history([3, 4, 5]), 4, 'over'), { n: 3, hits: 1, pushes: 1, rate: 1 / 3, values: [3, 4, 5] });
 });
 
-test('qualifying sides respect the threshold, window, favorite limit, markets, injuries and start time', () => {
+test('qualifying sides respect the threshold, window, odds limit, markets, injuries and start time', () => {
   const hot = leg({ id: 'hot', playerId: 'h' });                                              // 8/10 over
   const cold = leg({ id: 'cold', playerId: 'c', games: history([10, 20, 60, 10, 20, 10, 20, 10, 20, 10]) }); // 9/10 under
   const started = leg({ id: 'started', playerId: 's', start: '2026-10-05T11:00:00Z' });
@@ -78,38 +65,36 @@ test('qualifying sides respect the threshold, window, favorite limit, markets, i
   assert.deepEqual(ids({ threshold: 70, skipInjured: false, maxFavorite: null }), ['cold:under', 'hot:over', 'hurt:over', 'juiced:over']);
   assert.deepEqual(ids({ threshold: 70, markets: ['rec'] }), []);
   assert.deepEqual(ids({ threshold: 70, excluded: ['hot:over'] }), ['cold:under']);
-  // Fewer than 5 games never qualifies; a 5-game window needs all 5.
-  assert.ok(!ids({ threshold: 50, window: '5' }).includes('short:over'));
+  assert.ok(!ids({ threshold: 50, window: '5' }).includes('short:over'), 'fewer than 5 games never qualifies');
+  const ranked = qualifyingSides(pool, { threshold: 70 }, NOW).map(c => c.chance);
+  assert.deepEqual(ranked, [...ranked].sort((a, b) => b - a), 'most likely to hit first');
 });
 
-test('the ticket takes the best sides, one per player and per-game limit, and prices the parlay', () => {
+test('the ticket takes the most likely sides, one per player and per-game limit, and prices the parlay', () => {
   const a = leg({ id: 'a', playerId: 'a', gameId: 'g1' });
   const a2 = leg({ id: 'a2', playerId: 'a', gameId: 'g1', market: 'rec', line: 4.5, games: history([6, 7, 5, 8, 6, 7, 5, 6, 9, 6]) });
   const b = leg({ id: 'b', playerId: 'b', gameId: 'g1', over: 120, under: -140 });
   const c = leg({ id: 'c', playerId: 'c', gameId: 'g2', over: -105, under: -115 });
   const d = leg({ id: 'd', playerId: 'd', gameId: 'g3', over: -150, under: 130, games: history([60, 70, 80, 90, 60, 70, 80, 90, 60, 70]) });
   const pool = { legs: [a, a2, b, c, d] };
-  const value = buildParlay(pool, { legs: 3, threshold: 70, perGame: 1 }, NOW);
-  assert.equal(value.legs.length, 3);
-  assert.equal(new Set(value.legs.map(x => x.leg.gameId)).size, 3, 'one leg per game');
-  assert.equal(new Set(value.legs.map(x => x.leg.playerId)).size, 3, 'one leg per player');
-  const scores = value.legs.map(x => Math.log(x.chance * x.decimal));
-  assert.deepEqual(scores, [...scores].sort((x, y) => y - x));
-  const t = value.ticket, decimal = value.legs.reduce((p, x) => p * x.decimal, 1);
+  const result = buildParlay(pool, { legs: 3, threshold: 70, perGame: 1 }, NOW);
+  assert.equal(result.legs.length, 3);
+  assert.equal(new Set(result.legs.map(x => x.leg.gameId)).size, 3, 'one leg per game');
+  assert.equal(new Set(result.legs.map(x => x.leg.playerId)).size, 3, 'one leg per player');
+  const chances = result.legs.map(x => x.chance);
+  assert.deepEqual(chances, [...chances].sort((x, y) => y - x));
+  const t = result.ticket, decimal = result.legs.reduce((p, x) => p * x.decimal, 1);
   assert.ok(Math.abs(t.decimal - decimal) < 1e-12);
   assert.equal(t.american, toAmerican(decimal));
   assert.ok(Math.abs(t.payout - 10 * decimal) < 1e-9);
-  assert.ok(Math.abs(t.chance - value.legs.reduce((p, x) => p * x.chance, 1)) < 1e-12);
-  assert.ok(Math.abs(t.ev - (value.legs.reduce((p, x) => p * x.chance * x.decimal, 1) - 1)) < 1e-12);
-  assert.ok(Math.abs(t.breakEven - 1 / decimal) < 1e-12);
+  assert.ok(Math.abs(t.chance - result.legs.reduce((p, x) => p * x.chance, 1)) < 1e-12);
+  assert.ok(Math.abs(t.trendChance - result.legs.reduce((p, x) => p * x.recent.rate, 1)) < 1e-12);
+  assert.ok(t.chance < t.trendChance, 'the expected chance is below the raw trend math');
+  assert.equal(t.games, 3);
   assert.equal(t.sameGame, false);
-  assert.ok(value.bench.every(x => x.blocked), 'every bench row says why it is out');
-  assert.ok(value.bench.some(x => x.blocked.reason === 'game' || x.blocked.reason === 'player'));
-  // "Most likely" ranks by chance alone: d's 100% run at -150 beats b's +120.
-  const safe = buildParlay(pool, { legs: 2, threshold: 70, goal: 'safe', perGame: 'any' }, NOW);
-  assert.equal(safe.legs[0].leg.id, 'd');
-  const chances = safe.legs.map(x => x.chance);
-  assert.deepEqual(chances, [...chances].sort((x, y) => y - x));
+  assert.ok(!('ev' in t) && !('bookChance' in t), 'no price-based estimate on the ticket');
+  assert.ok(result.bench.every(x => x.blocked), 'every bench row says why it is out');
+  assert.ok(result.bench.some(x => x.blocked.reason === 'game' || x.blocked.reason === 'player'));
   const sameGame = buildParlay(pool, { legs: 4, threshold: 70, perGame: 'any' }, NOW);
   assert.equal(sameGame.ticket.sameGame, true);
 });
@@ -119,30 +104,44 @@ test('when too few sides qualify, the builder names the change that adds legs', 
   const result = buildParlay(pool, { legs: 3, threshold: 70, perGame: 1 }, NOW);
   assert.equal(result.legs.length, 1);
   assert.equal(result.short, true);
-  const tips = relaxations(pool, { legs: 3, threshold: 70, perGame: 1 }, NOW);
-  assert.deepEqual(tips, [{ changes: { perGame: 'any' }, legs: 3 }]);
+  assert.deepEqual(relaxations(pool, { legs: 3, threshold: 70, perGame: 1 }, NOW), [{ changes: { perGame: 'any' }, legs: 3 }]);
 });
 
-test('each leg explains itself with its record, cushion, misses, matchup, model and price', () => {
-  const c = evaluateSide(leg({ projection: 62.3, model: { over: 0.58, under: 0.42 }, matchup: { rate: 165, league: 150, unit: 'WR production per opponent game' }, games: history([60, 70, 40, 80, 55, 65, 30, 90, 75, 52], { versus: [3] }) }), 'over');
+test('each leg explains itself: why it is in, what to watch, short facts, and where its expected rate comes from', () => {
+  const c = evaluateSide(leg({ projection: 62.3, matchup: { rate: 165, league: 150, unit: 'WR production per opponent game' }, games: history([60, 70, 40, 80, 55, 65, 30, 90, 75, 52], { versus: [3] }) }), 'over', { base: () => 0.45 });
   c.rank = 1;
-  const text = legReasons(c, { unit: 'yards' }).map(r => r.tone + ': ' + r.text);
-  assert.ok(text.includes('good: Over 50.5 in 8 of the last 10 games (80%).'));
-  assert.ok(text.some(t => /^good: Averaging 61\.7 yards \(median 62\.5\) in that stretch: 11\.2 above the line\.$/.test(t)), text.join('\n'));
-  assert.ok(text.includes('info: Misses in that stretch: 40, 30 (worst 30, 20.5 short).'));
-  assert.ok(text.includes('good: Against ATL: 1 of 1 (80).'));
-  assert.ok(text.includes('good: ATL allows 10% more than the league average (WR production per opponent game).'));
-  assert.ok(text.some(t => t.startsWith('good: Our projection: 62.3 yards, 11.8 above the line; the model gives the Over 58%')));
-  assert.ok(text.includes('info: FanDuel -110: no-vig chance 50.0%. Adding the trend +1 pt and our model +0.5 pts gives 51.5%, an expected return of -1.7% per dollar.'), text.join('\n'));
-  assert.ok(text.some(t => t.startsWith('warn: Red flag: the trend says 80% but the price says 50%.')));
-  assert.equal(legSummary(c, { goal: 'value', qualifying: 12 }), '#1 of 12 qualifying lines by value: 52% to hit at -110, an expected return of -1.7% per dollar; no qualifying line beats its price, and this one gives up the least.');
-  assert.equal(legSummary(c, { goal: 'safe', qualifying: 12 }), '#1 of 12 qualifying lines by chance to hit: 52% by our estimate, on a 80% trend priced at -110.');
-  const fair = evaluateSide(leg({ games: history([52, 49, 55, 48, 56, 40, 53, 47, 51, 58]) }), 'over');
-  assert.ok(!legReasons(fair).some(r => r.text.startsWith('Red flag')), 'a trend near its price is no red flag');
+  const text = legReasons(c, { unit: 'yards', label: 'Receiving yards' }).map(r => r.tone + ': ' + r.text);
+  assert.deepEqual(text, [
+    'good: Over 50.5 in 8 of the last 10',
+    'good: Averages 61.7, 11.2 yards over the line',
+    'good: ATL allows 10% more than average (WR production per opponent game)',
+    'good: Our projection: 62.3, 11.8 yards over the line',
+    'info: Median 62.5',
+    'info: Worst miss 30',
+    'info: 3 books at 50.5'
+  ]);
+  assert.ok(!text.some(t => /no-vig|expected return|edge|value/i.test(t)), 'no +EV language');
+  assert.equal(legSummary(c, { qualifying: 12, label: 'Receiving yards' }), `#1 of 12 qualifying · ${Math.round(c.chance * 100)}% expected: the last 10 games (recent ones weighted) blended with this slate's Over rate in receiving yards (45%)`);
+  assert.match(legSummary({ ...c, side: 'under' }, { qualifying: 3, label: 'RBIs' }), /Under rate in RBIs/, 'acronyms keep their case');
+  // An average on the line, a weak head-to-head and a weaker venue are risks; a strong one isn't repeated.
+  const flat = evaluateSide(leg({ line: 0.5, games: history([0, 1, 0, 0, 2, 0, 1, 0, 0, 1], { versus: [1, 4, 9] }) }), 'under');
+  const warns = legReasons(flat).filter(r => r.tone === 'warn').map(r => r.text);
+  assert.ok(warns.includes('Averages 0.5, right at the line'), warns.join(' | '));
+  assert.ok(warns.includes('0 of 3 against ATL'));
   const hurt = evaluateSide(leg({ concern: true, status: 'Questionable', books: 1 }), 'over');
   const warnings = legReasons(hurt).filter(r => r.tone === 'warn').map(r => r.text);
-  assert.ok(warnings.includes('Injury report: Questionable.'));
-  assert.ok(warnings.includes('Only one book posts this line.'));
+  assert.ok(warnings.includes('Injury report: Questionable'));
+  assert.ok(warnings.includes('Only one book posts this line'));
+});
+
+test('a line set far below the usual output carries a warning', () => {
+  // Strikeouts at 1.5 for a pitcher who strikes out 2–6 every start.
+  const far = evaluateSide(leg({ market: 'k', line: 1.5, games: history([4, 4, 6, 4, 5, 3, 2, 3, 4, 4]) }), 'over');
+  assert.ok(far.cushion >= FAR_LINE && far.farLine);
+  assert.ok(legReasons(far).some(r => r.tone === 'warn' && r.text.startsWith('Line set far below')));
+  const normal = evaluateSide(leg(), 'over');
+  assert.equal(normal.farLine, false);
+  assert.ok(!legReasons(normal).some(r => r.text.startsWith('Line set far')));
 });
 
 const nflBoard = () => ({
@@ -165,8 +164,8 @@ test('the pool keeps open, priced, unexpired lines with the trends history and o
   assert.equal(l.key, 'nfl:g1:p1:rec_yds');
   assert.equal(l.game, 'ATL @ NO');
   assert.equal(l.home, true);
-  assert.deepEqual([l.line, l.over, l.under, l.book, l.books], [50.5, -110, -110, 'FanDuel', 3]);
-  assert.deepEqual(l.model, { over: 0.55, under: 0.45 });
+  assert.deepEqual([l.line, l.over, l.under, l.book, l.books, l.projection], [50.5, -110, -110, 'FanDuel', 3, 55]);
+  assert.ok(!('model' in l), 'no model probability: the estimate is trends only');
   assert.deepEqual(l.matchup, { rate: 160, league: 150, unit: 'WR production per opponent game' });
   assert.deepEqual(l.games, [['2026-09-27', 60, 1, 1, 'ATL'], ['2026-09-20', 40, 0, 0, 'LV']]);
 });
@@ -194,6 +193,15 @@ test('the pool covers every market, reuses a recent build and reports a market t
   assert.ok(soccer.notes[0].includes('soccer'));
 });
 
+test('the parlay builder never touches the +EV odds feed or +EV code', async () => {
+  for (const file of ['../public/parlay.js', '../public/parlay-builder.js', '../lib/parlay-pool.mjs']) {
+    const source = await readFile(new URL(file, import.meta.url), 'utf8');
+    const imports = [...source.matchAll(/import[^'"]*['"]([^'"]+)['"]/g)].map(m => m[1]);
+    assert.ok(!imports.some(path => /(^|\/)ev[-.]|ev-api|odds-screen/.test(path)), `${file} imports ${imports.join(', ')}`);
+    assert.ok(!/\/api\/ev\/|sportslab-ev-workbench|devig|fairFromAmerican/i.test(source), `${file} touches +EV data or math`);
+  }
+});
+
 test('the parlay builder lives in the Trends workspace and its data needs the research plan', async () => {
   assert.equal(requiredFeature('/api/trends/parlay'), 'research');
   assert.deepEqual(siteContext(new URL('https://x.test/nfl?view=parlay')), { sport: 'nfl', section: 'parlay' });
@@ -204,5 +212,5 @@ test('the parlay builder lives in the Trends workspace and its data needs the re
   assert.ok(server.split('\n').find(line => line.includes("url.pathname === '/api/trends/parlay'"))?.includes('sharedJson('));
   assert.match(server, /context\.section === 'parlay' \? 'parlay\.html'/);
   const html = await readFile(new URL('../public/parlay.html', import.meta.url), 'utf8');
-  for (const file of ['parlay-builder.js', 'ev-advanced-math.js', 'account-sync.js', 'product-ui.js', 'research-data.js', 'ui-icons.js']) assert.ok(html.includes(`rel="modulepreload" href="/${file}"`), file);
+  for (const file of ['parlay-builder.js', 'account-sync.js', 'product-ui.js', 'research-data.js', 'ui-icons.js', 'sports-identity.js']) assert.ok(html.includes(`rel="modulepreload" href="/${file}"`), file);
 });

@@ -1,9 +1,11 @@
 import { accountStorage as storage, accountReady } from './account-sync.js';
 await accountReady;
-import { requestData, emptyBoard } from './product-ui.js';
+import { requestData, sportsbookMark } from './product-ui.js';
 import { escape as esc } from './research-data.js';
 import { icon } from './ui-icons.js';
-import { PARLAY_DEFAULTS, BACKTEST, HALF_LIFE, TREND_WEIGHT, TREND_CAP, MODEL_WEIGHT, MODEL_CAP, buildParlay, relaxations, legReasons, legSummary, americanText } from './parlay-builder.js';
+import { playerPortrait } from './sports-identity.js';
+import { syncTrendControl } from './trends-controls.js';
+import { PARLAY_DEFAULTS, BACKTEST, HALF_LIFE, BASE_WEIGHT, buildParlay, relaxations, legReasons, legSummary, americanText } from './parlay-builder.js';
 
 const $ = selector => document.querySelector(selector);
 const sport = location.pathname.split('/')[1] || 'nfl', params = new URLSearchParams(location.search);
@@ -15,175 +17,195 @@ const pct = (value, digits = 0) => Number.isFinite(value) ? (value * 100).toFixe
 const money = value => '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const num = value => Number.isFinite(value) ? Number(value.toFixed(1)).toLocaleString('en-US') : '—';
 const kickoff = iso => new Date(iso).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+const count = (n, word) => `${n.toLocaleString('en-US')} ${word}${n === 1 ? '' : 's'}`;
+const sideWord = side => side === 'over' ? 'Over' : 'Under';
 
-// The member's +EV no-vig method setting, when they've saved one, so both tools agree.
-function savedMethod() {
-  try { const method = JSON.parse(storage.getItem('sportslab-ev-workbench-v1'))?.suite?.settings?.devigMethod; return ['multiplicative', 'additive', 'power', 'probit'].includes(method) ? method : null; } catch { return null; }
-}
 function savedSettings() {
   try { const value = JSON.parse(storage.getItem(SETTINGS_KEY)); return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; } catch { return {}; }
 }
 const clean = s => ({
-  legs: Math.min(10, Math.max(2, Math.round(Number(s.legs)) || PARLAY_DEFAULTS.legs)),
+  legs: Math.min(8, Math.max(2, Math.round(Number(s.legs)) || PARLAY_DEFAULTS.legs)),
   threshold: Math.min(100, Math.max(50, Math.round(Number(s.threshold) / 5) * 5 || PARLAY_DEFAULTS.threshold)),
   window: ['5', '10', '20'].includes(String(s.window)) ? String(s.window) : PARLAY_DEFAULTS.window,
   side: ['both', 'over', 'under'].includes(s.side) ? s.side : PARLAY_DEFAULTS.side,
-  goal: ['value', 'safe'].includes(s.goal) ? s.goal : PARLAY_DEFAULTS.goal,
   perGame: ['1', '2', 'any'].includes(String(s.perGame)) ? (s.perGame === 'any' ? 'any' : Number(s.perGame)) : PARLAY_DEFAULTS.perGame,
   maxFavorite: s.maxFavorite === null ? null : [-150, -200, -300, -500].includes(Number(s.maxFavorite)) ? Number(s.maxFavorite) : PARLAY_DEFAULTS.maxFavorite,
   skipInjured: typeof s.skipInjured === 'boolean' ? s.skipInjured : PARLAY_DEFAULTS.skipInjured,
   stake: Number(s.stake) >= 1 && Number(s.stake) <= 100000 ? Number(s.stake) : PARLAY_DEFAULTS.stake,
   markets: Array.isArray(s.markets?.[sport]) ? s.markets[sport].map(String) : []
 });
-const stored = savedSettings();
-let settings = clean(stored);
-const state = { pool: null, excluded: new Set(), season: params.get('season') || '', week: params.get('week') || '', date: params.get('date') || today(), loading: false };
+let settings = clean(savedSettings());
+const state = { pool: null, excluded: new Set(), season: params.get('season') || '', week: params.get('week') || '', date: params.get('date') || today() };
 let controller, requestId = 0;
 
 function save() {
   const markets = { ...(savedSettings().markets || {}), [sport]: settings.markets };
   try { storage.setItem(SETTINGS_KEY, JSON.stringify({ ...settings, markets })); } catch {}
 }
+function change(next) { settings = clean({ ...settings, ...next, markets: { [sport]: next.markets ?? settings.markets } }); save(); render(); }
 function updateUrl() {
   const q = new URLSearchParams({ view: 'parlay' });
   if (sport === 'nfl') { if (state.season && state.week) { q.set('season', state.season); q.set('week', state.week); } }
   else q.set('date', state.date);
   history.replaceState(null, '', '/' + sport + '?' + q);
 }
-
-function syncControls() {
-  $('#pb-legs').textContent = settings.legs;
-  $('[data-legs-step="-1"]').disabled = settings.legs <= 2; $('[data-legs-step="1"]').disabled = settings.legs >= 10;
-  $('#pb-threshold').value = settings.threshold; $('#pb-threshold-value').textContent = settings.threshold + '%';
-  for (const group of document.querySelectorAll('.pb-segment')) for (const b of group.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.value === String(settings[group.dataset.setting])));
-  $('#pb-favorite').value = settings.maxFavorite === null ? '' : String(settings.maxFavorite);
-  $('#pb-stake').value = settings.stake; $('#pb-injured').checked = settings.skipInjured;
-  const markets = Object.entries(state.pool?.markets || {});
-  $('#pb-markets').innerHTML = markets.length ? markets.map(([key, m]) => `<button type="button" data-market="${esc(key)}" aria-pressed="${!settings.markets.length || settings.markets.includes(key)}">${esc(m.label)}</button>`).join('') : '<span class="pb-muted">Markets appear once lines load.</span>';
-  const changed = [settings.side !== 'both', settings.perGame !== 1, settings.maxFavorite !== -300, !settings.skipInjured, settings.markets.length > 0].filter(Boolean).length;
-  $('#pb-more-count').textContent = changed ? `· ${changed} changed` : '';
-}
-
 const slateLabel = () => {
   const s = state.pool?.slate;
-  return sport === 'nfl' ? (s?.week ? `NFL Week ${s.week}` : 'NFL') : `${sport.toUpperCase()} · ${dayLabel(s?.date || state.date)}`;
+  return sport === 'nfl' ? (s?.week ? `NFL · Week ${s.week}` : 'NFL') : `${sport.toUpperCase()} · ${dayLabel(s?.date || state.date)}`;
 };
+const marketOf = key => state.pool?.markets[key] || { label: key, unit: '' };
+
+// ---------------------------------------------------------------- controls
+function showThreshold(value) {
+  const input = $('#pb-threshold');
+  input.value = value; input.setAttribute('aria-valuetext', value + '% or better');
+  input.style.setProperty('--t', String((value - 50) / 50));
+  $('#pb-threshold-value').textContent = value + '%';
+  for (const tick of document.querySelectorAll('[data-threshold]')) tick.classList.toggle('is-on', Number(tick.dataset.threshold) <= value);
+}
+function syncControls() {
+  for (const group of document.querySelectorAll('.pb-segment')) for (const b of group.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.value === String(settings[group.dataset.setting])));
+  showThreshold(settings.threshold);
+  $('#pb-favorite').value = settings.maxFavorite === null ? '' : String(settings.maxFavorite); syncTrendControl($('#pb-favorite'));
+  $('#pb-stake').value = settings.stake; $('#pb-injured').checked = settings.skipInjured;
+  // No selection means every market; picking one narrows to it, and All clears the selection.
+  const markets = Object.entries(state.pool?.markets || {}), all = !settings.markets.length;
+  $('#pb-markets').innerHTML = markets.length ? `<button type="button" class="pb-chip-toggle is-all" data-markets-all aria-pressed="${all}">All markets</button>` + markets.map(([key, m]) => `<button type="button" class="pb-chip-toggle" data-market="${esc(key)}" aria-pressed="${!all && settings.markets.includes(key)}">${esc(m.label)}</button>`).join('') : '<span class="pb-faint">Markets appear once lines load.</span>';
+  $('#pb-markets-count').textContent = markets.length ? (all ? `All ${markets.length}` : `${settings.markets.length} of ${markets.length}`) : '';
+  const defaults = clean({ ...PARLAY_DEFAULTS, stake: settings.stake, markets: {} });
+  $('#pb-reset').disabled = !state.excluded.size && Object.keys(defaults).every(key => JSON.stringify(defaults[key]) === JSON.stringify(settings[key]));
+}
+
+// ---------------------------------------------------------------- pieces
+const dots = (c, size = 10) => `<span class="pb-dots" aria-hidden="true">${c.leg.games.slice(0, size).reverse().map(r => `<i class="${(c.side === 'over' ? r[1] > c.line : r[1] < c.line) ? 'is-hit' : r[1] === c.line ? 'is-push' : ''}"></i>`).join('')}</span>`;
+const portrait = leg => playerPortrait({ sport, name: leg.player, team: leg.team, position: leg.position, image: leg.image, playerId: leg.playerId });
+const odds = c => `<span class="pb-odds">${sportsbookMark(c.leg.book)}<b>${esc(americanText(c.price))}</b></span>`;
 function trendsLink(c) {
-  const q = new URLSearchParams({ view: 'trends', market: c.leg.market, researchPlayer: c.leg.key });
-  const s = state.pool.slate;
+  const q = new URLSearchParams({ view: 'trends', market: c.leg.market, researchPlayer: c.leg.key }), s = state.pool.slate;
   if (sport === 'nfl') { if (s.season && s.week) { q.set('season', s.season); q.set('week', s.week); } }
   else { q.set('date', s.date); if (sport === 'nba' || sport === 'nhl') q.set('game', c.leg.gameId); }
   return '/' + sport + '?' + q;
 }
-
-function gameBars(c) {
+function bars(c) {
   const rows = c.leg.games.slice(0, c.size).reverse(), values = rows.map(r => r[1]);
-  const top = Math.max(c.line * 1.4, ...values, 1), linePos = Math.min(100, (c.line / top) * 100);
-  const result = v => (c.side === 'over' ? v > c.line : v < c.line) ? 'hit' : v === c.line ? 'push' : 'miss';
+  const top = Math.max(c.line * 1.35, ...values, 1), linePos = Math.min(100, (c.line / top) * 100);
+  const result = v => (c.side === 'over' ? v > c.line : v < c.line) ? 'is-hit' : v === c.line ? 'is-push' : 'is-miss';
   const label = `Last ${rows.length} games, oldest first: ${rows.map(r => `${num(r[1])} vs ${r[4]}`).join(', ')}. Line ${num(c.line)}.`;
-  return `<div class="pb-bars" role="img" aria-label="${esc(label)}"><i class="pb-bars-line" style="bottom:${linePos}%"></i>${rows.map(r => `<span class="pb-bar ${result(r[1])}" style="height:${Math.max(3, (Math.max(0, r[1]) / top) * 100)}%" title="${esc(`${r[0]} vs ${r[4]}: ${num(r[1])}`)}"><b>${esc(num(r[1]))}</b></span>`).join('')}</div>`;
+  return `<figure class="pb-chart" role="img" aria-label="${esc(label)}"><div class="pb-bars"><i class="pb-bars-line" style="bottom:${linePos}%"><span>${esc(num(c.line))}</span></i>${rows.map(r => `<span class="pb-bar ${result(r[1])}" style="--h:${Math.max(4, (Math.max(0, r[1]) / top) * 100)}%" title="${esc(`${r[0]} vs ${r[4]}: ${num(r[1])}`)}"><b>${esc(num(r[1]))}</b></span>`).join('')}</div><figcaption>Last ${rows.length} games, oldest to newest</figcaption></figure>`;
 }
-function splitChip(name, r, active = false) {
-  return r.n ? `<span class="pb-split${active ? ' active' : ''}"><small>${name}</small><b>${r.hits}/${r.n}</b></span>` : '';
-}
+const split = (name, r, active = false) => r.n ? `<span class="pb-split${active ? ' is-active' : ''}"><small>${esc(name)}</small><b>${r.hits}/${r.n}</b></span>` : '';
 function legCard(c, index, result) {
-  const leg = c.leg, market = state.pool.markets[leg.market] || { label: leg.market, unit: '' };
-  const reasons = legReasons(c, market);
-  const initials = leg.player.split(/\s+/).map(w => w[0]).join('').slice(0, 2);
+  const leg = c.leg, market = marketOf(leg.market), reasons = legReasons(c, market);
+  const list = (tone, title, glyph) => { const items = reasons.filter(r => r.tone === tone); return items.length ? `<div class="pb-insight is-${tone}"><h4>${icon(glyph)}${title}</h4><ul>${items.map(r => `<li>${esc(r.text)}</li>`).join('')}</ul></div>` : ''; };
+  const facts = reasons.filter(r => r.tone === 'info');
   return `<li class="pb-leg">
     <div class="pb-leg-head">
-      <span class="pb-leg-number">${index + 1}</span>
-      ${leg.image ? `<img src="${esc(leg.image)}" alt="" width="44" height="48" loading="lazy">` : `<span class="td-avatar" aria-hidden="true">${esc(initials)}</span>`}
-      <div class="pb-leg-title"><h3>${esc(leg.player)}</h3><p><strong>${c.side === 'over' ? 'Over' : 'Under'} ${esc(num(c.line))} ${esc(market.label)}</strong></p><small>${esc([leg.team, leg.position].filter(Boolean).join(' · '))} · ${esc(leg.game)} · ${esc(kickoff(leg.start))}</small></div>
-      <div class="pb-price"><small>${esc(leg.book)}</small><b>${esc(americanText(c.price))}</b></div>
+      <span class="pb-leg-num">${index + 1}</span>${portrait(leg)}
+      <div class="pb-leg-main"><strong>${esc(leg.player)}</strong><span class="pb-pick">${sideWord(c.side)} ${esc(num(c.line))} ${esc(market.label)}</span><small>${esc([leg.team, leg.position].filter(Boolean).join(' · '))} · ${esc(leg.game)} · ${esc(kickoff(leg.start))}</small></div>
+      ${odds(c)}
     </div>
-    <div class="pb-leg-body">
-      <div class="pb-splits">${splitChip('L5', c.l5, settings.window === '5')}${splitChip('L10', c.l10, settings.window === '10')}${splitChip('L20', c.l20, settings.window === '20')}${splitChip('vs ' + leg.opponent, c.h2h)}${c.venue ? splitChip(leg.home ? 'Home' : 'Away', c.venue) : ''}<span class="pb-split pb-estimate"><small>Our estimate</small><b>${pct(c.chance)}</b></span><span class="pb-split"><small>Book</small><b>${pct(c.market)}</b></span></div>
-      ${gameBars(c)}
-      <p class="pb-leg-summary">${esc(legSummary(c, { goal: settings.goal, qualifying: result.qualifying }))}</p>
-      <ul class="pb-reasons">${reasons.map(r => `<li class="${r.tone}">${icon(r.tone === 'good' ? 'check' : r.tone === 'warn' ? 'info' : 'tag')}<span>${esc(r.text)}</span></li>`).join('')}</ul>
-      <div class="pb-leg-actions"><button type="button" class="button subtle" data-swap="${esc(c.id)}">${icon('refresh')}<span>Swap this leg</span></button><a class="button subtle" href="${esc(trendsLink(c))}">${icon('trends')}<span>Open in Trends</span></a></div>
+    <div class="pb-leg-stats">
+      <div class="pb-rate"><span class="pb-rate-value">${c.recent.hits}/${c.recent.n}</span><small>last ${c.recent.n}</small>${dots(c, c.size)}</div>
+      <div class="pb-meter"><span class="pb-meter-value">${pct(c.chance)}</span><small>expected</small><i><b style="width:${(c.chance * 100).toFixed(1)}%"></b></i></div>
+      <div class="pb-splits">${split('L5', c.l5, settings.window === '5')}${split('L10', c.l10, settings.window === '10')}${split('L20', c.l20, settings.window === '20')}${split('vs ' + leg.opponent, c.h2h)}${c.venue ? split(leg.home ? 'Home' : 'Away', c.venue) : ''}</div>
     </div>
+    ${bars(c)}
+    <div class="pb-insights">${list('good', "Why it's in", 'check')}${list('warn', 'Watch for', 'info')}</div>
+    ${facts.length ? `<ul class="pb-facts">${facts.map(r => `<li>${esc(r.text)}</li>`).join('')}</ul>` : ''}
+    <div class="pb-leg-foot"><p>${esc(legSummary(c, { qualifying: result.qualifying, label: market.label }))}</p><div class="pb-leg-actions"><button type="button" class="pb-pill" data-swap="${esc(c.id)}">${icon('refresh')}<span>Swap</span></button><a class="pb-pill" href="${esc(trendsLink(c))}">${icon('trends')}<span>Open in Trends</span></a></div></div>
   </li>`;
 }
+const relaxLabel = c => c.threshold !== undefined ? `Lower the trend to ${c.threshold}%` : c.perGame ? 'Allow same-game legs' : c.maxFavorite === null ? 'Remove the odds limit' : c.side ? 'Use Overs and Unders' : c.skipInjured === false ? 'Include injury-listed players' : 'Use every market';
+const relaxButton = (t, primary = false) => `<button class="${primary ? 'pb-cta' : 'pb-pill'}" type="button" data-relax='${esc(JSON.stringify(t.changes))}'>${esc(relaxLabel(t.changes))} <span class="pb-soft">→ ${t.legs} leg${t.legs === 1 ? '' : 's'}</span></button>`;
+const emptyState = (glyph, title, text, actions = '') => `<div class="pb-empty"><span class="pb-cta-icon" aria-hidden="true">${icon(glyph)}</span><strong>${esc(title)}</strong><p>${esc(text)}</p>${actions ? `<div class="pb-empty-actions">${actions}</div>` : ''}</div>`;
+const skeleton = () => `<div class="pb-skeleton" aria-hidden="true"><div class="pb-skeleton-summary"><b></b><b></b></div>${[0, 1, 2].map(() => '<div class="pb-skeleton-row"><i></i><span><b></b><b></b></span><em></em></div>').join('')}</div><p class="pb-faint pb-loading-note">Gathering every posted line and each player's recent games. The first load after a quiet spell can take up to a minute.</p>`;
 
 function whyText(result) {
-  const s = settings, t = result.ticket, n = result.legs.length;
+  const s = settings, t = result.ticket, n = result.legs.length, kind = s.side === 'over' ? 'Over' : s.side === 'under' ? 'Under' : 'side';
   const rule = s.perGame === 1 ? 'one per player and one per game, so no two legs ride on the same game' : s.perGame === 2 ? 'one per player and at most two per game' : 'one per player';
-  const kind = s.side === 'over' ? 'Over' : s.side === 'under' ? 'Under' : 'side';
-  const lines = [`Out of ${result.qualifying} ${kind}${result.qualifying === 1 ? '' : 's'} that hit in at least ${s.threshold}% of the last ${s.window} games (${result.players} player${result.players === 1 ? '' : 's'}, ${result.games} game${result.games === 1 ? '' : 's'}), these ${n} rank highest by ${s.goal === 'value' ? 'expected return' : 'chance to hit'}, with ${rule}.`];
-  lines.push(`If every trend simply held, this ticket would hit ${pct(t.trendChance)}. It won't: on ${BACKTEST.hotSides.toLocaleString('en-US')} past lines that hit 70%+ of their last 10 games, ${pct(BACKTEST.hotActual)} went on to hit, about what their prices said (${pct(BACKTEST.hotPrice)}), not the ${pct(BACKTEST.hotTrend)} their trends said. Books set these lines knowing the trends. So each leg's chance starts from its price and moves only as far as the trend${result.legs.some(c => c.model !== null) ? ' and our projection model' : ''} earned on past slates. That gives ${pct(t.chance, 1)}; the prices alone imply ${pct(t.bookChance, 1)}. At ${americanText(t.american)} the ticket needs ${pct(t.breakEven, 1)} to break even.`);
-  const losing = result.legs.filter(c => c.ev <= 0).length;
-  lines.push(t.ev > 0 ? `By our estimate that's an expected return of +${pct(t.ev, 1)} per dollar.` : `By our estimate it returns ${pct(t.ev, 1)} per dollar${losing ? `: ${losing === n ? 'none' : n - losing} of the ${n} legs ${losing === n ? 'beat' : 'beats'} ${losing === n ? 'their' : 'its'} price` : ''}. Every parlay pays the book's margin once per leg; this is the ticket that gives up the least while meeting your settings.`);
-  return lines;
+  return [
+    `Out of ${count(result.qualifying, kind)} that hit in at least ${s.threshold}% of the last ${s.window} games (${count(result.players, 'player')}, ${count(result.games, 'game')}), these ${n} have the highest expected hit rates, with ${rule}.`,
+    `If every trend held, this ticket would hit ${pct(t.trendChance)}. Trends cool off: on ${BACKTEST.hotSides.toLocaleString('en-US')} past lines that hit 70%+ of their last 10 games, ${pct(BACKTEST.hotActual)} hit the next time, not ${pct(BACKTEST.hotTrend)}. Using each leg's expected hit rate instead, the ticket lands about ${pct(t.chance, 1)} of the time.`
+  ];
+}
+function ticketView(result) {
+  const t = result.ticket, s = settings;
+  const notes = [
+    ...state.pool.notes.map(n => `<div class="pb-note">${icon('info')}<span>${esc(n)}</span></div>`),
+    result.short ? `<div class="pb-note is-warn">${icon('info')}<div><span>Only ${count(result.legs.length, 'line')} can join a ${s.legs}-leg ticket under these settings.</span><div class="pb-note-actions">${relaxations(state.pool, { ...settings, excluded: [...state.excluded] }).slice(0, 3).map(r => relaxButton(r)).join('')}</div></div></div>` : '',
+    t.sameGame ? `<div class="pb-note">${icon('info')}<span>Some legs share a game. Books price those together as a same-game parlay, so the payout will differ from these multiplied odds, and the legs tend to hit or miss together.</span></div>` : ''
+  ].join('');
+  const swaps = state.excluded.size ? `<button type="button" class="pb-text-button" data-reset-swaps>Undo ${count(state.excluded.size, 'swap')}</button>` : '';
+  return `${notes}
+    <div class="pb-summary">
+      <div class="pb-payout"><span class="pb-overline">${result.legs.length}-leg parlay · ${esc(slateLabel())}</span><strong class="pb-big-odds">${esc(americanText(t.american))}</strong><span class="pb-pays">${esc(money(s.stake))} pays <b>${esc(money(t.payout))}</b></span></div>
+      <dl class="pb-mini-stats">
+        <div class="is-accent"><dt>Hit chance</dt><dd>${pct(t.chance, 1)}</dd><small>expected, legs independent</small></div>
+        <div><dt>If trends held</dt><dd>${pct(t.trendChance, 1)}</dd><small>raw L${esc(s.window)} rates</small></div>
+        <div><dt>Avg hit rate</dt><dd>${pct(t.averageRate)}</dd><small>last ${esc(s.window)}, per leg</small></div>
+        <div><dt>Games</dt><dd>${t.games}</dd><small>${t.sameGame ? 'some share a game' : 'one leg each'}</small></div>
+      </dl>
+    </div>
+    <div class="pb-why"><h3>Why these legs</h3>${whyText(result).map(p => `<p>${esc(p)}</p>`).join('')}${swaps}</div>
+    <ol class="pb-legs">${result.legs.map((c, i) => legCard(c, i, result)).join('')}</ol>`;
+}
+function benchView(result) {
+  const why = c => c.blocked.reason === 'player' ? `Same player as leg ${result.legs.indexOf(c.blocked.by) + 1}` : c.blocked.reason === 'game' ? `Same game as leg ${result.legs.indexOf(c.blocked.by) + 1}` : `Next in line · #${c.rank}`;
+  return result.bench.map(c => `<li><div class="pb-row">${portrait(c.leg)}<span class="pb-row-main"><strong>${esc(c.leg.player)}</strong><small>${sideWord(c.side)} ${esc(num(c.line))} ${esc(marketOf(c.leg.market).label)} · ${esc(c.leg.game)}</small>${dots(c, c.size)}</span><span class="pb-tag">${esc(why(c))}</span>${odds(c)}<span class="pb-row-side"><strong>${pct(c.chance)}</strong><small>${c.recent.hits}/${c.recent.n} · expected</small></span></div></li>`).join('');
+}
+function methodView() {
+  return `<div class="pb-method-grid">
+    <div><h3>${icon('filter')}What qualifies</h3><p>Every player line still open on this slate, in every market, Over and Under, from the same public lines the Trends boards show. A side qualifies when it hit at least your threshold over your window (at least 5 games), its odds are within your limit, and its game hasn't started. Players on the injury report are skipped unless you turn that off.</p></div>
+    <div><h3>${icon('trends')}Expected hit rate</h3><p>Hit rates over a few games run hot: on ${BACKTEST.sides.toLocaleString('en-US')} past Overs and Unders (NFL weeks 1–4 of 2026, MLB July 20 to September 27, 2026), lines that hit 70%+ of their last 10 games went on to hit ${pct(BACKTEST.hotActual)}, not ${pct(BACKTEST.hotTrend)}. So each side blends the player's last 20 games (newer ones count more; a game's weight halves every ${HALF_LIFE} games back) with how often that side of that market hit across the slate, counted as ${BASE_WEIGHT} games. On those past slates it predicted ${pct(BACKTEST.hotEstimate)} for that group.</p></div>
+    <div><h3>${icon('parlay')}Picking legs</h3><p>Legs are taken highest expected hit rate first, one per player and within your per-game limit. In September games, the top tenth of hot lines by this rate hit ${pct(BACKTEST.topEstimateHit)}, against ${pct(BACKTEST.topRawHit)} picking by raw last-10 rate. Lines set far from a player's usual output are flagged: they hit ${pct(BACKTEST.farLineActual)}, against ${pct(BACKTEST.normalActual)} normally.</p></div>
+    <div><h3>${icon('info')}Keep in mind</h3><p>Past hit rates don't guarantee future results, and the ticket chance treats legs as independent. Odds only set the payout; they come from a public comparison of US books and can move, so check your book before you bet.</p></div>
+  </div>`;
 }
 
-function benchTable(result) {
-  if (!result.bench.length) return '';
-  const why = c => c.blocked.reason === 'player' ? `Same player as leg ${result.legs.indexOf(c.blocked.by) + 1}` : c.blocked.reason === 'game' ? `Same game as leg ${result.legs.indexOf(c.blocked.by) + 1}` : `Next in line (#${c.rank})`;
-  return `<section class="pb-bench" aria-labelledby="pb-bench-title"><h2 id="pb-bench-title">Next best lines</h2><p class="pb-muted">What would come in if you swap a leg, and why each one is out.</p><div class="pb-bench-scroll"><table><thead><tr><th scope="col">Player</th><th scope="col">Pick</th><th scope="col">Price</th><th scope="col">L${esc(settings.window)}</th><th scope="col">Estimate</th><th scope="col">Why it's out</th></tr></thead><tbody>${result.bench.map(c => `<tr><th scope="row">${esc(c.leg.player)}<small>${esc(c.leg.game)}</small></th><td>${c.side === 'over' ? 'Over' : 'Under'} ${esc(num(c.line))} ${esc(state.pool.markets[c.leg.market]?.label || c.leg.market)}</td><td>${esc(americanText(c.price))}</td><td>${c.recent.hits}/${c.recent.n}</td><td>${pct(c.chance)} <small>vs ${pct(c.market)}</small></td><td>${esc(why(c))}</td></tr>`).join('')}</tbody></table></div></section>`;
+// ---------------------------------------------------------------- render
+function hero(result) {
+  const pool = state.pool, now = Date.now(), open = pool ? pool.legs.filter(l => Date.parse(l.start) > now) : [];
+  $('#pb-slate').textContent = pool ? slateLabel() : 'Loading the slate';
+  $('#pb-asof').textContent = pool?.linesAt ? 'Lines as of ' + new Date(pool.linesAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'Posted lines';
+  $('#pb-stat-lines').textContent = pool ? open.length.toLocaleString('en-US') : '—';
+  $('#pb-stat-players').textContent = pool ? new Set(open.map(l => l.gameId + ':' + l.playerId)).size.toLocaleString('en-US') : '—';
+  $('#pb-stat-games').textContent = pool ? new Set(open.map(l => l.gameId)).size.toLocaleString('en-US') : '—';
+  $('#pb-stat-qualify-label').textContent = `Hit ${settings.threshold}%+ of last ${settings.window}`;
+  $('#pb-stat-qualify').textContent = result ? result.qualifying.toLocaleString('en-US') : '—';
 }
-
-const capPoints = v => { const n = Number((v * 100).toFixed(2)); return `${n} point${n === 1 ? '' : 's'}`; };
-function methodNote() {
-  return `<details class="pb-method"><summary>${icon('info')}<span>How the builder decides</span></summary><div>
-    <p><strong>Qualifying lines.</strong> Every player line a sportsbook still offers on this slate, in every market, Over and Under. A side qualifies when it hit at least your threshold over your chosen window (at least 5 games), its price is no shorter than your favorite limit, and the game hasn't started. Players on the injury report are skipped unless you turn that off.</p>
-    <p><strong>What we tested.</strong> Before building this we checked trends against ${BACKTEST.sides.toLocaleString('en-US')} past Overs and Unders (NFL weeks 1–4 of 2026, MLB July 20 to September 27, 2026). Raw hit rates predicted results much worse than the books' own prices. Lines that hit 70%+ of their last 10 games went on to hit ${pct(BACKTEST.hotActual)}, against ${pct(BACKTEST.hotPrice)} from their no-vig prices and ${pct(BACKTEST.hotTrend)} from their trends. When a trend beat its price by 30 points or more, those lines hit ${pct(BACKTEST.wideGapActual)}: right at their prices (${pct(BACKTEST.wideGapPrice)}), nowhere near their trends (${pct(BACKTEST.wideGapTrend)}).</p>
-    <p><strong>The estimate.</strong> So each side's chance is the book's no-vig price (in MLB, adjusted for a bias past results showed: favorites hit a little more often than priced, and prices posted on one side only run high), plus ${TREND_WEIGHT * 100}% of the gap between the player's recent record and that price (newer games count more), at most ${capPoints(TREND_WEIGHT * TREND_CAP)}, plus ${MODEL_WEIGHT * 100}% of our projection model's gap from the price, at most ${capPoints(MODEL_WEIGHT * MODEL_CAP)}. In later games, the top tenth of hot lines by this estimate roughly broke even on single bets (+${pct(BACKTEST.topEstimateRoi, 1)}); the top tenth by how far the trend beat the price lost ${pct(-BACKTEST.topTrendRoi, 1)}, and all hot lines lost ${pct(-BACKTEST.hotRoi, 1)}.</p>
-    <p><strong>Picking legs.</strong> "Best value" ranks by expected return (estimate × decimal odds); "Most likely to hit" ranks by the estimate alone. Legs are taken best first, one per player, and with your per-game limit. Ticket odds multiply the legs' prices, which is what books pay on legs from different games. A red flag marks a leg whose trend beats its price by 30+ points: those are where the book most often knows something the record doesn't. Same-game parlays are re-priced by the book for correlation, so their real payout differs.</p>
-    <p><strong>Limits.</strong> Past hit rates don't guarantee future results. The ticket chance assumes the legs are independent. Prices come from a public comparison of US books and can move; check your book before you bet.</p>
-  </div></details>`;
-}
-
 function render() {
-  const pool = state.pool;
   syncControls();
-  if (!pool) return;
-  const now = Date.now(), open = pool.legs.filter(l => Date.parse(l.start) > now), openGames = pool.games.filter(g => Date.parse(g.start) > now).length;
-  const lines = `${open.length} posted line${open.length === 1 ? '' : 's'} · ${openGames} game${openGames === 1 ? '' : 's'} · ${slateLabel()}${pool.linesAt ? ' · lines as of ' + new Date(pool.linesAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''}`;
-  $('#pb-status').textContent = lines;
-  $('#pb-result').setAttribute('aria-busy', 'false');
+  const pool = state.pool, result$ = $('#pb-result'), chip = $('#pb-ticket-chip');
+  $('#pb-bench').hidden = true; chip.hidden = true;
+  if (!pool) { hero(null); return; }
+  result$.setAttribute('aria-busy', 'false');
+  const now = Date.now(), open = pool.legs.filter(l => Date.parse(l.start) > now);
   if (!open.length) {
-    const next = sport === 'nfl' ? (pool.weeks || []).filter(w => w.season === pool.slate.season && w.week === pool.slate.week + 1)[0] : null;
-    const actions = sport === 'nfl' ? (next ? `<button class="button subtle" type="button" data-week="${next.season}:${next.week}">Try Week ${next.week}</button>` : '') : `<button class="button subtle" type="button" data-date="${shiftDay(state.date, 1)}">Next day · ${esc(dayLabel(shiftDay(state.date, 1)))}</button>`;
-    const message = pool.notes.find(n => /soccer/.test(n)) || (sport === 'nfl' ? 'Every game on this week\'s slate has started or has no posted player lines yet. Lines for the next week usually post early in the week.' : 'No game on this date has posted player lines that are still open. Try another date.');
-    $('#pb-result').innerHTML = emptyBoard('No open lines to build from', message, actions);
+    hero(null);
+    const next = sport === 'nfl' ? (pool.weeks || []).find(w => w.season === pool.slate.season && w.week === pool.slate.week + 1) : null;
+    const action = sport === 'nfl' ? (next ? `<button class="pb-cta" type="button" data-week="${next.season}:${next.week}">Try Week ${next.week}</button>` : '') : `<button class="pb-cta" type="button" data-date="${shiftDay(state.date, 1)}">Next day · ${esc(dayLabel(shiftDay(state.date, 1)))}</button>`;
+    const message = pool.notes.find(n => /soccer/.test(n)) || (sport === 'nfl' ? "Every game on this week's slate has started or has no posted player lines yet. Next week's lines usually post early in the week." : 'No game on this date has open player lines. Try another date.');
+    result$.innerHTML = emptyState('calendar', 'No open lines to build from', message, action);
     return;
   }
-  const result = buildParlay(pool, { ...settings, excluded: [...state.excluded], method: savedMethod() || 'multiplicative' }, now);
-  const notes = pool.notes.map(n => `<div class="td-notice">${esc(n)}</div>`).join('');
-  const swaps = state.excluded.size ? `<button type="button" class="pb-link" data-reset-swaps>Undo ${state.excluded.size} swap${state.excluded.size > 1 ? 's' : ''}</button>` : '';
-  if (!result.legs.length || result.legs.length < 2) {
+  const result = buildParlay(pool, { ...settings, excluded: [...state.excluded] }, now);
+  hero(result);
+  if (result.legs.length < 2) {
     const tips = relaxations(pool, { ...settings, excluded: [...state.excluded] }, now);
-    $('#pb-result').innerHTML = notes + emptyBoard(result.qualifying ? `Only ${result.legs.length} line can join a ticket` : 'No lines meet these settings', `${result.qualifying} side${result.qualifying === 1 ? '' : 's'} hit at least ${settings.threshold}% of the last ${settings.window} games${result.qualifying ? ', all on the same player or game' : ''}. Loosen a setting to build a parlay.`, tips.map(relaxButton).join('') + swaps);
+    const swaps = state.excluded.size ? `<button type="button" class="pb-pill" data-reset-swaps>Undo ${count(state.excluded.size, 'swap')}</button>` : '';
+    const text = result.qualifying ? `${count(result.qualifying, 'side')} hit at least ${settings.threshold}% of the last ${settings.window} games, but all on the same player or game. Loosen a setting to build a parlay.` : `No side hit at least ${settings.threshold}% of the last ${settings.window} games under these settings. Loosen a setting to build a parlay.`;
+    result$.innerHTML = emptyState('parlay', result.qualifying ? 'Not enough lines for a parlay yet' : 'No lines meet these settings', text, tips.map((t, i) => relaxButton(t, i === 0)).join('') + swaps);
     return;
   }
-  const t = result.ticket;
-  const short = result.short ? `<div class="td-notice">Only ${result.legs.length} lines meet your settings for a ${settings.legs}-leg ticket. <span class="pb-relax">${relaxations(pool, { ...settings, excluded: [...state.excluded] }, now).slice(0, 3).map(relaxButton).join('')}</span></div>` : '';
-  const sameGame = t.sameGame ? '<div class="td-notice">Two or more legs share a game. Books price same-game legs together as a same-game parlay, so the payout will differ from these multiplied odds, and the legs move together more than the ticket chance assumes.</div>' : '';
-  $('#pb-result').innerHTML = `${notes}${short}${sameGame}
-    <section class="pb-ticket" aria-labelledby="pb-ticket-title">
-      <header class="pb-ticket-head">
-        <div class="pb-ticket-price"><span class="pb-kicker" id="pb-ticket-title">${result.legs.length}-leg parlay · ${esc(slateLabel())}</span><strong>${esc(americanText(t.american))}</strong><small>${esc(money(settings.stake))} pays ${esc(money(t.payout))}</small></div>
-        <dl class="pb-metrics">
-          <div><dt>Our hit chance</dt><dd>${pct(t.chance, 1)}</dd><small>needs ${pct(t.breakEven, 1)} to break even</small></div>
-          <div><dt>Book's chance</dt><dd>${pct(t.bookChance, 1)}</dd><small>from no-vig prices</small></div>
-          <div><dt>If trends held</dt><dd>${pct(t.trendChance, 1)}</dd><small>raw L${esc(settings.window)} rates multiplied</small></div>
-          <div class="${t.ev > 0 ? 'positive' : 'negative'}"><dt>Expected return</dt><dd>${t.ev > 0 ? '+' : ''}${pct(t.ev, 1)}</dd><small>per dollar, by our estimate</small></div>
-        </dl>
-      </header>
-      <div class="pb-why"><h2>Why these legs</h2>${whyText(result).map(p => `<p>${esc(p)}</p>`).join('')}${swaps ? `<p>${swaps}</p>` : ''}</div>
-      <ol class="pb-legs">${result.legs.map((c, i) => legCard(c, i, result)).join('')}</ol>
-    </section>
-    ${benchTable(result)}
-    ${methodNote()}`;
+  chip.hidden = false; chip.textContent = `${result.legs.length} legs`;
+  result$.innerHTML = ticketView(result);
+  if (result.bench.length) { $('#pb-bench').hidden = false; $('#pb-bench-list').innerHTML = benchView(result); }
 }
 
 async function load({ force = false } = {}) {
   const id = ++requestId; controller?.abort(); controller = new AbortController();
-  state.loading = true; $('#pb-refresh').disabled = true; $('#pb-result').setAttribute('aria-busy', 'true');
-  $('#pb-status').textContent = 'Loading posted lines…';
-  if (!state.pool) $('#pb-result').innerHTML = '<div class="td-empty"><div class="loader"></div><h3>Gathering every posted line</h3><p>Each market\'s lines and every player\'s recent games. The first load after a quiet spell can take up to a minute.</p></div>';
+  $('#pb-refresh').disabled = true; $('#pb-result').setAttribute('aria-busy', 'true');
+  if (!state.pool) $('#pb-result').innerHTML = skeleton();
   const q = new URLSearchParams({ sport });
   if (sport === 'nfl') { if (state.season && state.week) { q.set('season', state.season); q.set('week', state.week); } }
   else q.set('date', state.date);
@@ -197,27 +219,30 @@ async function load({ force = false } = {}) {
     if (sport === 'nfl') {
       const current = pool.slate, weeks = (pool.weeks || []).filter(w => w.season === current.season && w.week >= current.week).sort((a, b) => a.week - b.week).slice(0, 4);
       $('#pb-week').innerHTML = '<option value="">This week · automatic</option>' + weeks.map(w => `<option value="${w.season}:${w.week}">${w.season} · Week ${w.week}</option>`).join('');
-      $('#pb-week').value = state.season && state.week ? `${state.season}:${state.week}` : '';
+      $('#pb-week').value = state.season && state.week ? `${state.season}:${state.week}` : ''; syncTrendControl($('#pb-week'));
     } else $('#pb-date').value = state.date;
     updateUrl(); render();
   } catch (error) {
     if (id !== requestId || error.name === 'AbortError') return;
-    state.pool = null;
-    $('#pb-status').textContent = 'Lines could not load';
+    state.pool = null; hero(null);
     $('#pb-result').setAttribute('aria-busy', 'false');
-    $('#pb-result').innerHTML = emptyBoard('Lines could not load', error.message, '<button class="button subtle" type="button" data-retry>Try again</button>');
-  } finally { if (id === requestId) { state.loading = false; $('#pb-refresh').disabled = false; } }
+    $('#pb-result').innerHTML = emptyState('info', 'Lines could not load', error.message, '<button class="pb-cta" type="button" data-retry>Try again</button>');
+  } finally { if (id === requestId) $('#pb-refresh').disabled = false; }
 }
 
-const relaxLabel = c => c.threshold !== undefined ? `Lower the trend to ${c.threshold}%` : c.perGame ? 'Allow same-game legs' : c.maxFavorite === null ? 'Remove the favorite limit' : c.side ? 'Allow Overs and Unders' : c.skipInjured === false ? 'Include injury-listed players' : 'Use every market';
-const relaxButton = t => `<button class="button subtle" type="button" data-relax='${esc(JSON.stringify(t.changes))}'>${esc(relaxLabel(t.changes))} → ${t.legs} leg${t.legs === 1 ? '' : 's'}</button>`;
-function change(next) { settings = clean({ ...settings, ...next, markets: { [sport]: next.markets ?? settings.markets } }); save(); render(); }
-
+// ---------------------------------------------------------------- wiring
+for (const node of document.querySelectorAll('[data-pb-icon]')) node.outerHTML = icon(node.dataset.pbIcon);
+const sports = document.querySelector('.site-sports');
+if (sports) $('#pb-sports').append(sports);
 $('#pb-week-label').hidden = sport !== 'nfl'; $('#pb-date-label').hidden = sport === 'nfl';
 $('#pb-date').value = state.date;
+$('#pb-method').innerHTML = methodView();
 $('#pb-refresh').addEventListener('click', () => load({ force: true }));
+// Back to the default ticket; the member's stake stays.
+$('#pb-reset').addEventListener('click', () => { state.excluded.clear(); change({ ...PARLAY_DEFAULTS, stake: settings.stake, markets: [] }); });
 $('#pb-form').addEventListener('submit', e => e.preventDefault());
-$('#pb-threshold').addEventListener('input', e => { $('#pb-threshold-value').textContent = e.target.value + '%'; });
+$('#pb-threshold').addEventListener('input', e => showThreshold(Number(e.target.value)));
+$('#pb-range-ticks').addEventListener('click', e => { const tick = e.target.closest('[data-threshold]'); if (tick) { change({ threshold: Number(tick.dataset.threshold) }); $('#pb-threshold').focus({ preventScroll: true }); } });
 $('#pb-threshold').addEventListener('change', e => change({ threshold: Number(e.target.value) }));
 $('#pb-favorite').addEventListener('change', e => change({ maxFavorite: e.target.value === '' ? null : Number(e.target.value) }));
 $('#pb-stake').addEventListener('change', e => change({ stake: Number(e.target.value) }));
@@ -226,21 +251,22 @@ $('#pb-week').addEventListener('change', e => { [state.season, state.week] = e.t
 $('#pb-date').addEventListener('change', e => { if (!e.target.value) return; state.date = e.target.value; state.excluded.clear(); load(); });
 document.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.legsStep) change({ legs: settings.legs + Number(b.dataset.legsStep) });
   const segment = b.closest('.pb-segment');
-  if (segment && b.dataset.value) change({ [segment.dataset.setting]: segment.dataset.setting === 'perGame' && b.dataset.value !== 'any' ? Number(b.dataset.value) : b.dataset.value });
+  if (segment && b.dataset.value) {
+    const key = segment.dataset.setting, value = key === 'legs' || key === 'perGame' && b.dataset.value !== 'any' ? Number(b.dataset.value) : b.dataset.value;
+    change({ [key]: value }); document.querySelector(`.pb-segment[data-setting="${key}"] [data-value="${b.dataset.value}"]`)?.focus({ preventScroll: true });
+  }
   if (b.dataset.market && b.closest('#pb-markets')) {
-    const all = Object.keys(state.pool?.markets || {}), on = new Set(settings.markets.length ? settings.markets : all);
+    const all = Object.keys(state.pool?.markets || {}), on = new Set(settings.markets);
     on.has(b.dataset.market) ? on.delete(b.dataset.market) : on.add(b.dataset.market);
-    if (!on.size) return;
     change({ markets: on.size === all.length ? [] : [...on] });
     document.querySelector(`#pb-markets [data-market="${CSS.escape(b.dataset.market)}"]`)?.focus({ preventScroll: true });
   }
-  if (b.hasAttribute('data-markets-all')) change({ markets: [] });
+  if (b.hasAttribute('data-markets-all')) { change({ markets: [] }); $('#pb-markets [data-markets-all]')?.focus({ preventScroll: true }); }
   if (b.dataset.swap) {
     const index = [...document.querySelectorAll('[data-swap]')].indexOf(b);
     state.excluded.add(b.dataset.swap); render();
-    document.querySelectorAll('[data-swap]')[index]?.closest('.pb-leg')?.querySelector('h3')?.scrollIntoView({ block: 'nearest' });
+    document.querySelectorAll('.pb-leg')[index]?.scrollIntoView({ block: 'nearest' });
   }
   if (b.hasAttribute('data-reset-swaps')) { state.excluded.clear(); render(); }
   if (b.dataset.relax) { try { change(JSON.parse(b.dataset.relax)); } catch {} }
@@ -248,6 +274,5 @@ document.addEventListener('click', e => {
   if (b.dataset.date) { state.date = b.dataset.date; $('#pb-date').value = state.date; state.excluded.clear(); load(); }
   if (b.hasAttribute('data-retry')) load({ force: true });
 });
-$('#pb-refresh').innerHTML = icon('refresh') + '<span>Refresh lines</span>';
-syncControls();
+syncControls(); hero(null);
 await load();

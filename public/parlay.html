@@ -4,37 +4,84 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#08080a"><meta name="description" content="Build a parlay from player trends: choose the legs and the hit-rate threshold, and see why each line made the ticket.">
   <title>Parlay Builder · VisualOdds</title><link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/trends.css"><link rel="stylesheet" href="/parlay.css"><script type="module" src="/parlay.js"></script>
-  <link rel="modulepreload" href="/account-sync.js"><link rel="modulepreload" href="/product-ui.js"><link rel="modulepreload" href="/research-data.js"><link rel="modulepreload" href="/ui-icons.js"><link rel="modulepreload" href="/parlay-builder.js"><link rel="modulepreload" href="/ev-advanced-math.js">
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/parlay.css?v=2"><script type="module" src="/parlay.js?v=2"></script>
+  <link rel="modulepreload" href="/account-sync.js"><link rel="modulepreload" href="/product-ui.js"><link rel="modulepreload" href="/research-data.js"><link rel="modulepreload" href="/ui-icons.js"><link rel="modulepreload" href="/parlay-builder.js"><link rel="modulepreload" href="/sports-identity.js"><link rel="modulepreload" href="/platform-catalog.js"><link rel="modulepreload" href="/trends-controls.js"><link rel="modulepreload" href="/calendar-control.js">
 </head>
-<body class="trends-workspace parlay-workspace">
+<body class="parlay-page">
   <a class="skip" href="#main">Skip to the parlay builder</a>
   <!--site-header-->
   <main id="main" tabindex="-1">
-    <div class="page-heading"><div><div class="eyebrow">TRENDS PARLAY BUILDER</div><h1>Parlay builder<span class="accent">.</span></h1><p>Choose how many legs and how hot each trend must be. The builder picks from every posted line on the slate and shows why each one made the ticket.</p></div><button id="pb-refresh" class="button subtle" type="button">↻ Refresh lines</button></div>
-    <form id="pb-form" class="pb-controls" aria-label="Parlay settings" novalidate>
-      <div class="pb-row">
-        <label class="pb-field" id="pb-week-label" hidden><span>NFL week</span><select id="pb-week" name="week"><option value="">This week · automatic</option></select></label>
-        <label class="pb-field" id="pb-date-label" hidden><span>Game date</span><input type="date" id="pb-date" name="date" required></label>
-        <fieldset class="pb-field pb-legs"><legend>Legs</legend><div class="pb-stepper"><button type="button" data-legs-step="-1" aria-label="Fewer legs">−</button><output id="pb-legs" aria-live="polite">3</output><button type="button" data-legs-step="1" aria-label="More legs">+</button></div></fieldset>
-        <label class="pb-field pb-threshold"><span>Trend hit rate at least <output id="pb-threshold-value">70%</output></span><input type="range" id="pb-threshold" name="threshold" min="50" max="100" step="5" value="70"></label>
-        <fieldset class="pb-field"><legend>Over the last</legend><div class="pb-segment" data-setting="window"><button type="button" data-value="5">5 games</button><button type="button" data-value="10">10 games</button><button type="button" data-value="20">20 games</button></div></fieldset>
-        <fieldset class="pb-field"><legend>Build for</legend><div class="pb-segment" data-setting="goal"><button type="button" data-value="value">Best value</button><button type="button" data-value="safe">Most likely to hit</button></div></fieldset>
-      </div>
-      <details class="pb-more" id="pb-more">
-        <summary>More options <span id="pb-more-count"></span></summary>
-        <div class="pb-row">
-          <fieldset class="pb-field"><legend>Side</legend><div class="pb-segment" data-setting="side"><button type="button" data-value="both">Over or Under</button><button type="button" data-value="over">Overs</button><button type="button" data-value="under">Unders</button></div></fieldset>
-          <fieldset class="pb-field"><legend>Legs per game</legend><div class="pb-segment" data-setting="perGame"><button type="button" data-value="1">1</button><button type="button" data-value="2">Up to 2</button><button type="button" data-value="any">Any (same-game)</button></div></fieldset>
-          <label class="pb-field"><span>Biggest favorite allowed</span><select id="pb-favorite" name="maxFavorite"><option value="-150">−150</option><option value="-200">−200</option><option value="-300">−300</option><option value="-500">−500</option><option value="">No limit</option></select></label>
-          <label class="pb-field pb-stake"><span>Stake ($)</span><input type="number" id="pb-stake" name="stake" min="1" max="100000" step="1" inputmode="decimal" value="10"></label>
-          <label class="pb-check"><input type="checkbox" id="pb-injured" name="skipInjured" checked><span>Skip players on the injury report</span></label>
+    <div class="pb" id="parlay-builder">
+      <section class="pb-hero" aria-labelledby="pb-title">
+        <div class="pb-hero-art" aria-hidden="true"><i class="pb-orb pb-orb-a"></i><i class="pb-orb pb-orb-b"></i><i class="pb-grid"></i></div>
+        <div class="pb-hero-copy">
+          <p class="pb-eyebrow"><span class="pb-eyebrow-dot" aria-hidden="true"></span><span id="pb-slate">Loading the slate</span><span class="pb-eyebrow-sep" aria-hidden="true">·</span><span id="pb-asof">Posted lines</span></p>
+          <h1 id="pb-title"><span class="pb-kicker">Parlay builder</span> Built from the trends, <span class="pb-gradient">explained leg by leg.</span></h1>
+          <p class="pb-lede">Choose how many legs and how hot each trend must be. Every open line on the slate is scored on its recent record, and each pick shows why it made the ticket.</p>
+          <div class="pb-sports" id="pb-sports"></div>
         </div>
-        <fieldset class="pb-field pb-markets-field"><legend>Markets <button type="button" class="pb-link" data-markets-all>All</button></legend><div id="pb-markets" class="pb-markets"></div></fieldset>
-      </details>
-    </form>
-    <div id="pb-status" class="pb-status" role="status">Loading posted lines…</div>
-    <div id="pb-result" class="pb-result" aria-busy="true"><div class="td-empty"><div class="loader"></div><h3>Gathering every posted line</h3><p>Each market's lines and every player's recent games. The first load after a quiet spell can take up to a minute.</p></div></div>
+        <dl class="pb-stats" aria-label="This slate">
+          <div class="pb-stat"><dt>Open lines</dt><dd id="pb-stat-lines">—</dd></div>
+          <div class="pb-stat"><dt>Players</dt><dd id="pb-stat-players">—</dd></div>
+          <div class="pb-stat"><dt>Games</dt><dd id="pb-stat-games">—</dd></div>
+          <div class="pb-stat is-accent"><dt id="pb-stat-qualify-label">Hit 70%+ of last 10</dt><dd id="pb-stat-qualify">—</dd></div>
+        </dl>
+      </section>
+
+      <div class="pb-layout">
+        <form class="pb-panel pb-settings" id="pb-form" aria-labelledby="pb-settings-title" novalidate>
+          <header class="pb-panel-head"><div class="pb-panel-title"><span class="pb-panel-icon" aria-hidden="true" data-pb-icon="filter"></span><h2 id="pb-settings-title">Build your ticket</h2></div><button type="button" class="pb-open" id="pb-reset">Reset</button></header>
+          <div class="pb-settings-body">
+            <section class="pb-group" aria-labelledby="pb-group-ticket">
+              <h3 class="pb-group-title" id="pb-group-ticket">Ticket</h3>
+              <label class="pb-field" id="pb-week-label" hidden><span class="pb-label">NFL week</span><select id="pb-week" name="week"><option value="">This week · automatic</option></select></label>
+              <label class="pb-field" id="pb-date-label" hidden><span class="pb-label">Game date</span><input type="date" id="pb-date" name="date" aria-label="Game date" required></label>
+              <div class="pb-field">
+                <span class="pb-label" id="pb-legs-label">Legs</span>
+                <div class="pb-segment pb-legs-segment" data-setting="legs" role="group" aria-labelledby="pb-legs-label"><button type="button" data-value="2" aria-label="2 legs">2</button><button type="button" data-value="3" aria-label="3 legs">3</button><button type="button" data-value="4" aria-label="4 legs">4</button><button type="button" data-value="5" aria-label="5 legs">5</button><button type="button" data-value="6" aria-label="6 legs">6</button><button type="button" data-value="7" aria-label="7 legs">7</button><button type="button" data-value="8" aria-label="8 legs">8</button></div>
+              </div>
+              <div class="pb-field">
+                <label class="pb-label pb-range-label" for="pb-threshold"><span>Trend hit rate at least</span><output id="pb-threshold-value" for="pb-threshold">70%</output></label>
+                <div class="pb-range">
+                  <input type="range" id="pb-threshold" name="threshold" min="50" max="100" step="5" value="70" aria-valuetext="70% or better">
+                  <div class="pb-range-ticks" id="pb-range-ticks" aria-hidden="true"><span data-threshold="50" style="--t:0">50%</span><span data-threshold="60" style="--t:0.2">60%</span><span data-threshold="70" style="--t:0.4">70%</span><span data-threshold="80" style="--t:0.6">80%</span><span data-threshold="90" style="--t:0.8">90%</span><span data-threshold="100" style="--t:1">100%</span></div>
+                </div>
+              </div>
+              <fieldset class="pb-field"><legend class="pb-label">Over the last</legend><div class="pb-segment" data-setting="window"><button type="button" data-value="5">5 games</button><button type="button" data-value="10">10 games</button><button type="button" data-value="20">20 games</button></div></fieldset>
+            </section>
+            <section class="pb-group" aria-labelledby="pb-group-filters">
+              <h3 class="pb-group-title" id="pb-group-filters">Filters</h3>
+              <fieldset class="pb-field"><legend class="pb-label">Side</legend><div class="pb-segment" data-setting="side"><button type="button" data-value="both">Both</button><button type="button" data-value="over">Overs</button><button type="button" data-value="under">Unders</button></div></fieldset>
+              <fieldset class="pb-field"><legend class="pb-label">Legs per game</legend><div class="pb-segment" data-setting="perGame"><button type="button" data-value="1">One</button><button type="button" data-value="2">Up to 2</button><button type="button" data-value="any">Any</button></div></fieldset>
+              <div class="pb-field-row">
+                <label class="pb-field"><span class="pb-label">Shortest odds</span><select id="pb-favorite" name="maxFavorite"><option value="-150">−150</option><option value="-200">−200</option><option value="-300" selected>−300</option><option value="-500">−500</option><option value="">No limit</option></select></label>
+                <label class="pb-field"><span class="pb-label">Stake</span><span class="pb-money"><span aria-hidden="true">$</span><input type="number" id="pb-stake" name="stake" min="1" max="100000" step="1" inputmode="decimal" value="10" aria-label="Stake in dollars"></span></label>
+              </div>
+              <label class="pb-switch"><input type="checkbox" id="pb-injured" name="skipInjured" role="switch" checked><span class="pb-switch-track" aria-hidden="true"></span><span class="pb-switch-copy"><strong>Skip injury-listed players</strong><small>Leaves out questionable and doubtful players</small></span></label>
+            </section>
+            <section class="pb-group" aria-labelledby="pb-group-markets">
+              <div class="pb-group-head"><h3 class="pb-group-title" id="pb-group-markets">Markets</h3><span class="pb-group-count" id="pb-markets-count"></span></div>
+              <div id="pb-markets" class="pb-chips" role="group" aria-labelledby="pb-group-markets"></div>
+            </section>
+          </div>
+        </form>
+
+        <section class="pb-panel pb-ticket" aria-labelledby="pb-ticket-title" aria-live="polite">
+          <header class="pb-panel-head"><div class="pb-panel-title"><span class="pb-panel-icon" aria-hidden="true" data-pb-icon="parlay"></span><h2 id="pb-ticket-title">Your parlay</h2><span class="pb-chip" id="pb-ticket-chip" hidden></span></div><button type="button" class="pb-open" id="pb-refresh"><span data-pb-icon="refresh"></span><span>Refresh lines</span></button></header>
+          <div class="pb-ticket-body" id="pb-result" aria-busy="true"></div>
+        </section>
+      </div>
+
+      <section class="pb-panel pb-bench" id="pb-bench" aria-labelledby="pb-bench-title" hidden>
+        <header class="pb-panel-head"><div class="pb-panel-title"><span class="pb-panel-icon" aria-hidden="true" data-pb-icon="players"></span><h2 id="pb-bench-title">Next best lines</h2><span class="pb-chip">Swap-ins</span></div></header>
+        <ul class="pb-list" id="pb-bench-list"></ul>
+      </section>
+
+      <section class="pb-panel pb-method" aria-labelledby="pb-method-title">
+        <header class="pb-panel-head"><div class="pb-panel-title"><span class="pb-panel-icon" aria-hidden="true" data-pb-icon="info"></span><h2 id="pb-method-title">How the builder picks</h2><span class="pb-chip">Trends only</span></div></header>
+        <div class="pb-method-body" id="pb-method"></div>
+      </section>
+    </div>
   </main>
   <noscript>Enable JavaScript to build a parlay.</noscript>
 </body>
