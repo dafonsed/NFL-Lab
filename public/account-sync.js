@@ -7,7 +7,7 @@ export function accountDataKind(key) {
   if (key === 'nfl-notes' || key === 'mlb-lab-notes' || /^sports-lab-notes-(nfl|mlb|nba|wnba|nhl|soccer)$/.test(key)) return 'notes';
   if (['nfl-saved', 'mlb-lab-watchlist'].includes(key) || /^sports-lab-(saved|trends-watchlist)-(nfl|mlb|nba|wnba|nhl|soccer)$/.test(key)) return 'watchlist';
   if (/^sports-lab-filter-presets:[a-z-]+:[a-z-]+$/.test(key)) return 'filters';
-  if (['nfl-auto', 'sports-lab-display', 'sports-lab-dev-mode', 'sportslab-sportsbook-state-v1', 'sportslab-ev-display-v1', 'sportslab-ev-sharp-min', 'sportslab-docs-theme', 'sports-lab-line-observations-v1', 'sportslab-odds-display-v1'].includes(key)) return 'preferences';
+  if (['nfl-auto', 'sports-lab-display', 'sports-lab-dev-mode', 'sportslab-sportsbook-state-v1', 'sportslab-ev-display-v1', 'sportslab-ev-sharp-min', 'sportslab-docs-theme', 'sports-lab-line-observations-v1', 'sportslab-odds-display-v1', 'sports-lab-parlay-settings'].includes(key)) return 'preferences';
   return null;
 }
 

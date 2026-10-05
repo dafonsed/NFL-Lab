@@ -1,5 +1,6 @@
 import { handleReferralLink } from './lib/accounts/referrals.mjs';
 import { trendsPreload } from './lib/trends-preload.mjs';
+import { createParlayPool } from './lib/parlay-pool.mjs';
 import { handlePreviewLogin, previewLoginButton } from './lib/preview-login.mjs';
 import { renderContentSitemap } from './lib/content/registry.mjs';
 import { renderBeginnerGuide, renderLearnLibrary } from './lib/learn-library.mjs';
@@ -53,6 +54,7 @@ const liveSports = new LiveSportsStore({ provider: sports.provider });
 const betTracker = new BetTrackerStore();
 const simulation = new SimulationStore({ nflProvider: store.provider, provider: sports.provider });
 const simulationProps = new SimulationPropsStore(createSimulationPropStores({ nfl: store, mlb, sports }));
+const parlayPool = createParlayPool({ nfl: store, mlb, sports });
 let syncing = false, lastSync = null;
 async function sync() {
   if (syncing) return;
@@ -278,6 +280,7 @@ export const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/catalog') { const {current,weeks}=await store.catalog(forceRefresh); return sharedJson(res,{current,weeks},forceRefresh); }
     if (url.pathname === '/api/landing/research') return sharedJson(res, landingResearch(await store.board({ market: 'rec_yds' })));
     if (url.pathname === '/api/nfl/research') { const board=await store.board(Object.fromEntries(url.searchParams)); const player=board.players.find(p=>p.playerId===url.searchParams.get('player')); if(!player)return json(res,{error:'Player not found in this matchup.'},404); return sharedJson(res,{player,current:board.current,sources:board.datasets,definitions:board.definitions}); }
+    if (url.pathname === '/api/trends/parlay') return sharedJson(res, await parlayPool(Object.fromEntries(url.searchParams), forceRefresh), forceRefresh);
     if (url.pathname === '/api/board') return sharedJson(res, compactNflBoard(await store.board(Object.fromEntries(url.searchParams), forceRefresh)), forceRefresh);
     const names = { '/docs':'docs.html', '/docs.html':'docs.html', '/docs.css':'docs.css', '/docs.js':'docs.js', '/bets':'bets.html', '/bets/':'bets.html', '/bets.js':'bets.js', '/bet-legs.js':'bet-legs.js', '/bet-editor.js':'bet-editor.js', '/bet-utils.js':'bet-utils.js', '/presentation.js':'presentation.js', '/bets.css':'bets.css', '/wnba':'sports.html','/wnba/':'sports.html','/nba':'sports.html','/nhl':'sports.html','/soccer':'sports.html','/sports.js':'sports.js','/sports-view.js':'sports-view.js','/sports.css':'sports.css', '/nfl/live':'live.html', '/nfl/live/':'live.html', '/live.js':'live.js', '/live-game.js':'live-game.js', '/live.css':'live.css', '/live-utils.js':'live-utils.js', '/paper':'paper.html','/paper.js':'paper.js','/context-ui.js':'context-ui.js','/context.css':'context.css', '/performance':'performance.html', '/performance.js':'performance.js', '/forecast.css':'forecast.css', '/': 'index.html', '/nfl': 'index.html', '/mlb': 'mlb.html', '/mlb/': 'mlb.html', '/mlb.js': 'mlb.js', '/mlb-model.js':'mlb-model.js', '/mlb.css': 'mlb.css', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/manifest.webmanifest': 'manifest.webmanifest' };
     const pagePath = url.pathname.replace(/\/$/, '') || '/';
@@ -333,6 +336,7 @@ export const server = http.createServer(async (req, res) => {
     if (pagePath === '/simulation' || /^\/(nfl|nba|wnba|mlb|nhl|soccer)\/simulation$/.test(pagePath)) names[pagePath] = 'simulation.html';
     if (['/navigation.js','/dashboard.css','/landing.js','/landing-live.js','/landing-demo.js','/demo-data.js','/home.js','/product-ui.js','/player-research.js','/chart-line.js','/research-notes.js','/research-data.js','/site-preferences.js','/player-research.css','/workspace.css','/trends.css','/trends.js','/trends-data.js','/app-design.css','/workspace-ui.js','/ui-icons.js','/betting-pages.js','/betting-pages.css'].includes(pagePath)) names[pagePath]=pagePath.slice(1);
     for (const file of ['bet-expanded.js','bet-expanded.css','bet-reference-history.js']) names['/' + file] = file;
+    for (const file of ['parlay.js','parlay.css','parlay-builder.js']) names['/' + file] = file;
     const preferredGroup = /(?:^|;\s*)sl-group=(trends|models|ev)(?:;|$)/.exec(req.headers.cookie || '')?.[1] || null;
     if (pagePath === '/research') {
       // The combined Dashboard became one dashboard per workspace; open the viewer's current one.
@@ -343,7 +347,7 @@ export const server = http.createServer(async (req, res) => {
     const dashboard = renderProductDashboard(url);
     if (dashboard) { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' }); return res.end(renderSitePage(dashboard, url, { features: req.sportslabFeatures || null, group: preferredGroup })); }
     const context = siteContext(url);
-    const name = context.section === 'landing' ? 'landing.html' : context.section === 'home' ? 'home.html' : context.section === 'trends' ? 'trends.html' : /^\/(nba|wnba|mlb)\/live$/.test(pagePath) ? 'live-sports.html' : pagePath === '/live' ? 'live-hub.html' : pagePath === '/site-layout.css' ? 'site-layout.css' : pagePath === '/live-sports.js' ? 'live-sports.js' : names[pagePath];
+    const name = context.section === 'landing' ? 'landing.html' : context.section === 'home' ? 'home.html' : context.section === 'trends' ? 'trends.html' : context.section === 'parlay' ? 'parlay.html' : /^\/(nba|wnba|mlb)\/live$/.test(pagePath) ? 'live-sports.html' : pagePath === '/live' ? 'live-hub.html' : pagePath === '/site-layout.css' ? 'site-layout.css' : pagePath === '/live-sports.js' ? 'live-sports.js' : names[pagePath];
     if (!name) return errorResponse(req, res, url, 'Not found.', 404);
     const bytes = await fs.readFile(path.join(publicDir, name));
     const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.gz': 'application/gzip', '.webmanifest': 'application/manifest+json' };

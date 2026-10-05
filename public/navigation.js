@@ -3,7 +3,7 @@ export const SPORTS = { nfl: 'NFL', mlb: 'MLB', nba: 'NBA', wnba: 'WNBA', nhl: '
 const live = new Set(['nfl', 'mlb', 'nba', 'wnba']);
 export function workspaceProduct(section) {
   if (['ev', 'bets', 'ev-home'].includes(section)) return 'ev';
-  return ['trends', 'trends-home'].includes(section) ? 'trends' : 'models';
+  return ['trends', 'trends-home', 'parlay'].includes(section) ? 'trends' : 'models';
 }
 export function productDashboardUrl(product, sport) {
   const selected = Object.hasOwn(SPORTS, sport) ? sport : product === 'ev' ? 'all' : 'mlb';
@@ -13,7 +13,8 @@ export function productTools(product, sport) {
   const selected = Object.hasOwn(SPORTS, sport) ? sport : 'mlb';
   if (product === 'trends') return [
     { key: 'trends', label: 'Player trends', href: '/' + selected + '?view=trends' },
-    { key: 'watchlist', label: 'Watchlist', href: '/' + selected + '?view=trends&saved=1' }
+    { key: 'watchlist', label: 'Watchlist', href: '/' + selected + '?view=trends&saved=1' },
+    { key: 'parlay', label: 'Parlay builder', href: '/' + selected + '?view=parlay' }
   ];
   return sportTools(sport).filter(tool => !['ev', 'trends'].includes(tool.key)).map(tool => tool.key === 'research' ? { ...tool, label: 'Projections' } : tool);
 }
@@ -44,5 +45,6 @@ export function sportDestination(sport, section) {
   if (section === 'home') return '/research?sport=' + sport;
   if (section === 'bets') return betTrackerUrl(sport);
   if (section === 'ev') return '/ev?sport=' + sport;
+  if (section === 'parlay') return '/' + sport + '?view=parlay';
   return sportTools(sport).find(tool => tool.key === section)?.href || '/' + sport;
 }

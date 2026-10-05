@@ -300,7 +300,7 @@ test('workspace selector lists Trends, Models, +EV and the sidebar shows only th
   assert.equal(nav(null, '/trends?sport=nfl').group, 'trends');
   assert.equal(nav(null, '/research?sport=nfl', 'trends').group, 'trends', 'the Dashboard keeps the last picked group');
   assert.equal(nav(null, '/models?sport=nfl', 'trends').group, 'models', 'a product page always shows its own group');
-  assert.deepEqual(nav(['research', 'trends', 'bet-tracker'], '/research?sport=nfl', 'ev'), { group: 'trends', shared: ['bets'], products: ['trends'], more: 0, context: 2 });
+  assert.deepEqual(nav(['research', 'trends', 'bet-tracker'], '/research?sport=nfl', 'ev'), { group: 'trends', shared: ['bets'], products: ['trends'], more: 0, context: 3 }, 'Player trends, Watchlist, Parlay builder');
   assert.deepEqual(nav(['research', 'trends', 'models', 'bet-tracker']).products, ['trends', 'models']);
   assert.deepEqual(nav(['account', 'bet-tracker', 'saved-filters'], '/ev/tracker').group, null);
 });
