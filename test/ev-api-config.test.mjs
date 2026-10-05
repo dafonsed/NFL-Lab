@@ -211,3 +211,16 @@ test('JSON replies are compressed for clients that accept brotli or gzip', async
   assert.equal((await call('/api/ev/quotes', { fetcher, loadControls: async () => [], headers: { 'accept-encoding': 'br, gzip' } })).headers['Content-Encoding'], 'br');
   assert.equal((await call('/api/ev/quotes', { fetcher, loadControls: async () => [], headers: { 'accept-encoding': 'identity' } })).headers['Content-Encoding'], undefined);
 });
+
+test('the quotes reply says which records were dropped, why and from which book', async () => {
+  const inventory = [
+    feedQuote('a', 'FanDuel'), feedQuote('b', 'FanDuel'),
+    // As Underdog sends DFS props in /quotes: no event.
+    feedQuote('u1', 'Underdog', { event: '' }), feedQuote('u2', 'Underdog', { event: '' }),
+    feedQuote('s', 'Pinnacle', { sport: '' }), feedQuote('a', 'DraftKings'),
+  ];
+  const result = await call('/api/ev/quotes', { fetcher: async () => new Response(JSON.stringify({ quotes: inventory })), loadControls: async () => [] });
+  assert.equal(result.body.count, 2);
+  assert.equal(result.body.dropped, 4);
+  assert.deepEqual(result.body.droppedReasons, { 'no event': { Underdog: 2 }, 'no sport': { Pinnacle: 1 }, 'duplicate id': { DraftKings: 1 } });
+});
