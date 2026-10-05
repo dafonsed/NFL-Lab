@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeAdvancedEv, consensusPrice } from '../public/ev-advanced-math.js';
+import { computeAdvancedEv, consensusPrice } from '../lib/odds/engine.mjs';
 import { permanentDemoWorkspace } from './fixtures/ev-preview.js';
 
 // computeAdvancedEv indexes markets once per batch; each fair value must match

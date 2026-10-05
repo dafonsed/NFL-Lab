@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { consensusPrice, computeAdvancedEv, quoteAvailable, marketFairPrice, devig, evCapFor, EV_SANITY_LIMIT, EV_SINGLE_BOOK_LIMIT,
-  priceClv, noVigClv, comparableClv, performanceSummary, SHARP_MAX_VIG_PERCENT, MIN_EXCHANGE_IMPLIED_SUM } from '../public/ev-advanced-math.js';
+import { consensusPrice, computeAdvancedEv, quoteAvailable, marketFairPrice, evCapFor, EV_SANITY_LIMIT, EV_SINGLE_BOOK_LIMIT,
+  SHARP_MAX_VIG_PERCENT, MIN_EXCHANGE_IMPLIED_SUM } from '../lib/odds/engine.mjs';
+import { devig, priceClv, noVigClv, comparableClv, performanceSummary } from '../public/betting-math.js';
 
 // Fixed clock: every quote is a minute old and the game starts the next day.
 const now = Date.parse('2026-10-03T06:00:00Z');

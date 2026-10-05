@@ -10,10 +10,10 @@ import {playerPortrait, teamMark} from './sports-identity.js';
 import {icon} from './ui-icons.js';
 import {sportTools, betTrackerUrl, SPORTS} from './navigation.js';
 import {evToolUrl} from './ev-tool-catalog.js';
-import {computeAdvancedEv, DEVIG_METHODS} from './ev-advanced-math.js';
-import {plausibleEv, marketRowsOf} from './ev-core.js';
+import {getEV, serverNow} from './odds-client.js';
+import {suiteSettings, isCurrent} from './odds-contract.js';
+import {implied} from './betting-math.js';
 import {isDemoRecord} from './ev-workspace-clean.js?v=1';
-import {readQuoteCache} from './ev-quote-cache.js?v=3';
 import {platformAsset, platformLabel} from './platform-catalog.js';
 import {readBets, summarizeBets, betReturns} from './bet-utils.js?v=4';
 
@@ -27,18 +27,13 @@ const zone = sport === 'mlb' ? 'America/New_York' : 'America/Phoenix';
 const today = new Intl.DateTimeFormat('en-CA', {timeZone:zone, year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date());
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const tools = new Set(sport === 'all' ? [] : sportTools(sport).map(t => t.key));
-const EV_SETTINGS = {minSharpBooks:1, maxVigPercent:20, devigMethod:'multiplicative', bookRules:[], liveMaxAgeSeconds:90, pregameMaxAgeSeconds:900, minEvPercent:0, maxEvPercent:null};
-// The member's fair-value settings from the +EV workspace, read as ev-suite.js settings() reads them, so the
-// preview prices like the Positive EV page. Its board filters (league, odds range) stay on that page.
-const FAIR_VALUE_SETTINGS = ['minSharpBooks', 'maxVigPercent', 'devigMethod', 'bookRules', 'liquidityWeighting', 'liquidityWeightUnit', 'liveMaxAgeSeconds', 'pregameMaxAgeSeconds', 'maxEvPercent'];
+// The member's pricing settings from the +EV workspace, read as ev-suite.js settings() reads them, so the
+// preview is priced like the Positive EV page. Its board filters (league, odds range) stay on that page.
 // Loaded on demand: the storage module waits for account sync, which must not hold up the first paint.
 async function memberEvSettings() {
   let saved = {};
   try { const {readSuiteState} = await import('./ev-suite-storage.js?v=2'); const settings = readSuiteState()?.settings; if (settings && typeof settings === 'object') saved = settings; } catch { /* Unreadable saved settings fall back to the defaults. */ }
-  const picked = Object.fromEntries(FAIR_VALUE_SETTINGS.filter(key => saved[key] !== undefined).map(key => [key, saved[key]]));
-  if (Number(picked.pregameMaxAgeSeconds) === 86400) delete picked.pregameMaxAgeSeconds;
-  if (!DEVIG_METHODS.includes(picked.devigMethod)) delete picked.devigMethod;
-  return {...EV_SETTINGS, ...picked};
+  return suiteSettings(saved);
 }
 // Books available in the member's state, as the Positive EV page offers them (every book still prices).
 async function memberBooks() {
@@ -74,8 +69,8 @@ const americanOdds = value => {
   return odds === null ? '' : (odds > 0 ? '+' : '') + Math.round(odds);
 };
 const impliedFromAmerican = value => {
-  const odds = finite(value);
-  return odds === null || Math.abs(odds) < 100 ? null : odds > 0 ? 100 / (odds + 100) : -odds / (-odds + 100);
+  const odds = finite(value), probability = odds === null ? NaN : implied(odds);
+  return Number.isFinite(probability) ? probability : null;
 };
 
 // Rank the entire pool first, then slice. Rows with a posted line come first so the
@@ -135,12 +130,17 @@ function evSelection(quote) {
   return {title:`${quote.player ? quote.player + ' ' : ''}${pick}${lineText}`, detail:quote.displayMarket || quote.market, event:quote.displayEvent || quote.event};
 }
 
-// Priced and vetted as on the Positive EV page: EV above the shared sanity caps (25%, 10% with one
-// reference book, unless the member saved a maximum) is a feed error, a game line counts only from a book
-// pricing both of its sides (plausibleEv), and only prices at `offered` books (the member's state) show.
-function dashboardEvRows(quotes, settings, offered = () => true) {
-  const markets = marketRowsOf(quotes);
-  return computeAdvancedEv(quotes, settings).filter(row => offered(row.quote.book) && plausibleEv(row, markets, settings));
+// The odds service's +EV rows (priced with the member's settings, past the feed-error caps and the
+// both-sides check) with their quotes: only positive, current prices at `offered` books (the member's
+// state), within the member's saved EV range.
+function dashboardEvRows(snapshot, settings = {}, offered = () => true, now = Date.now()) {
+  const quotes = new Map((snapshot?.quotes || []).map(quote => [quote.id, quote])), set = value => value != null && value !== '';
+  const inRange = ev => ev > 0 && (!set(settings.minEvPercent) || ev * 100 >= Number(settings.minEvPercent)) && (!set(settings.maxEvPercent) || ev * 100 <= Number(settings.maxEvPercent));
+  return (snapshot?.pricing || []).flatMap(row => {
+    const quote = quotes.get(row.quoteId);
+    return quote && row.plausible && inRange(row.ev) && offered(quote.book) && isCurrent(quote, now)
+      ? [{quote, fair:row.fairProbability, ev:row.ev}] : [];
+  });
 }
 
 function evSummary(rows) {
@@ -225,15 +225,13 @@ function count(key, value) {
 // ---------------------------------------------------------------- +EV preview
 async function evPanel() {
   if (!$('#hd-ev')) return;
-  // The +EV page caches feed quotes in IndexedDB (public/ev-quote-cache.js). Without a cache from the
-  // last 15 minutes, the panel loads the feed itself rather than showing old prices as current value.
-  const cache = await readQuoteCache();
-  const fresh = cache && Date.now() - Date.parse(cache.apiSyncedAt || 0) < 15 * 60_000;
-  const feed = fresh ? null : await import('./ev-feed-normalize.js?v=30').then(m => m.loadFeed('/api/ev/quotes', new Date().toISOString(), {price:false})).catch(() => null);
-  const source = fresh ? cache.quotes : feed?.ok ? feed.quotes : [];
-  const quotes = source.filter(quote => quote?.source === 'local-api' && !isDemoRecord(quote));
-  const code = sport === 'soccer' ? 'Soccer' : label;
-  const rows = dashboardEvRows(sport === 'all' ? quotes : quotes.filter(q => (q.league || q.sport) === code || q.sport === code), await memberEvSettings(), await memberBooks());
+  // Pregame +EV rows from the odds service (GET /api/odds/ev), priced with the member's settings. When it
+  // can't answer, the panel says so instead of showing old prices as current value.
+  const code = sport === 'soccer' ? 'Soccer' : label, settings = await memberEvSettings();
+  let snapshot;
+  try { snapshot = await getEV({settings, sport:sport === 'all' ? undefined : code, live:false, limit:2000}); }
+  catch (error) { put('#hd-ev', failed(error?.code === 'NOT_CONFIGURED' ? 'The odds feed is not connected yet.' : 'The odds service is unavailable right now. Reload the page to try again.')); setStat('ev', null); setStat('edge', null); booksPanel([]); return; }
+  const rows = dashboardEvRows({...snapshot, quotes:snapshot.quotes.filter(quote => quote?.source === 'local-api' && !isDemoRecord(quote))}, settings, await memberBooks(), serverNow());
   const summary = evSummary(rows), top = topEvRows(rows, 5);
   setStat('ev', summary.count); setStat('edge', summary.best === null ? null : summary.best * 100);
   booksPanel(rows);

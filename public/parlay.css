@@ -181,6 +181,10 @@ html:root body.parlay-page:not(#pb-root) #main {
   & .pb-odds b {color:var(--pb-text);font:650 13.5px/1 var(--pb-font)}
   & .pb-odds .sportsbook-symbol {display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;overflow:hidden;background:#fff1}
   & .pb-odds .sportsbook-symbol img {width:22px;height:22px;object-fit:cover}
+  /* Alternate lines: no posted price, shown as a quiet dashed tag rather than odds. */
+  & .pb-odds.is-unpriced {padding:3px 12px;border-style:dashed;background:transparent}
+  & .pb-odds.is-unpriced b {color:var(--pb-muted, #b9c3be);font-size:12px;font-weight:600}
+  & .pb-big-odds.is-unpriced {font-size:clamp(28px,3vw,38px);background:none;color:var(--pb-text);-webkit-text-fill-color:currentColor}
   & .pb-leg-stats {display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:12px 22px;align-items:center;padding-left:38px}
   & .pb-rate {display:grid;grid-template-columns:auto auto;align-items:baseline;gap:2px 8px}
   & .pb-rate-value {color:var(--pb-lime);font:650 22px/1 var(--pb-display);letter-spacing:-.03em}

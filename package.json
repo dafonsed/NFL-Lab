@@ -19,6 +19,7 @@
     "accounts:mail": "node --env-file-if-exists=.env.local scripts/accounts.mjs mail-drain",
     "test:accounts": "node --test test/account-*.test.mjs",
     "test": "node --test test/*.test.mjs",
+    "typecheck": "node scripts/typecheck.mjs",
     "test:e2e": "playwright test",
     "test:load": "node scripts/load-test.mjs",
     "sync": "node scripts/sync.mjs",

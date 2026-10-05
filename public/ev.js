@@ -2,7 +2,6 @@ import { browserAlertsControl, deliverAlerts, toggleBrowserAlerts } from './aler
 import { wagerCard } from './ev-bet-card.js';
 import { renderEvBoard, renderEvBoardDetail, renderBetPanel, boostedOffer, boardIcon, bookLogo, startLabel, selectionText } from './ev-board.js?v=7';
 import { createEvSuite, EV_SUITE_TOOLS } from './ev-suite.js?v=local-suite-7';
-import { computeAdvancedEv, consensusPrice, constrainedArb, middleOutcomes, devig } from './ev-advanced-math.js';
 import { readSuiteState, writeSuiteState } from './ev-suite-storage.js?v=2';
 import { installMobileWorkspace, quoteRevision, preserveReadingOrder } from './ev-mobile.js';
 import { accountStorage as localStorage, accountReady, getAccountPreferences, accountSyncState } from './account-sync.js';
@@ -11,12 +10,19 @@ import { secondaryShell, toolHero, accentTitle, toolPanel, toolEmpty, toolStats,
 import { SECONDARY_TOOLS } from './ev-tool-catalog.js';
 import { emptyWorkspace, purgeDemoData, clearLegacyDemoStorage } from './ev-workspace-clean.js?v=1';
 import { createQuoteFeedControls, toolDataLabel } from './ev-feed.js?v=9';
-import { loadAndPrice, createDfsPricer, payoutTables, knownSport } from './ev-feed-normalize.js?v=30';
+import { knownSport } from './sport-names.js';
+import { getSnapshot, getDfs, getLineMovement, getPredictionContracts, indexSnapshot, emptyIndex, serverNow } from './odds-client.js';
+import { isCurrent, snapshotStale, valueState } from './odds-contract.js';
+import { alertMatches } from './odds-alerts.js';
 import { readQuoteCache, createThrottledCacheWriter } from './ev-quote-cache.js?v=3';
 import { START_WINDOWS, MIN_ODDS, MIN_EV, MIN_WIN_CHANCE, TOOL_FILTERS, TOOL_FILTER_DEFAULTS, activeFilterCount, startsWithin, oddsWithin, quoteMatches, readToolFilters, saveToolFilters, toolFilterBar } from './ev-filters.js?v=2';
 import { SITE_PLATFORMS, SPORTSBOOK_PLATFORMS, PREDICTION_PLATFORMS, EXCHANGE_PLATFORMS, canonicalPlatform, platformAsset, platformLabel, platformOptions, isContestPlatform } from './platform-catalog.js';
 import { betTrackerUrl, legacyBetTrackerUrl } from './navigation.js?v=tracker-1';
-import { decimal, implied, expectedReturn, money, percent, signed, probabilityToAmerican, fairProbability, fresh, groups, marketKey, evRows, fractionalKellyStake, holdRows, arbitrage, arbitrageRows, middleRows, promoConversion, parlay, fantasySlip, closingLineValue, gradedBet, pearson, sharpMatches, alertMatches, opposingSides, ownBookConsistent, priceFamily, sameGame, plausibleEv, marketRowsOf } from './ev-core.js';
+// Prices and every betting value on these boards come from /api/odds (odds-client.js); this page displays
+// them. betting-math.js runs only the calculators on numbers a member chooses (parlay legs, promo stakes,
+// boosts, DFS slips, recorded results).
+import { decimal, constrainedArb, promoConversion, parlay, fantasySlip, pearson } from './betting-math.js';
+import { money, percent, signed } from './odds-format.js';
 import { teamMark, leagueMark } from './sports-identity.js';
 import { comparisonAnnotations } from './bet-comparison.js?v=4';
 import { inlineBetCard as betComparisonCard, bindInlineComparison as bindComparison } from './bet-inline.js?v=card-click-4';
@@ -78,6 +84,8 @@ function normalize(data) {
   data.history = data.history.filter(x => quoteIds.has(x.quoteId));
   data.contractHistory = data.contractHistory.filter(x => contractIds.has(x.contractId));
   if (!data.paytables || typeof data.paytables !== 'object' || Array.isArray(data.paytables)) data.paytables = {};
+  // The latest /api/odds answer, indexed for display (never saved with the workspace).
+  if (!data.analytics) data.analytics = emptyIndex();
   for (const [collection,field] of [['quotes','book'],['history','book'],['dfs','app'],['contracts','platform'],['traders','platform']]) {
     for (const item of data[collection]) if (item[field]) item[field] = canonicalPlatform(item[field]);
   }
@@ -92,7 +100,9 @@ function normalize(data) {
 let state = load();
 // Nothing is cached before the first sync (or the cache's own prices are shown), so a reload while the
 // API is down still starts from the last prices.
-const quoteCacheWriter = createThrottledCacheWriter(() => !state.apiSyncedAt ? null : ({ quotes: state.quotes.filter(q => q.source === 'local-api'), dfs: state.dfs.filter(item => item.source === 'local-api'), history: state.history.filter(item => item.source === 'local-api'), apiSyncedAt: state.apiSyncedAt }));
+// The analytics sections are cached with the prices they belong to.
+let lastSnapshot = null;
+const quoteCacheWriter = createThrottledCacheWriter(() => !state.apiSyncedAt ? null : ({ quotes: state.quotes.filter(q => q.source === 'local-api'), dfs: state.dfs.filter(item => item.source === 'local-api'), history: state.history.filter(item => item.source === 'local-api'), apiSyncedAt: state.apiSyncedAt, ...(lastSnapshot ? { snapshot: { ...lastSnapshot, quotes: [] } } : {}) }));
 // Show the last cached prices while the first sync runs, unless that sync has already finished.
 void readQuoteCache().then(cache => {
   if (!cache) return;
@@ -101,6 +111,8 @@ void readQuoteCache().then(cache => {
   // A cache older than 15 minutes holds prices the books may no longer offer; wait for the sync.
   if (Date.now() - Date.parse(cache.apiSyncedAt || 0) > 15 * 60_000 || (state.apiSyncedAt && Date.parse(state.apiSyncedAt) >= Date.parse(cache.apiSyncedAt || 0))) return;
   state.quotes = [...state.quotes.filter(q => q.source !== 'local-api'), ...cache.quotes.filter(q => q?.source === 'local-api')];
+  // Cached prices show with the analytics they came with; each price's expiry still decides whether it is current.
+  state.analytics = indexSnapshot({ ...(cache.snapshot || {}), quotes: state.quotes });
   // Cached pick'em lines stand in for the props request until it answers.
   if (Array.isArray(cache.dfs) && !dfsLoaded) setFeedDfs(cache.dfs);
   state.apiSyncedAt = cache.apiSyncedAt;
@@ -182,7 +194,7 @@ let editing = null;
 // Published standard payouts fill in until the member saves their own table for an app and size.
 const paytables = () => withStandardPaytables(state.paytables, apiPaytables);
 const dfsWorkspace = createDfsWorkspace({onDeleteSlip:id=>{state.slips=state.slips.filter(slip=>slip.id!==id);commit();},getState:()=>({...state,quotes:eligibleQuotes(state.quotes),bookAvailable,paytables:paytables(),devigMethod:suite.settings().devigMethod,payoutSource:(app,size)=>paytableSource(state.paytables,app,size,apiPaytables),dfsLoading:dfsLoading&&!dfsLoaded}),redraw:()=>redrawDfsBoard(),onSave:slip=>{state.slips.push(slip);commit();},onConfigure:picks=>{fantasyIds=picks.map(item=>item.id);fantasyApp=picks[0].app;setTool('slip');}});
-const oddsScreen = createOddsScreen({storage:localStorage,defaultFormat:getAccountPreferences().oddsFormat,getSettings:()=>suite.settings(),getQuotes:()=>eligibleQuotes(oddsQuotes()),getReferenceQuotes:oddsQuotes,getSportsbookState:()=>sportsbookState,onAllSportsbooks:()=>{const saved=saveSportsbookState('');document.dispatchEvent(new CustomEvent(STATE_CHANGE_EVENT,{detail:{state:'',saved}}));},brandMark,redraw:()=>render(),onSport:value=>{sport=value;history.replaceState(history.state,'',`${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}#odds`);}});
+const oddsScreen = createOddsScreen({storage:localStorage,defaultFormat:getAccountPreferences().oddsFormat,getSettings:()=>suite.settings(),getQuotes:()=>eligibleQuotes(oddsQuotes()),getAnalytics:()=>state.analytics,now:serverNow,getSportsbookState:()=>sportsbookState,onAllSportsbooks:()=>{const saved=saveSportsbookState('');document.dispatchEvent(new CustomEvent(STATE_CHANGE_EVENT,{detail:{state:'',saved}}));},brandMark,redraw:()=>render(),onSport:value=>{sport=value;history.replaceState(history.state,'',`${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}#odds`);}});
 const suite = createEvSuite({
   getState:()=>state, save:persist, redraw:render, navigate:key=>setTool(key==='tracker'&&!accountSyncState().userId?'ledger':key), getTool:()=>active,
   nativeViews:['ev-pre','ev-live','arb-pre','arb-live','middles','odds','sharp','parlay'],
@@ -199,7 +211,9 @@ const uid = () => crypto.randomUUID();
 const origin = x => x.source === 'local-api' ? '<span class="ev-status">API</span>' : '<span class="ev-status">Manual</span>';
 const age = ts => { const n = Date.parse(ts); if (!Number.isFinite(n)) return 'Unknown time'; const s = Math.max(0, Math.floor((Date.now() - n) / 1000)); return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.floor(s / 60)}m ago` : `${Math.floor(s / 3600)}h ago`; };
 const qName = q => `${q.event} · ${q.market}${q.line !== '' && q.line != null ? ' ' + q.line : ''} · ${q.side}`;
-const qStatus = q => q.live ? `<span class="ev-status${fresh(q) ? '' : ' stale'}">${fresh(q) ? 'Live entry' : 'Stale live'} · ${age(q.ts)}</span>` : `<span class="ev-caption">Pregame · ${age(q.ts)}</span>`;
+// A price is current until the server's expiry time for it (stale live prices are never shown as live).
+const current = q => isCurrent(q, serverNow());
+const qStatus = q => q.live ? `<span class="ev-status${current(q) ? '' : ' stale'}">${current(q) ? 'Live entry' : 'Stale live'} · ${age(q.ts)}</span>` : `<span class="ev-caption">Pregame · ${age(q.ts)}</span>`;
 const filterText = value => String(value ?? '').toLowerCase().includes(search);
 const visible = (item, fields) => (!sport || !item.sport || item.sport === sport) && (!search || fields.some(key => filterText(item[key])));
 // DFS props are entered by hand and carry no event start, so they keep the observed-date filter.
@@ -223,7 +237,7 @@ function persist() {
     // API quotes, their price history and the sync time are re-fetched every few seconds, so they
     // stay in this browser (IndexedDB, throttled). Saving them to the account would exceed its size
     // limit (blocking tracked-bet saves in the same document) and upload on every refresh.
-    const { quotes, history, apiSyncedAt, dfs, ...account } = state;
+    const { quotes, history, apiSyncedAt, dfs, analytics, ...account } = state;
     quoteCacheWriter.schedule();
     localStorage.setItem(STORE, JSON.stringify({ ...account, dfs: dfs.filter(item => item.source !== 'local-api'), quotes: [], history: [] }));
     if(state.suite) writeSuiteState(state.suite);
@@ -251,83 +265,45 @@ function trimHistory(history) {
   }
   return kept.reverse();
 }
-function snapshotQuote(q) { state.history.push({ id: uid(), quoteId: q.id, seriesId: q.seriesId || q.id, sport: q.sport, event: q.displayEvent || q.event, market: q.market, side: q.side, selection: q.selection, book: q.book, line: q.line, odds: q.odds, ts: q.ts, source: q.source }); }
+function snapshotQuote(q) { state.history.push({ id: uid(), quoteId: q.id, seriesId: q.seriesId || q.id, sport: q.sport, event: q.displayEvent || q.event, market: q.market, side: q.side, selection: q.selection, book: q.book, line: q.line, odds: q.odds, impliedProbability: q.impliedProbability ?? null, ts: q.ts, source: q.source }); }
 // Tools that show feed prices. Other tabs hold the member's own records and forms, so a quote
 // sync must not rebuild them (it would wipe what they are typing).
 const QUOTE_TOOLS = new Set(['odds','ev-pre','ev-live','arb-pre','arb-live','middles','holds','promo','parlay','sharp','line-alerts']);
 // DFS tools re-render only when the feed's pick'em lines or hit chances change.
 const DFS_TOOLS = new Set(['fantasy','optimizer','slip','fantasy-alerts']);
-// Feed DFS picks arrive from the feed worker already merged (the quote snapshot's pick'em lines and
-// GET /site/dfs/props, each line once) and priced against the latest sportsbook quotes, and only
-// when they changed; the page just swaps them in.
+// Feed DFS picks arrive from GET /api/odds/dfs already merged (the quote snapshot's pick'em lines and the
+// props feed, each line once) and priced against the sportsbooks; the page just swaps them in.
 // An entry saved by an earlier version under a feed line's id is dropped: the feed line is the record.
 function setFeedDfs(dfs) { const ids = new Set(dfs.map(item => item.id)); state.dfs = [...state.dfs.filter(item => item.source !== 'local-api' && !ids.has(item.id)), ...dfs]; }
-// The same pricing in the page, for browsers without module workers.
-const inlinePricer = createDfsPricer();
 let lastSkipped = 0;
-// The snapshot is downloaded and cleaned in a worker so the page stays responsive; browsers
-// without module workers run the same loadAndPrice in the page.
-let feedWorker = null, feedRequest = 0, missedDfs = false;
-const pendingFeed = new Map();
-function fetchFeed(kind = 'quotes', apps = []) {
-  const url = kind === 'dfs' ? '/api/ev/site/dfs/props' : '/api/ev/quotes', syncedAt = now(), settings = suite.settings();
-  // DFS lines use the member's devig method, minimum books and maximum margin. After an answer the page
-  // gave up waiting for, the worker resends DFS lines even if unchanged (it counted them as delivered).
-  const job = { kind, url, syncedAt, apps, method: settings.devigMethod, minBooks: settings.minSharpBooks, maxVigPercent: settings.maxVigPercent, force: missedDfs };
-  const delivered = result => { if (result.ok) missedDfs = false; else if (result.kind === 'timeout') missedDfs = true; return result; };
-  const inline = () => loadAndPrice(inlinePricer, job).then(delivered);
-  if (feedWorker !== false && typeof Worker === 'function') {
-    try {
-      if (!feedWorker) {
-        feedWorker = new Worker('/ev-feed-worker.js?v=30', { type: 'module' });
-        feedWorker.onmessage = ({ data }) => { pendingFeed.get(data.id)?.(data); pendingFeed.delete(data.id); };
-        feedWorker.onerror = () => { feedWorker = false; for (const resolve of pendingFeed.values()) resolve({ ok: false, kind: 'worker' }); pendingFeed.clear(); };
-      }
-      const id = ++feedRequest;
-      return new Promise(resolve => {
-        pendingFeed.set(id, resolve);
-        feedWorker.postMessage({ id, ...job });
-        setTimeout(() => { if (pendingFeed.delete(id)) resolve({ ok: false, kind: 'timeout' }); }, 60_000);
-      }).then(result => result.kind === 'worker' && !result.message ? inline() : delivered(result));
-    } catch { feedWorker = false; }
-  }
-  return inline();
+// The analytics sections each tool shows. Pricing and market summaries are always loaded (every tool's
+// comparison panel and the alerts use them); the rest only while a tool that shows them is open.
+const SECTION_TOOLS = { arbitrage: ['arb-pre', 'arb-live'], middles: ['middles'], holds: ['holds'], sharp: ['sharp'], hedges: ['promo'] };
+function sectionsFor(tool) {
+  const wanted = ['pricing', 'markets', ...Object.entries(SECTION_TOOLS).filter(([, tools]) => tools.includes(tool)).map(([section]) => section)];
+  // Saved arbitrage watches (Alert center) need the arbitrage list on every update.
+  if (!wanted.includes('arbitrage') && (state.suite?.watchRules || []).some(rule => rule.kind === 'arb' && rule.enabled)) wanted.push('arbitrage');
+  // The detailed arbitrage view lists middles beside the arbitrage pairs.
+  if (suite.hasView(tool) && ['arb-pre', 'arb-live'].includes(tool)) wanted.push('middles');
+  return [...new Set(wanted)];
 }
-// DFS props (GET /site/dfs/props, about 30k lines) load while a DFS tool is open and refresh every
-// minute; the worker prices them with the quote snapshot's lines. Payout tables (GET
-// /site/dfs/payouts) load once and name the apps the props are requested for.
-let dfsSyncedAt = 0, dfsLoading = false, dfsLoaded = false, dfsError = '', dfsFailures = 0, dfsRetryAt = 0, apiPaytables = {}, payouts = null, payoutsAt = 0;
-function loadPayouts() {
-  // Payout tables change rarely: fetched once an hour, and after a failure no sooner than a minute later.
-  if (payouts && Date.now() - payoutsAt > 3_600_000) payouts = null;
-  if (!payouts && Date.now() - payoutsAt < 60_000 && payoutsAt) return Promise.resolve([]);
-  if (!payouts) payoutsAt = Date.now();
-  payouts ||= fetch('/api/ev/site/dfs/payouts', { cache: 'no-store', signal: AbortSignal.timeout(15_000) })
-    .then(response => { if (!response.ok) throw Error(`payouts ${response.status}`); return response.json(); })
-    .then(records => {
-      const tables = payoutTables(records);
-      if (Object.keys(tables).length) { apiPaytables = tables; if (DFS_TOOLS.has(active)) render(); }
-      return (Array.isArray(records) ? records : []).map(entry => entry?.app).filter(app => typeof app === 'string' && app);
-    })
-    .catch(() => { payouts = null; return []; });
-  return payouts;
-}
-// Prediction contracts from the quote API (GET /site/prediction/contracts), shown read-only beside the
-// member's own. ProphetX sends up to 113 unlabeled contracts per event that can't be told apart, so an
-// event with more than one contract per platform is left out, as are crossed books (bid above ask).
+// The sportsbooks the member can bet in their chosen state (no state chosen: every book). Holds and hedge
+// pairs pick their best prices among these.
+const offerBooks = () => sportsbookState ? SPORTSBOOK_PLATFORMS.filter(bookAvailable) : undefined;
+// A tool opened without its section loaded asks for it right away instead of waiting for the next refresh.
+const missingSection = () => sectionsFor(active).some(section => !state.analytics.has(section));
+const sectionsShown = () => sectionsFor(active).filter(section => state.analytics.has(section)).join(',');
+// DFS lines (GET /api/odds/dfs: about 30k lines priced against the sportsbooks, with each app's payout
+// tables) load while a DFS tool is open and refresh every minute.
+let dfsSyncedAt = 0, dfsLoading = false, dfsLoaded = false, dfsError = '', dfsWarning = '', dfsFailures = 0, dfsRetryAt = 0, apiPaytables = {}, dfsGeneratedAt = '';
+// Prediction contracts from the quote API (GET /api/odds/contracts), shown read-only beside the member's
+// own. The server leaves out events it can't tell apart and crossed books.
 let feedContracts = [], contractsLoading = false, contractsAt = 0;
 function ensureContracts() {
   if (active !== 'prediction' || contractsLoading || Date.now() - contractsAt < 60_000 || document.hidden && contractsAt) return;
   contractsLoading = true;
-  fetch('/api/ev/site/prediction/contracts', { cache: 'no-store', signal: AbortSignal.timeout(20_000) })
-    .then(response => response.ok ? response.json() : Promise.reject(Error(String(response.status))))
-    .then(rows => {
-      const list = Array.isArray(rows) ? rows : [], perEvent = new Map(), key = row => `${row?.platform}|${row?.event}`;
-      for (const row of list) perEvent.set(key(row), (perEvent.get(key(row)) || 0) + 1);
-      feedContracts = list.filter(row => perEvent.get(key(row)) === 1 && typeof row?.event === 'string' && row.event && Number(row.yes_bid_cents) >= 0 && Number(row.yes_ask_cents) <= 100 && Number(row.yes_bid_cents) <= Number(row.yes_ask_cents) && Number.isFinite(Date.parse(row.ts)))
-        .map(row => ({ id: `feed-contract:${key(row)}`, platform: canonicalPlatform(row.platform), event: row.event, sport: knownSport(row.sport) || 'Other', bid: Number(row.yes_bid_cents), ask: Number(row.yes_ask_cents), ...(Number.isFinite(Number(row.last)) ? { last: Number(row.last) } : {}), volume: Number(row.volume) || 0, ts: row.ts, source: 'local-api' }));
-      contractsAt = Date.now();
-    })
+  getPredictionContracts()
+    .then(rows => { feedContracts = rows; contractsAt = Date.now(); })
     .catch(() => { contractsAt = Date.now() - 30_000; })
     .finally(() => { contractsLoading = false; if (active === 'prediction') render(); });
 }
@@ -335,16 +311,22 @@ function ensureDfsFeed() {
   if (!DFS_TOOLS.has(active)) return;
   // The first load runs even in a background tab so the lines are ready when it is opened; refreshes
   // wait for the tab to be visible.
-  if (dfsLoading || Date.now() < dfsRetryAt || (dfsLoaded && (Date.now() - dfsSyncedAt < 60_000 || document.hidden))) { void loadPayouts(); return; }
+  if (dfsLoading || Date.now() < dfsRetryAt || (dfsLoaded && (Date.now() - dfsSyncedAt < 60_000 || document.hidden))) return;
   dfsLoading = true;
   let changed = false;
-  void loadPayouts().then(apps => fetchFeed('dfs', apps)).then(result => {
-    // A failed props request keeps the last lines and says so; retries back off up to 5 minutes.
-    if (!result.ok) { dfsFailures += 1; dfsRetryAt = Date.now() + Math.min(300_000, 15_000 * 2 ** Math.min(dfsFailures, 5)); dfsError = result.kind === 'timeout' ? 'The DFS lines request timed out.' : 'The DFS lines could not be loaded.'; changed = true; return; }
+  void getDfs({ settings: suite.settings() }).then(result => {
     if (dfsError) changed = true;
     dfsSyncedAt = Date.now(); dfsFailures = 0; dfsRetryAt = 0; dfsError = '';
-    // No dfs in the answer: the priced picks are the same as last time.
-    if (Array.isArray(result.dfs)) { setFeedDfs(result.dfs); evaluateAlerts(); persist(); changed = true; }
+    // A partial answer (payout tables or the props feed missing) says so beside the data label.
+    const warning = result.meta.partial ? result.meta.warnings.join(' ') || 'Some DFS data is missing.' : '';
+    if (warning !== dfsWarning) { dfsWarning = warning; changed = true; }
+    if (Object.keys(result.payouts).length) apiPaytables = result.payouts;
+    // The same pricing run as last time: nothing to redraw.
+    if (result.meta.provenance.generatedAt !== dfsGeneratedAt || !dfsLoaded) { dfsGeneratedAt = result.meta.provenance.generatedAt; setFeedDfs(result.picks); evaluateAlerts(); persist(); changed = true; }
+  }, error => {
+    // A failed request keeps the last lines and says so; retries back off up to 5 minutes.
+    dfsFailures += 1; dfsRetryAt = Date.now() + Math.min(300_000, 15_000 * 2 ** Math.min(dfsFailures, 5));
+    dfsError = error?.code === 'TIMEOUT' ? 'The DFS lines request timed out.' : 'The DFS lines could not be loaded.'; changed = true;
   }).finally(() => {
     // The first answer, even an empty or failed one, replaces the loading message.
     const first = !dfsLoaded;
@@ -352,54 +334,50 @@ function ensureDfsFeed() {
     if (DFS_TOOLS.has(active) && (changed || first)) renderKeepingView();
   });
 }
+// An OddsError → the error the feed controls show (ev-feed.js): retryable or not, and how long to wait.
+function feedFailure(error) {
+  const text = typeof error?.message === 'string' && error.message ? error.message.replace(/\.?$/, '.') : 'The odds service is unavailable.';
+  const failure = Error(error?.code === 'TIMEOUT' ? 'The request timed out. Saved prices were kept.' : `${text} Saved prices were kept.`);
+  if (error?.code === 'TIMEOUT') failure.name = 'TimeoutError';
+  failure.retryable = error?.retryable !== false;
+  if (Number.isFinite(error?.retryAfterSeconds)) failure.retryAfterMs = Math.min(86_400_000, error.retryAfterSeconds * 1000);
+  return failure;
+}
 async function syncLocalApi() {
-  const workspace = state;
-  const result = await fetchFeed();
-  const invalid = message => Object.assign(Error(message + ' Saved prices were kept.'), { retryable: false });
-  if (!result.ok) {
-    if (result.kind === 'timeout') throw Object.assign(Error('The request timed out. Saved prices were kept.'), { name: 'TimeoutError' });
-    if (result.kind === 'network') throw Object.assign(Error('The quote feed could not be reached. Saved prices were kept.'), { retryable: true });
-    // A 200 that can't be read was cut off mid-download; that is worth another try.
-    if (result.kind === 'unreadable') throw Object.assign(Error('The quote server returned an unreadable response. Saved prices were kept.'), { retryable: result.status === 200 || result.status === 429 || result.status >= 500 });
-    if (result.kind === 'worker') throw Object.assign(Error('The price update failed in this browser. Saved prices were kept.'), { retryable: true });
-    if (result.kind === 'shape') throw invalid('The EV API did not return a quotes array.');
-    // A partial snapshot (the API restarting) is temporary: keep the old prices and try again.
-    if (result.kind === 'partial') throw Object.assign(Error('The quote API sent a partial snapshot. Saved prices were kept.'), { retryable: true });
-    const payload = result.payload;
-    const failure = Error(typeof payload?.error === 'string' ? payload.error : typeof payload?.detail === 'string' ? payload.detail : 'The EV API is unavailable. Saved prices were kept.');
-    failure.retryable = payload?.retryable !== false && ![400,401,403,404,405,422].includes(result.status);
-    const retry = result.retryAfter;
-    if (retry) failure.retryAfterMs = Math.min(86_400_000, Math.max(0, /^\d+$/.test(retry) ? Number(retry) * 1000 : Date.parse(retry) - Date.now()));
-    throw failure;
-  }
-  // Bad or mislabeled records were skipped and counted; one bad record never blocks the snapshot.
-  const { quotes: kept, skipped } = result;
-  const dfsChanged = Array.isArray(result.dfs);
-  if (dfsChanged) setFeedDfs(result.dfs);
-  const feed = new Map(kept.map(quote => [quote.id, quote]));
-  if (state !== workspace) throw invalid('The workspace changed during sync. Try again after your import.');
-  const existing = new Map(state.quotes.filter(quote => quote.source === 'local-api').map(quote => [quote.id, quote]));
-  state.quotes = [...state.quotes.filter(quote => quote.source !== 'local-api' && !feed.has(quote.id)), ...feed.values()];
-  for (const quote of feed.values()) {
+  const workspace = state, tool = active;
+  let result;
+  try { result = await getSnapshot({ settings: suite.settings(), include: sectionsFor(tool), books: offerBooks() }); }
+  catch (error) { throw feedFailure(error); }
+  const { snapshot, dropped } = result;
+  if (state !== workspace) throw Object.assign(Error('The workspace changed during sync. Try again after your import. Saved prices were kept.'), { retryable: false });
+  const existing = new Map(state.quotes.map(quote => [quote.id, quote]));
+  state.quotes = snapshot.quotes;
+  state.analytics = indexSnapshot(snapshot);
+  lastSnapshot = snapshot;
+  for (const quote of snapshot.quotes) {
     const prior = existing.get(quote.id);
     if (!prior || prior.odds !== quote.odds || prior.line !== quote.line) snapshotQuote(quote);
   }
   state.history = trimHistory(state.history);
-  // The time the proxy fetched what it served: a held-over snapshot isn't shown as just updated.
-  state.apiSyncedAt = result.snapshotAt && Date.parse(result.snapshotAt) <= Date.now() + 5_000 ? result.snapshotAt : now();
-  // Records the feed sent that can't be used. Pick'em lines (now DFS picks), older copies, expired
-  // prices and started games are not "unusable".
-  lastSkipped = (skipped.invalid || 0) + (skipped.mislabeled || 0) + (skipped.inconsistent || 0);
+  // The time the server fetched the prices: a held-over snapshot isn't shown as just updated.
+  const at = Date.parse(snapshot.meta.snapshotAt || '');
+  state.apiSyncedAt = Number.isFinite(at) && at <= serverNow() + 5_000 ? snapshot.meta.snapshotAt : now();
+  // Records the feed sent that can't be used. Expired prices and started games are not "unusable".
+  const skipped = snapshot.meta.counts?.skipped || {};
+  // Records this page couldn't read (odds-contract.js decodeSnapshot) are unusable too.
+  lastSkipped = (skipped.invalid || 0) + (skipped.mislabeled || 0) + (skipped.inconsistent || 0) + (dropped?.quotes || 0);
   evaluateAlerts();
   // Alert-center watches run on every price update, not only when "Refresh saved records" is on.
-  if (state.suite?.watchRules?.length) suite.evaluateWatches();
+  if (state.suite?.watchRules?.length) void suite.evaluateWatches();
   const saved = persist();
-  // Rebuild only a quote tab, and only when prices actually changed, keeping scroll and menus.
-  if (DFS_TOOLS.has(active) ? dfsChanged : QUOTE_TOOLS.has(active) && quoteRevision(state.quotes) !== displayedQuoteRevision) {
+  // Rebuild only a quote tab, and only when prices changed (or its section just arrived), keeping scroll and menus.
+  if (QUOTE_TOOLS.has(active) && (quoteRevision(state.quotes, serverNow()) !== displayedQuoteRevision || sectionsShown() !== displayedSections)) {
     if (active === 'odds' && !suite.hasView(active)) oddsScreen.refresh();
     else renderKeepingView();
   }
-  return { count: feed.size, saved, skipped: lastSkipped, expired: skipped.stale, heldOver: Boolean(result.stale || result.warmingUp) };
+  // The tool changed while this answer was on its way and needs a section it didn't ask for.
+  if (active !== tool && missingSection()) void feedControls.refresh();
+  return { count: snapshot.quotes.length, saved, skipped: lastSkipped, expired: skipped.stale, heldOver: snapshotStale(snapshot.meta, serverNow()) || snapshot.meta.warmingUp, partial: snapshot.meta.partial ? (snapshot.meta.warnings.length ? snapshot.meta.warnings : ['The odds service marked this answer incomplete.']) : [] };
 }
 // Re-render after a price sync without moving the reader: sideways scroll positions and open
 // menus inside the view come back as they were.
@@ -424,7 +402,7 @@ function emailAlertsControl() {
 // the Positive EV board; only the offered price must be at a book available in the member's state. Only
 // current matches are remembered, so a price that newly meets a rule fires once and the list stays as
 // small as the matches (it lives in the account document beside tracked bets).
-const alertOptions = () => ({ settings: suite.settings(), offered: q => bookAvailable(q.book) });
+const alertOptions = () => ({ pricing: state.analytics.pricing, available: current, offered: q => bookAvailable(q.book) });
 function evaluateAlerts() {
   const fresh = [], options = alertOptions();
   for (const rule of state.alerts) {
@@ -524,7 +502,7 @@ function renderEvThresholds() {
     + choice('minEv','↗','Min EV',MIN_EV,'Hide bets with a smaller expected edge.')
     + choice('minProb','◔','Min Win Chance',MIN_WIN_CHANCE,'Fair no-vig probability. Raise it to skip long shots.');
 }
-let inlineDetail=null;
+let inlineDetail=null, sectionRequestedAt=0;
 let renderedTool = '';
 function render() {
   // Switching tools: drop the old view before anything measures layout. Leaving it in place made
@@ -533,6 +511,8 @@ function render() {
   feedControls?.update();
   ensureDfsFeed();
   ensureContracts();
+  // A tool whose analytics section isn't loaded yet fetches it now (at most every few seconds).
+  if (QUOTE_TOOLS.has(active) && feedControls && missingSection() && Date.now() - sectionRequestedAt > 5_000) { sectionRequestedAt = Date.now(); void feedControls.refresh(); }
   if (active === 'tracker') { location.replace(legacyBetTrackerUrl(new URL(location.href)) || betTrackerUrl(sport.toLowerCase())); return; }
   renderNav();
   const titles = { odds:'Odds Screen', 'ev-pre':'Positive EV', 'ev-live':'Live Positive EV', fantasy:'DFS Props', 'arb-pre':'Arbitrage', 'arb-live':'Live Arbitrage', sharp:'Smart Money', tracker:'Bet Tracker' };
@@ -598,8 +578,9 @@ function render() {
   const usesFlat = ['arb-pre','arb-live'].includes(active);
   $('#ev-kelly').value = usesKelly ? kelly : flatMultiplier.toFixed(2);
   const dataKind = active === 'fantasy' ? (state.dfs.length ? 'Entered props' : 'No props yet') : hasApiSnapshot() ? 'API snapshot' : 'No prices yet';
-  const dataLabel = toolDataLabel(active, { ...state, dfsLoading: dfsLoading && !dfsLoaded, dfsError, feedContracts }, dataKind);
+  const dataLabel = toolDataLabel(active, { ...state, dfsLoading: dfsLoading && !dfsLoaded, dfsError, dfsWarning, feedContracts }, dataKind);
   $('#ev-data-kind').textContent = dataLabel;
+  $('#ev-data-kind').title = DFS_TOOLS.has(active) ? dfsWarning : '';
   $('#ev-top-badge').textContent = dataLabel;
   $('#ev-multiplier-label').textContent = usesKelly ? 'Kelly multiplier' : 'Flat multiplier';
   $('#ev-kelly').disabled = !usesKelly && !usesFlat;
@@ -720,67 +701,28 @@ function renderOdds() {
   return oddsScreen.render({sport});
 }
 
-function renderEvExpanded(quote, fair, ev, asCard = false) {
-  const open = detailQuoteId === quote.id;
-  const peers = groups(state.quotes).find(group => group.some(item => item.id === quote.id)) || [quote];
-  const sides = [quote.side, ...new Set(peers.map(item => item.side).filter(side => side !== quote.side))];
-  const books = [...new Set(peers.map(item => item.book))].filter(bookAvailable).sort((a,b) => {
-    const ai = sportsbookNames.indexOf(a), bi = sportsbookNames.indexOf(b);
-    return (ai < 0 ? 100 : ai) - (bi < 0 ? 100 : bi) || a.localeCompare(b);
-  });
-  const matrix = sides.map(side => {
-    const prices = peers.filter(item => item.side === side);
-    const average = prices.length ? probabilityToAmerican(prices.reduce((sum,item) => sum + implied(item.odds),0) / prices.length) : NaN;
-    const best = prices.slice().sort((a,b) => decimal(b.odds) - decimal(a.odds))[0];
-    const cells = books.map(book => {
-      const price = prices.filter(item => item.book === book).sort((a,b) => Date.parse(b.ts) - Date.parse(a.ts))[0];
-      return `<td class="${price?.id === quote.id ? 'is-selected' : ''} ${price?.id === best?.id ? 'is-best' : ''}">${price ? `<strong>${oddsLabel(price.odds)}</strong>${price.liquidity ? `<small>${money(price.liquidity)} available</small>` : ''}` : '<span class="ev-odds-missing">—</span>'}</td>`;
-    }).join('');
-    const line = prices[0]?.line;
-    return `<tr><th scope="row">${esc(side)}${line !== '' && line != null ? ' ' + fmtLine(line) : ''}</th><td>${Number.isFinite(average) ? oddsLabel(average) : '—'}</td><td class="ev-matrix-best">${best ? `${brandMark(best.book)} <strong>${oddsLabel(best.odds)}</strong>` : '—'}</td>${cells}</tr>`;
-  }).join('');
-  const stakeEstimate = fractionalKellyStake(bankroll,kelly,fair,quote.odds);
-  return `${asCard ? '' : '<tr class="ev-opportunity-detail-row"><td colspan="9">'}<article class="ev-opportunity-card" aria-label="${esc(quote.event)} ${esc(quote.market)} price comparison">
-    <div class="ev-opportunity-summary">
-      <button type="button" class="ev-opportunity-collapse" data-detail="${esc(quote.id)}" aria-expanded="${open}" aria-label="${open ? 'Collapse' : 'Expand'} ${esc(quote.event)} details">${open ? '⌃' : '+'}</button>
-      <div class="ev-opportunity-market"><strong>${esc(quote.market)}</strong><span>${esc(quote.event)} · ${esc(quote.sport)} · ${quote.live ? 'Live entry' : 'Pregame'}</span></div>
-      <div><strong>${esc(quote.side)}${quote.line !== '' && quote.line != null ? ' ' + fmtLine(quote.line) : ''}</strong><span>Selection</span></div>
-      <div><strong class="ev-opportunity-book">${brandMark(quote.book)} ${oddsLabel(quote.odds)}</strong><span>${esc(quote.book)}</span></div>
-      <div><strong>${percent(fair)}</strong><span>Fair probability</span></div>
-      <div><strong>${money(stakeEstimate)}</strong><span>Rec. bet</span></div>
-      <div class="ev-opportunity-ev"><strong>${(ev * 100).toFixed(2)}%</strong><span>Estimated EV</span></div>
-    </div>
-    ${open ? `<div class="ev-opportunity-actions"><span>Observed ${age(quote.ts)} · API price</span><div>${quote.live ? '' : `<button type="button" data-parlay="${esc(quote.id)}">Add to parlay</button>`}</div></div>
-    <div class="ev-price-matrix-scroller"><table class="ev-price-matrix"><thead><tr><th scope="col">Selection</th><th scope="col">Average</th><th scope="col">Best</th>${books.map(book => `<th scope="col">${brandMark(book)}<span>${esc(book)}</span></th>`).join('')}</tr></thead><tbody>${matrix}</tbody></table></div>
-    <p class="ev-opportunity-note">Prices shown come from the quote API for this market. Confirm availability, limits and freshness independently.</p>` : ''}
-  </article>${asCard ? '' : '</td></tr>'}`;
-}
-
-// Pricing every quote takes 0.1-0.2 s, so Positive EV reuses it until the prices, pricing settings, sport
-// or league change, and for at most 10 seconds as prices age out.
-let evPricing = { quotes: null, key: '', at: 0, rows: [] };
-function pricedQuotes(pool, settings) {
-  const key = JSON.stringify([sport, evLeague, settings]);
-  if (evPricing.quotes !== state.quotes || evPricing.key !== key || Date.now() - evPricing.at > 10_000) evPricing = { quotes: state.quotes, key, at: Date.now(), rows: computeAdvancedEv(pool, settings) };
-  return evPricing.rows;
+// Positive EV rows as /api/odds priced them (fair probability, EV, Kelly fraction and plausibility from
+// the member's pricing settings), joined with their quotes. Prices past their expiry aren't rows.
+function evRowOf(quote) {
+  const row = state.analytics.pricingOf(quote);
+  return row && { quote, fair: row.fairProbability, fairOdds: row.fairOdds, ev: row.ev, edge: row.edge, kellyFraction: row.kellyFraction, plausible: row.plausible, estimated: row.estimated,
+    conditionalOnNoPush: row.conditionalOnNoPush, consensus: { books: row.references, bookCount: row.bookCount }, devigMethod: row.devigMethod, devigVersion: row.devigVersion };
 }
 function renderEv(live) {
-  // Fair odds use every book in the market; the Starts window only narrows the result rows
-  // (filtering first would drop books that don't report a start time from the consensus).
   const pool = state.quotes.filter(q => (!sport || q.sport === sport) && (!evLeague || (q.league || q.sport) === evLeague));
   const settings = suite.settings();
-  const all = pricedQuotes(pool, settings).filter(row=>Boolean(row.quote.live)===live && suite.quoteVisible(row.quote) && (live || startsWithin(row.quote, evDateRange)));
+  const all = pool.filter(q => Boolean(q.live) === live && current(q) && suite.quoteVisible(q) && (live || startsWithin(q, evDateRange))).map(evRowOf).filter(Boolean);
   const { evMinOdds, minEv, minProb } = toolFilters;
-  // Without a saved maximum, EV above 25% (10% with one reference book) is a feed error, the way
-  // arbitrage above 15% is, and a game line counts only from a book pricing both sides (plausibleEv).
-  const defaultCaps = settings.maxEvPercent === '' || settings.maxEvPercent == null;
-  const markets = marketRowsOf(pool), believable = row => plausibleEv(row, markets, settings);
-  const matching = all.filter(({quote:q,ev,fair}) => ev > 0 && oddsWithin(q.odds, evMinOdds, evMaxOdds === 'all' ? '' : evMaxOdds)
+  // The member's saved EV range (Pricing & filters) and this board's filters choose rows; the EV itself is the server's.
+  const evRange = row => (settings.minEvPercent == null || settings.minEvPercent === '' || row.ev * 100 >= Number(settings.minEvPercent)) && (settings.maxEvPercent == null || settings.maxEvPercent === '' || row.ev * 100 <= Number(settings.maxEvPercent));
+  const matching = all.filter(row => { const {quote:q,ev,fair} = row; return ev > 0 && evRange(row) && oddsWithin(q.odds, evMinOdds, evMaxOdds === 'all' ? '' : evMaxOdds)
     && (!minEv || ev * 100 >= Number(minEv)) && (!minProb || fair * 100 >= Number(minProb))
-    && sportsbookSelected(q.book) && (!marketType || q.type === marketType) && (!search || [q.displayEvent,q.event,q.market,q.book,q.selection,q.sport,q.player].some(value => filterText(value))));
-  // Counted among the rows the other filters would show, so the note matches what is hidden.
-  const hiddenAsErrors = matching.filter(row => !believable(row)).length;
-  const rows = matching.filter(believable);
+    && sportsbookSelected(q.book) && (!marketType || q.type === marketType) && (!search || [q.displayEvent,q.event,q.market,q.book,q.selection,q.sport,q.player].some(value => filterText(value))); });
+  // Without a saved maximum, EV above 25% (10% with one reference book) is a feed error, the way
+  // arbitrage above 15% is, and a game line counts only from a book pricing both sides: the server
+  // marks those rows implausible. Counted among the rows the other filters would show.
+  const hiddenAsErrors = matching.filter(row => !row.plausible).length;
+  const rows = matching.filter(row => row.plausible);
   const startOf = q => { const start = Date.parse(q.startTime); return Number.isFinite(start) ? start : Infinity; };
   if (evSort === 'event') rows.sort((a,b) => (a.quote.displayEvent || a.quote.event).localeCompare(b.quote.displayEvent || b.quote.event) || b.ev - a.ev);
   else if (evSort === 'odds') rows.sort((a,b) => decimal(b.quote.odds) - decimal(a.quote.odds));
@@ -792,20 +734,25 @@ function renderEv(live) {
   // Live rows keep their reading order between 3-second refreshes; pregame rows re-sort, so a new edge isn't stuck below "Show more".
   if (preserveLiveOrder && live) preserveReadingOrder(rows, [...document.querySelectorAll('.evb-row[data-wager-id]')].map(card=>card.dataset.wagerId), row=>row.quote.id);
   const noLive = live && !pool.some(q => q.live);
-  const emptyTitle = noLive ? 'No live games in the feed right now' : !pool.length ? 'No prices for this sport yet' : 'No positive EV selections match these filters';
-  const emptyBody = noLive ? 'Live +EV appears here when the quote feed sends in-play prices. Pregame +EV is under the Pregame tab.' : !pool.length ? 'Prices appear here once the odds feed syncs.' : 'No book is currently priced above the fair line for these filters. Clear a filter or wait for the next refresh.';
+  const unpriced = pool.length && !state.analytics.pricing.size;
+  const emptyTitle = noLive ? 'No live games in the feed right now' : !pool.length ? 'No prices for this sport yet' : unpriced ? 'Fair prices are not available yet' : 'No positive EV selections match these filters';
+  const emptyBody = noLive ? 'Live +EV appears here when the quote feed sends in-play prices. Pregame +EV is under the Pregame tab.' : !pool.length ? 'Prices appear here once the odds feed syncs.' : unpriced ? 'The odds service sent prices without fair values. EV appears once it prices them; nothing is estimated in the meantime.' : 'No book is currently priced above the fair line for these filters. Clear a filter or wait for the next refresh.';
   const shown = rows.slice(0,evVisibleCount);
   const books = new Set(rows.map(row => row.quote.book)).size;
   const summary = `<div class="evb-summary"><p><strong>${rows.length} positive ${rows.length === 1 ? 'selection' : 'selections'}</strong> from ${pool.filter(q => Boolean(q.live) === live).length} prices checked</p>${rows.length ? `<dl><div><dt>Top edge</dt><dd class="is-positive">${(Math.max(...rows.map(row => row.ev)) * 100).toFixed(2)}%</dd></div><div><dt>Books</dt><dd>${books}</dd></div><div><dt>Bankroll</dt><dd>${money(bankroll)}</dd></div></dl>` : ''}</div>`;
   const more = rows.length > evVisibleCount ? `<button type="button" class="ev-parlay-more" data-ev-more>Show ${Math.min(40,rows.length-evVisibleCount)} more selections · ${Math.min(evVisibleCount,rows.length)} of ${rows.length} shown</button>` : '';
-  return `<div class="ev-stack ev-positive-screen evb-board"><div class="wager-results-bar evb-results-bar">${summary}</div>${rows.length ? renderEvBoard(evBoardContext(shown, live)) + more : empty(emptyTitle,emptyBody)}<p class="ev-caption ev-method-note">Fair probability uses your saved reference-book, weighting and no-vig settings; by default Pinnacle counts three times as much as other books. Recommended stakes use your bankroll and Kelly multiplier. Open a row to compare every book. ${live ? 'Live entries expire after 90 seconds.' : ''}${hiddenAsErrors ? ` ${hiddenAsErrors} ${hiddenAsErrors === 1 ? 'price' : 'prices'} above 25% EV (10% when only one book sets the fair price) ${hiddenAsErrors === 1 ? 'is' : 'are'} hidden as likely feed errors; set a maximum EV in Pricing &amp; filters to change this.` : ''} Confirm price, limits and freshness independently.</p></div>`;
+  const pricing = state.analytics.meta?.pricing || {};
+  const capNote = pricing.evCap != null && pricing.evCapSingleBook != null ? `above ${(pricing.evCap * 100).toFixed(0)}% EV (${(pricing.evCapSingleBook * 100).toFixed(0)}% when only one book sets the fair price)` : 'outside the EV limits';
+  return `<div class="ev-stack ev-positive-screen evb-board"><div class="wager-results-bar evb-results-bar">${summary}</div>${rows.length ? renderEvBoard(evBoardContext(shown, live)) + more : empty(emptyTitle,emptyBody)}<p class="ev-caption ev-method-note">Fair probability and EV come from the odds service, priced with your saved reference-book, weighting and no-vig settings${pricing.devigMethod ? ` (${esc(pricing.devigMethod)} devig, ${esc(pricing.devigVersion || 'version not reported')})` : ''}; by default Pinnacle counts three times as much as other books. Recommended stakes scale its Kelly fraction by your bankroll and Kelly multiplier. Open a row to compare every book. ${live ? 'Live prices expire 90 seconds after they are seen.' : ''}${hiddenAsErrors ? ` ${hiddenAsErrors} ${hiddenAsErrors === 1 ? 'price' : 'prices'} ${capNote} ${hiddenAsErrors === 1 ? 'is' : 'are'} hidden as likely feed errors; set a maximum EV in Pricing &amp; filters to change this.` : ''} Confirm price, limits and freshness independently.</p></div>`;
 }
 
 // A stake no larger than the book's limit or the exchange's available amount, when the feed sends one.
 const cappedStake = (amount, quote) => { const limits = [quote?.maxStake, quote?.exchange ? quote?.liquidity : undefined].map(Number).filter(value => value > 0); return limits.length ? Math.min(amount, ...limits) : amount; };
+// The server's full-Kelly fraction for a price, scaled by the member's bankroll and Kelly multiplier.
+const kellyStake = quote => { const fraction = state.analytics.pricingOf(quote)?.kellyFraction; return fraction == null ? NaN : bankroll * kelly * fraction; };
 function evBoardContext(rows, live) {
   return {rows, live, sort:evSort, openId:evOpenId, oddsLabel, age,
-    stake:(fair,odds,quote)=>cappedStake(fractionalKellyStake(bankroll,kelly,fair,odds),quote),
+    stake:(fair,odds,quote)=>cappedStake(kellyStake(quote),quote),
     kellyLabel:`${kelly === 1 ? 'Full' : kelly === .5 ? '½' : kelly === .25 ? '¼' : kelly} Kelly`,
     flags:id=>({...comparisonAnnotations(id),...state.suite?.flags?.[id]}),
     detail:comparisonForQuote};
@@ -821,32 +768,17 @@ function toggleEvBoardRow(id) {
   evOpenId = evOpenId === id || analysisOpen ? '' : id;
   if (!evOpenId) return;
   const row = view.querySelector(`.evb-row[data-evb-row="${CSS.escape(id)}"]`);
-  const match = row && (evPricing.rows.find(item => item.quote.id === id) || computeAdvancedEv(quoteSource(), suite.settings()).find(item => item.quote.id === id));
+  const quote = state.analytics.byId.get(id), match = row && quote && evRowOf(quote);
   if (!match) { evOpenId = ''; return; }
   row.classList.add('is-open');
   row.querySelector('[data-evb-toggle]')?.setAttribute('aria-expanded','true');
   row.insertAdjacentHTML('afterend', renderEvBoardDetail(evBoardContext([match], match.quote.live), match.quote, match.fair, match.ev));
 }
 
-function evReferenceModel(quote, fair, ev) {
-  const model = comparisonForQuote(quote);
-  return {...model, standalone:true, inlineHistory:true, historyMetric:'line',
-    market:quote.displayMarket || (quote.player ? quote.market.replace(quote.player,'').trim() : quote.market),
-    selection:`${quote.player ? quote.player+' ' : ''}${quote.side}${quote.line !== '' && quote.line != null ? ' '+quote.line : ''}`,
-    event:quote.displayEvent || quote.event,
-    time:`${quote.live ? 'Live' : 'Pregame'} · Observed ${age(quote.ts)}`,
-    fairOdds:Number.isFinite(fair)?oddsLabel(probabilityToAmerican(fair)):'—',fairMark:'',fairLabel:'Fair value · consensus',
-    probability:percent(fair),probabilityLabel:'Consensus probability',
-    metrics:[{label:quote.book,value:oddsLabel(quote.odds)},{label:'Expected value',value:Number.isFinite(ev)?`${(ev*100).toFixed(2)}%`:'—'},{label:'Rec. bet',value:money(fractionalKellyStake(bankroll,kelly,fair,quote.odds))},...(Number(quote.liquidity)>0?[{label:'Available',value:money(Number(quote.liquidity))}]:[])],
-    extraActions:quote.live?'':`<button type="button" class="bet-inline-icon" data-parlay="${esc(quote.id)}" aria-label="Add to parlay" title="Add to parlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/></svg></button>`,
-    referenceRows:[{selection:'Line',prices:model.columns.map(column=>({value:column.line,difference:column.difference}))},{selection:'Odds',prices:model.columns.map(column=>({value:column.odds}))}]
-  };
-}
-
+// The comparison panel for one price: every book's price in its market with that book's own no-vig
+// probability, the market average and best, and the consensus fair value and EV, all as /api/odds sent them.
 function comparisonForQuote(quote) {
-  const source = quoteSource();
-  const peers = groups(source).find(group => group.some(item => item.id === quote.id)) || [quote];
-  const fair = consensusPrice(quote, source, suite.settings()).probability;
+  const peers = state.analytics.peers(quote), pricing = state.analytics.pricingOf(quote), fair = pricing?.fairProbability ?? NaN;
   const books = [...new Set(peers.map(item => item.book))].filter(bookAvailable).sort((a,b) => {
     const ai = sportsbookNames.indexOf(a), bi = sportsbookNames.indexOf(b);
     return Number(peers.some(item=>item.book===b&&item.exchange))-Number(peers.some(item=>item.book===a&&item.exchange)) || (ai < 0 ? 100 : ai) - (bi < 0 ? 100 : bi) || a.localeCompare(b);
@@ -857,69 +789,65 @@ function comparisonForQuote(quote) {
     const same = latest(book, quote.side), other = opposite ? latest(book, opposite) : null;
     const difference = same && quote.line !== '' && same.line !== '' && Number.isFinite(Number(same.line) - Number(quote.line)) && Number(same.line) !== Number(quote.line)
       ? `${Number(same.line) - Number(quote.line) > 0 ? '+' : ''}${Number(same.line) - Number(quote.line)}` : '';
-    const complete=[...new Set(peers.map(item=>item.side))].map(side=>latest(book,side));
-    // This book's own fair probability: its complete market devigged with the member's method.
-    const noVig=same&&complete.length>=2&&complete.every(item=>item&&fresh(item))?devig(complete.map(item=>implied(item.odds)),suite.settings().devigMethod)[complete.indexOf(same)]??NaN:NaN;
-    return {name:book,probability:Number.isFinite(noVig)?percent(noVig):null,mark:brandMark(book),exchange:peers.some(item=>item.book===book&&item.exchange),line:same?.line !== '' && same?.line != null ? fmtLine(same.line) : '—',difference,odds:same ? `${oddsLabel(same.odds)}${other ? ' / ' + oddsLabel(other.odds) : ''}` : '—'};
+    // This book's own fair probability: its complete market devigged with the member's method (server).
+    const noVig = same && current(same) ? same.bookFairProbability : null;
+    return {name:book,probability:noVig != null ? percent(noVig) : null,mark:brandMark(book),exchange:peers.some(item=>item.book===book&&item.exchange),line:same?.line !== '' && same?.line != null ? fmtLine(same.line) : '—',difference,odds:same ? `${oddsLabel(same.odds)}${other ? ' / ' + oddsLabel(other.odds) : ''}` : '—'};
   });
   const selection = `${quote.side}${quote.line !== '' && quote.line != null ? ' ' + fmtLine(quote.line) : ''}`;
   const canEdit = state.quotes.some(item => item.id === quote.id);
   const sideNames=[quote.side,...new Set(peers.map(item=>item.side).filter(side=>side!==quote.side))];
   const rows=sideNames.map(side=>{
-    const prices=books.map(book=>latest(book,side)),available=prices.filter(item=>item&&fresh(item)),best=available.slice().sort((a,b)=>decimal(b.odds)-decimal(a.odds))[0];
-    const average=available.length?probabilityToAmerican(available.reduce((sum,item)=>sum+implied(item.odds),0)/available.length):NaN;
+    const prices=books.map(book=>latest(book,side)),available=prices.filter(item=>item&&current(item)),best=available.slice().sort((a,b)=>decimal(b.odds)-decimal(a.odds))[0];
+    // The market's average price for this side (every current book at this line), from the server.
+    const average=state.analytics.marketSide({...quote,side})?.averageOdds;
     const line=available[0]?.line;
-    return {side,selection:`${side}${line!==''&&line!=null?' '+fmtLine(line):''}`,average:Number.isFinite(average)?oddsLabel(average):'—',best:best?oddsLabel(best.odds):'—',bestMark:best?brandMark(best.book):'',prices:prices.map(item=>({raw:item?Number(item.odds):NaN,value:item?oddsLabel(item.odds):'—',best:!!item&&item.id===best?.id,liquidity:item?.exchange&&Number(item.liquidity)>0?money(Number(item.liquidity)):''}))};
+    return {side,selection:`${side}${line!==''&&line!=null?' '+fmtLine(line):''}`,average:average!=null?oddsLabel(average):'—',best:best?oddsLabel(best.odds):'—',bestMark:best?brandMark(best.book):'',prices:prices.map(item=>({raw:item?Number(item.odds):NaN,value:item?oddsLabel(item.odds):'—',best:!!item&&item.id===best?.id,liquidity:item?.exchange&&Number(item.liquidity)>0?money(Number(item.liquidity)):''}))};
   });
-  const historyBySide=Object.fromEntries(sideNames.map(side=>{const current=books.map(book=>latest(book,side)).filter(Boolean),ids=new Set(current.map(item=>item.id)),seen=new Set();return [side,[...state.history.filter(item=>ids.has(item.quoteId)),...current].filter(item=>{const key=[item.book,item.ts,item.odds,item.line].join('|');if(seen.has(key))return false;seen.add(key);return true;})];}));
+  const historyBySide=Object.fromEntries(sideNames.map(side=>{const currentRows=books.map(book=>latest(book,side)).filter(Boolean),ids=new Set(currentRows.map(item=>item.id)),seen=new Set();return [side,[...state.history.filter(item=>ids.has(item.quoteId)),...currentRows].filter(item=>{const key=[item.book,item.ts,item.odds,item.line].join('|');if(seen.has(key))return false;seen.add(key);return true;})];}));
   const priceHistory=historyBySide[quote.side];
-  const offeredPair=sideNames.map(side=>latest(quote.book,side));
-  const vig=offeredPair.length>=2&&offeredPair.every(Boolean)?(offeredPair.reduce((sum,item)=>sum+implied(item.odds),0)-1)*100:NaN;
-  const recommended=fractionalKellyStake(bankroll,kelly,fair,quote.odds);
-  return {id:quote.id,market:quote.displayMarket || quote.market,sport:quote.sport,event:quote.displayEvent || quote.event,time:quote.startTime ? startLabel(quote) : `${quote.live ? fresh(quote)?'Live':'Stale live' : 'Pregame'} · ${quote.ageUnknown ? 'price age unknown' : age(quote.ts)}`,selection,
-    fairOdds:Number.isFinite(fair) ? oddsLabel(probabilityToAmerican(fair)) : null,fairMark:brandMark(quote.book),
-    book:quote.book,rawLine:quote.line,side:quote.side,rawOdds:Number(quote.odds),offerOdds:oddsLabel(quote.odds),rawFair:fair,rawStake:recommended,recommended:money(recommended),ev:Number.isFinite(fair)?(expectedReturn(fair,quote.odds)*100).toFixed(2)+'%':'—',vig:Number.isFinite(vig)?vig.toFixed(1)+'%':null,
+  // The offered book's own margin on this market (server), when it prices every side.
+  const vig=quote.bookHold!=null&&current(quote)?quote.bookHold*100:NaN;
+  const recommended=kellyStake(quote);
+  const method = pricing?.devigMethod || suite.settings().devigMethod;
+  return {id:quote.id,market:quote.displayMarket || quote.market,sport:quote.sport,event:quote.displayEvent || quote.event,time:quote.startTime ? startLabel(quote) : `${quote.live ? current(quote)?'Live':'Stale live' : 'Pregame'} · ${quote.ageUnknown ? 'price age unknown' : age(quote.ts)}`,selection,
+    fairOdds:pricing?.fairOdds != null ? oddsLabel(pricing.fairOdds) : null,fairMark:brandMark(quote.book),
+    book:quote.book,rawLine:quote.line,side:quote.side,rawOdds:Number(quote.odds),offerOdds:oddsLabel(quote.odds),rawFair:fair,rawStake:recommended,recommended:money(recommended),ev:pricing?.ev!=null?(pricing.ev*100).toFixed(2)+'%':'—',vig:Number.isFinite(vig)?vig.toFixed(1)+'%':null,
     probability:Number.isFinite(fair) ? percent(fair) : null,probabilityLabel:'Est. probability',
-    context:`${quote.source === 'local-api' ? 'Feed' : 'Saved'} prices · ${books.length} ${books.length === 1 ? 'book' : 'books'} · ${quote.ageUnknown ? 'This book does not report when its price was seen' : `Observed ${age(quote.ts)}`}`,
-    note:`Fair value uses your saved reference-book, weighting, and ${suite.settings().devigMethod} no-vig settings. Missing values mean there is not enough qualifying data. Detailed analysis shows each reference and any estimated threshold.`,
+    context:`${quote.source === 'local-api' ? 'Feed' : 'Saved'} prices · ${books.length} ${books.length === 1 ? 'book' : 'books'} · ${quote.ageUnknown ? 'This book does not report when its price was seen' : `Observed ${age(quote.ts)}`}${current(quote) ? '' : ' · no longer current'}`,
+    note:`${FAIR_SOURCE[valueState(pricing?.fairProbability, { meta: state.analytics.meta, quote, now: serverNow() })]} Priced with your saved reference-book, weighting, and ${esc(method)} no-vig settings${pricing?.devigVersion ? ` (${esc(pricing.devigVersion)})` : ''}. Detailed analysis shows each reference and any estimated threshold.`,
     columns,rows,historyBySide,history:priceHistory,canSwap:!!opposite,swapId:peers.find(item=>item.side===opposite)?.id,
     // Feed prices can't be edited; they are replaced on every refresh.
     canEdit:canEdit && quote.source !== 'local-api',canTrack:canEdit};
 }
+// Where the detail view's fair value came from (odds-contract.js valueState).
+const FAIR_SOURCE = {
+  authoritative: 'Fair value and EV come from the odds API.',
+  calculated: 'Fair value and EV are calculated on the VisualOdds server from raw sportsbook prices.',
+  stale: 'These prices are no longer current, so their fair value and EV may have changed.',
+  unavailable: 'There is not enough qualifying reference data for a fair value.',
+  pending: 'Fair value is loading.',
+};
 // Line History modal for any [data-line-history="<quote id>"] button.
-// The quote API keeps each price's history (GET /site/odds/history?id=&hours=). Pull it for every
-// book in this market so the chart starts with real movement, not only what this browser saw.
-// The API's recorded prices for the opened market: the opened book's sides plus up to four other books
-// (sharp books first), one request at a time and cached for a minute, so opening a chart can't use up
-// the price feed's request limit. The API keys rows by its own record id (without this site's
-// "local-api:" prefix) and sometimes files another selection's price under the same id within the same
-// scrape, so only rows at this line, one per second, are kept.
-const DEFAULT_SHARP_BOOKS = new Set(['pinnacle', 'circa', 'circa sports', 'betfair', 'betfair exchange']);
+// The odds service keeps each price's history (GET /api/odds/history?id=&hours=): the opened book's sides
+// plus up to four other books (sharp books first), cleaned on the server. Their points join what this
+// browser recorded, so the chart starts with real movement. Cached for a minute per quote.
 const serverHistoryCache = new Map();
 async function loadServerHistory(quote) {
-  const key = marketKey(quote), sharp = book => DEFAULT_SHARP_BOOKS.has(String(book).toLowerCase());
-  const peers = state.quotes.filter(q => q.source === 'local-api' && q.feedId && marketKey(q) === key);
-  const others = [...new Set(peers.filter(q => q.book !== quote.book).sort((a, b) => Number(sharp(b.book)) - Number(sharp(a.book))).map(q => q.book))].slice(0, 4);
-  for (const peer of peers.filter(q => q.book === quote.book || others.includes(q.book))) {
-    const id = String(peer.feedId).replace(/^local-api:/, ''), cached = serverHistoryCache.get(id);
-    let rows = cached && Date.now() - cached.at < 60_000 ? cached.rows : null;
-    if (!rows) {
-      try {
-        const response = await fetch(`/api/ev/site/odds/history?id=${encodeURIComponent(id)}&hours=24`, { cache: 'no-store', signal: AbortSignal.timeout(5_000) });
-        rows = response.ok ? await response.json() : [];
-      } catch { rows = []; /* The chart still shows what this browser recorded. */ }
-      if (!Array.isArray(rows)) rows = [];
-      serverHistoryCache.set(id, { at: Date.now(), rows });
-    }
+  const cached = serverHistoryCache.get(quote.id);
+  let series = cached && Date.now() - cached.at < 60_000 ? cached.series : null;
+  if (!series) {
+    // The chart still shows what this browser recorded when the history can't be read.
+    try { series = (await getLineMovement({ quoteId: quote.id, hours: 24 })).series; } catch { series = []; }
+    serverHistoryCache.set(quote.id, { at: Date.now(), series });
+  }
+  for (const line of series) {
+    const peer = state.quotes.find(item => item.id === line.quoteId);
+    if (!peer) continue;
     const seen = new Set(state.history.filter(item => item.quoteId === peer.id).map(item => item.ts));
-    const usable = rows.map(row => ({ ts: Date.parse(row?.ts), odds: Number(row?.odds), line: row?.line })).filter(row => Number.isFinite(row.ts) && Number.isFinite(decimal(row.odds))
-      && (row.line == null || row.line === '' || peer.line === '' || Number(row.line) === Number(peer.line))).sort((a, b) => a.ts - b.ts);
-    for (const [index, row] of usable.entries()) {
-      // A row followed within a second by another for the same id is a mixed-up copy from one scrape.
-      if (usable[index + 1] && usable[index + 1].ts - row.ts < 1_000) continue;
-      const ts = new Date(row.ts).toISOString();
-      if (seen.has(ts)) continue;
-      state.history.push({ id: uid(), quoteId: peer.id, seriesId: peer.seriesId || peer.id, sport: peer.sport, event: peer.displayEvent || peer.event, market: peer.market, side: peer.side, selection: peer.selection, book: peer.book, line: peer.line, odds: row.odds, ts, source: 'local-api' });
+    for (const point of line.points) {
+      const ts = new Date(point.at).toISOString();
+      if (!Number.isFinite(Date.parse(ts)) || seen.has(ts)) continue;
+      state.history.push({ id: uid(), quoteId: peer.id, seriesId: peer.seriesId || peer.id, sport: peer.sport, event: peer.displayEvent || peer.event, market: peer.market, side: peer.side, selection: peer.selection, book: peer.book, line: peer.line, odds: point.odds, impliedProbability: point.impliedProbability ?? null, ts, source: 'local-api' });
     }
   }
   state.history.sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
@@ -1060,7 +988,8 @@ function pairBooks(ctx, rows, chosen) {
 function pairMatrix(ctx, rows, chosen, summary, beats = () => false) {
   const {books, latest} = pairBooks(ctx, rows, chosen);
   const heads = books.map(book => {
-    const pair = chosen.map(q => latest(book, q.side)), hold = pair.every(Boolean) ? (pair.reduce((sum, q) => sum + implied(q.odds), 0) - 1) * 100 : NaN;
+    // Each book's own margin on the market (server), shown when it prices both sides.
+    const pair = chosen.map(q => latest(book, q.side)), hold = pair.every(Boolean) && pair[0].bookHold != null ? pair[0].bookHold * 100 : NaN;
     return `<th scope="col" class="${chosen.some(q => q.book === book) ? 'is-offer' : ''}" title="${esc(book)}"><span class="evb-book-tile">${bookLogo(book, 34)}</span><small>${esc(book)}</small><em>${Number.isFinite(hold) ? `${hold.toFixed(1)}% hold` : 'One side'}</em></th>`;
   }).join('');
   const body = chosen.map((q, index) => `<tr class="is-selected-side"><th scope="row"><span>${esc(selectionText(q))}</span></th>${summary.cells(q, index).map(value => `<td class="evb-summary-cell"><strong>${esc(value)}</strong></td>`).join('')}${books.map(book => {
@@ -1101,8 +1030,9 @@ function arbPrices(ctx, rows, chosen) {
   return {books, rows:chosen.map((q, index) => {
     const prices = books.map(book => latest(book, q.side)), quoted = prices.filter(Boolean);
     const best = quoted.reduce((top, price) => !top || decimal(price.odds) > decimal(top.odds) ? price : top, null);
-    const average = probabilityToAmerican(quoted.reduce((sum, price) => sum + implied(price.odds), 0) / quoted.length);
-    return {label:selectionText(q), selected:index === 0, average:Number.isFinite(average) ? ctx.oddsLabel(average) : '—', best:best && {book:best.book, value:ctx.oddsLabel(best.odds)},
+    // The market's average price for this side (server).
+    const average = state.analytics.marketSide(q)?.averageOdds;
+    return {label:selectionText(q), selected:index === 0, average:average != null ? ctx.oddsLabel(average) : '—', best:best && {book:best.book, value:ctx.oddsLabel(best.odds)},
       cells:prices.map(price => price ? {value:ctx.oddsLabel(price.odds), sub:arbLiquidity(price), best:price.id === q.id} : {value:'—'})};
   })};
 }
@@ -1170,12 +1100,11 @@ function renderArbBoard(opportunities, ctx) {
     + pairTable(`${ctx.live ? 'Live' : 'Pregame'} arbitrage opportunities`, [['Arb %', 'arb-col-pct'], ['Market'], ['Bets'], ['<span class="sr-only">Actions</span>', 'evb-col-actions']], body) + pairMore(count);
 }
 // Final totals (or first-selection margins) from just below to just above the window.
+// The server's outcome at each final score, scaled to the member's total outlay.
 function pairLadder(x) {
-  const {over, under, plan} = x, low = x.kind === 'spread' ? -Number(over.line) : Number(over.line), high = Number(under.line);
-  let scores = [];
-  for (let score = Math.floor(low) - 1; score <= Math.ceil(high) + 1; score++) scores.push(score);
-  if (scores.length > 12) scores = [...new Set([Math.floor(low) - 1, Math.floor(low), Math.round((low + high) / 2), Math.ceil(high), Math.ceil(high) + 1])];
-  const results = scores.map(score => middleOutcomes(over, under, plan.stakes[0], plan.stakes[1], score));
+  const {over, under, plan} = x;
+  const results = (x.ladder || []).map(point => ({ score:point.score, a:{result:point.first}, b:{result:point.second}, profit:point.netPerUnit * plan.actualTotal }));
+  const scores = results.map(result => result.score);
   const word = leg => leg ? {win:'Win', push:'Push', loss:'Loss'}[leg.result] || '—' : '—';
   const net = result => !result ? '' : result.a.result === 'win' && result.b.result === 'win' ? 'is-best' : result.profit >= 0 ? 'is-plus' : 'is-loss';
   const legRow = (q, pick) => `<tr><th scope="row"><span>${esc(selectionText(q))}</span></th>${results.map(result => `<td class="pair-result is-${pick(result)?.result || 'none'}"><span>${word(pick(result))}</span></td>`).join('')}</tr>`;
@@ -1197,7 +1126,7 @@ function renderMiddleBoard(rows, ctx, empty) {
       <td class="evb-actions"><div><button type="button" class="evb-link" ${calc} aria-label="Calculate outcome for ${esc(label)}" title="Calculate outcome">${pairCalcIcon(14)}<span>Calculate</span></button>${pairToggle(key, label)}</div></td>`;
     const detail = () => pairDetail(key, 8, `Outcomes for ${label}`,
       pairStats([['Net if both win', money(x.inside.profit), 'is-positive'], ['Total stake', money(plan.actualTotal)], // A score can only land on a whole-number line (a push for that leg); half-point lines never.
-      ...(Number.isInteger(low) ? [['At lower line', money(x.lower.profit), x.lower.profit >= 0 ? '' : 'is-negative']] : []), ...(Number.isInteger(high) ? [['At upper line', money(x.upper.profit), x.upper.profit >= 0 ? '' : 'is-negative']] : []), ['Lowest outside', money(x.outside), x.outside >= 0 ? 'is-positive' : 'is-negative'], ['Capacity', pairCapacity(plan)]])
+      ...(Number.isInteger(low) && x.lower ? [['At lower line', money(x.lower.profit), x.lower.profit >= 0 ? '' : 'is-negative']] : []), ...(Number.isInteger(high) && x.upper ? [['At upper line', money(x.upper.profit), x.upper.profit >= 0 ? '' : 'is-negative']] : []), ['Lowest outside', money(x.outside), x.outside >= 0 ? 'is-positive' : 'is-negative'], ['Capacity', pairCapacity(plan)]])
       + pairLadder(x)
       + pairFooter([['is-best', 'Both bets win'], ['is-plus', 'Net gain or even'], ['is-loss', 'Net loss']],
         `<button type="button" data-suite-action="track" data-id="${esc(over.id)}" data-tool="middles">${boardIcon('track', 14)}Track first</button><button type="button" data-suite-action="track" data-id="${esc(under.id)}" data-tool="middles">${boardIcon('track', 14)}Track second</button><button type="button" class="evb-primary" ${calc}>${pairCalcIcon(14)}Calculate outcome</button>`,
@@ -1217,14 +1146,15 @@ function renderHoldBoard(rows, ctx, empty) {
   const holds = rows.map(x => x.hold), worst = Math.max(...holds, 0), best = Math.min(...holds, 0);
   const body = rows.slice(0, pairVisibleCount).map(x => {
     const [a, b] = x.best, key = pairKey(a, b), label = `${selectionText(a)} and ${selectionText(b)}`;
-    const fair = devig([implied(a.odds), implied(b.odds)], suite.settings().devigMethod);
+    // Implied and no-vig probabilities of the two best prices, as the server computed them.
+    const fair = x.fairProbabilities, impliedOf = [a.impliedProbability, b.impliedProbability];
     const cells = pairCells(a, false, {value:signed(x.hold), width:pairBar(worst === best ? 1 : .06 + .94 * (worst - x.hold) / (worst - best)), tier:x.hold < 0 ? 'high' : 'flat'})
-      + pairLeg(ctx, a, 'a', `${percent(implied(a.odds))} implied`) + pairLeg(ctx, b, 'b', `${percent(implied(b.odds))} implied`)
+      + pairLeg(ctx, a, 'a', `${percent(impliedOf[0])} implied`) + pairLeg(ctx, b, 'b', `${percent(impliedOf[1])} implied`)
       + `<td class="pair-fair"><strong>${percent(fair[0])} / ${percent(fair[1])}</strong><span class="pair-split" aria-hidden="true"><i style="width:${(fair[0]*100).toFixed(1)}%"></i></span><small>No-vig split</small></td>
       <td class="evb-actions"><div>${pairToggle(key, label)}</div></td>`;
     const detail = () => pairDetail(key, 7, `Book prices for ${label}`,
-      pairStats([['Combined hold', signed(x.hold), x.hold < 0 ? 'is-positive' : ''], ['Market margin', x.hold < 0 ? 'Below zero' : 'Combined margin'], [`Fair ${selectionText(a)}`, ctx.oddsLabel(probabilityToAmerican(fair[0]))], [`Fair ${selectionText(b)}`, ctx.oddsLabel(probabilityToAmerican(fair[1]))], ['Books compared', String(new Set(x.rows.map(q => q.book)).size)], ['Observed', ctx.age(pairOldest(a, b))]])
-      + pairMatrix(ctx, x.rows, [a, b], {heads:['Implied', 'No-vig'], cells:(q, i) => [percent(implied(q.odds)), percent(fair[i])]})
+      pairStats([['Combined hold', signed(x.hold), x.hold < 0 ? 'is-positive' : ''], ['Market margin', x.hold < 0 ? 'Below zero' : 'Combined margin'], [`Fair ${selectionText(a)}`, x.fairOdds[0] != null ? ctx.oddsLabel(x.fairOdds[0]) : '—'], [`Fair ${selectionText(b)}`, x.fairOdds[1] != null ? ctx.oddsLabel(x.fairOdds[1]) : '—'], ['Books compared', String(new Set(x.rows.map(q => q.book)).size)], ['Observed', ctx.age(pairOldest(a, b))]])
+      + pairMatrix(ctx, x.rows, [a, b], {heads:['Implied', 'No-vig'], cells:(q, i) => [percent(q.impliedProbability), percent(fair[i])]})
       + pairFooter([['is-best', 'Best price']], x.hold < 0 ? `<button type="button" class="evb-primary" data-tool="${a.live ? 'arb-live' : 'arb-pre'}">${pairCalcIcon(14)}Open in Arbitrage</button>` : ''));
     return pairBoardRow(key, a, false, cells, detail);
   }).join('');
@@ -1233,29 +1163,35 @@ function renderHoldBoard(rows, ctx, empty) {
     + '<p class="ev-caption ev-method-note">Hold is the sum of both implied probabilities, less 100%. Negative hold is a potential arbitrage before fees, limits, and execution changes. Open a row to compare every book.</p>';
 }
 
-const ARB_SANITY_LIMIT = .15;
-// The largest return an arbitrage-like pair may show (Arbitrage, Middles, Low holds): the saved
-// maximum, else 15%; bigger gaps are mislabeled or stale prices.
-const arbCap = settings => settings.maxArbPercent === '' || settings.maxArbPercent == null ? ARB_SANITY_LIMIT : Number(settings.maxArbPercent) / 100;
+// A board's section that hasn't arrived yet (the tool was just opened) or that the odds service didn't send.
+const sectionPending = (title, section) => `<div class="ev-empty ev-arb-empty" role="status"><strong>${esc(title)}</strong><p>${state.apiSyncedAt ? `Loading ${section} from the odds service…` : 'Waiting for the odds service. Results appear once prices sync.'}</p></div>`;
+// A server opportunity's stake split for the member's total: its stake shares times the total, no more than
+// the supplied limits allow. Returns and outcomes are the server's per-unit figures times that total.
+function stakePlan(shares, total, opportunity) {
+  const capacity = opportunity.capacity ?? Infinity, actualTotal = Math.max(0, Math.min(total, capacity));
+  return { stakes: shares.map(share => Math.round(actualTotal * share * 100) / 100), actualTotal, limited: total > capacity + 1e-9,
+    limitsKnown: opportunity.limitsKnown, maximumFeasibleTotal: capacity, pushPossible: Boolean(opportunity.pushPossible) };
+}
 function renderArb(live) {
   const settings = suite.settings();
+  if (!state.analytics.arbitrage) return `<div class="ev-stack ev-arb-screen evb-board pair-board arb-board">${sectionPending('Arbitrage', 'arbitrage matches')}</div>`;
   const budget = Math.max(.01, Number(bankroll) || 5000);
   const firstStake = Math.max(.01, Number(stake) * flatMultiplier || 100);
   const minimumMargin = Math.max(Number(settings.minArbPercent || 0) / 100, Number(designFilters.minEdge) || 0);
-  // Without a saved max, returns above 15% are hidden: real arbitrage is almost always a few
-  // percent, and larger gaps come from mislabeled sides, sports or stale prices in the feed.
-  const maximumMargin = arbCap(settings);
   const pinned = legs => legs.some(q => state.suite?.flags?.[q.id]?.pin);
-  const capacityPasses = plan => !(Number(settings.minAvailableStake) > 0) || plan.limitsKnown && Number.isFinite(plan.maximumFeasibleTotal) && plan.maximumFeasibleTotal >= Number(settings.minAvailableStake);
-  const opportunities = arbitrageRows(quotes().filter(q => sportsbookSelected(q.book) && suite.quoteVisible(q)), live, settings)
-    .flatMap(({ rows, pairs }) => pairs.map(legs => {
-        const allocation = constrainedArb(legs, budget);
-        if (!allocation) return null;
-        const requested = Math.min(budget, firstStake * allocation.actualTotal / allocation.stakes[0]);
-        const plan = constrainedArb(legs, requested);
-        return plan ? {legs,plan,rows} : null;
-      }))
-    .filter(entry => entry && (!marketType || entry.legs[0].type === marketType) && entry.plan.margin >= minimumMargin && entry.plan.margin <= maximumMargin && capacityPasses(entry.plan));
+  const capacityPasses = opportunity => !(Number(settings.minAvailableStake) > 0) || opportunity.limitsKnown && opportunity.capacity != null && opportunity.capacity >= Number(settings.minAvailableStake);
+  // The server lists every pair below 100% within the return cap; the member's books, filters and
+  // minimum return choose which show. The first leg gets the member's first stake.
+  const opportunities = state.analytics.arbitrage.flatMap(opportunity => {
+    const legs = opportunity.legs.map(leg => state.analytics.byId.get(leg.quoteId));
+    if (Boolean(opportunity.live) !== live || legs.some(q => !q || !current(q) || !sportsbookSelected(q.book) || !suite.quoteVisible(q) || !quotePassesDesign(q) || !quotePassesTool(q) || !visible(q, ['event','market','book','side','sport','player']))) return [];
+    if ((marketType && legs[0].type !== marketType) || opportunity.margin < minimumMargin || !capacityPasses(opportunity)) return [];
+    const shares = opportunity.legs.map(leg => leg.stakeFraction), total = Math.min(budget, firstStake / shares[0]);
+    const plan = { ...stakePlan(shares, total, opportunity), margin: opportunity.margin };
+    plan.profits = plan.stakes.map(() => plan.actualTotal * opportunity.margin);
+    plan.minProfit = plan.actualTotal * opportunity.lowestPerUnit;
+    return [{ legs, plan, rows: state.analytics.peers(legs[0]), opportunity }];
+  });
   const eventOf = entry => entry.legs[0].displayEvent || entry.legs[0].event, startOf = entry => Date.parse(entry.legs[0].startTime) || Infinity;
   const order = designSort === 'event' ? (left,right) => eventOf(left).localeCompare(eventOf(right)) || right.plan.margin - left.plan.margin
     : designSort === 'time' ? (left,right) => startOf(left) - startOf(right) || right.plan.margin - left.plan.margin : (left,right) => right.plan.margin - left.plan.margin;
@@ -1264,8 +1200,8 @@ function renderArb(live) {
     preserveReadingOrder(opportunities, [...document.querySelectorAll('.evb-row[data-pair-row]')].map(row=>row.dataset.pairRow), ({legs:[a,b]})=>pairKey(a,b));
     opportunities.sort((left,right) => Number(pinned(right.legs)) - Number(pinned(left.legs)));
   }
-  const count = opportunities.length;
-  return `<div class="ev-stack ev-arb-screen evb-board pair-board arb-board">${count ? renderArbBoard(opportunities, pairContext({live, firstStake, budget})) : `<div class="ev-empty ev-arb-empty"><strong>${live && !state.quotes.some(q => q.live) ? 'No live games in the feed right now' : 'No arbitrage matches'}</strong><p>${live && !state.quotes.some(q => q.live) ? 'Live arbitrage appears here when the quote feed sends in-play prices. Pregame arbitrage is under the Pregame tab.' : state.quotes.length ? 'No opposing prices match the selected books, pricing settings, and stake limits. Adjust a filter or wait for the next refresh.' : 'Arbitrage matches appear here once the quote API returns both sides of a market at different sportsbooks.'}</p><div class="ev-arb-empty-actions">${state.quotes.length ? button('Clear filters', 'data-arb-clear') : ''}</div></div>`}<p class="ev-caption ev-method-note">Rounded stakes use supplied limits, commissions, and boosts. Missing capacity is labeled; calculated outcomes do not confirm availability at a sportsbook. Open a row to compare every book.${maximumMargin === ARB_SANITY_LIMIT ? ' Returns above 15% are hidden as likely data errors; set a max return in Pricing &amp; filters to change this.' : ''}</p></div>`;
+  const count = opportunities.length, cap = state.analytics.meta?.pricing?.arbCap;
+  return `<div class="ev-stack ev-arb-screen evb-board pair-board arb-board">${count ? renderArbBoard(opportunities, pairContext({live, firstStake, budget})) : `<div class="ev-empty ev-arb-empty"><strong>${live && !state.quotes.some(q => q.live) ? 'No live games in the feed right now' : 'No arbitrage matches'}</strong><p>${live && !state.quotes.some(q => q.live) ? 'Live arbitrage appears here when the quote feed sends in-play prices. Pregame arbitrage is under the Pregame tab.' : state.quotes.length ? 'No opposing prices match the selected books, pricing settings, and stake limits. Adjust a filter or wait for the next refresh.' : 'Arbitrage matches appear here once the quote API returns both sides of a market at different sportsbooks.'}</p><div class="ev-arb-empty-actions">${state.quotes.length ? button('Clear filters', 'data-arb-clear') : ''}</div></div>`}<p class="ev-caption ev-method-note">Returns, stake shares and capacity come from the odds service (supplied limits and commissions included); stakes here scale them to your first stake and are rounded. Missing capacity is labeled; calculated outcomes do not confirm availability at a sportsbook. Open a row to compare every book.${cap != null && settings.maxArbPercent == null ? ` Returns above ${(cap * 100).toFixed(0)}% are hidden as likely data errors; set a max return in Pricing &amp; filters to change this.` : ''}</p></div>`;
 }
 
 // When a tool's filters hide every result, say so instead of implying the feed has no prices.
@@ -1273,46 +1209,55 @@ const filteredEmpty = (fallback, symbol = 'filter') => TOOL_FILTERS[active] && a
   ? toolEmpty('Nothing matches these filters', 'The quote API has prices, but none pass the filters you picked. Loosen or clear a filter to see more.', button('Clear filters', 'data-tool-filter-clear'), symbol)
   : fallback;
 function renderMiddles() {
-  const settings = suite.settings(), maximumMargin = arbCap(settings);
+  if (!state.analytics.middles) return `<div class="tool-stack evb-board pair-board middle-board">${sectionPending('Middles', 'middle windows')}</div>`;
+  const settings = suite.settings(), total = Number(stake);
   const pinned = row => [row.over,row.under].some(q => state.suite?.flags?.[q.id]?.pin);
-  // Allocate only the supplied financial terms here. Settlement still uses the
-  // original exact market identities and distinct thresholds below.
-  const allocationLeg = q => Object.fromEntries(['odds','commission','commissionPercent','boostPercent','minStake','maxStake','maxBet','exchange','liquidity'].filter(key=>q[key]!==undefined).map(key=>[key,q[key]]));
-  // The sportsbook picker isn't shown here, so its choices on Arbitrage don't hide books (eligibleQuotes
-  // keeps the member's available books).
-  const rows = [false,true].flatMap(mode => middleRows(eligibleQuotes(quotes()).filter(q=>suite.quoteVisible(q)),mode,settings))
-    .map(row => {
-      const plan = constrainedArb([allocationLeg(row.over),allocationLeg(row.under)],Number(stake));
-      if (!plan || Number(settings.minAvailableStake)>0 && (!plan.limitsKnown || !Number.isFinite(plan.maximumFeasibleTotal) || plan.maximumFeasibleTotal<Number(settings.minAvailableStake))) return null;
-      const lower = row.kind==='spread' ? -Number(row.over.line) : Number(row.over.line), upper = Number(row.under.line);
-      const outcomes = [lower-1,(lower+upper)/2,upper+1,lower,upper].map(score=>middleOutcomes(row.over,row.under,plan.stakes[0],plan.stakes[1],score));
-      if (outcomes.some(outcome=>!outcome)) return null;
-      return {...row,plan,inside:outcomes[1],outside:Math.min(outcomes[0].profit,outcomes[2].profit),lower:outcomes[3],upper:outcomes[4]};
-    }).filter(row => row && row.cost >= -maximumMargin && (!toolFilters.minWidth || row.width >= Number(toolFilters.minWidth)) && (!toolFilters.maxCost || row.cost * 100 <= Number(toolFilters.maxCost))).sort((left,right)=>Number(pinned(right))-Number(pinned(left)));
+  const capacityPasses = opportunity => !(Number(settings.minAvailableStake) > 0) || opportunity.limitsKnown && opportunity.capacity != null && opportunity.capacity >= Number(settings.minAvailableStake);
+  // The sportsbook picker isn't shown here, so its choices on Arbitrage don't hide books (bookAvailable
+  // keeps the member's available books). Outcomes are the server's per-unit results times the outlay.
+  const rows = state.analytics.middles.flatMap(opportunity => {
+    const over = state.analytics.byId.get(opportunity.firstQuoteId), under = state.analytics.byId.get(opportunity.secondQuoteId);
+    if (!over || !under || ![over, under].every(q => current(q) && bookAvailable(q.book) && suite.quoteVisible(q) && quotePassesTool(q) && visible(q, ['event','market','book','side','sport','player'])) || !capacityPasses(opportunity)) return [];
+    const plan = stakePlan(opportunity.stakeFractions, total, opportunity), unit = plan.actualTotal, per = opportunity.perUnit;
+    return [{ over, under, kind: opportunity.kind, window: opportunity.window.label, width: opportunity.width, cost: opportunity.cost, ladder: opportunity.ladder, plan,
+      inside: { profit: per.inside * unit }, outside: per.outside * unit, lower: per.atLower == null ? null : { profit: per.atLower * unit }, upper: per.atUpper == null ? null : { profit: per.atUpper * unit } }];
+  }).filter(row => (!toolFilters.minWidth || row.width >= Number(toolFilters.minWidth)) && (!toolFilters.maxCost || row.cost * 100 <= Number(toolFilters.maxCost))).sort((left,right)=>Number(pinned(right))-Number(pinned(left)));
   return `<div class="tool-stack evb-board pair-board middle-board">${renderMiddleBoard(rows, pairContext({stake}), toolPanel('Middle opportunities','Compare overlapping totals and spread lines.',filteredEmpty(toolEmpty('Find a winning window','Middles appear when the quote API has a lower Over and a higher Under, or opposing spreads with room for both sides to win. Prices must meet your availability and stake settings.',action('Add market prices','quote'),'expand'))))}</div>`;
 }
 
 function renderHolds() {
-  const cap = arbCap(suite.settings()), rows = [false,true].flatMap(mode=>holdRows(eligibleQuotes(quotes()),mode)).filter(row=>1/(1+row.hold)-1 <= cap && (!toolFilters.maxHold || row.hold*100 <= Number(toolFilters.maxHold))).sort((a,b)=>a.hold-b.hold);
+  if (!state.analytics.holds) return `<div class="tool-stack evb-board pair-board hold-board">${sectionPending('Low holds', 'market holds')}</div>`;
+  // The server lists two-way markets by the hold of their best prices (within the return cap); the member's
+  // available books and filters choose which show.
+  const rows = state.analytics.holds.flatMap(market => {
+    const best = market.quoteIds.map(id => state.analytics.byId.get(id));
+    if (best.some(q => !q || !current(q) || !bookAvailable(q.book) || !suite.quoteVisible(q) || !quotePassesTool(q) || !visible(q, ['event','market','book','side','sport','player']))) return [];
+    return [{ ...market, best, rows: state.analytics.peers(best[0]) }];
+  }).filter(row => !toolFilters.maxHold || row.hold * 100 <= Number(toolFilters.maxHold)).sort((a,b)=>a.hold-b.hold);
   const empty = filteredEmpty(toolEmpty('No two-sided markets yet','Holds appear here once the quote API returns both sides of a market across books.',action('Add prices','quote'),'performance'));
   return `<div class="tool-stack evb-board pair-board hold-board">${renderHoldBoard(rows, pairContext(), empty)}</div>`;
 }
 
 function renderPromo() {
   const outcome = promoConversion({...promoInput, boost:promoInput.kind === 'bonus' ? 0 : promoInput.boost});
-  // Promo book and min odds describe the promotion side only; the hedge can be at any other book.
-  // A bonus is a sportsbook's: the promotion side is never an exchange. Only two-way markets can be
-  // hedged with one bet (a draw would lose both), and both prices must come from books that price
-  // both sides of that market (see ownBookConsistent).
-  const promoSide = q => !q.exchange && fresh(q) && (!toolFilters.book || q.book === toolFilters.book) && oddsWithin(q.odds, toolFilters.minOdds);
-  const paired = groups(eligibleQuotes(quotes())).flatMap(rows=>opposingSides(rows).length!==2?[]:rows.filter(q=>promoSide(q)&&ownBookConsistent(q,rows,fresh)).map(q=>({q,opposite:rows.filter(x=>x.side!==q.side&&priceFamily(x)!==priceFamily(q)&&fresh(x)&&sameGame(x,q)&&ownBookConsistent(x,rows,fresh)).sort((a,b)=>decimal(b.odds)-decimal(a.odds))[0]})).filter(x=>x.opposite));
+  // Promo book and min odds describe the promotion side only; the hedge can be at any other book. The odds
+  // service pairs each sportsbook price in a two-way market (its own book pricing both sides) with the best
+  // hedges at other books, best first; the first one at a book available to the member is used.
+  const promoSide = q => !q.exchange && current(q) && bookAvailable(q.book) && (!toolFilters.book || q.book === toolFilters.book) && oddsWithin(q.odds, toolFilters.minOdds) && quotePassesTool(q) && suite.quoteVisible(q) && visible(q, ['event','market','book','side','sport','player']);
+  const paired = (state.analytics.hedges || []).flatMap(pair => {
+    const q = state.analytics.byId.get(pair.promoQuoteId);
+    if (!q || !promoSide(q)) return [];
+    const opposite = pair.hedges.map(hedge => state.analytics.byId.get(hedge.quoteId)).find(x => x && current(x) && bookAvailable(x.book));
+    return opposite ? [{ q, opposite }] : [];
+  });
   const fields = `<div class="tool-form-grid"><label>Promotion type<select data-promo="kind"><option value="bonus" ${promoInput.kind==='bonus'?'selected':''}>Bonus bet · stake not returned</option><option value="boost" ${promoInput.kind==='boost'?'selected':''}>Odds boost · cash stake</option></select></label><label>${promoInput.kind==='bonus'?'Bonus value':'Cash stake'} ($)<input data-promo="stake" type="number" min="0.01" step="0.01" value="${esc(promoInput.stake)}"></label><label>Profit boost (%)<input data-promo="boost" type="number" min="0" step="0.1" value="${esc(promoInput.boost)}" ${promoInput.kind==='bonus'?'disabled':''}></label><label>Promotion odds<input data-promo="promoOdds" type="number" step="1" value="${esc(promoInput.promoOdds)}"><small>American odds, such as +150.</small></label><label>Hedge odds<input data-promo="hedgeOdds" type="number" step="1" value="${esc(promoInput.hedgeOdds)}"><small>The opposing selection at another book.</small></label></div>`;
   const result = toolReceipt('Hedge stake',outcome?money(outcome.hedge):'—', [['Promotion wins',outcome?money(outcome.ifPromoWins):'—'],['Hedge wins',outcome?money(outcome.ifHedgeWins):'—'],[promoInput.kind==='bonus'?'Bonus conversion':'Cash stake',outcome?(promoInput.kind==='bonus'?percent(outcome.conversion):money(promoInput.stake)):'—']],outcome?'Calculated from the prices entered. Check promotion terms and settlement rules before using this plan.':'Enter a positive stake and valid American odds to calculate both outcomes.');
   const bonus = promoInput.kind === 'bonus';
   const pick = selectionText, seenPairs = new Set();
-  const plans = paired.filter(({q,opposite})=>1/(implied(q.odds)+implied(opposite.odds))-1 <= ARB_SANITY_LIMIT).map(({q,opposite})=>({q,opposite,plan:promoConversion({...promoInput,boost:bonus?0:promoInput.boost,promoOdds:q.odds,hedgeOdds:opposite.odds})})).filter(x=>x.plan&&(!bonus||x.plan.conversion<=1)).map(x=>({...x,locked:Math.min(x.plan.ifPromoWins,x.plan.ifHedgeWins)})).sort((a,b)=>b.locked-a.locked)
-    .filter(({q,opposite})=>{const key=JSON.stringify([marketKey(q),priceFamily(q),Number(q.odds),priceFamily(opposite),Number(opposite.odds)]);return !seenPairs.has(key)&&seenPairs.add(key);}).slice(0,12);
-  const prices = plans.length ? toolBoard({layout:'cards',variant:'promo',
+  // The conversion of each pair is this calculator run on its two prices with the member's promotion.
+  const plans = paired.map(({q,opposite})=>({q,opposite,plan:promoConversion({...promoInput,boost:bonus?0:promoInput.boost,promoOdds:q.odds,hedgeOdds:opposite.odds})})).filter(x=>x.plan&&(!bonus||x.plan.conversion<=1)).map(x=>({...x,locked:Math.min(x.plan.ifPromoWins,x.plan.ifHedgeWins)})).sort((a,b)=>b.locked-a.locked)
+    .filter(({q,opposite})=>{const key=JSON.stringify([q.marketKey,q.priceFamily||q.book,Number(q.odds),opposite.priceFamily||opposite.book,Number(opposite.odds)]);return !seenPairs.has(key)&&seenPairs.add(key);}).slice(0,12);
+  const prices = !state.analytics.hedges ? toolPanel('Use saved market prices','Load a promotion price and its opposing hedge in one click.',`<div class="ev-empty" role="status"><strong>Loading hedge pairs</strong>${state.apiSyncedAt ? 'Reading promotion and hedge prices from the odds service…' : 'Waiting for the odds service.'}</div>`) : plans.length ? toolBoard({layout:'cards',variant:'promo',
     label:'Saved promotion and hedge pairs',
     summary:{text:`<strong>${plans.length} hedge ${plans.length===1?'pair':'pairs'}</strong> from saved prices`,pills:[[bonus?'Best conversion':'Best locked profit',bonus?percent(plans[0].plan.conversion):money(plans[0].locked),plans[0].locked>0],[bonus?'Bonus value':'Cash stake',money(promoInput.stake)]]},
     columns:{metric:bonus?'Conversion':'Locked profit',event:'Event',market:'Market',bet:'Promotion bet',odds:'Promo odds',prob:'Hedge',stake:'Hedge stake'},
@@ -1333,41 +1278,37 @@ function renderPromo() {
 
 function renderParlay() {
   const selected = parlayIds.map(id=>state.quotes.find(q=>q.id===id)).filter(q=>q&&bookAvailable(q.book));
-  // Legs are priced exactly as on Positive EV (every book is a reference; only the legs' own books must be
-  // available in the member's state); an EV above its sanity cap is a data error, not a leg. Every leg gets
-  // its fair chance, not only +EV ones: the minimum/maximum EV settings filter the Positive EV board, and
-  // here the Leg EV filter ("Any" includes negative legs) chooses which legs are listed.
-  const settings = suite.settings(), priced = new Map(computeAdvancedEv(quoteSource(), { ...settings, minEvPercent: null, maxEvPercent: null }).map(row => [row.quote.id, row]));
-  // As on the board, a game line counts only from a book pricing both of its sides.
-  const markets = marketRowsOf(quoteSource()), usable = row => row && !row.estimated && plausibleEv(row, markets, settings);
-  const legs = selected.map(q=>({...q,probability:usable(priced.get(q.id))?priced.get(q.id).fair:NaN}));
+  // Each leg's fair chance is the odds service's (priced exactly as on Positive EV: every book is a
+  // reference, the member's pricing settings). A leg the server marks implausible (above its sanity cap, or
+  // a game line from a book not pricing both sides) is a data error, not a leg. The ticket's combined
+  // price and EV are this page's parlay calculator on those values and the legs the member picked.
+  const usable = row => row && !row.estimated && row.plausible;
+  const legs = selected.map(q=>({...q,probability:usable(state.analytics.pricingOf(q))?state.analytics.pricingOf(q).fairProbability:NaN}));
   const result = parlay(legs);
   const valid = result && Number.isFinite(result.ev) && new Set(selected.map(q=>q.book)).size===1;
   const invalidReason = selected.length < 2 ? 'Choose at least two legs from different events.' : new Set(selected.map(q=>q.book)).size > 1 ? 'Choose one sportsbook for every leg. These books cannot form one ticket.' : new Set(selected.map(q=>q.event)).size < selected.length ? 'Same-event legs may be correlated. This independent-leg calculator does not support that combination.' : 'A fair estimate needs complete comparison prices for every leg.';
-  // Fair odds for each leg come from every book in the market; filters only choose which legs show.
+  // Filters only choose which legs show.
   const listed = new Set(quotes().map(q => q.id));
-  const options = [...priced.values()].filter(row => usable(row) && !row.quote.live && (!sport || row.quote.sport === sport)).filter(({quote,ev})=>listed.has(quote.id)
-    && (!toolFilters.book || quote.book === toolFilters.book)
-    && (toolFilters.legEv === '' || ev * 100 >= Number(toolFilters.legEv))
-    && oddsWithin(quote.odds, '', toolFilters.maxOdds));
+  const options = state.quotes.filter(q => !q.live && current(q) && listed.has(q.id) && (!sport || q.sport === sport)).map(evRowOf).filter(row => usable(row) && (!toolFilters.book || row.quote.book === toolFilters.book)
+    && (toolFilters.legEv === '' || row.ev * 100 >= Number(toolFilters.legEv)) && oddsWithin(row.quote.odds, '', toolFilters.maxOdds)).sort((a,b)=>b.ev-a.ev);
   const pick = selectionText;
   const available = options.length ? toolBoard({layout:'cards',variant:'parlay',
     label:'Available parlay legs',compact:true,
     summary:{text:`<strong>${options.length} ${options.length===1?'leg':'legs'}</strong> with complete comparison prices`,pills:[['In ticket',String(selected.length)]]},
     columns:{metric:'Leg EV',event:'Event',market:'Market',bet:'Leg & book',odds:'Odds',prob:'Fair chance'},
     rows:options.slice(0,parlayVisibleCount).map(({quote:q,fair,ev})=>{
-      const inTicket = parlayIds.includes(q.id);
+      const inTicket = parlayIds.includes(q.id), fairOdds = state.analytics.pricingOf(q)?.fairOdds;
       return {id:'parlay-'+q.id,attrs:`data-open-quote="${esc(q.id)}"`,selected:inTicket,
         metric:{value:signed(ev),bar:Math.max(0,ev),negative:ev<0,tier:ev>=.05?'high':ev>=.02?'mid':'low'},
         event:{quote:q,title:q.displayEvent||q.event,sport:q.sport},market:q.displayMarket||q.market,live:q.live,
         bet:{book:q.book,title:pick(q),lines:[q.book]},
-        odds:{value:oddsLabel(q.odds),sub:Number.isFinite(fair)?`Fair ${oddsLabel(probabilityToAmerican(fair))}`:''},
+        odds:{value:oddsLabel(q.odds),sub:fairOdds!=null?`Fair ${oddsLabel(fairOdds)}`:''},
         prob:{value:percent(fair),sub:'No-vig'},
         actions:boardButton(inTicket?'Added':'Add leg',`data-parlay="${esc(q.id)}" aria-pressed="${inTicket}" aria-label="${inTicket?'Remove':'Add'} ${esc(pick(q))} ${inTicket?'from':'to'} parlay"`)+boardToggle(`Compare prices for ${pick(q)}`,`data-detail="${esc(q.id)}"`)};
     })
   })+`${options.length > parlayVisibleCount ? `<button type="button" class="ev-parlay-more" data-parlay-more>Show ${Math.min(40,options.length-parlayVisibleCount)} more legs · ${options.length} available</button>` : ''}` : filteredEmpty(toolEmpty('No priced markets yet','Parlay legs appear once the quote API returns both sides at two books.',action('Add prices','quote'),'plus'));
   const ticket = legs.length ? boardTicket(legs.map(q=>({book:q.book,title:pick(q),sub:`${q.displayEvent||q.event} · ${q.displayMarket||q.market} · Fair ${percent(q.probability)}`,price:oddsLabel(q.odds),action:button('Remove',`data-parlay-remove="${esc(q.id)}"`)}))) : toolEmpty('Your ticket starts here','Choose legs from one sportsbook and different events.','','picks');
-  return `<div class="ev-parlay-summary"><div><strong>${selected.length} ${selected.length===1?'leg':'legs'}</strong><span>${valid ? `${result.payout.toFixed(2)} decimal · ${signed(result.ev)} EV` : 'Choose compatible legs'}</span></div><button type="button" data-parlay-ticket>Review ticket</button></div><div class="tool-two-column evt-builder" id="ev-parlay-browse">${options.length ? `<div class="tool-stack">${available}</div>` : toolPanel('Available legs','Prices with a complete comparison market.',available)}<div class="tool-stack" id="ev-parlay-ticket" tabindex="-1"><button type="button" data-parlay-browse>Back to available legs</button>${toolPanel('Your parlay',selected.length+' selected '+(selected.length===1?'leg':'legs'),ticket)}${toolReceipt('Combined decimal odds',valid?result.payout.toFixed(2):'—',[['Fair chance',valid?percent(result.probability):'—'],['Expected value',valid?signed(result.ev):'—']],valid?'Probabilities assume independent legs. Book pricing and parlay rules may change the actual offer.':invalidReason)}</div></div>`;
+  return `<div class="ev-parlay-summary"><div><strong>${selected.length} ${selected.length===1?'leg':'legs'}</strong><span>${valid ? `${result.payout.toFixed(2)} decimal · ${signed(result.ev)} EV` : 'Choose compatible legs'}</span></div><button type="button" data-parlay-ticket>Review ticket</button></div><div class="tool-two-column evt-builder" id="ev-parlay-browse">${options.length ? `<div class="tool-stack">${available}</div>` : toolPanel('Available legs','Prices with a complete comparison market.',available)}<div class="tool-stack" id="ev-parlay-ticket" tabindex="-1"><button type="button" data-parlay-browse>Back to available legs</button>${toolPanel('Your parlay',selected.length+' selected '+(selected.length===1?'leg':'legs'),ticket)}${toolReceipt('Combined decimal odds',valid?result.payout.toFixed(2):'—',[['Fair chance',valid?percent(result.probability):'—'],['Expected value',valid?signed(result.ev):'—']],valid?'Calculated here from the odds service\'s fair chance for each leg, assuming independent legs. Book pricing and parlay rules may change the actual offer.':invalidReason)}</div></div>`;
 }
 
 function renderSharp() {
@@ -1375,8 +1316,13 @@ function renderSharp() {
   const cash = value => new Intl.NumberFormat('en-US', { style:'currency', currency:'USD', maximumFractionDigits:0 }).format(value);
   const shortCash = value => Number(value) >= 1000 ? `$${(Number(value)/1000).toFixed(1)}k` : cash(value);
   const source = state.quotes;
-  const filtered = source.filter(q => !sport || q.sport === sport);
-  const matches = sharpMatches(filtered.filter(q => !q.depthOnly), threshold).filter(x => bookAvailable(x.sportsbook.book) && sportsbookSelected(x.sportsbook.book) && quotePassesDesign(x.exchange) && quotePassesDesign(x.sportsbook) && (!marketType || x.exchange.type === marketType) && (!bookmaker || [x.exchange.book,x.sportsbook.book].includes(bookmaker)) && (!search || [x.exchange.event,x.exchange.market,x.exchange.side,x.exchange.book,x.sportsbook.side,x.sportsbook.book,x.exchange.sport].some(value => filterText(value))) && suite.quoteVisible(x.exchange));
+  if (!state.analytics.sharp) return `<div class="sharp-workspace evb-board">${sectionPending('Smart Money', 'exchange liquidity')}</div>`;
+  // Exchange prices with depth beside the best sportsbook price on the other side, as the odds service
+  // matched them; the member's minimum liquidity and filters choose which show.
+  const matches = state.analytics.sharp.flatMap(match => {
+    const exchange = state.analytics.byId.get(match.exchangeQuoteId), sportsbook = state.analytics.byId.get(match.sportsbookQuoteId), opposite = state.analytics.byId.get(match.oppositeExchangeQuoteId) || null;
+    return exchange && sportsbook && current(exchange) && current(sportsbook) && (!sport || exchange.sport === sport) && match.liquidity >= threshold ? [{ exchange, sportsbook, opposite, liquidity: match.liquidity, improvement: match.improvement ?? NaN }] : [];
+  }).filter(x => bookAvailable(x.sportsbook.book) && sportsbookSelected(x.sportsbook.book) && quotePassesDesign(x.exchange) && quotePassesDesign(x.sportsbook) && (!marketType || x.exchange.type === marketType) && (!bookmaker || [x.exchange.book,x.sportsbook.book].includes(bookmaker)) && (!search || [x.exchange.event,x.exchange.market,x.exchange.side,x.exchange.book,x.sportsbook.side,x.sportsbook.book,x.exchange.sport].some(value => filterText(value))) && suite.quoteVisible(x.exchange));
   const eventName = q => q.displayEvent || q.event;
   const sorters = { liquidity:(a,b) => b.liquidity - a.liquidity, event:(a,b) => eventName(a.exchange).localeCompare(eventName(b.exchange)) || b.liquidity - a.liquidity, odds:(a,b) => decimal(b.sportsbook.odds) - decimal(a.sportsbook.odds) || b.liquidity - a.liquidity };
   matches.sort(sorters[sharpSort] || sorters.liquidity);
@@ -1394,7 +1340,7 @@ function renderSharp() {
   // Detail panel: exchange depth ladder above a book-by-book table for both sides of the selected market.
   const panel = (x, order) => {
     const q = x.exchange, offer = x.sportsbook, market = marketName(q);
-    const peers = groups(source).find(group => group.some(item => item.id === q.id)) || [];
+    const peers = state.analytics.peers(q);
     const depthRows = peers.filter(item => item.exchange && item.side === q.side && Number(item.liquidity) > 0).sort((a,b) => Number(b.liquidity) - Number(a.liquidity)).slice(0,6).sort((a,b) => decimal(b.odds) - decimal(a.odds) || Number(b.liquidity) - Number(a.liquidity));
     const maxDepth = Math.max(1,...depthRows.map(item => Number(item.liquidity)));
     const latest = (book, side) => peers.filter(item => !item.exchange && item.book === book && item.side === side).sort((a,b) => Date.parse(b.ts) - Date.parse(a.ts))[0];
@@ -1404,7 +1350,8 @@ function renderSharp() {
     const sides = [[offer, x.opposite], [q, q]].map(([label, exchangePrice]) => {
       const prices = books.map(book => latest(book, label.side)), priced = prices.filter(Boolean);
       const best = [...priced].sort((a,b) => decimal(b.odds) - decimal(a.odds))[0];
-      const average = priced.length ? probabilityToAmerican(priced.reduce((sum, item) => sum + implied(item.odds), 0) / priced.length) : NaN;
+      // The market's average price for this side (server).
+      const average = state.analytics.marketSide(label)?.averageOdds ?? NaN;
       return {label, prices, best, average, exchangePrice};
     });
     const price = (item, side) => item ? `<td class="${decimal(item.odds) >= decimal(side.best.odds) ? 'is-best' : ''}${item.id === offer.id ? ' is-offer' : ''}">${esc(oddsLabel(item.odds))}</td>` : '<td class="is-empty">—</td>';
@@ -2080,8 +2027,8 @@ $('#ev-export').addEventListener('click', () => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 window.addEventListener('hashchange', () => { const key = location.hash.slice(1); if (toolMeta[key]) { if (key !== active) closeToolDialogs(); active = key; bookmaker = ''; marketType = ''; showAllBooks = false; bookMenuOpen = false; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; render(); } });
-let displayedQuoteRevision = '';
-document.addEventListener('ev-tool-change', () => { displayedQuoteRevision = quoteRevision(state.quotes); });
+let displayedQuoteRevision = '', displayedSections = '';
+document.addEventListener('ev-tool-change', () => { displayedQuoteRevision = quoteRevision(state.quotes, serverNow()); displayedSections = sectionsShown(); });
 // Coming back to the tab refreshes DFS lines right away instead of on the next tick.
 document.addEventListener('visibilitychange', () => { if (!document.hidden) ensureDfsFeed(); });
 setInterval(() => {
@@ -2097,7 +2044,8 @@ setInterval(() => {
     const label = card.querySelector('.wager-meta>span:last-child,.bet-inline-market>small');
     if (quote && label) label.textContent = `${quote.live ? 'Live' : 'Pregame'} · Observed ${age(quote.ts)}`;
   });
-  if (['ev-live','arb-live','sharp','line-alerts'].includes(active) && quoteRevision(state.quotes) !== displayedQuoteRevision) {
+  // A price that passed its server expiry leaves the board (or shows as stale) even when refreshes are failing.
+  if (QUOTE_TOOLS.has(active) && quoteRevision(state.quotes, serverNow()) !== displayedQuoteRevision) {
     preserveLiveOrder = true;
     try { render(); } finally { preserveLiveOrder = false; }
   }
@@ -2108,6 +2056,8 @@ document.addEventListener(STATE_CHANGE_EVENT, event => {
   sportsbookState = event.detail.state;
   selectedSportsbooks = null; bookmaker = ''; bookMenuOpen = false; detailQuoteId = ''; sharpSelectedBook = '';
   render();
+  // Holds and hedge pairs pick best prices among the state's books.
+  if (['holds', 'promo'].includes(active)) void feedControls.refresh();
 });
 // A price refresh waits while someone is typing (until 5 seconds after the last key), has a menu open,
 // or uses the phone filter sheet, so it never wipes an edit or closes what they are reading. A focused
@@ -2118,7 +2068,7 @@ const interacting = () => bookMenuOpen || Boolean(document.fullscreenElement)
   || document.body.classList.contains('ev-mobile-filter-open')
   || Boolean(document.querySelector('dialog[open],[aria-haspopup][aria-expanded="true"],.wager-more[open],.evx-more[open],.evx-tools-menu[open],.bet-expanded-more[open]'))
   || Date.now() - lastTyped < 5_000 && Boolean(document.activeElement?.closest?.('#main input:not([type=button]):not([type=checkbox]):not([type=radio]),#main textarea,#main [contenteditable]'));
-feedControls = createQuoteFeedControls({ sync: syncLocalApi, getState: () => state, getTool: () => active, canRefresh: () => !interacting(), hasLive: () => state.quotes.some(q => q.live && fresh(q)) });
+feedControls = createQuoteFeedControls({ sync: syncLocalApi, getState: () => state, getTool: () => active, canRefresh: () => !interacting(), hasLive: () => state.quotes.some(q => q.live && current(q)) });
 installMobileWorkspace();
 for(const type of ['click','change','input','submit','dragstart','dragover','drop'])$('#main').addEventListener(type,event=>{if(suite.handleEvent(event))event.stopImmediatePropagation();},true);
 suite.startRefresh();

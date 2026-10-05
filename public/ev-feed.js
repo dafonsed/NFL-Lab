@@ -1,3 +1,5 @@
+import { isCurrent } from './odds-contract.js';
+import { serverNow } from './odds-client.js';
 // Controls for the shared quote feed. Creating these controls only schedules the next refresh.
 const waitOptions = [10_000, 15_000, 30_000, 60_000];
 // Live tools always refresh every 3 seconds; the viewer's cadence applies everywhere else.
@@ -18,7 +20,7 @@ export function toolDataLabel(tool, state, quoteLabel) {
   if (collection === 'contracts' && state.feedContracts?.length) return 'Feed contracts';
   const records = state[collection] || [];
   // Pick'em lines from the quote feed aren't entries; while the first request runs there is nothing yet.
-  if (collection === 'dfs' && records.some(item => item?.source === 'local-api')) return state.dfsError ? 'DFS lines (last update failed)' : 'Feed DFS lines';
+  if (collection === 'dfs' && records.some(item => item?.source === 'local-api')) return state.dfsError ? 'DFS lines (last update failed)' : state.dfsWarning ? 'Feed DFS lines (partial)' : 'Feed DFS lines';
   if (collection === 'dfs' && state.dfsLoading) return 'Loading DFS lines';
   if (collection === 'dfs' && state.dfsError) return 'DFS lines unavailable';
   return records.length ? `Entered ${label}` : `No ${label}`;
@@ -66,7 +68,8 @@ export function createQuoteFeedControls({ sync, getState, getTool, canRefresh = 
     select.disabled = live();
     select.title = live() ? 'Live prices refresh 3 seconds after each update finishes.' : '';
     const quotes = state.quotes.filter(quote => quote.source === 'local-api');
-    const stale = quotes.filter(quote => quote.live && (!Number.isFinite(Date.parse(quote.ts)) || Date.now() - Date.parse(quote.ts) > 90_000 || Date.parse(quote.ts) > Date.now() + 5_000)).length;
+    // Live prices past the server's expiry time (odds-contract.js isCurrent, on the server's clock).
+    const stale = quotes.filter(quote => quote.live && !isCurrent(quote, serverNow())).length;
     const newest = quotes.reduce((latest, quote) => Date.parse(quote.ts) > Date.parse(latest || '1970-01-01') ? quote.ts : latest, '');
     const age = Date.now() - Date.parse(state.apiSyncedAt), recent = age <= Math.max(2 * (interval || 0), 60_000);
     let label = pending ? 'Updating…' : error ? 'Refresh failed' : !state.apiSyncedAt ? 'Not checked' : heldOver ? 'Held-over prices' : recent ? 'Up to date' : `Prices from ${elapsed(state.apiSyncedAt)}`;
@@ -120,6 +123,8 @@ export function createQuoteFeedControls({ sync, getState, getTool, canRefresh = 
       skipped = Number(result?.skipped) || 0;
       expired = Number(result?.expired) || 0;
       heldOver = Boolean(result?.heldOver);
+      // A partial answer says what is missing (the odds service's warnings).
+      if (!warning && Array.isArray(result?.partial) && result.partial.length) warning = `Some data is missing: ${result.partial.join(' ')}`;
     } catch (reason) {
       failures++;
       blocked = reason.retryable === false;

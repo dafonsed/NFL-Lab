@@ -3,15 +3,23 @@ import assert from 'node:assert/strict';
 import { load } from 'cheerio';
 import { buildOddsBoard, createOddsScreen } from '../public/odds-screen.js';
 import { SPORTSBOOK_COVERAGE, availableSportsbookQuotes, readSportsbookState, saveSportsbookState } from '../public/sportsbook-availability.js';
+import { priced } from './helpers/priced.mjs';
 
 // Pregame prices expire after 24 hours, so fixtures are observed relative to the real clock.
 const now = Date.now();
 const quote = (extra = {}) => ({id:'a',sport:'MLB',event:'MIA @ WSH',player:'Player A',market:'Player A hits',type:'prop',line:.5,side:'Over',book:'DraftKings',odds:110,ts:new Date(now).toISOString(),...extra});
+// The screen shows prices as /api/odds serves them: each fixture runs through the real engine first.
+const boardOf = (quotes, books, at = now) => { const served = priced(quotes, {now:at}); return buildOddsBoard(served.quotes, books, at, served.analytics); };
+const screenOf = options => {
+  let last = null;
+  const view = () => { const input = options.getQuotes(); if (!last || last.input !== input) last = {input, ...priced(input, {now})}; return last; };
+  return createOddsScreen({...options, getQuotes:() => view().quotes, getAnalytics:() => view().analytics, now:() => now});
+};
 // A click on an odds-screen control: matches the screen's own selectors, never line-history buttons.
 const hit = dataset => ({target:{closest:selector => selector.includes('data-line-history') ? null : {dataset}}});
 
 test('compares each threshold separately and keeps tied best prices', () => {
-  const board = buildOddsBoard([quote(),quote({id:'b',book:'FanDuel'}),quote({id:'c',book:'BetMGM',line:1.5,odds:300})],['DraftKings','FanDuel','BetMGM'],now);
+  const board = boardOf([quote(),quote({id:'b',book:'FanDuel'}),quote({id:'c',book:'BetMGM',line:1.5,odds:300})],['DraftKings','FanDuel','BetMGM'],now);
   assert.equal(board[0].markets.length,2);
   const row = board[0].markets[0].sides[0];
   assert.equal(row.bestDecimal,2.1);
@@ -20,7 +28,7 @@ test('compares each threshold separately and keeps tied best prices', () => {
 });
 
 test('uses the latest quote per book and excludes stale live prices from summaries', () => {
-  const board = buildOddsBoard([quote({live:true,odds:200,ts:new Date(now-5000).toISOString()}),quote({id:'new',live:true,odds:100}),quote({id:'stale',book:'FanDuel',live:true,odds:400,ts:new Date(now-120000).toISOString()})],['DraftKings','FanDuel'],now);
+  const board = boardOf([quote({live:true,odds:200,ts:new Date(now-5000).toISOString()}),quote({id:'new',live:true,odds:100}),quote({id:'stale',book:'FanDuel',live:true,odds:400,ts:new Date(now-120000).toISOString()})],['DraftKings','FanDuel'],now);
   const row = board[0].markets[0].sides[0];
   assert.equal(row.prices.length,2);
   assert.equal(row.best.id,'new');
@@ -29,21 +37,21 @@ test('uses the latest quote per book and excludes stale live prices from summari
 
 test('pairs opposing spread lines and isolates sports and live markets', () => {
   const base = {type:'spread',player:'',market:'Point spread'};
-  const board = buildOddsBoard([quote({...base,line:-3.5,side:'Away'}),quote({...base,line:3.5,side:'Home'}),quote({...base,line:-3.5,side:'Away',sport:'NFL'}),quote({...base,line:-3.5,side:'Away',live:true})],['DraftKings'],now);
+  const board = boardOf([quote({...base,line:-3.5,side:'Away'}),quote({...base,line:3.5,side:'Home'}),quote({...base,line:-3.5,side:'Away',sport:'NFL'}),quote({...base,line:-3.5,side:'Away',live:true})],['DraftKings'],now);
   assert.equal(board.length,3);
   assert.equal(board[0].markets.length,1);
   assert.equal(board[0].markets[0].sides.length,2);
 });
 
 test('excludes hidden books, exchange depth and invalid prices', () => {
-  const board = buildOddsBoard([quote(),quote({book:'FanDuel',odds:500}),quote({id:'depth',depthOnly:true,odds:800}),quote({id:'invalid',odds:20})],['DraftKings'],now);
+  const board = boardOf([quote(),quote({book:'FanDuel',odds:500}),quote({id:'depth',depthOnly:true,odds:800}),quote({id:'invalid',odds:20})],['DraftKings'],now);
   assert.equal(board[0].markets[0].sides[0].best.id,'a');
 });
 
 test('renders honest empty state and escapes entered market text', () => {
-  const empty = createOddsScreen({getQuotes:()=>[],brandMark:()=>'',redraw:()=>{},onSport:()=>{}}).render({sport:'MLB'});
+  const empty = screenOf({getQuotes:()=>[],brandMark:()=>'',redraw:()=>{},onSport:()=>{}}).render({sport:'MLB'});
   assert.match(empty,/Waiting for prices/); assert.doesNotMatch(empty,/data-add="quote"|Add a price/);
-  const html = createOddsScreen({getQuotes:()=>[quote({player:'<img onerror=x>',market:'<script>x<\/script>'})],brandMark:()=>'',redraw:()=>{},onSport:()=>{}}).render({sport:'MLB'});
+  const html = screenOf({getQuotes:()=>[quote({player:'<img onerror=x>',market:'<script>x<\/script>'})],brandMark:()=>'',redraw:()=>{},onSport:()=>{}}).render({sport:'MLB'});
   assert.doesNotMatch(html,/<script>|<img onerror/);
   assert.match(html,/&lt;img onerror=x&gt;/);
 });
@@ -54,7 +62,7 @@ test('All sportsbooks clears a one-book state filter, restores hidden columns an
   saveSportsbookState('FL',storage);
   const records = Object.keys(SPORTSBOOK_COVERAGE).map(book => quote({id:book,book}));
   const options = {getQuotes:()=>availableSportsbookQuotes(records,readSportsbookState(storage)),getSportsbookState:()=>readSportsbookState(storage),onAllSportsbooks:()=>saveSportsbookState('',storage),brandMark:()=>'',redraw:()=>{},onSport:()=>{}};
-  const screen = createOddsScreen(options);
+  const screen = screenOf(options);
   let html = screen.render({sport:'MLB'});
   assert.equal((html.match(/data-os-book=/g) || []).length,1);
   assert.match(html,/Filtered to FL/);
@@ -73,7 +81,7 @@ test('All sportsbooks clears a one-book state filter, restores hidden columns an
     assert.equal(bookHeadings(screen.render({sport:'MLB'})),10);
     showAll();
     assert.equal(bookHeadings(screen.render({sport:'MLB'})),11);
-    assert.equal((createOddsScreen(options).render({sport:'MLB'}).match(/data-os-book=/g) || []).length,11);
+    assert.equal((screenOf(options).render({sport:'MLB'}).match(/data-os-book=/g) || []).length,11);
     assert.equal(readSportsbookState(storage),'');
   } finally {
     if (originalDocument === undefined) delete globalThis.document;
@@ -84,9 +92,9 @@ test('All sportsbooks clears a one-book state filter, restores hidden columns an
 test('grid rows keep both sides and show every sportsbook price in its own column', () => {
   const records = [quote(),quote({id:'b',book:'FanDuel',odds:100}),quote({id:'under-dk',side:'Under',odds:-110}),quote({id:'under-fd',side:'Under',book:'FanDuel',odds:-120})];
   // American is the default, matching every other +EV tab; this test checks decimal cells.
-  const american = createOddsScreen({getQuotes:()=>records,brandMark:book=>`<span>${book}</span>`,redraw:()=>{},onSport:()=>{}});
+  const american = screenOf({getQuotes:()=>records,brandMark:book=>`<span>${book}</span>`,redraw:()=>{},onSport:()=>{}});
   assert.equal(load(american.render({sport:'MLB'}))('tbody tr.os-row').first().find('.os-best-cell strong').text(),'+110');
-  const screen = createOddsScreen({getQuotes:()=>records,brandMark:book=>`<span>${book}</span>`,redraw:()=>{},onSport:()=>{},defaultFormat:'decimal'});
+  const screen = screenOf({getQuotes:()=>records,brandMark:book=>`<span>${book}</span>`,redraw:()=>{},onSport:()=>{},defaultFormat:'decimal'});
   const $ = load(screen.render({sport:'MLB'}));
   assert.equal($('tbody tr.os-row').length,2);
   assert.deepEqual($('thead .os-book-head').toArray().map(cell => $(cell).attr('title')),['DraftKings','FanDuel']);
@@ -125,7 +133,7 @@ test('best, worst, missing and different-line prices are marked per row', () => 
     quote({...spread,id:'m1',side:'MIA',line:1.5,odds:-120}),quote({...spread,id:'m2',side:'MIA',line:1.5,book:'FanDuel',odds:-105}),quote({...spread,id:'m3',side:'MIA',line:-1.5,book:'BetMGM',odds:150}),
     quote({...spread,id:'w1',side:'WSH',line:-1.5,odds:100}),quote({...spread,id:'w2',side:'WSH',line:-1.5,book:'FanDuel',odds:-110}),
   ];
-  const $ = load(createOddsScreen({getQuotes:()=>records,brandMark:()=>'',redraw:()=>{},onSport:()=>{}}).render({sport:'MLB'}));
+  const $ = load(screenOf({getQuotes:()=>records,brandMark:()=>'',redraw:()=>{},onSport:()=>{}}).render({sport:'MLB'}));
   const rows = $('tbody tr.os-row');
   // Away side first, with the signed spread line in the selection.
   assert.equal(rows.first().find('[data-detail]').text(),'MIA -1.5');
@@ -149,7 +157,7 @@ test('market tabs default to main markets and drive the market filter', t => {
   ];
   let redraws = 0;
   const saved = new Map(), storage = {getItem:key=>saved.get(key),setItem:(key,value)=>saved.set(key,value)};
-  const screen = createOddsScreen({storage,getQuotes:()=>records,brandMark:()=>'',redraw:()=>{redraws++;},onSport:()=>{}});
+  const screen = screenOf({storage,getQuotes:()=>records,brandMark:()=>'',redraw:()=>{redraws++;},onSport:()=>{}});
   let $ = load(screen.render({sport:'MLB'}));
   assert.deepEqual($('.os-tab').toArray().map(tab => $(tab).text()),['All markets','Main markets','Moneyline','Total runs','Player props','hits','Alternate lines']);
   assert.equal($('.os-tab[aria-pressed="true"]').text(),'Main markets');
@@ -166,7 +174,7 @@ test('market tabs default to main markets and drive the market filter', t => {
   screen.click(hit({osTab:'group:all'}));
   assert.equal(load(screen.render({sport:'MLB'}))('tbody tr.os-row').length,6);
   // An explicit "All markets" choice survives recreating the screen; reset returns to main markets.
-  $ = load(createOddsScreen({storage,getQuotes:()=>records,brandMark:()=>'',redraw:()=>{},onSport:()=>{}}).render({sport:'MLB'}));
+  $ = load(screenOf({storage,getQuotes:()=>records,brandMark:()=>'',redraw:()=>{},onSport:()=>{}}).render({sport:'MLB'}));
   assert.equal($('.os-tab[aria-pressed="true"]').text(),'All markets');
   screen.click(hit({osAction:'reset'}));
   assert.equal(load(screen.render({sport:'MLB'}))('.os-tab[aria-pressed="true"]').text(),'Main markets');
@@ -174,7 +182,7 @@ test('market tabs default to main markets and drive the market filter', t => {
 
 test('stale live prices stay available in comparison without becoming actionable best-price rows', () => {
   const records = [quote({live:true,ts:new Date(Date.now()-120000).toISOString()})];
-  const screen = createOddsScreen({getQuotes:()=>records,brandMark:()=>'',redraw:()=>{},onSport:()=>{}});
+  const screen = screenOf({getQuotes:()=>records,brandMark:()=>'',redraw:()=>{},onSport:()=>{}});
   const $ = load(screen.render({sport:'MLB'}));
   assert.equal($('tbody .os-best-cell strong').text(),'—');
   assert.equal($('tbody .os-average strong').text(),'—');
@@ -187,7 +195,7 @@ test('stale live prices stay available in comparison without becoming actionable
 });
 
 test('suspended books never appear as current references on price rows', () => {
-  const screen = createOddsScreen({getQuotes:()=>[quote(),quote({id:'closed-book',book:'FanDuel',odds:300,status:'suspended'})],brandMark:()=>'',redraw:()=>{},onSport:()=>{}});
+  const screen = screenOf({getQuotes:()=>[quote(),quote({id:'closed-book',book:'FanDuel',odds:300,status:'suspended'})],brandMark:()=>'',redraw:()=>{},onSport:()=>{}});
   const $ = load(screen.render({sport:'MLB'}));
   assert.equal($('.os-row [data-detail]').attr('data-detail'),'a');
   assert.equal($('.os-row [data-suite-action="track"]').attr('data-id'),'a');
@@ -198,15 +206,15 @@ test('suspended books never appear as current references on price rows', () => {
 });
 
 test('the odds board labels feed and entered prices, never demo data', () => {
-  const feed = load(createOddsScreen({getQuotes:()=>[quote({source:'local-api'})],brandMark:()=>'',redraw:()=>{},onSport:()=>{}}).render({sport:'MLB'}));
+  const feed = load(screenOf({getQuotes:()=>[quote({source:'local-api'})],brandMark:()=>'',redraw:()=>{},onSport:()=>{}}).render({sport:'MLB'}));
   assert.match(feed('.os-board-meta').text(),/Feed prices/);
-  const entered = load(createOddsScreen({getQuotes:()=>[quote({source:'manual'})],brandMark:()=>'',redraw:()=>{},onSport:()=>{}}).render({sport:'MLB'}));
+  const entered = load(screenOf({getQuotes:()=>[quote({source:'manual'})],brandMark:()=>'',redraw:()=>{},onSport:()=>{}}).render({sport:'MLB'}));
   assert.match(entered('.os-board-meta').text(),/Entered prices/);
   assert.doesNotMatch(entered.text(),/Demo mode|Simulated|Example data/);
 });
 
 test('periods never share an odds comparison and price-less suspensions replace older offers', () => {
-  const board = buildOddsBoard([
+  const board = boardOf([
     quote(), quote({id:'half',period:'first half',odds:300}),
     quote({id:'closed',status:'suspended',odds:null,ts:new Date(now+1000).toISOString()}),
   ],['DraftKings'],now);
@@ -222,12 +230,12 @@ test('saved book order, selected books and odds format survive recreating the od
   t.after(()=>{if(originalDocument === undefined) delete globalThis.document;else globalThis.document=originalDocument;});
   const saved = new Map(), storage = {getItem:key=>saved.get(key),setItem:(key,value)=>saved.set(key,value)};
   const options = {storage,getQuotes:()=>[quote(),quote({book:'FanDuel'})],brandMark:()=>'',redraw:()=>{},onSport:()=>{}};
-  const screen = createOddsScreen(options);
+  const screen = screenOf(options);
   screen.render();
   screen.click(hit({osOrder:'FanDuel',osDirection:'-1'}));
   screen.change({target:{dataset:{osBook:'DraftKings'},checked:false}});
   screen.change({target:{dataset:{osFilter:'format'},value:'american'}});
-  const html = createOddsScreen(options).render();
+  const html = screenOf(options).render();
   const $ = load(html);
   assert.deepEqual($('[data-os-book]').toArray().map(node=>$(node).attr('data-os-book')),['FanDuel','DraftKings']);
   assert.equal($('[data-os-book="DraftKings"]').attr('checked'),undefined);
@@ -240,7 +248,7 @@ test('unchanged odds snapshots update age without replacing the board', t => {
   globalThis.document={querySelector:()=>null,querySelectorAll:()=>[],activeElement:null};
   t.after(()=>{if(originalDocument===undefined)delete globalThis.document;else globalThis.document=originalDocument;});
   const record=quote();let renders=0;
-  const screen=createOddsScreen({getQuotes:()=>[record],brandMark:()=>'',onSport:()=>{},redraw:()=>{renders++;}});
+  const screen=screenOf({getQuotes:()=>[record],brandMark:()=>'',onSport:()=>{},redraw:()=>{renders++;}});
   screen.render();screen.refresh();
   record.ts=new Date().toISOString();screen.refresh();
   assert.equal(renders,0);
@@ -250,14 +258,14 @@ test('unchanged odds snapshots update age without replacing the board', t => {
 
 test('account odds default controls prices until the user saves an explicit display choice', () => {
   const options = { defaultFormat: 'american', getQuotes:()=>[quote()], brandMark:()=>'', redraw:()=>{}, onSport:()=>{} };
-  const initial = load(createOddsScreen(options).render());
+  const initial = load(screenOf(options).render());
   assert.equal(initial('#os-format option[selected]').attr('value'), 'american');
   assert.equal(initial('.os-best-cell strong').text(), '+110');
   const storage = { getItem: () => '{"format":"decimal","formatChosen":true}' };
-  const saved = load(createOddsScreen({ ...options, storage }).render());
+  const saved = load(screenOf({ ...options, storage }).render());
   assert.equal(saved('#os-format option[selected]').attr('value'), 'decimal');
   assert.equal(saved('.os-best-cell strong').text(), '2.100');
   // Older saves stored whatever format was showing with every change; they don't override the member's.
-  const legacy = load(createOddsScreen({ ...options, storage: { getItem: () => '{"format":"decimal"}' } }).render());
+  const legacy = load(screenOf({ ...options, storage: { getItem: () => '{"format":"decimal"}' } }).render());
   assert.equal(legacy('.os-best-cell strong').text(), '+110');
 });

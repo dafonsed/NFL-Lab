@@ -1,6 +1,7 @@
 import { canonicalPlatform } from './platform-catalog.js';
 import { validateLeg, ticketSettlement, LEG_RESULTS, legState, formatLegTarget } from './bet-legs.js';
-import { priceClv, noVigClv } from './ev-advanced-math.js';
+// A member's own tickets: returns and CLV from what they recorded, through the shared calculator.
+import { priceClv, noVigClv, decimal } from './betting-math.js';
 export const BET_STORAGE_KEY = 'nfl-lab.personal-bets.v1';
 export const SPORTS = ['NFL', 'MLB', 'NBA', 'WNBA', 'NHL', 'Soccer', 'Other'];
 export const STATUSES = { open: 'Open', won: 'Won', lost: 'Lost', push: 'Push', void: 'Void', cashed: 'Cashed out' };
@@ -64,8 +65,8 @@ export function validateBet(input) {
   };
 }
 
-const decimalOdds = (odds, format) => format === 'decimal' ? odds : odds > 0 ? 1 + odds / 100 : 1 + 100 / Math.abs(odds);
-// CLV in percent, with the definitions the /ev/tracker Performance view uses (ev-advanced-math.js).
+const decimalOdds = (odds, format) => format === 'decimal' ? odds : decimal(odds);
+// CLV in percent, with the definitions the /ev/tracker Performance view uses (betting-math.js).
 /** Price CLV, vig included: booked payout / closing payout of the same side − 1. Null without closing odds. */
 export function closingLineValue(bet) {
   if (bet.closingOdds == null) return null;
@@ -83,7 +84,7 @@ export function noVigClosingLineValue(bet, method = 'multiplicative') {
 // Round each ticket to cents before adding it to the ledger.
 export function betReturns(bet) {
   const stake = cents(bet.stake);
-  const multiplier = bet.oddsFormat === 'decimal' ? bet.odds - 1 : bet.odds > 0 ? bet.odds / 100 : 100 / Math.abs(bet.odds);
+  const multiplier = decimalOdds(bet.odds, bet.oddsFormat) - 1;
   const boost = Number.isFinite(bet.boost) ? bet.boost : 0;
   const potentialProfit = Math.round(stake * multiplier * (1 + boost / 100));
   // A free bet's stake is a sportsbook token: it is never returned and costs no cash if the bet loses.

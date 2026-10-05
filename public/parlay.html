@@ -4,7 +4,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#08080a"><meta name="description" content="Build a parlay from player trends: choose the legs and the hit-rate threshold, and see why each line made the ticket.">
   <title>Parlay Builder · VisualOdds</title><link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/parlay.css?v=2"><script type="module" src="/parlay.js?v=2"></script>
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/parlay.css?v=3"><script type="module" src="/parlay.js?v=3"></script>
   <link rel="modulepreload" href="/account-sync.js"><link rel="modulepreload" href="/product-ui.js"><link rel="modulepreload" href="/research-data.js"><link rel="modulepreload" href="/ui-icons.js"><link rel="modulepreload" href="/parlay-builder.js"><link rel="modulepreload" href="/sports-identity.js"><link rel="modulepreload" href="/platform-catalog.js"><link rel="modulepreload" href="/trends-controls.js"><link rel="modulepreload" href="/calendar-control.js">
 </head>
 <body class="parlay-page">
@@ -58,6 +58,7 @@
                 <label class="pb-field"><span class="pb-label">Stake</span><span class="pb-money"><span aria-hidden="true">$</span><input type="number" id="pb-stake" name="stake" min="1" max="100000" step="1" inputmode="decimal" value="10" aria-label="Stake in dollars"></span></label>
               </div>
               <label class="pb-switch"><input type="checkbox" id="pb-injured" name="skipInjured" role="switch" checked><span class="pb-switch-track" aria-hidden="true"></span><span class="pb-switch-copy"><strong>Skip injury-listed players</strong><small>Leaves out questionable and doubtful players</small></span></label>
+              <label class="pb-switch"><input type="checkbox" id="pb-alt" name="altLines" role="switch"><span class="pb-switch-track" aria-hidden="true"></span><span class="pb-switch-copy"><strong>Use alternate lines</strong><small>Adds each player's highest milestone that clears your hit rate, like 10+ or 20+ yards. Overs only; no posted price</small></span></label>
             </section>
             <section class="pb-group" aria-labelledby="pb-group-markets">
               <div class="pb-group-head"><h3 class="pb-group-title" id="pb-group-markets">Markets</h3><span class="pb-group-count" id="pb-markets-count"></span></div>

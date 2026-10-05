@@ -1,4 +1,7 @@
-// Shared filters for the +EV tools. Pure helpers, so every tool and the tests apply the same rules.
+// Shared filters for the +EV tools. Pure helpers, so every tool and the tests apply the same rules. Filters
+// choose which rows show; they never change a price or a fair value.
+import { decimal } from './betting-math.js';
+import { name, number, valuePresent as present } from './market-identity.js';
 
 // "Starts" windows use the event start time from the quote feed, not when a price was observed.
 export const START_WINDOWS = [['all', 'Any time'], ['soon', 'Next 3 hours'], ['today', 'Today'], ['tomorrow', 'Tomorrow'], ['week', 'Next 7 days']];
@@ -30,11 +33,8 @@ export const TOOL_FILTER_DEFAULTS = Object.freeze({
 const STORE = 'sportslab-ev-tool-filters-v1';
 const DAY = 86_400_000;
 
-export function americanToDecimal(odds) {
-  const value = Number(odds);
-  if (!Number.isFinite(value) || Math.abs(value) < 100) return NaN;
-  return value > 0 ? 1 + value / 100 : 1 + 100 / Math.abs(value);
-}
+/** American odds → decimal (the shared conversion; kept under this name for the filters' callers). */
+export const americanToDecimal = decimal;
 
 /**
  * True when the event starts inside the window. Games that already started count toward
@@ -70,6 +70,28 @@ export function quoteMatches(quote, filters = {}, now = Date.now()) {
   if (f.period === 'live' && !quote.live || f.period === 'pregame' && quote.live) return false;
   if (!startsWithin(quote, f.when, now)) return false;
   if (f.book && quote.book !== f.book) return false;
+  return true;
+}
+
+/** The member's Scope settings (league, market, side, game state, region, liquidity, odds range). */
+export function passesFilters(quote, settings) {
+  for (const field of ['league', 'market', 'side']) if (present(settings[field]) && name(settings[field]) !== 'all'
+    && name(settings[field]) !== name(field === 'league' ? quote.league || quote.sport : quote[field])) return false;
+  if (present(settings.gameStatus) && name(settings.gameStatus) !== 'all') {
+    const wanted = name(settings.gameStatus), status = quote.live === true ? 'live' : 'pregame';
+    const state = quote.gameState && typeof quote.gameState === 'object' ? quote.gameState : {};
+    const inPlay = state.inPlay === true || quote.inPlay === true;
+    const stopped = state.stoppage === true || quote.stoppage === true || state.inPlay === false;
+    if (!(wanted === status || wanted === 'in' && status === 'live' || wanted === 'pre' && status === 'pregame'
+      || wanted === 'in-play' && quote.live === true && inPlay && !stopped || wanted === 'stoppage' && quote.live === true && stopped && !inPlay)) return false;
+  }
+  if (present(settings.region) && name(settings.region) !== 'all') {
+    const regions = Array.isArray(quote.regions) ? quote.regions : [quote.region || quote.state];
+    if (!regions.some(region => name(region) === name(settings.region))) return false;
+  }
+  for (const [field, pass] of [['minOdds', value => number(quote.odds) >= value], ['maxOdds', value => number(quote.odds) <= value], ['minLiquidity', value => value === 0 || value > 0 && number(quote.liquidity) >= value]]) {
+    if (present(settings[field]) && (!Number.isFinite(number(settings[field])) || !pass(number(settings[field])))) return false;
+  }
   return true;
 }
 

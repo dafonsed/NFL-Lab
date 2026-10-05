@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { teamKey, matchedEventKey, splitQuoteTimes } from '../public/ev-event-match.js';
+import { teamKey, matchedEventKey, splitQuoteTimes } from '../lib/odds/event-match.mjs';
 
 test('team names from different books reduce to the same nickname', () => {
   for (const name of ['CIN Bengals', 'Bengals', 'Cincinnati Bengals']) assert.equal(teamKey(name), 'bengals');
@@ -34,8 +34,8 @@ test('a future ts is treated as the game start and the price as seen at sync tim
 });
 
 test('listings whose own two sides cannot be real prices are skipped', async () => {
-  const { dropInconsistentListings } = await import('../public/ev-event-match.js');
-  const { marketKey } = await import('../public/ev-core.js');
+  const { dropInconsistentListings } = await import('../lib/odds/event-match.mjs');
+  const { marketKey } = await import('../lib/odds/engine.mjs');
   const q = (id, book, event, side, odds, extra = {}) => ({ id, sport: 'NFL', eventId: 'NFL:titans @ ravens', event, market: 'moneyline', marketId: 'moneyline|NFL:titans @ ravens', type: 'moneyline', line: '', side, book, odds, live: false, outcomes: '', ...extra });
   const quotes = [
     q('dk-a', 'DraftKings', 'TEN Titans @ BAL Ravens', 'away', 500), q('dk-h', 'DraftKings', 'TEN Titans @ BAL Ravens', 'home', -714),
@@ -49,8 +49,8 @@ test('listings whose own two sides cannot be real prices are skipped', async () 
 });
 
 test('one-sided alternate-line ladders are skipped because their team is unknown', async () => {
-  const { dropInconsistentListings } = await import('../public/ev-event-match.js');
-  const { marketKey } = await import('../public/ev-core.js');
+  const { dropInconsistentListings } = await import('../lib/odds/event-match.mjs');
+  const { marketKey } = await import('../lib/odds/engine.mjs');
   const spread = (id, book, side, line, odds) => ({ id, sport: 'NFL', eventId: 'NFL:steelers @ browns', event: 'Steelers @ Browns', market: 'spread', marketId: 'spread|NFL:steelers @ browns', type: 'spread', line, side, book, odds, live: false, outcomes: '' });
   const quotes = [spread('l1', 'Fanatics', 'home', 2.5, 130), spread('l2', 'Fanatics', 'home', -13.5, 600), spread('l3', 'Fanatics', 'home', 8.5, -400),
     spread('m1', 'DraftKings', 'away', -2.5, -120), spread('m2', 'DraftKings', 'home', 2.5, 100)];

@@ -1,6 +1,7 @@
 // Tracker analysis for the Advanced tab: bankroll over time, closing line value per bet, and
 // results by bet type and by odds range, in dollars or units.
 import { betReturns, closingLineValue } from './bet-utils.js?v=4';
+import { decimal } from './betting-math.js';
 
 export const DISPLAY_KEY = 'vo-tracker-display-v1';
 
@@ -15,7 +16,7 @@ export function writeDisplay(storage, display) {
 }
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const decimalOdds = bet => bet.oddsFormat === 'decimal' ? bet.odds : bet.odds > 0 ? 1 + bet.odds / 100 : 1 + 100 / Math.abs(bet.odds);
+const decimalOdds = bet => bet.oddsFormat === 'decimal' ? bet.odds : decimal(bet.odds);
 
 /** Median cash stake, used as the default unit so units work before the user sets one. */
 export function defaultUnit(bets) {

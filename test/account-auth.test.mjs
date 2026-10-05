@@ -355,7 +355,7 @@ test('alert emails read the feed once per run: baseline first, then each new mat
 
 test('alert emails match as the page does: member books, member pricing settings, no movement rules', async () => {
   const { currentMatches, sportsbookStateFrom, EMAILED_RULE_KINDS } = await import('../lib/accounts/alert-mailer.mjs');
-  const { normalizeFeed } = await import('../public/ev-feed-normalize.js');
+  const { normalizeFeed } = await import('../lib/odds/normalize.mjs');
   const ts = new Date().toISOString(), start = new Date(Date.now() + 86_400_000).toISOString();
   // One game: Pinnacle and DraftKings price it evenly, BetMGM and FanDuel offer Buffalo at +120 (about 6% EV).
   const price = (book, side, odds) => ({ id: `${book}-${side}`, sport: 'nfl', event: 'Buffalo Bills @ Miami Dolphins', eventId: 'buffalo bills @ miami dolphins', market: 'moneyline', type: 'moneyline', side, book, odds, live: false, ts, startTime: start });

@@ -30,7 +30,7 @@ Use **Sync API**, or opt into auto-refresh at 15, 30 or 60 seconds. Auto-refresh
 
 The feed panel shows last successful sync, newest observation time, expired live counts, and the data needed by the active tool. API history records price/line changes rather than repeated identical prices and keeps the latest 5,000 API movement entries. Manual history is retained separately. Quote grouping includes sport, event, player and period identity. See [the complete API handoff](ev-api-requirements.md) for all 18 tools and the additional datasets still needed.
 
-The feed adapter should supply the same record shapes used by `public/ev-demo.js`. The calculation functions in `public/ev-core.js` do not fetch data. Keep stable `id` values for the same quote across updates and append a history snapshot whenever its price or line changes. The current UI form and JSON import do this locally.
+The feed adapter should supply the same record shapes used by `public/ev-demo.js`. Feed prices are priced on the server (`lib/odds/engine.mjs`) and read through `public/odds-client.js`; the formulas in `public/betting-math.js` do not fetch data. Keep stable `id` values for the same quote across updates and append a history snapshot whenever its price or line changes. The current UI form and JSON import do this locally.
 
 An ordinary quote uses:
 

@@ -31,6 +31,7 @@ const clean = s => ({
   perGame: ['1', '2', 'any'].includes(String(s.perGame)) ? (s.perGame === 'any' ? 'any' : Number(s.perGame)) : PARLAY_DEFAULTS.perGame,
   maxFavorite: s.maxFavorite === null ? null : [-150, -200, -300, -500].includes(Number(s.maxFavorite)) ? Number(s.maxFavorite) : PARLAY_DEFAULTS.maxFavorite,
   skipInjured: typeof s.skipInjured === 'boolean' ? s.skipInjured : PARLAY_DEFAULTS.skipInjured,
+  altLines: typeof s.altLines === 'boolean' ? s.altLines : PARLAY_DEFAULTS.altLines,
   stake: Number(s.stake) >= 1 && Number(s.stake) <= 100000 ? Number(s.stake) : PARLAY_DEFAULTS.stake,
   markets: Array.isArray(s.markets?.[sport]) ? s.markets[sport].map(String) : []
 });
@@ -67,7 +68,7 @@ function syncControls() {
   for (const group of document.querySelectorAll('.pb-segment')) for (const b of group.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.value === String(settings[group.dataset.setting])));
   showThreshold(settings.threshold);
   $('#pb-favorite').value = settings.maxFavorite === null ? '' : String(settings.maxFavorite); syncTrendControl($('#pb-favorite'));
-  $('#pb-stake').value = settings.stake; $('#pb-injured').checked = settings.skipInjured;
+  $('#pb-stake').value = settings.stake; $('#pb-injured').checked = settings.skipInjured; $('#pb-alt').checked = settings.altLines;
   // No selection means every market; picking one narrows to it, and All clears the selection.
   const markets = Object.entries(state.pool?.markets || {}), all = !settings.markets.length;
   $('#pb-markets').innerHTML = markets.length ? `<button type="button" class="pb-chip-toggle is-all" data-markets-all aria-pressed="${all}">All markets</button>` + markets.map(([key, m]) => `<button type="button" class="pb-chip-toggle" data-market="${esc(key)}" aria-pressed="${!all && settings.markets.includes(key)}">${esc(m.label)}</button>`).join('') : '<span class="pb-faint">Markets appear once lines load.</span>';
@@ -79,7 +80,9 @@ function syncControls() {
 // ---------------------------------------------------------------- pieces
 const dots = (c, size = 10) => `<span class="pb-dots" aria-hidden="true">${c.leg.games.slice(0, size).reverse().map(r => `<i class="${(c.side === 'over' ? r[1] > c.line : r[1] < c.line) ? 'is-hit' : r[1] === c.line ? 'is-push' : ''}"></i>`).join('')}</span>`;
 const portrait = leg => playerPortrait({ sport, name: leg.player, team: leg.team, position: leg.position, image: leg.image, playerId: leg.playerId });
-const odds = c => `<span class="pb-odds">${sportsbookMark(c.leg.book)}<b>${esc(americanText(c.price))}</b></span>`;
+// Alternate lines aren't on the public board, so they show no book and no price rather than a borrowed one.
+const odds = c => c.price === null ? '<span class="pb-odds is-unpriced"><b>No posted price</b></span>' : `<span class="pb-odds">${sportsbookMark(c.leg.book)}<b>${esc(americanText(c.price))}</b></span>`;
+const pickText = (c, market) => c.leg.alt ? `${c.leg.alt}+ ${market.label} · Alt line` : `${sideWord(c.side)} ${num(c.line)} ${market.label}`;
 function trendsLink(c) {
   const q = new URLSearchParams({ view: 'trends', market: c.leg.market, researchPlayer: c.leg.key }), s = state.pool.slate;
   if (sport === 'nfl') { if (s.season && s.week) { q.set('season', s.season); q.set('week', s.week); } }
@@ -101,7 +104,7 @@ function legCard(c, index, result) {
   return `<li class="pb-leg">
     <div class="pb-leg-head">
       <span class="pb-leg-num">${index + 1}</span>${portrait(leg)}
-      <div class="pb-leg-main"><strong>${esc(leg.player)}</strong><span class="pb-pick">${sideWord(c.side)} ${esc(num(c.line))} ${esc(market.label)}</span><small>${esc([leg.team, leg.position].filter(Boolean).join(' · '))} · ${esc(leg.game)} · ${esc(kickoff(leg.start))}</small></div>
+      <div class="pb-leg-main"><strong>${esc(leg.player)}</strong><span class="pb-pick">${esc(pickText(c, market))}</span><small>${esc([leg.team, leg.position].filter(Boolean).join(' · '))} · ${esc(leg.game)} · ${esc(kickoff(leg.start))}</small></div>
       ${odds(c)}
     </div>
     <div class="pb-leg-stats">
@@ -115,7 +118,7 @@ function legCard(c, index, result) {
     <div class="pb-leg-foot"><p>${esc(legSummary(c, { qualifying: result.qualifying, label: market.label }))}</p><div class="pb-leg-actions"><button type="button" class="pb-pill" data-swap="${esc(c.id)}">${icon('refresh')}<span>Swap</span></button><a class="pb-pill" href="${esc(trendsLink(c))}">${icon('trends')}<span>Open in Trends</span></a></div></div>
   </li>`;
 }
-const relaxLabel = c => c.threshold !== undefined ? `Lower the trend to ${c.threshold}%` : c.perGame ? 'Allow same-game legs' : c.maxFavorite === null ? 'Remove the odds limit' : c.side ? 'Use Overs and Unders' : c.skipInjured === false ? 'Include injury-listed players' : 'Use every market';
+const relaxLabel = c => c.threshold !== undefined ? `Lower the trend to ${c.threshold}%` : c.perGame ? 'Allow same-game legs' : c.maxFavorite === null ? 'Remove the odds limit' : c.side ? 'Use Overs and Unders' : c.skipInjured === false ? 'Include injury-listed players' : c.altLines ? 'Use alternate lines' : 'Use every market';
 const relaxButton = (t, primary = false) => `<button class="${primary ? 'pb-cta' : 'pb-pill'}" type="button" data-relax='${esc(JSON.stringify(t.changes))}'>${esc(relaxLabel(t.changes))} <span class="pb-soft">→ ${t.legs} leg${t.legs === 1 ? '' : 's'}</span></button>`;
 const emptyState = (glyph, title, text, actions = '') => `<div class="pb-empty"><span class="pb-cta-icon" aria-hidden="true">${icon(glyph)}</span><strong>${esc(title)}</strong><p>${esc(text)}</p>${actions ? `<div class="pb-empty-actions">${actions}</div>` : ''}</div>`;
 const skeleton = () => `<div class="pb-skeleton" aria-hidden="true"><div class="pb-skeleton-summary"><b></b><b></b></div>${[0, 1, 2].map(() => '<div class="pb-skeleton-row"><i></i><span><b></b><b></b></span><em></em></div>').join('')}</div><p class="pb-faint pb-loading-note">Gathering every posted line and each player's recent games. The first load after a quiet spell can take up to a minute.</p>`;
@@ -124,7 +127,7 @@ function whyText(result) {
   const s = settings, t = result.ticket, n = result.legs.length, kind = s.side === 'over' ? 'Over' : s.side === 'under' ? 'Under' : 'side';
   const rule = s.perGame === 1 ? 'one per player and one per game, so no two legs ride on the same game' : s.perGame === 2 ? 'one per player and at most two per game' : 'one per player';
   return [
-    `Out of ${count(result.qualifying, kind)} that hit in at least ${s.threshold}% of the last ${s.window} games (${count(result.players, 'player')}, ${count(result.games, 'game')}), these ${n} have the highest expected hit rates, with ${rule}.`,
+    `Out of ${count(result.qualifying, kind)} that hit in at least ${s.threshold}% of the last ${s.window} games (${count(result.players, 'player')}, ${count(result.games, 'game')}), these ${n} have the highest expected hit rates, with ${rule}.${s.altLines ? ` Alternate lines are on, so each player's stat also offers its highest milestone (like 20+ yards) that cleared ${s.threshold}%.` : ''}`,
     `If every trend held, this ticket would hit ${pct(t.trendChance)}. Trends cool off: on ${BACKTEST.hotSides.toLocaleString('en-US')} past lines that hit 70%+ of their last 10 games, ${pct(BACKTEST.hotActual)} hit the next time, not ${pct(BACKTEST.hotTrend)}. Using each leg's expected hit rate instead, the ticket lands about ${pct(t.chance, 1)} of the time.`
   ];
 }
@@ -138,7 +141,9 @@ function ticketView(result) {
   const swaps = state.excluded.size ? `<button type="button" class="pb-text-button" data-reset-swaps>Undo ${count(state.excluded.size, 'swap')}</button>` : '';
   return `${notes}
     <div class="pb-summary">
-      <div class="pb-payout"><span class="pb-overline">${result.legs.length}-leg parlay · ${esc(slateLabel())}</span><strong class="pb-big-odds">${esc(americanText(t.american))}</strong><span class="pb-pays">${esc(money(s.stake))} pays <b>${esc(money(t.payout))}</b></span></div>
+      <div class="pb-payout"><span class="pb-overline">${result.legs.length}-leg parlay · ${esc(slateLabel())}</span>${t.priced
+        ? `<strong class="pb-big-odds">${esc(americanText(t.american))}</strong><span class="pb-pays">${esc(money(s.stake))} pays <b>${esc(money(t.payout))}</b></span>`
+        : `<strong class="pb-big-odds is-unpriced">No price</strong><span class="pb-pays">${esc(count(t.alternates, 'alternate line'))} ${t.alternates === 1 ? 'has' : 'have'} no posted price, so the payout needs your book's odds</span>`}</div>
       <dl class="pb-mini-stats">
         <div class="is-accent"><dt>Hit chance</dt><dd>${pct(t.chance, 1)}</dd><small>expected, legs independent</small></div>
         <div><dt>If trends held</dt><dd>${pct(t.trendChance, 1)}</dd><small>raw L${esc(s.window)} rates</small></div>
@@ -151,11 +156,11 @@ function ticketView(result) {
 }
 function benchView(result) {
   const why = c => c.blocked.reason === 'player' ? `Same player as leg ${result.legs.indexOf(c.blocked.by) + 1}` : c.blocked.reason === 'game' ? `Same game as leg ${result.legs.indexOf(c.blocked.by) + 1}` : `Next in line · #${c.rank}`;
-  return result.bench.map(c => `<li><div class="pb-row">${portrait(c.leg)}<span class="pb-row-main"><strong>${esc(c.leg.player)}</strong><small>${sideWord(c.side)} ${esc(num(c.line))} ${esc(marketOf(c.leg.market).label)} · ${esc(c.leg.game)}</small>${dots(c, c.size)}</span><span class="pb-tag">${esc(why(c))}</span>${odds(c)}<span class="pb-row-side"><strong>${pct(c.chance)}</strong><small>${c.recent.hits}/${c.recent.n} · expected</small></span></div></li>`).join('');
+  return result.bench.map(c => `<li><div class="pb-row">${portrait(c.leg)}<span class="pb-row-main"><strong>${esc(c.leg.player)}</strong><small>${esc(pickText(c, marketOf(c.leg.market)))} · ${esc(c.leg.game)}</small>${dots(c, c.size)}</span><span class="pb-tag">${esc(why(c))}</span>${odds(c)}<span class="pb-row-side"><strong>${pct(c.chance)}</strong><small>${c.recent.hits}/${c.recent.n} · expected</small></span></div></li>`).join('');
 }
 function methodView() {
   return `<div class="pb-method-grid">
-    <div><h3>${icon('filter')}What qualifies</h3><p>Every player line still open on this slate, in every market, Over and Under, from the same public lines the Trends boards show. A side qualifies when it hit at least your threshold over your window (at least 5 games), its odds are within your limit, and its game hasn't started. Players on the injury report are skipped unless you turn that off.</p></div>
+    <div><h3>${icon('filter')}What qualifies</h3><p>Every player line still open on this slate, in every market, Over and Under, from the same public lines the Trends boards show. A side qualifies when it hit at least your threshold over your window (at least 5 games), its odds are within your limit, and its game hasn't started. Players on the injury report are skipped unless you turn that off. With alternate lines on, each player's stat also gets its highest round-number milestone (1+, 2+ for counts; 10+, 20+ yards and so on) that clears your threshold, scored from the same games. The public board posts only the main line, so milestones carry no price.</p></div>
     <div><h3>${icon('trends')}Expected hit rate</h3><p>Hit rates over a few games run hot: on ${BACKTEST.sides.toLocaleString('en-US')} past Overs and Unders (NFL weeks 1–4 of 2026, MLB July 20 to September 27, 2026), lines that hit 70%+ of their last 10 games went on to hit ${pct(BACKTEST.hotActual)}, not ${pct(BACKTEST.hotTrend)}. So each side blends the player's last 20 games (newer ones count more; a game's weight halves every ${HALF_LIFE} games back) with how often that side of that market hit across the slate, counted as ${BASE_WEIGHT} games. On those past slates it predicted ${pct(BACKTEST.hotEstimate)} for that group.</p></div>
     <div><h3>${icon('parlay')}Picking legs</h3><p>Legs are taken highest expected hit rate first, one per player and within your per-game limit. In September games, the top tenth of hot lines by this rate hit ${pct(BACKTEST.topEstimateHit)}, against ${pct(BACKTEST.topRawHit)} picking by raw last-10 rate. Lines set far from a player's usual output are flagged: they hit ${pct(BACKTEST.farLineActual)}, against ${pct(BACKTEST.normalActual)} normally.</p></div>
     <div><h3>${icon('info')}Keep in mind</h3><p>Past hit rates don't guarantee future results, and the ticket chance treats legs as independent. Odds only set the payout; they come from a public comparison of US books and can move, so check your book before you bet.</p></div>
@@ -247,6 +252,7 @@ $('#pb-threshold').addEventListener('change', e => change({ threshold: Number(e.
 $('#pb-favorite').addEventListener('change', e => change({ maxFavorite: e.target.value === '' ? null : Number(e.target.value) }));
 $('#pb-stake').addEventListener('change', e => change({ stake: Number(e.target.value) }));
 $('#pb-injured').addEventListener('change', e => change({ skipInjured: e.target.checked }));
+$('#pb-alt').addEventListener('change', e => change({ altLines: e.target.checked }));
 $('#pb-week').addEventListener('change', e => { [state.season, state.week] = e.target.value ? e.target.value.split(':') : ['', '']; state.excluded.clear(); load(); });
 $('#pb-date').addEventListener('change', e => { if (!e.target.value) return; state.date = e.target.value; state.excluded.clear(); load(); });
 document.addEventListener('click', e => {

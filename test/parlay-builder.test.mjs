@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { HALF_LIFE, BASE_WEIGHT, FAR_LINE, evaluateSide, qualifyingSides, buildParlay, relaxations, legReasons, legSummary, slateBaseRates, weightedTrend, record, toAmerican, toDecimal } from '../public/parlay-builder.js';
+import { HALF_LIFE, BASE_WEIGHT, FAR_LINE, milestoneSteps, bestAlternateLine, evaluateSide, qualifyingSides, buildParlay, relaxations, legReasons, legSummary, slateBaseRates, weightedTrend, record, toAmerican, toDecimal } from '../public/parlay-builder.js';
 import { boardLegs, createParlayPool } from '../lib/parlay-pool.mjs';
 import { requiredFeature } from '../lib/accounts/entitlements.mjs';
 import { productTools, sportDestination, workspaceProduct } from '../public/navigation.js';
@@ -213,4 +213,51 @@ test('the parlay builder lives in the Trends workspace and its data needs the re
   assert.match(server, /context\.section === 'parlay' \? 'parlay\.html'/);
   const html = await readFile(new URL('../public/parlay.html', import.meta.url), 'utf8');
   for (const file of ['parlay-builder.js', 'account-sync.js', 'product-ui.js', 'research-data.js', 'ui-icons.js', 'sports-identity.js']) assert.ok(html.includes(`rel="modulepreload" href="/${file}"`), file);
+});
+
+test('alternate lines ladder round-number milestones up to the best recent game', () => {
+  assert.deepEqual(milestoneSteps([5, 3, 12]), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  assert.deepEqual(milestoneSteps([40, 22]), [5, 10, 15, 20, 25, 30, 35, 40]);
+  assert.deepEqual(milestoneSteps([60, 90, 75]), [10, 20, 30, 40, 50, 60, 70, 80, 90]);
+  assert.deepEqual(milestoneSteps([310, 250]), [25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300]);
+  assert.deepEqual(milestoneSteps([0, 0]), []);
+});
+
+test('with alternate lines on, each stat offers its highest milestone that clears the threshold, unpriced', () => {
+  // Last 10: 60 70 40 80 55 65 30 90 75 52. 50+ hits 8 of 10; 60+ only 6 of 10.
+  const pool = { legs: [leg({ over: null })] }, settings = { side: 'over', threshold: 70, window: '10' };
+  assert.equal(qualifyingSides(pool, settings, NOW).length, 0, 'the posted Over has no price, so nothing qualifies without alternates');
+  const [c] = qualifyingSides(pool, { ...settings, altLines: true }, NOW);
+  assert.equal(c.leg.alt, 50);
+  assert.equal(c.line, 49.5);
+  assert.equal(c.price, null);
+  assert.equal(c.decimal, null);
+  assert.deepEqual([c.recent.hits, c.recent.n], [8, 10]);
+  assert.equal(c.farLine, false, 'milestones sit below usual output by design');
+  const reasons = legReasons(c, { unit: 'yds', label: 'Receiving yards' });
+  assert.equal(reasons[0].text, '50+ in 8 of the last 10');
+  assert.ok(reasons.some(r => r.tone === 'warn' && /posts only 50\.5 for this stat, so this milestone has no price/.test(r.text)), 'names the posted line, not the milestone');
+  assert.ok(!reasons.some(r => /books at|Only one book/.test(r.text)), 'book counts describe the posted line, not the milestone');
+  assert.equal(qualifyingSides(pool, { ...settings, altLines: true, threshold: 90 }, NOW)[0].leg.alt, 40, 'a higher bar steps down the ladder');
+  assert.equal(bestAlternateLine(leg({ games: history([1, 2]) }), settings, { base: () => 0.5, milestoneBase: () => 0.5 }), null, 'needs enough games');
+});
+
+test('a ticket with an alternate leg has no payout; swapping drops that alternate; Unders-only skips them', () => {
+  const pool = { legs: [leg({ over: null }), leg({ id: 'g2:p2:rec_yds', key: 'nfl:g2:p2:rec_yds', player: 'Player Two', playerId: 'p2', gameId: 'g2', game: 'TB @ CAR', over: -110 })] };
+  const settings = { side: 'over', threshold: 70, window: '10', legs: 2, altLines: true, maxFavorite: null };
+  const result = buildParlay(pool, settings, NOW);
+  assert.equal(result.legs.length, 2);
+  assert.ok(result.legs.some(c => c.leg.alt));
+  assert.equal(result.ticket.priced, false);
+  assert.equal(result.ticket.payout, null);
+  assert.equal(result.ticket.american, null);
+  assert.ok(result.ticket.alternates >= 1);
+  assert.ok(result.ticket.chance > 0 && result.ticket.chance < 1, 'the hit chance still comes from the trends');
+  const alt = result.legs.find(c => c.leg.id.startsWith('g1:p1:rec_yds:alt'));
+  const swapped = qualifyingSides(pool, { ...settings, excluded: [alt.id] }, NOW);
+  assert.ok(!swapped.some(c => c.leg.id.startsWith('g1:p1:rec_yds')), 'the swapped player has no other priced side here');
+  assert.ok(!qualifyingSides(pool, { ...settings, side: 'under' }, NOW).some(c => c.leg.alt), 'milestones are Overs');
+  const priced = buildParlay({ legs: [pool.legs[1], leg({ id: 'g3:p3:rec_yds', playerId: 'p3', gameId: 'g3' })] }, { ...settings, altLines: false }, NOW);
+  assert.equal(priced.ticket.priced, true);
+  assert.ok(priced.ticket.payout > 0);
 });

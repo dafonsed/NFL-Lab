@@ -7,7 +7,10 @@ import {siteHeader,renderSitePage} from '../lib/site-layout.mjs';
 import {MORE_TOOLS,SECONDARY_TOOLS} from '../public/ev-tool-catalog.js';
 import {evToolUrl} from '../public/ev-tool-catalog.js';
 import * as views from '../public/ev-secondary-views.js';
-import * as core from '../public/ev-core.js';
+import * as math from '../public/betting-math.js';
+import * as format from '../public/odds-format.js';
+import {indexSnapshot} from '../public/odds-client.js';
+const core={...math,...format};
 import {selectionText} from '../public/ev-board.js';
 import * as catalog from '../public/platform-catalog.js';
 import {TOOL_FILTER_DEFAULTS, oddsWithin} from '../public/ev-filters.js';
@@ -62,7 +65,9 @@ test('promo view balances outcomes and never applies a disabled cash boost to a 
   const source=await fs.readFile(new URL('../public/ev.js',import.meta.url),'utf8');
   const start=source.indexOf('function renderPromo()');
   const end=source.indexOf('\nfunction ',start+1);
-  const context=vm.createContext({...views,...core,selectionText,promoInput:{kind:'bonus',stake:100,promoOdds:150,hedgeOdds:-130,boost:50},eligibleQuotes:x=>x,quotes:()=>[],toolFilters:{...TOOL_FILTER_DEFAULTS},oddsWithin,filteredEmpty:fallback=>fallback,esc:views.toolEsc,money:n=>'$'+n.toFixed(2),percent:n=>(n*100).toFixed(1)+'%',action:()=>'',button:()=>''});
+  // No hedge pairs from the odds service yet: the calculator still works on the member's numbers.
+  const context=vm.createContext({...views,...core,selectionText,promoInput:{kind:'bonus',stake:100,promoOdds:150,hedgeOdds:-130,boost:50},eligibleQuotes:x=>x,quotes:()=>[],
+    state:{quotes:[],analytics:indexSnapshot({quotes:[],hedges:[]})},current:()=>true,quotePassesTool:()=>true,visible:()=>true,bookAvailable:()=>true,suite:{quoteVisible:()=>true},toolFilters:{...TOOL_FILTER_DEFAULTS},oddsWithin,filteredEmpty:fallback=>fallback,esc:views.toolEsc,money:n=>'$'+n.toFixed(2),percent:n=>(n*100).toFixed(1)+'%',action:()=>'',button:()=>''});
   const $=load(vm.runInContext(source.slice(start,end)+'\nrenderPromo()',context));
   assert.equal($('.tool-receipt-value').text(),'$84.78');
   assert.deepEqual($('.tool-receipt dd').map((_,el)=>$(el).text()).get(),['$65.22','$65.22','65.2%']);

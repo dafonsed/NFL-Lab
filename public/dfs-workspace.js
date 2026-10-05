@@ -1,4 +1,10 @@
-import { probabilityToAmerican, fantasySlip, money, oddsLabel, decimal, fresh } from './ev-core.js';
+// DFS lines arrive priced by the odds service (fair probability and odds, each book's line and average);
+// the slip calculator (betting-math.js) runs on the picks and payout tables the member chooses.
+import { fantasySlip, decimal, breakEven, probabilityToAmerican } from './betting-math.js';
+import { money, oddsLabel } from './odds-format.js';
+import { isCurrent } from './odds-contract.js';
+import { serverNow } from './odds-client.js';
+export { breakEven };
 import { teamLogo } from './sports-identity.js';
 import { FANTASY_PLATFORMS, SPORTSBOOK_PLATFORMS, canonicalPlatform, platformAsset, isFantasyPlatform, isContestPlatform } from './platform-catalog.js';
 import { boardIcon, renderBetPanel } from './ev-board.js?v=7';
@@ -75,16 +81,6 @@ const teamMark = item => {
 };
 
 
-export function breakEven(rules) {
-  if (!Array.isArray(rules) || rules.length < 3 || Number(rules.at(-1)) <= 1) return null;
-  let low = 0, high = 1;
-  for (let i=0;i<48;i++) {
-    const probability = (low+high)/2;
-    const result = fantasySlip(Array.from({length:rules.length-1},()=>({probability})),rules);
-    if (result.payout < 1) low = probability; else high = probability;
-  }
-  return (low+high)/2;
-}
 
 // DFS comparisons come only from DFS props. Sportsbook quotes are a separate market.
 export function comparisonPlatforms(item, props = []) {
@@ -159,7 +155,7 @@ export function sportsbookOffers(item, quotes = []) {
         quotePlayer !== player || marketName(quote.market) !== market ||
         !hasLine(quote.line) || Number(quote.line) !== Number(item.line) ||
         normalize(quote.side) !== normalize(item.side) || Boolean(quote.live) !== Boolean(item.live) ||
-        normalize(quote.period || 'full') !== normalize(item.period || 'full') || !fresh(quote)) continue;
+        normalize(quote.period || 'full') !== normalize(item.period || 'full') || !isCurrent(quote, serverNow())) continue;
     const prior = latest.get(book);
     if (!prior || (Date.parse(quote.ts) || 0) >= (Date.parse(prior.ts) || 0)) latest.set(book,{...quote,book});
   }
@@ -274,11 +270,12 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure,onDeleteS
     for (const offer of sportsbookOffers({...item,side},quotes())) if (!merged.has(offer.book) && bookShown(offer.book)) merged.set(offer.book, offer);
     return [...merged.values()].sort((a,b) => decimal(b.odds) - decimal(a.odds) || a.book.localeCompare(b.book));
   };
-  const averagePrice = offers => {
-    // One book: its own price (an even-money +100 shouldn't come back from 50% as -100).
+  // The books' average price for a side, as the odds service computed it: a feed line's own average, else
+  // the sportsbook market's average at that exact line (one book: its own price).
+  const averagePrice = (offers, item, side) => {
     if (offers.length === 1 && Number.isFinite(decimal(offers[0].odds))) return oddsLabel(offers[0].odds);
-    const values = offers.map(offer => decimal(offer.odds)).filter(Number.isFinite);
-    return values.length ? oddsLabel(probabilityToAmerican(values.length / values.reduce((sum,value) => sum+value,0))) : '—';
+    const average = item.bookAverage?.[side.toLowerCase()] ?? current().analytics?.marketSide(offers.find(offer => offer.id))?.averageOdds;
+    return offers.length && average != null ? oddsLabel(average) : '—';
   };
   const COLUMNS = 5;
   // Expanded row: the shared bet panel with sportsbook prices, then each selected DFS platform's line.
@@ -301,10 +298,11 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure,onDeleteS
       const key = side.toLowerCase(), list = offers[side], top = best(key);
       const bookCells = books.map(book => { const offer = list.find(entry => entry.book === book); return {value:offer ? oddsLabel(offer.odds) : '—', best:offer === list[0] && Boolean(offer)}; });
       const dfsCells = platforms.map(p => ({value:p[key] ? String(p[key].line) : '—', sub:validProbability(p[key]?.probability) ? `${percent(p[key].probability)} fair` : '', best:!list.length && top?.differs && Number(p[key]?.line) === top.line}));
-      return {label:`${item.player} ${side} ${item.line}`, selected:side === item.side, average:averagePrice(list),
+      return {label:`${item.player} ${side} ${item.line}`, selected:side === item.side, average:averagePrice(list, item, side),
         best:list[0] ? {book:list[0].book, value:oddsLabel(list[0].odds)} : top ? {book:top.app, value:String(top.line)} : null, cells:[...bookCells, ...dfsCells]};
     });
-    const valid = validProbability(item.probability), fair = valid ? probabilityToAmerican(Number(item.probability)) : NaN;
+    // Feed lines carry the server's fair odds; a line the member entered converts their own estimate.
+    const valid = validProbability(item.probability), fair = !valid ? NaN : item.fairOdds != null ? Number(item.fairOdds) : item.source !== 'local-api' ? probabilityToAmerican(Number(item.probability)) : NaN;
     const edge = edgeFor(item, threshold), type = chosenType();
     const facts = [`Fair ${percent(item.probability)}`, Number.isFinite(fair) ? `Fair odds ${oddsLabel(fair)}` : '',
       !payoutKnown(item) ? `${ODDS_TYPE_LABELS[item.oddsType]} payout not in the feed, so no break-even` : threshold == null ? 'Payout rules needed for break-even' : `Break-even ${percent(threshold)} (${appName(item.app)} ${type.size} Pick${standardPayout(item) ? '' : `, ${ODDS_TYPE_LABELS[item.oddsType].toLowerCase()} payout ×${payoutFactor(item)}`})`,

@@ -40,6 +40,8 @@ import { SimulationPropsStore, createSimulationPropStores } from './lib/simulati
 import { renderBettingPage } from './lib/betting-pages.mjs';
 import { renderOddsApiPage } from './lib/odds-api-page.mjs';
 import { handleEvApi } from './lib/ev-api-proxy.mjs';
+import { handleOddsApi } from './lib/odds/http.mjs';
+import { OddsError } from './public/odds-contract.js';
 import { accountRuntime } from './lib/accounts/runtime.mjs';
 import { accountJson, enforceAccountAccess } from './lib/accounts/http.mjs';
 import { readMarketControlsWithFallback } from './lib/admin-market-controls.mjs';
@@ -80,8 +82,9 @@ function cachedPage(req, key, render) {
 // Rendered editorial illustrations (/art/<key>.svg), by key.
 const artCache = new Map();
 const allowApiRequest = createIpLimiter({ max: 240, windowMs: 60_000 });
-// The public quote feed: 3-second live polling is 20 requests a minute per tab, so 120 allows a
-// few open tabs while stopping a runaway client from hammering the upstream API.
+// The public quote feed and odds API (/api/ev, /api/odds share one budget): 3-second live polling is 20
+// requests a minute per tab, so 120 allows a few open tabs while stopping a runaway client from hammering
+// the upstream API.
 const allowEvRequest = createIpLimiter({ max: 120, windowMs: 60_000 });
 const allowRefresh = createRefreshGate({ windowMs: 60_000 });
 // Same test as accountRuntime(): configured account services that failed to start are not "no accounts".
@@ -124,10 +127,13 @@ export const server = http.createServer(async (req, res) => {
     if (url.pathname === '/admin/login') { res.writeHead(302, { Location: '/login?next=%2Fadmin', 'Cache-Control': 'no-store' }); return res.end(); }
     const trackerRedirect = legacyBetTrackerUrl(url);
     if (trackerRedirect) { res.writeHead(308, { Location: trackerRedirect, 'Cache-Control': 'no-cache' }); return res.end(); }
-    if (url.pathname.startsWith('/api/ev/') && !allowEvRequest(clientIp(req))) { res.setHeader('Retry-After', '30'); return json(res, { error: 'Too many price requests. Prices resume shortly.', code: 'RATE_LIMITED', retryable: true }, 429); }
+    const oddsApi = url.pathname === '/api/odds' || url.pathname.startsWith('/api/odds/');
+    if ((url.pathname.startsWith('/api/ev/') || oddsApi) && !allowEvRequest(clientIp(req))) { res.setHeader('Retry-After', '30'); return json(res, oddsApi ? new OddsError('RATE_LIMITED', undefined, { retryAfterSeconds: 30 }).toBody() : { error: 'Too many price requests. Prices resume shortly.', code: 'RATE_LIMITED', retryable: true }, 429); }
     // Distribution controls fail closed: a database error is a 503, never an unfiltered snapshot. Only a
     // server with no account services configured (so no controls can exist) serves without them.
-    if (url.pathname.startsWith('/api/ev/')) return await handleEvApi(req, res, url, { loadControls: accounts ? () => readMarketControlsWithFallback(accounts.system.db) : accountsConfigured() ? async () => { throw new Error('Account services are unavailable.'); } : null });
+    const loadControls = accounts ? () => readMarketControlsWithFallback(accounts.system.db) : accountsConfigured() ? async () => { throw new Error('Account services are unavailable.'); } : null;
+    if (url.pathname.startsWith('/api/ev/')) return await handleEvApi(req, res, url, { loadControls });
+    if (oddsApi) return await handleOddsApi(req, res, url, { loadControls });
     if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, { error: 'Method not allowed.' }, 405);
     const helpRequest = resolveHelpCenterRequest(url, { host });
     if (helpRequest) {
@@ -287,9 +293,11 @@ export const server = http.createServer(async (req, res) => {
     for (const file of ['admin.js', 'admin.css', 'admin-catalog.js', 'admin-store.js', 'admin-values.js']) names['/' + file] = file;
     for (const file of ['admin-shell.js', 'admin-unified.css', 'admin-overview.js', 'admin-overview.css']) names['/' + file] = file;
     for (const file of ['help.css', 'help.js', 'help-search.js']) names['/' + file] = file;
-    for (const file of ['ev.js', 'ev-core.js', 'ev-workspace-clean.js', 'ev-feed.js', 'ev-feed.css', 'ev-bet-card.js', 'ev-bet-cards.css', 'dfs-workspace.js', 'dfs-workspace.css', 'odds-screen.js', 'odds-screen.css', 'ev.css', 'ev.html']) names['/' + file] = file;
-    for (const file of ['ev-suite.js', 'ev-suite.css', 'ev-suite-storage.js', 'ev-advanced-math.js', 'ev-operations.js', 'ev-operations.css', 'ev-market-views.js', 'ev-market-views.css', 'ev-ledger.js', 'ev-ledger.css', 'ev-fantasy-lab.js', 'ev-fantasy-lab.css', 'ev.webmanifest', 'ev-sw.js', 'ev-app-icon.svg']) names['/' + file] = file;
-    for (const file of ['platform-catalog.js', 'ev-tool-catalog.js', 'ev-more-menu.js', 'ev-secondary-views.js', 'ev-more-tools.css', 'ev-filters.js', 'ev-event-match.js', 'ev-feed-normalize.js', 'ev-quote-cache.js', 'ev-feed-worker.js']) names['/' + file] = file;
+    for (const file of ['ev.js', 'ev-workspace-clean.js', 'ev-feed.js', 'ev-feed.css', 'ev-bet-card.js', 'ev-bet-cards.css', 'dfs-workspace.js', 'dfs-workspace.css', 'odds-screen.js', 'odds-screen.css', 'ev.css', 'ev.html']) names['/' + file] = file;
+    for (const file of ['ev-suite.js', 'ev-suite.css', 'ev-suite-storage.js', 'ev-operations.js', 'ev-operations.css', 'ev-market-views.js', 'ev-market-views.css', 'ev-ledger.js', 'ev-ledger.css', 'ev-fantasy-lab.js', 'ev-fantasy-lab.css', 'ev.webmanifest', 'ev-sw.js', 'ev-app-icon.svg']) names['/' + file] = file;
+    for (const file of ['platform-catalog.js', 'ev-tool-catalog.js', 'ev-more-menu.js', 'ev-secondary-views.js', 'ev-more-tools.css', 'ev-filters.js', 'ev-quote-cache.js']) names['/' + file] = file;
+    // The odds client and the shared calculators (lib/odds prices the feed; the browser displays it).
+    for (const file of ['odds-client.js', 'odds-contract.js', 'odds-alerts.js', 'odds-format.js', 'betting-math.js', 'market-identity.js', 'sport-names.js']) names['/' + file] = file;
     for (const file of ['research-filters.css', 'research-details.css', 'tool-dropdowns.css', 'arb-calculator.js', 'arb-calculator.css', 'bet-comparison.js', 'bet-comparison.css', 'bet-dashboard-v2.js', 'bet-dashboard-v3.js', 'bet-history.js', 'bet-inline.js', 'bet-inline.css',   'bet-tracker-reference.css', 'ev-arb-reference.css', 'ev-book-picker.css', 'ev-filter-polish.css',  'sites-redesign.css', 'smart-money.css']) names['/' + file] = file;
     if (/^\/ev-icons\/(date|leagues|markets|odds|sports)\.svg$/.test(pagePath)) names[pagePath] = pagePath.slice(1);
     if (['/product-switcher.js','/product-switcher.css'].includes(pagePath)) names[pagePath] = pagePath.slice(1);

@@ -15,12 +15,13 @@
 // first, one per player and at most `perGame` per game; with those nested limits greedy picks the
 // highest product of chances, i.e. the ticket most likely to hit (legs treated as independent).
 export const HALF_LIFE = 8, BASE_WEIGHT = 20, MIN_GAMES = 5, FAR_LINE = 2;
-export const PARLAY_DEFAULTS = Object.freeze({ legs: 3, threshold: 70, window: '10', side: 'both', perGame: 1, maxFavorite: -300, markets: [], skipInjured: true, stake: 10 });
+export const PARLAY_DEFAULTS = Object.freeze({ legs: 3, threshold: 70, window: '10', side: 'both', perGame: 1, maxFavorite: -300, markets: [], skipInjured: true, altLines: false, stake: 10 });
 // Backtest figures quoted to members (see the header).
 export const BACKTEST = Object.freeze({ sides: 72102, hotSides: 16834, hotActual: 0.664, hotEstimate: 0.677, hotTrend: 0.797, topEstimateHit: 0.944, topRawHit: 0.87, farLineSides: 1100, farLineActual: 0.584, normalActual: 0.724 });
 
-export const toDecimal = american => american > 0 ? 1 + american / 100 : 1 + 100 / -american;
-export const toAmerican = decimal => decimal >= 2 ? Math.round((decimal - 1) * 100) : Math.round(-100 / (decimal - 1));
+// Odds conversions are the site's shared ones (betting-math.js).
+import { decimal as toDecimal, decimalToAmerican as toAmerican } from './betting-math.js';
+export { toDecimal, toAmerican };
 export const americanText = odds => odds > 0 ? '+' + odds : String(odds);
 const median = values => { const s = [...values].sort((a, b) => a - b), n = s.length; return n ? n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2 : null; };
 const mean = values => values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
@@ -54,10 +55,50 @@ export function slateBaseRates(legs) {
   return (market, side) => (sums.get(market + ':' + side)?.n >= 5 ? average(market + ':' + side) : null) ?? average(side) ?? 0.5;
 }
 
-/** One side of one line, with every number the explanation uses. Null when the side has no posted price. */
+// Alternate lines: round-number milestones ("20+ receiving yards" = Over 19.5) scored from the same
+// games as the posted line. The public board posts only the main line, so a milestone has no price.
+/** The milestones a book would ladder for a stat: whole numbers for small counts, then 5s, 10s or 25s, up to the player's best game. */
+export function milestoneSteps(values) {
+  const top = Math.max(0, ...values.filter(Number.isFinite));
+  const step = top <= 15 ? 1 : top <= 60 ? 5 : top <= 200 ? 10 : 25, out = [];
+  for (let n = step; n <= top; n += step) out.push(n);
+  return out;
+}
+
+/** The anchor for a milestone: how often players in the same market reached it on this slate. */
+export function milestoneBaseRates(legs) {
+  const cache = new Map();
+  return (market, line, fallback = 0.5) => {
+    const key = market + ':' + line;
+    if (!cache.has(key)) {
+      const rates = legs.filter(leg => leg.market === market && Array.isArray(leg.games) && leg.games.length >= MIN_GAMES).map(leg => weightedTrend(leg.games, line, 'over').rate);
+      cache.set(key, rates.length >= 5 ? mean(rates) : null);
+    }
+    return cache.get(key) ?? fallback;
+  };
+}
+
+/**
+ * The highest milestone for this player's stat that still clears the member's hit-rate threshold, or null.
+ * Milestones start at half the posted line (19.5 yards → 10+; 2.5 receptions → 2+): lower rungs like
+ * 1+ reception are near-certain, so they would crowd out every other leg while adding almost no payout.
+ */
+export function bestAlternateLine(leg, settings, { base, milestoneBase }) {
+  const s = { ...PARLAY_DEFAULTS, ...settings }, size = sizeOf(s.window);
+  if (!Array.isArray(leg.games) || leg.games.length < MIN_GAMES) return null;
+  const floor = Number.isFinite(leg.line) && leg.line > 0 ? Math.ceil(leg.line / 2) : 1;
+  for (const n of milestoneSteps(leg.games.slice(0, 20).map(r => r[1])).filter(n => n >= floor).reverse()) {
+    const line = n - 0.5, alt = { ...leg, id: `${leg.id}:alt${n}`, line, postedLine: leg.line, over: null, under: null, alt: n };
+    const c = evaluateSide(alt, 'over', { window: s.window, base: () => milestoneBase(leg.market, line, base(leg.market, 'over')) });
+    if (c && c.recent.n >= Math.min(MIN_GAMES, size) && c.recent.rate * 100 >= s.threshold) return c;
+  }
+  return null;
+}
+
+/** One side of one line, with every number the explanation uses. Null when a posted side has no price; alternate lines never have one. */
 export function evaluateSide(leg, side, { window = '10', base = () => 0.5 } = {}) {
-  const price = leg[side], line = leg.line;
-  if (price === null || price === undefined || line === null || !Array.isArray(leg.games)) return null;
+  const price = leg[side] ?? null, line = leg.line;
+  if ((price === null && !leg.alt) || line === null || !Array.isArray(leg.games)) return null;
   const outcome = outcomeOf(line, side), trend = weightedTrend(leg.games, line, side), baseRate = base(leg.market, side);
   const chance = (trend.weight * (trend.rate ?? 0) + BASE_WEIGHT * baseRate) / (trend.weight + BASE_WEIGHT);
   const size = sizeOf(window), recent = record(leg.games, line, side, size);
@@ -68,8 +109,9 @@ export function evaluateSide(leg, side, { window = '10', base = () => 0.5 } = {}
   let streak = 0; for (const r of leg.games) { if (outcome(r[1]) === 1) streak++; else break; }
   const venue = leg.home === null || leg.home === undefined ? null : record(leg.games.filter(r => r[2] === (leg.home ? 1 : 0)), line, side);
   return {
-    id: leg.id + ':' + side, leg, side, price, decimal: toDecimal(price), line, chance, baseRate, trend: trend.rate, weight: trend.weight,
-    size, recent, cushion, farLine: cushion !== null && cushion >= FAR_LINE,
+    id: leg.id + ':' + side, leg, side, price, decimal: price === null ? null : toDecimal(price), line, chance, baseRate, trend: trend.rate, weight: trend.weight,
+    // Milestones sit below the player's usual output by design, so the far-line warning is for posted lines only.
+    size, recent, cushion, farLine: !leg.alt && cushion !== null && cushion >= FAR_LINE,
     l5: record(leg.games, line, side, 5), l10: record(leg.games, line, side, 10), l20: record(leg.games, line, side, 20),
     average: mean(recent.values), median: median(recent.values), streak,
     form: last5.length === 5 && prior5.length === 5 ? { last: mean(last5), prior: mean(prior5) } : null,
@@ -81,6 +123,7 @@ export function evaluateSide(leg, side, { window = '10', base = () => 0.5 } = {}
 export function qualifyingSides(pool, settings = {}, now = Date.now()) {
   const s = { ...PARLAY_DEFAULTS, ...settings }, base = slateBaseRates(pool.legs || []), markets = new Set(s.markets || []);
   const excluded = new Set(s.excluded || []), size = sizeOf(s.window), out = [];
+  const milestoneBase = s.altLines ? milestoneBaseRates(pool.legs || []) : null;
   for (const leg of pool.legs || []) {
     if (!(Date.parse(leg.start) > now) || markets.size && !markets.has(leg.market) || s.skipInjured && leg.concern) continue;
     for (const side of s.side === 'both' ? ['over', 'under'] : [s.side]) {
@@ -88,6 +131,12 @@ export function qualifyingSides(pool, settings = {}, now = Date.now()) {
       if (!c || excluded.has(c.id) || c.recent.n < Math.min(MIN_GAMES, size) || c.recent.rate * 100 < s.threshold) continue;
       if (Number.isFinite(s.maxFavorite) && c.price < s.maxFavorite) continue;
       out.push(c);
+    }
+    // Milestones are Overs ("20+"), so they join only when Overs are allowed. Swapping one out drops
+    // that player's alternate line for this stat rather than stepping down the ladder.
+    if (milestoneBase && s.side !== 'under' && ![...excluded].some(id => id.startsWith(leg.id + ':alt'))) {
+      const c = bestAlternateLine(leg, s, { base, milestoneBase });
+      if (c) out.push(c);
     }
   }
   return out.sort((a, b) => b.chance - a.chance || b.recent.rate - a.recent.rate || a.id.localeCompare(b.id));
@@ -104,9 +153,11 @@ export function buildParlay(pool, settings = {}, now = Date.now()) {
     if (legs.length < s.legs && !blocked) { legs.push(c); perPlayer.set(player, c); perGame.set(game, [...(perGame.get(game) || []), c]); }
     else if (bench.length < 6 && (legs.length >= s.legs || blocked)) bench.push({ ...c, blocked: blocked || { reason: 'rank' } });
   }
-  const product = values => values.reduce((a, b) => a * b, 1), decimal = product(legs.map(c => c.decimal));
+  // An alternate line has no posted price, so a ticket that includes one has no payout to show.
+  const product = values => values.reduce((a, b) => a * b, 1), priced = legs.every(c => Number.isFinite(c.decimal)), decimal = priced ? product(legs.map(c => c.decimal)) : null;
   const ticket = legs.length ? {
-    decimal, american: toAmerican(decimal), payout: s.stake * decimal, profit: s.stake * (decimal - 1),
+    priced, decimal, american: priced ? toAmerican(decimal) : null, payout: priced ? s.stake * decimal : null, profit: priced ? s.stake * (decimal - 1) : null,
+    alternates: legs.filter(c => c.leg.alt).length,
     chance: product(legs.map(c => c.chance)), trendChance: product(legs.map(c => c.recent.rate)), averageRate: mean(legs.map(c => c.recent.rate)),
     games: new Set(legs.map(c => c.leg.gameId)).size, sameGame: legs.length !== new Set(legs.map(c => c.leg.gameId)).size
   } : null;
@@ -117,7 +168,7 @@ export function buildParlay(pool, settings = {}, now = Date.now()) {
 export function relaxations(pool, settings, now = Date.now()) {
   const s = { ...PARLAY_DEFAULTS, ...settings }, count = changes => buildParlay(pool, { ...s, ...changes }, now).legs.length, current = count({}), out = [];
   for (const threshold of [s.threshold - 5, s.threshold - 10, s.threshold - 20].filter(t => t >= 50)) { const n = count({ threshold }); if (n > current) { out.push({ changes: { threshold }, legs: n }); break; } }
-  const tries = [[s.perGame !== 'any', { perGame: 'any' }], [Number.isFinite(s.maxFavorite), { maxFavorite: null }], [s.side !== 'both', { side: 'both' }], [s.markets?.length > 0, { markets: [] }], [s.skipInjured, { skipInjured: false }]];
+  const tries = [[s.perGame !== 'any', { perGame: 'any' }], [Number.isFinite(s.maxFavorite), { maxFavorite: null }], [s.side !== 'both', { side: 'both' }], [s.markets?.length > 0, { markets: [] }], [s.skipInjured, { skipInjured: false }], [!s.altLines && s.side !== 'under', { altLines: true }]];
   for (const [applies, changes] of tries) if (applies) { const n = count(changes); if (n > current) out.push({ changes, legs: n }); }
   return out.sort((a, b) => b.legs - a.legs);
 }
@@ -140,7 +191,8 @@ export function legReasons(c, { unit = '', label = '' } = {}) {
   const out = [], { leg, side, line } = c, above = side === 'over', toward = gap => above ? gap > 0 : gap < 0;
   const add = (tone, text) => out.push({ tone, text });
   const by = gap => `${fmt(Math.abs(gap))}${unit ? ' ' + unit : ''} ${gap > 0 ? 'over' : 'under'} the line`;
-  add('good', `${Side(side)} ${fmt(line)} in ${c.recent.hits} of the last ${c.recent.n}${c.l20.n > c.recent.n ? `, ${c.l20.hits} of the last ${c.l20.n}` : ''}`);
+  add('good', `${leg.alt ? `${leg.alt}+` : `${Side(side)} ${fmt(line)}`} in ${c.recent.hits} of the last ${c.recent.n}${c.l20.n > c.recent.n ? `, ${c.l20.hits} of the last ${c.l20.n}` : ''}`);
+  if (leg.alt) add('warn', `Alternate line: the public board posts only ${fmt(leg.postedLine)} for this stat, so this milestone has no price. Check your book for it`);
   if (c.h2h.n >= 2 && c.h2h.rate >= 0.75) add('good', `${c.h2h.hits} of ${c.h2h.n} against ${leg.opponent}`);
   // A split only says something when the history has both home and road games.
   if (c.venue && c.venue.n >= 4 && c.venue.n < leg.games.length && c.venue.rate >= Math.max(0.75, c.recent.rate)) add('good', `${c.venue.hits} of ${c.venue.n} ${leg.home ? 'at home' : 'on the road'}`);
@@ -169,18 +221,19 @@ export function legReasons(c, { unit = '', label = '' } = {}) {
   }
   if (c.farLine) add('warn', `Line set far ${above ? 'below' : 'above'} this player's usual output. Hot ${Side(side)}s like this hit ${pct(BACKTEST.farLineActual)} on past slates, not ${pct(BACKTEST.normalActual)}: the book may expect a different role`);
   if (leg.concern && leg.status) add('warn', `Injury report: ${leg.status}`);
-  if (leg.books === 1) add('warn', 'Only one book posts this line');
+  if (leg.books === 1 && !leg.alt) add('warn', 'Only one book posts this line');
   if (c.recent.n < c.size) add('warn', `Only ${games(c.recent.n)} of history`);
   if (leg.lineup === 'confirmed') add('good', 'In the confirmed lineup');
   if (c.median !== null) add('info', `Median ${fmt(c.median)}`);
   if (misses.length) { const worst = above ? Math.min(...misses) : Math.max(...misses); add('info', `Worst miss ${fmt(worst)}`); }
   else if (c.recent.values.length) add('info', `${above ? 'Low' : 'High'} ${fmt(above ? Math.min(...c.recent.values) : Math.max(...c.recent.values))}`);
   if (leg.pitcher) add('info', `Faces ${leg.pitcher}`);
-  if (leg.books > 1) add('info', `${leg.books} books at ${fmt(line)}`);
+  if (leg.books > 1 && !leg.alt) add('info', `${leg.books} books at ${fmt(line)}`);
   return out;
 }
 
 /** The leg's rank and where its expected hit rate comes from, in one line. */
 export function legSummary(c, { qualifying = 0, label = '' } = {}) {
-  return `#${c.rank} of ${qualifying} qualifying · ${pct(c.chance)} expected: the last ${games(Math.min(c.leg.games.length, 20))} (recent ones weighted) blended with this slate's ${Side(c.side)} rate in ${inSentence(label) || 'this market'} (${pct(c.baseRate)})`;
+  const anchor = c.leg.alt ? `how often this slate's players reached ${c.leg.alt}+ ${inSentence(label) || 'in this market'}` : `this slate's ${Side(c.side)} rate in ${inSentence(label) || 'this market'}`;
+  return `#${c.rank} of ${qualifying} qualifying · ${pct(c.chance)} expected: the last ${games(Math.min(c.leg.games.length, 20))} (recent ones weighted) blended with ${anchor} (${pct(c.baseRate)})`;
 }
