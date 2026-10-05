@@ -6,6 +6,7 @@ const paths = {
   research: '<path d="M4 19V9m5 10V4m6 15v-7m5 7V7"/>',
   ev: '<path d="M3 17h4l3-10 4 13 3-8h4"/><path d="M3 4h18"/>',
   trends: '<path d="m3 16 6-6 4 4 8-10M15 4h6v6"/>',
+  parlay: '<rect x="3" y="3" width="18" height="5" rx="1.5"/><rect x="3" y="16" width="18" height="5" rx="1.5"/><path d="M8 8v8M16 8v8"/>',
   live: '<path d="M3 12h4l3-8 4 16 3-8h4"/>',
   simulation: '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8 8h.01M16 8h.01M12 12h.01M8 16h.01M16 16h.01" stroke-width="3"/>',
   performance: '<path d="M12 3a9 9 0 1 0 9 9h-9Z"/><path d="M16 3.9A9 9 0 0 1 20.1 8H16Z"/>',

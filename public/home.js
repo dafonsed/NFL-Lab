@@ -367,7 +367,7 @@ function quickLinks() {
   const byProduct = {
     ev: [['Odds Screen', 'Every book, one grid', evToolUrl('odds', sport), 'research'], ['Positive EV', 'Prices above fair', evToolUrl('ev-pre', sport), 'ev'], ['DFS Props', 'Pick’em lines', evToolUrl('fantasy', sport), 'players'], ['Arbitrage', 'Opposing best prices', evToolUrl('arb-pre', sport), 'expand'], ['Smart Money', 'Exchange liquidity', evToolUrl('sharp', sport), 'performance'], ['Middles', 'Windows to win both', evToolUrl('middles', sport), 'filter']],
     models: [['Projections', label + ' model board', base, 'research', 'research'], ['Live games', 'In-game model', base + '/live', 'live', 'live'], ['Simulation', 'Game scenarios', base + '/simulation', 'simulation', 'simulation']],
-    trends: [['Player trends', 'Hit rates at the line', base + '?view=trends', 'trends'], ['Watchlist', 'Saved players', base + '?view=trends&saved=1', 'bookmark'], ...(TREND_MARKETS[sport] || []).slice(0, 4).map(([key, name]) => [name, 'Trends board', base + '?view=trends&market=' + key, 'trends'])]
+    trends: [['Player trends', 'Hit rates at the line', base + '?view=trends', 'trends'], ['Watchlist', 'Saved players', base + '?view=trends&saved=1', 'bookmark'], ['Parlay builder', 'Legs picked from trends', base + '?view=parlay', 'parlay'], ...(TREND_MARKETS[sport] || []).slice(0, 3).map(([key, name]) => [name, 'Trends board', base + '?view=trends&market=' + key, 'trends'])]
   };
   if (byProduct[product]) { renderTools(byProduct[product].filter(([, , , , need]) => !need || tools.has(need))); return; }
   const links = [
