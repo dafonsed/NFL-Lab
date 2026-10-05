@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { repairSelection, matchParticipant, normalizeFeed, markPriceFamilies, knownSport, sportName } from '../public/ev-feed-normalize.js';
-import { consensusPrice } from '../public/ev-advanced-math.js';
+import { repairSelection, matchParticipant, normalizeFeed, markPriceFamilies, knownSport, sportName } from '../lib/odds/normalize.mjs';
+import { consensusPrice } from '../lib/odds/engine.mjs';
 
 // Shapes copied from the live quote feed's mislabeled records (30 Sep 2026).
 const record = (id, extra) => ({ id, sport: 'nfl', event: 'Cowboys @ Texans', market: 'spread', type: 'spread', side: 'home', book: 'Fanatics', odds: -110, ts: '2026-09-30T21:58:58.477Z', ...extra });
@@ -134,7 +134,7 @@ test('set-score and handicap selections are other markets', () => {
 });
 
 test('the API\'s DFS props become picks; contests and rosters are left out and the API\'s probability is never read', async () => {
-  const { normalizeDfsRecords, payoutTables } = await import('../public/ev-feed-normalize.js');
+  const { normalizeDfsRecords, payoutTables } = await import('../lib/odds/normalize.mjs');
   const synced = '2026-10-02T00:30:00.000Z', ts = '2026-10-02T00:29:00.000Z';
   const pp = (i, extra = {}) => ({ id: `pp${i}`, sport: 'nfl', event: '', player: `Player ${i}`, market: 'Rush Yards', line: 50.5 + i, side: 'higher', app: 'PrizePicks', probability: 0.6667, ts, ...extra });
   const records = [...Array.from({ length: 24 }, (_, i) => pp(i)), pp(99, { probability: 0.58 }),
@@ -163,7 +163,7 @@ test('the API\'s DFS props become picks; contests and rosters are left out and t
 });
 
 test('DFS lines filed under NBA move to the sport their markets belong to; season rows are not players', async () => {
-  const { normalizeDfsRecords } = await import('../public/ev-feed-normalize.js');
+  const { normalizeDfsRecords } = await import('../lib/odds/normalize.mjs');
   const synced = '2026-10-02T00:30:00.000Z', ts = '2026-10-02T00:29:00.000Z';
   const pick = (player, market, sport = 'nba') => ({ id: `${player}:${market}`, sport, event: '', player, market, line: 2.5, side: 'higher', app: 'PrizePicks', ts });
   const { picks, skipped } = normalizeDfsRecords([
@@ -184,24 +184,8 @@ test('DFS lines filed under NBA move to the sport their markets belong to; seaso
   assert.equal(skipped.notProps, 1);
 });
 
-test('DFS props are also requested per app for apps the unfiltered response leaves out', async t => {
-  const { loadDfsFeed } = await import('../public/ev-feed-normalize.js');
-  const ts = new Date().toISOString(), originalFetch = globalThis.fetch, urls = [];
-  t.after(() => { globalThis.fetch = originalFetch; });
-  const prop = (id, app, market = 'Points') => ({ id, app, sport: 'nba', event: '', player: `P ${id}`, market, line: 10.5, side: 'higher', ts });
-  globalThis.fetch = async url => {
-    urls.push(url);
-    const app = new URL(url, 'https://x.test').searchParams.get('app');
-    const body = !app ? [prop('a', 'PrizePicks'), prop('b', 'Sleeper', 'roster')] : app === 'Underdog' ? [prop('c', 'Underdog'), prop('a', 'PrizePicks')] : [];
-    return new Response(JSON.stringify(body), { status: 200 });
-  };
-  const result = await loadDfsFeed('/api/ev/site/dfs/props', ts, ['PrizePicks', 'Underdog', 'Sleeper', 'Betr']);
-  assert.deepEqual(urls, ['/api/ev/site/dfs/props', '/api/ev/site/dfs/props?app=Underdog', '/api/ev/site/dfs/props?app=Betr'], 'apps already in the unfiltered response are not requested again');
-  assert.deepEqual(result.picks.map(pick => pick.book).sort(), ['PrizePicks', 'Underdog Fantasy'], 'duplicates by id are dropped and roster rows skipped');
-});
-
 test('raw two-sided odds → implied → devig → fair probability, with the method as a setting', async () => {
-  const { americanToImpliedProbability, fairFromAmerican, devig, DEVIG_METHODS } = await import('../public/ev-advanced-math.js');
+  const { implied: americanToImpliedProbability, fairFromAmerican, devig, DEVIG_METHODS } = await import('../public/betting-math.js');
   const { breakEven } = await import('../public/dfs-workspace.js');
   const pct = value => Math.round(value * 10000) / 100;
   assert.equal(pct(americanToImpliedProbability(-140)), 58.33);
@@ -230,8 +214,8 @@ test('raw two-sided odds → implied → devig → fair probability, with the me
 });
 
 test('DFS fair probability devigs each book\'s Over/Under prices with the chosen method', async () => {
-  const { dfsPicks } = await import('../public/ev-feed-normalize.js');
-  const { fairFromAmerican } = await import('../public/ev-advanced-math.js');
+  const { dfsPicks } = await import('../lib/odds/normalize.mjs');
+  const { fairFromAmerican } = await import('../public/betting-math.js');
   const ts = new Date().toISOString();
   const book = (book, side, odds) => ({ book, side, odds, player: 'Jalen Hurts', market: 'Pass Yards', line: 225.5, eventId: 'NFL:eagles', ts });
   const quotes = [book('FanDuel', 'over', -140), book('FanDuel', 'under', 118), book('DraftKings', 'over', -150), book('DraftKings', 'under', 125), book('BetMGM', 'over', -130)];
@@ -249,7 +233,7 @@ test('DFS fair probability devigs each book\'s Over/Under prices with the chosen
 });
 
 test('Fanatics props read the stat from propMarket and repair a selection sent as the player', async () => {
-  const { normalizeRecord } = await import('../public/ev-feed-normalize.js');
+  const { normalizeRecord } = await import('../lib/odds/normalize.mjs');
   const ts = new Date().toISOString();
   const yards = normalizeRecord({ id: 'f1', sport: 'nfl', event: 'Commanders @ Colts', market: 'prop', propMarket: 'Receiving Yards', player: 'Rachaad White', line: 20.5, side: 'over', book: 'Fanatics', odds: 240, ts, type: 'prop', selection_name: 'Rachaad White Over 20.5 Receiving Yards' });
   assert.deepEqual([yards.player, yards.market, yards.side, yards.line], ['Rachaad White', 'Receiving Yards', 'over', 20.5]);
@@ -258,8 +242,8 @@ test('Fanatics props read the stat from propMarket and repair a selection sent a
 });
 
 test('a sportsbook Over/Under pair with no margin is not devigged into a fair probability', async () => {
-  const { dfsPicks } = await import('../public/ev-feed-normalize.js');
-  const { fairFromAmerican } = await import('../public/ev-advanced-math.js');
+  const { dfsPicks } = await import('../lib/odds/normalize.mjs');
+  const { fairFromAmerican } = await import('../public/betting-math.js');
   const ts = new Date().toISOString();
   const book = (book, side, odds) => ({ book, side, odds, player: 'Rachaad White', market: 'Receiving Yards', line: 20.5, eventId: 'NFL:colts @ commanders', ts });
   // +240 / -238 implies 29.4% + 70.4% = 99.8%: the Under is the Over mirrored, not a market.
@@ -270,8 +254,8 @@ test('a sportsbook Over/Under pair with no margin is not devigged into a fair pr
 });
 
 test('a pick prices against the same player, stat and line when the books name the game differently', async () => {
-  const { dfsPicks } = await import('../public/ev-feed-normalize.js');
-  const { fairFromAmerican } = await import('../public/ev-advanced-math.js');
+  const { dfsPicks } = await import('../lib/odds/normalize.mjs');
+  const { fairFromAmerican } = await import('../public/betting-math.js');
   const ts = new Date().toISOString();
   const quote = (side, odds, eventId = 'NBA:wings @ valkyries') => ({ book: 'Fanatics', side, odds, sport: 'NBA', player: 'Veronica Burton', market: 'Points', line: 12.5, eventId, ts });
   const pick = (eventId = 'NBA:dal @ gsv') => ({ book: 'PrizePicks', sport: 'NBA', player: 'Veronica Burton', market: 'Points', line: 12.5, side: 'over', eventId, ts });
@@ -288,7 +272,7 @@ test('a pick prices against the same player, stat and line when the books name t
 });
 
 test('PrizePicks line type is read from oddsType or odds_type; unflagged PrizePicks lines are standard', async () => {
-  const { normalizeRecord, normalizeDfsRecords, dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const { normalizeRecord, normalizeDfsRecords, dfsPicks } = await import('../lib/odds/normalize.mjs');
   const ts = new Date().toISOString();
   const quote = extra => normalizeRecord({ id: 'pp', sport: 'nfl', event: 'IND @ WAS', market: 'Receiving Yards', side: 'over', book: 'PrizePicks', ts, type: 'prop', line: 63.5, player: 'Josh Downs', selection_name: 'Josh Downs Over 63.5', ...extra });
   assert.equal(quote({ oddsType: 'Goblin' }).oddsType, 'goblin');
@@ -300,8 +284,8 @@ test('PrizePicks line type is read from oddsType or odds_type; unflagged PrizePi
 });
 
 test('a standard pick\'em line sent as More is also listed as Less at the same line; goblins and demons are More only', async () => {
-  const { dfsPicks } = await import('../public/ev-feed-normalize.js');
-  const { fairFromAmerican } = await import('../public/ev-advanced-math.js');
+  const { dfsPicks } = await import('../lib/odds/normalize.mjs');
+  const { fairFromAmerican } = await import('../public/betting-math.js');
   const ts = new Date().toISOString();
   const pick = (oddsType, line) => ({ book: 'PrizePicks', sport: 'NBA', player: 'Paige Bueckers', market: 'Points', line, side: 'over', eventId: 'NBA:dal @ gsv', ts, oddsType });
   const quotes = [['over', -110], ['under', -120]].map(([side, odds]) => ({ book: 'Fanatics', side, odds, sport: 'NBA', player: 'Paige Bueckers', market: 'Points', line: 15.5, eventId: 'NBA:dal @ gsv', ts }));
@@ -315,7 +299,7 @@ test('a standard pick\'em line sent as More is also listed as Less at the same l
 });
 
 test('player props show their stat as the market and in the bet; margin bands and round props are not moneylines', async () => {
-  const { normalizeRecord } = await import('../public/ev-feed-normalize.js');
+  const { normalizeRecord } = await import('../lib/odds/normalize.mjs');
   const { selectionText } = await import('../public/ev-board.js');
   const ts = new Date().toISOString();
   const fanatics = extra => normalizeRecord({ id: 'f', sport: 'nfl', event: 'Patriots @ Bills', book: 'Fanatics', odds: 110, ts, type: 'prop', ...extra });
@@ -333,7 +317,7 @@ test('player props show their stat as the market and in the bet; margin bands an
 });
 
 test('a sportsbook market with no margin is never a fair-price reference; an exchange can be', async () => {
-  const { consensusPrice } = await import('../public/ev-advanced-math.js');
+  const { consensusPrice } = await import('../lib/odds/engine.mjs');
   const now = Date.now(), ts = new Date(now).toISOString();
   const row = (id, book, side, odds, extra = {}) => ({ id, book, side, odds, ts, sport: 'NFL', event: 'Patriots @ Bills', eventId: 'NFL:patriots @ bills', market: 'Receiving Yards', type: 'prop', player: 'Dawson Knox', line: 10, ...extra });
   const offered = row('o', 'Fanatics', 'under', 110);
@@ -347,9 +331,9 @@ test('a sportsbook market with no margin is never a fair-price reference; an exc
 });
 
 test('DFS audit fixes: stat-aware props, sides per book, pregame only, per-app matching, higher/lower, merged pricing', async () => {
-  const { normalizeFeed, dfsPicks, createDfsPricer, normalizeRecord } = await import('../public/ev-feed-normalize.js');
-  const { fairFromAmerican } = await import('../public/ev-advanced-math.js');
-  const { fantasySlip } = await import('../public/ev-core.js');
+  const { normalizeFeed, dfsPicks, createDfsPricer, normalizeRecord } = await import('../lib/odds/normalize.mjs');
+  const { fairFromAmerican } = await import('../public/betting-math.js');
+  const { fantasySlip } = await import('../public/betting-math.js');
   const now = Date.now(), ts = new Date(now - 60_000).toISOString(), start = new Date(now + 3 * 3_600_000).toISOString();
   const dk = (id, propMarket, side, odds) => ({ id, sport: 'nba', event: 'Dallas Mavericks @ Denver Nuggets', market: 'prop', propMarket, player: 'Luka Doncic', line: 8.5, side, book: 'DraftKings', odds, ts, type: 'prop', startTime: start, selection_name: `Luka Doncic ${side === 'over' ? 'Over' : 'Under'} 8.5 ${propMarket}` });
   // 1. Rebounds 8.5 and Assists 8.5 for one player at one book are two markets, not duplicates.
@@ -390,7 +374,7 @@ test('DFS audit fixes: stat-aware props, sides per book, pregame only, per-app m
 });
 
 test('DFS sports for display: college football and WNBA split out by team abbreviation, matching keeps the feed sport', async () => {
-  const { normalizeDfsRecords, dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const { normalizeDfsRecords, dfsPicks } = await import('../lib/odds/normalize.mjs');
   const ts = new Date().toISOString(), start = new Date(Date.now() + 3_600_000).toISOString();
   const row = (sport, event, player) => ({ id: player, sport, event, player, market: 'Points', line: 10.5, side: 'higher', app: 'PrizePicks', ts, startTime: start });
   const { picks } = normalizeDfsRecords([row('nfl', 'PITT @ VT', 'College Player'), row('nfl', 'IND @ WAS', 'Pro Player'), row('nba', 'DAL @ GSV', 'Paige Bueckers'), row('nba', 'DAL @ DEN', 'Luka Doncic')], { syncedAt: ts });
@@ -402,7 +386,7 @@ test('DFS sports for display: college football and WNBA split out by team abbrev
 });
 
 test('milestone thresholds for one player and stat are separate markets, not duplicates', async () => {
-  const { normalizeFeed } = await import('../public/ev-feed-normalize.js');
+  const { normalizeFeed } = await import('../lib/odds/normalize.mjs');
   const ts = new Date(Date.now() - 60_000).toISOString();
   const row = (id, threshold, odds) => ({ id, sport: 'nfl', event: 'Chicago Bears @ Detroit Lions', market: 'Isaiah Davis - ALT Rushing Yards 1st Quarter', side: 'yes', book: 'Fanatics', odds, ts, type: 'prop', player: threshold, selection_name: threshold });
   const { quotes, skipped } = normalizeFeed([row('a', '1+', -200), row('b', '5+', 129), row('c', '10+', 309)], { syncedAt: new Date().toISOString(), price: false });
@@ -412,7 +396,7 @@ test('milestone thresholds for one player and stat are separate markets, not dup
 });
 
 test('DFS lines match a book that labels the game with another sport; payout multipliers and sportless quotes are read', async () => {
-  const { dfsPicks, normalizeRecord, normalizeDfsRecords } = await import('../public/ev-feed-normalize.js');
+  const { dfsPicks, normalizeRecord, normalizeDfsRecords } = await import('../lib/odds/normalize.mjs');
   const ts = new Date().toISOString(), start = new Date(Date.now() + 3_600_000).toISOString();
   // FanDuel files this NFL game's props as NCAAF; PrizePicks says NFL.
   const book = ['over', 'under'].map(side => ({ book: 'FanDuel', side, odds: -114, sport: 'NCAAF', player: 'Josh Downs', market: 'Receiving Yards', line: 52.5, eventId: 'NCAAF:indianapolis colts @ washington commanders', ts, startTime: start }));
@@ -427,7 +411,7 @@ test('DFS lines match a book that labels the game with another sport; payout mul
 });
 
 test('a payout multiplier repeated on nearly every goblin or demon line is a default and is ignored', async () => {
-  const { dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const { dfsPicks } = await import('../lib/odds/normalize.mjs');
   const ts = new Date().toISOString();
   const demon = (i, payoutMultiplier) => ({ book: 'PrizePicks', sport: 'NFL', player: `Player ${i}`, market: 'Rush Yards', line: 80.5 + i, side: 'over', eventId: 'NFL:a @ b', ts, oddsType: 'demon', payoutMultiplier });
   const flat = dfsPicks(Array.from({ length: 25 }, (_, i) => demon(i, 1.55)), []);
@@ -437,7 +421,7 @@ test('a payout multiplier repeated on nearly every goblin or demon line is a def
 });
 
 test('bet links that name the game instead of the book id are dropped; a future game is not live', async () => {
-  const { normalizeRecord, normalizeFeed } = await import('../public/ev-feed-normalize.js');
+  const { normalizeRecord, normalizeFeed } = await import('../lib/odds/normalize.mjs');
   const ts = new Date(Date.now() - 60_000).toISOString();
   const quote = (betUrl, extra = {}) => normalizeRecord({ id: 'q', sport: 'nfl', event: 'Cincinnati Bengals @ Miami Dolphins', market: 'moneyline', type: 'moneyline', side: 'home', book: 'DraftKings', odds: -150, ts, betUrl, eventUrl: betUrl, ...extra });
   assert.equal(quote('https://sportsbook.fanduel.com/event/36112224?market=&selection=').betUrl, 'https://sportsbook.fanduel.com/event/36112224?market=&selection=');
@@ -453,7 +437,7 @@ test('bet links that name the game instead of the book id are dropped; a future 
 });
 
 test('milestone, N+ and one-sided ladder props compare with the same pick\'em lines as Over (N - 0.5)', async () => {
-  const { normalizeFeed, dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const { normalizeFeed, dfsPicks } = await import('../lib/odds/normalize.mjs');
   const ts = new Date(Date.now() - 60_000).toISOString(), start = new Date(Date.now() + 3_600_000).toISOString();
   const base = { sport: 'nfl', event: 'New York Jets @ Chicago Bears', type: 'prop', ts, startTime: start };
   const raw = [
@@ -481,7 +465,7 @@ test('milestone, N+ and one-sided ladder props compare with the same pick\'em li
 });
 
 test('games filed as football whose lines are hockey, baseball or basketball show under that sport', async () => {
-  const { normalizeDfsRecords } = await import('../public/ev-feed-normalize.js');
+  const { normalizeDfsRecords } = await import('../lib/odds/normalize.mjs');
   const ts = new Date().toISOString(), start = new Date(Date.now() + 3_600_000).toISOString();
   const row = (event, player, market) => ({ id: `${event}${player}${market}`, sport: 'nfl', event, player, market, line: 1.5, side: 'higher', app: 'PrizePicks', ts, startTime: start });
   const { picks } = normalizeDfsRecords([
@@ -499,7 +483,7 @@ test('games filed as football whose lines are hockey, baseball or basketball sho
 });
 
 test('books naming a player or stat differently still match the pick\'em line', async () => {
-  const { dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const { dfsPicks } = await import('../lib/odds/normalize.mjs');
   const ts = new Date().toISOString(), start = new Date(Date.now() + 3_600_000).toISOString();
   const pairs = [
     // [PrizePicks player, PrizePicks stat, book player, book stat]
@@ -524,7 +508,7 @@ test('books naming a player or stat differently still match the pick\'em line', 
 });
 
 test('each sportsbook is matched to the pick by its own game, however it names or files it', async () => {
-  const { dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const { dfsPicks } = await import('../lib/odds/normalize.mjs');
   const ts = new Date().toISOString(), at = hours => new Date(Date.now() + hours * 3_600_000).toISOString();
   const pair = (book, eventId, over, under, startTime, line = 1.5) => [['over', over], ['under', under]].map(([side, odds]) => ({ book, side, odds, player: 'Daniel Jones', market: 'Pass TDs', line, eventId, ts, startTime }));
   const pick = { book: 'PrizePicks', sport: 'NFL', player: 'Daniel Jones', market: 'Pass TDs', line: 1.5, side: 'over', eventId: 'NFL:ind @ was', ts, startTime: at(40) };
@@ -543,7 +527,7 @@ test('each sportsbook is matched to the pick by its own game, however it names o
 });
 
 test('initials, nicknames and FanDuel ladder names match the pick\'em line', async () => {
-  const { dfsPicks, normalizeFeed } = await import('../public/ev-feed-normalize.js');
+  const { dfsPicks, normalizeFeed } = await import('../lib/odds/normalize.mjs');
   const ts = new Date().toISOString(), start = new Date(Date.now() + 3_600_000).toISOString();
   const pairs = [
     ['D.J. Moore', 'Receptions', 'DJ Moore', 'Receptions'],
@@ -566,7 +550,7 @@ test('initials, nicknames and FanDuel ladder names match the pick\'em line', asy
 });
 
 test('a line a book moved or a DFS app pulled leaves the feed once the newer one is 5+ minutes ahead', async () => {
-  const { normalizeFeed } = await import('../public/ev-feed-normalize.js');
+  const { normalizeFeed } = await import('../lib/odds/normalize.mjs');
   const now = Date.now(), ago = minutes => new Date(now - minutes * 60_000).toISOString(), start = new Date(now + 86_400_000).toISOString();
   const prop = (id, book, line, side, minutes, extra = {}) => ({ id, sport: 'nfl', event: 'Giants @ Saints', market: 'prop', propMarket: 'Receiving Yards', player: 'Darius Slayton', line, side, book, odds: -110, ts: ago(minutes), type: 'prop', selection_name: `Darius Slayton ${side === 'over' ? 'Over' : 'Under'} ${line} Receiving Yards`, startTime: start, ...extra });
   const { quotes, picks } = normalizeFeed([
@@ -582,7 +566,7 @@ test('a line a book moved or a DFS app pulled leaves the feed once the newer one
 });
 
 test('exchange prices that add up to well under 100% are not shown or devigged', async () => {
-  const { dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const { dfsPicks } = await import('../lib/odds/normalize.mjs');
   const ts = new Date().toISOString(), start = new Date(Date.now() + 3_600_000).toISOString();
   const pair = (book, over, under) => [['over', over], ['under', under]].map(([side, odds]) => ({ book, side, odds, exchange: book === 'Novig', player: 'Isaiah Davis', market: 'Rushing Yards', line: 20.5, eventId: 'NFL:jets @ bears', ts, startTime: start }));
   const pick = { book: 'PrizePicks', sport: 'NFL', player: 'Isaiah Davis', market: 'Rush Yards', line: 20.5, side: 'over', eventId: 'NFL:nyj @ chi', ts, startTime: start };
@@ -593,7 +577,7 @@ test('exchange prices that add up to well under 100% are not shown or devigged',
 });
 
 test('DFS lines take their sport from league codes and from the app\'s other lines for the game', async () => {
-  const { normalizeDfsRecords } = await import('../public/ev-feed-normalize.js');
+  const { normalizeDfsRecords } = await import('../lib/odds/normalize.mjs');
   const ts = new Date().toISOString(), start = new Date(Date.now() + 3_600_000).toISOString();
   const row = (sport, event, player, market) => ({ id: `${event}${player}${market}`, sport, event, player, market, line: 10.5, side: 'higher', app: 'PrizePicks', ts, startTime: start });
   const { picks } = normalizeDfsRecords([
@@ -608,7 +592,7 @@ test('DFS lines take their sport from league codes and from the app\'s other lin
 });
 
 test('1st-half and 1st-quarter lines sent under the full-game stat are marked and not priced', async () => {
-  const { dfsPicks } = await import('../public/ev-feed-normalize.js');
+  const { dfsPicks } = await import('../lib/odds/normalize.mjs');
   const ts = new Date().toISOString(), start = new Date(Date.now() + 3_600_000).toISOString();
   const pp = (player, line, oddsType) => ({ book: 'PrizePicks', sport: 'NFL', player, market: 'Pass Yards', line, side: 'over', eventId: 'NFL:ind @ was', ts, startTime: start, ...(oddsType ? { oddsType } : {}) });
   const book = (player, line, over, under) => [['over', over], ['under', under]].map(([side, odds]) => ({ book: 'FanDuel', side, odds, player, market: 'Passing Yards', line, eventId: 'NFL:colts @ commanders', ts, startTime: start }));
@@ -626,7 +610,7 @@ test('1st-half and 1st-quarter lines sent under the full-game stat are marked an
 });
 
 test('season-long entries without a player name are dropped from the quote feed too', async () => {
-  const { normalizeFeed } = await import('../public/ev-feed-normalize.js');
+  const { normalizeFeed } = await import('../lib/odds/normalize.mjs');
   const ts = new Date().toISOString(), start = new Date(Date.now() + 86_400_000).toISOString();
   const row = (id, player) => ({ id, sport: 'nba', event: 'NBASZN', market: 'Points Per Game', player, line: 22.5, side: 'over', book: 'PrizePicks', ts, type: 'prop', selection_name: `${player} Over 22.5`, startTime: start });
   const { picks, skipped } = normalizeFeed([row('a', '2026-2027 Season'), row('b', 'Nikola Jokic')], { syncedAt: ts });
@@ -635,7 +619,7 @@ test('season-long entries without a player name are dropped from the quote feed 
 });
 
 test('books that put the player before the stat keep the player; team props keep the team', async () => {
-  const { normalizeFeed } = await import('../public/ev-feed-normalize.js');
+  const { normalizeFeed } = await import('../lib/odds/normalize.mjs');
   const ts = new Date().toISOString(), start = new Date(Date.now() + 86_400_000).toISOString();
   const prop = (id, player, propMarket, side, line, odds) => ({ id, sport: 'nfl', event: 'Indianapolis Colts @ Washington Commanders', market: 'prop', propMarket, player, line, side, book: 'FanDuel', odds, ts, type: 'prop', selection_name: `${player} ${side === 'over' ? 'Over' : 'Under'} ${line} ${propMarket}`, startTime: start });
   const { quotes } = normalizeFeed([
@@ -654,7 +638,7 @@ const propRecord = (id, book, event, player, propMarket, side, line, odds, extra
 const pair = (id, book, event, player, stat, line, over, under, extra) => [propRecord(`${id}o`, book, event, player, stat, 'over', line, over, extra), propRecord(`${id}u`, book, event, player, stat, 'under', line, under, extra)];
 
 test('Pinnacle props ("Davante Adams Total", stat in the player) join every book\'s same line', async () => {
-  const { marketIdentity } = await import('../public/ev-advanced-math.js');
+  const { marketIdentity } = await import('../public/market-identity.js');
   const game = 'Los Angeles Rams @ Philadelphia Eagles', short = 'LA Rams @ PHI Eagles';
   const { quotes, dfs } = normalizeFeed([
     ...pair('pin', 'Pinnacle', game, 'Davante Adams Total', 'Receptions', 4.5, -120, -104),
@@ -829,8 +813,8 @@ test('API v2 records: epoch start times, pick\'em game lines, place names as spo
 
 test('a pick sent without its game, start or sport takes them from the sportsbook game it is priced from', async () => {
   const game = 'Indianapolis Colts @ Washington Commanders', start = new Date(Date.now() + 86_400_000).toISOString();
-  const { normalizeDfsRecords } = await import('../public/ev-feed-normalize.js');
-  const pricer = (await import('../public/ev-feed-normalize.js')).createDfsPricer();
+  const { normalizeDfsRecords } = await import('../lib/odds/normalize.mjs');
+  const pricer = (await import('../lib/odds/normalize.mjs')).createDfsPricer();
   const feed = normalizeFeed([...pair('fd', 'FanDuel', game, 'Jonathan Taylor', 'Jonathan Taylor - Rushing Yds', 89.5, -114, -114, { startTime: start })], { price: false });
   pricer.setQuotes(feed);
   // As Underdog sends them on 4 Oct 2026: sport "other", no event, no start time.

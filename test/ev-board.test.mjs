@@ -14,7 +14,7 @@ const detail = () => ({
 const context = (rows, extra = {}) => ({ rows, live:false, sort:'ev', openId:'', oddsLabel:value => (value > 0 ? '+' : '') + Math.round(value), age:() => 'Just now', stake:() => 160.99, kellyLabel:'¼ Kelly', flags:() => ({}), detail, ...extra });
 
 test('each opportunity row shows edge, bet, price, fair value, probability and stake', () => {
-  const html = renderEvBoard(context([{ quote:quote(), fair:.492, ev:.1803 }]));
+  const html = renderEvBoard(context([{ quote:quote(), fair:.492, fairOdds:103, ev:.1803 }]));
   assert.match(html, /18\.03%/);
   assert.match(html, /Over 47\.5/);
   assert.match(html, /FanDuel/);
@@ -28,7 +28,7 @@ test('each opportunity row shows edge, bet, price, fair value, probability and s
 });
 
 test('an open row renders the shared bet panel with the selected side and best prices', () => {
-  const html = renderEvBoard(context([{ quote:quote(), fair:.492, ev:.1803 }], { openId:'q1' }));
+  const html = renderEvBoard(context([{ quote:quote(), fair:.492, fairOdds:103, ev:.1803 }], { openId:'q1' }));
   assert.match(html, /aria-expanded="true"/);
   assert.match(html, /evb-detail-row evd-row/);
   assert.match(html, /<tr class="is-selected"><th scope="row">Over 47\.5<\/th>/, 'the offered side is highlighted');

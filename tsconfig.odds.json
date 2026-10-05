@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2023", "dom"],
+    "types": [],
+    "skipLibCheck": false
+  },
+  "files": [
+    "lib/odds/contract.d.ts",
+    "public/odds-contract.js",
+    "public/odds-client.js",
+    "public/odds-alerts.js",
+    "public/odds-format.js",
+    "public/betting-math.js",
+    "public/market-identity.js"
+  ]
+}

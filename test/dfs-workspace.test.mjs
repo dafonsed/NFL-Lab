@@ -5,8 +5,9 @@ import { isContestPlatform } from '../public/platform-catalog.js';
 // The rail lists pick'em apps; salary-cap contest apps never post pick'em lines.
 const PICKEM = DFS_PLATFORMS.filter(app => !isContestPlatform(app));
 import { dfsPreview } from './fixtures/dfs-props.mjs';
-import { fantasySlip } from '../public/ev-core.js';
+import { fantasySlip } from '../public/betting-math.js';
 import { load } from 'cheerio';
+import { current, expired, priced } from './helpers/priced.mjs';
 
 // Quotes must stay inside the pregame freshness window, so fixtures are relative to now.
 // Both within the 15-minute pregame freshness window; `later` is the newer observation.
@@ -134,7 +135,8 @@ test('DFS comparison allows any number of platforms even with saved props from o
 
 test('main DFS odds use the best current recorded sportsbook quote for the exact selection', () => {
   const prop = {sport:'NFL',event:'BUF vs MIA',player:'Josh Allen',market:'Passing Yards',line:249.5,side:'Over',probability:.6};
-  const quote = {...prop,type:'prop',book:'FanDuel',odds:-115,ts:later};
+  // Quotes as the odds service serves them: current until their expiry time.
+  const quote = current({...prop,type:'prop',book:'FanDuel',odds:-115,ts:later});
   const result = sportsbookOffer(prop,[
     {...quote,odds:150,ts:earlier},
     {...quote,book:'DraftKings',odds:-120}, quote,
@@ -148,8 +150,9 @@ test('main DFS odds use the best current recorded sportsbook quote for the exact
     {player:undefined}, {market:'Rushing Yards'}, {line:250.5}, {line:null},
     {line:''}, {side:'Under'}, {live:true}, {period:'first half'},
     {odds:0}, {odds:99}, {odds:Infinity}, {book:'PrizePicks'}, {book:'Sporttrade'},
-    {exchange:true}, {source:'example'},
+    {exchange:true}, {source:'example'}, {status:'stale'}, {status:'suspended'}, {expiresAt:new Date(Date.now() - 1000).toISOString()},
   ]) assert.equal(sportsbookOffer(prop,[{...quote,...mismatch}]),null,JSON.stringify(mismatch));
+  assert.equal(sportsbookOffer(prop,[expired(quote)]),null,'a price past its expiry time is not offered');
   assert.equal(sportsbookOffer({...prop,event:''},[quote]),null);
   assert.equal(sportsbookOffer({...prop,source:'design-preview'},[quote]),null);
   assert.equal(sportsbookOffer({...prop,source:'example'},[{...quote,source:'example'}]).book,'FanDuel');
@@ -165,8 +168,10 @@ test('DFS rows show the book logo and offered odds, while fair value stays in th
     if (originalCSS === undefined) delete globalThis.CSS; else globalThis.CSS = originalCSS;
   });
   const prop = {id:'manual-offer',sport:'NFL',event:'BUF vs MIA',player:'Josh Allen',market:'Passing Yards',line:249.5,side:'Over',probability:.6,app:'PrizePicks'};
-  const ts = new Date().toISOString(), quote = {...prop,book:'FanDuel',odds:-115,ts};
-  const state = {dfs:[prop],quotes:[quote,{...quote,book:'DraftKings',odds:-125},{...quote,side:'Under',odds:-105}],paytables:{}};
+  // The sportsbook prices as /api/odds serves them, with their market's average.
+  const ts = new Date().toISOString(), quote = {...prop,id:'fd-over',book:'FanDuel',odds:-115,ts};
+  const {quotes, analytics} = priced([quote,{...quote,id:'dk-over',book:'DraftKings',odds:-125},{...quote,id:'fd-under',side:'Under',odds:-105}]);
+  const state = {dfs:[prop],quotes,analytics,paytables:{}};
   const view = createDfsWorkspace({getState:()=>state,redraw:()=>{}});
   const html = view.render();
   const $ = load(html);

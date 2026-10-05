@@ -3,11 +3,16 @@ import assert from 'node:assert/strict';
 import { quoteRevision, preserveReadingOrder } from '../public/ev-mobile.js';
 import { createQuoteFeedControls } from '../public/ev-feed.js';
 
-test('clock-only updates do not invalidate cards; expiry, odds and liquidity do', () => {
+test('clock-only updates do not invalidate cards; the server’s expiry, status, odds and liquidity do', () => {
   const time = Date.parse('2026-09-27T12:00:00Z');
-  const quotes = [{id:'one',odds:110,line:24.5,liquidity:200,live:true,ts:new Date(time).toISOString()}];
+  const quotes = [{id:'one',odds:110,line:24.5,liquidity:200,live:true,ts:new Date(time).toISOString(),status:'open',expiresAt:new Date(time+90_000).toISOString()}];
   assert.equal(quoteRevision(quotes,time),quoteRevision(quotes,time+15_000));
-  assert.notEqual(quoteRevision(quotes,time),quoteRevision(quotes,time+90_001));
+  assert.notEqual(quoteRevision(quotes,time),quoteRevision(quotes,time+90_001),'past the server’s expiresAt');
+  assert.notEqual(quoteRevision(quotes,time),quoteRevision([{...quotes[0],status:'suspended'}],time));
+  // A pregame price expires too (at its own server expiry), not only live ones.
+  const pregame=[{...quotes[0],live:false,expiresAt:new Date(time+900_000).toISOString()}];
+  assert.equal(quoteRevision(pregame,time),quoteRevision(pregame,time+899_000));
+  assert.notEqual(quoteRevision(pregame,time),quoteRevision(pregame,time+900_001));
   assert.notEqual(quoteRevision(quotes,time),quoteRevision([{...quotes[0],odds:120}],time));
   assert.notEqual(quoteRevision(quotes,time),quoteRevision([{...quotes[0],liquidity:0}],time));
 });

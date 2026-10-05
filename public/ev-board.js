@@ -2,7 +2,8 @@
 // book-by-book price grid. Rendering only; ev.js supplies data and handlers.
 import { platformAsset } from './platform-catalog.js';
 import { leagueMark } from './sports-identity.js';
-import { probabilityToAmerican, money, percent } from './ev-core.js';
+import { effectiveDecimal, decimalToAmerican, expectedValue } from './betting-math.js';
+import { money, percent } from './odds-format.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icons = {
@@ -54,18 +55,19 @@ export const hasBetLink = quote => Boolean(quote.betUrl || quote.eventUrl || quo
 
 const sortHeader = (label, key, sort, extra = '') => `<th scope="col" ${extra} aria-sort="${sort === key ? key === 'event' || key === 'start' ? 'ascending' : 'descending' : 'none'}"><button type="button" data-sort="${key}" class="evb-sort${sort === key ? ' is-active' : ''}">${label}<span aria-hidden="true">${sort === key ? '↓' : '↕'}</span></button></th>`;
 
-// ctx: { rows:[{quote,fair,ev}], total, live, sort, openId, oddsLabel, stake(fair,odds), flags, kellyLabel, detail(quote) }
+// ctx: { rows:[{quote,fair,fairOdds,ev,consensus}], total, live, sort, openId, oddsLabel, stake(fair,odds,quote), flags, kellyLabel, detail(quote) }
+// Every value in a row (fair probability and odds, EV, the stake's Kelly fraction) is the odds service's.
 export function renderEvBoard(ctx) {
   const { rows, sort, openId, oddsLabel } = ctx;
   const maxEv = Math.max(...rows.map(row => row.ev).filter(Number.isFinite), 0.0001);
-  const body = rows.map(({quote:q, fair, ev, consensus}) => {
+  const body = rows.map(({quote:q, fair, fairOdds:fairAmerican, ev, consensus}) => {
     const fairBooks = [...new Set((consensus?.books || []).map(book => book.book))];
     const open = openId === q.id, flags = ctx.flags(q.id), stake = ctx.stake(fair, q.odds, q);
     const width = Math.max(6, Math.min(100, ev / maxEv * 100));
     const tier = ev >= .05 ? 'high' : ev >= .02 ? 'mid' : 'low';
     const sportKey = String(q.sport || '').toLowerCase();
     const market = q.displayMarket || (q.player ? String(q.market).replace(q.player, '').trim() : q.market);
-    const fairOdds = Number.isFinite(fair) ? oddsLabel(probabilityToAmerican(fair)) : '—';
+    const fairOdds = fairAmerican != null ? oddsLabel(fairAmerican) : '—';
     return `<tr class="evb-row${open ? ' is-open' : ''}${flags.pin ? ' is-pinned' : ''}" data-evb-row="${esc(q.id)}" data-wager-id="${esc(q.id)}">
       <td class="evb-ev" data-tier="${tier}"><strong>${(ev * 100).toFixed(2)}%</strong><span class="evb-ev-bar" aria-hidden="true"><i style="width:${width.toFixed(1)}%"></i></span>${flags.pin ? `<small class="evb-pin">${boardIcon('pin', 12)}Pinned</small>` : ''}</td>
       <td class="evb-event"><small>${esc(startLabel(q))}</small><strong>${esc(q.displayEvent || q.event)}</strong><span class="evb-league">${leagueMark(sportKey) || ''}<span>${esc(q.sport)}${q.league && q.league !== q.sport ? ` · ${esc(q.league)}` : ''}</span></span></td>
@@ -105,14 +107,13 @@ export function renderBetPanel(opts) {
   </section></td></tr>`;
 }
 
-// Boosted American price and EV for a profit boost in percent.
+// The boost calculator: the member's profit boost (percent) on a price, and its EV at the odds service's
+// fair probability.
 export function boostedOffer(odds, fair, boostPercent) {
-  const american = Number(odds), boost = Number(boostPercent);
-  const decimal = american >= 100 ? 1 + american / 100 : american <= -100 ? 1 - 100 / american : NaN;
-  if (!(boost > 0) || !Number.isFinite(decimal)) return null;
-  const boosted = 1 + (decimal - 1) * (1 + boost / 100);
+  const boost = Number(boostPercent), boosted = effectiveDecimal({ odds }, boost);
+  if (!(boost > 0) || !Number.isFinite(boosted)) return null;
   // Whole American odds, as books quote them (+108, not +108.33333333333334).
-  return { decimal:boosted, american:Math.round(boosted >= 2 ? (boosted - 1) * 100 : -100 / (boosted - 1)), ev:Number.isFinite(fair) ? fair * boosted - 1 : NaN };
+  return { decimal:boosted, american:decimalToAmerican(boosted), ev:Number.isFinite(fair) ? expectedValue(fair, boosted) : NaN };
 }
 
 export function renderEvBoardDetail(ctx, quote, fair) {

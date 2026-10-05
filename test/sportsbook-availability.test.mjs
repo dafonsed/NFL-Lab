@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {US_STATES, SPORTSBOOK_COVERAGE, STATE_STORAGE_KEY, normalizeState, sportsbookStatus, sportsbookAvailable, availableSportsbookQuotes, readSportsbookState, saveSportsbookState} from '../public/sportsbook-availability.js';
-import {evRows} from '../public/ev-core.js';
+import {priced} from './helpers/priced.mjs';
 
 test('state coverage distinguishes individual books, DFS products, and unverified books', () => {
   assert.equal(Object.keys(US_STATES).length, 51);
@@ -34,7 +34,9 @@ test('filter offers without deleting records or altering benchmark probabilities
   const before = structuredClone(quotes);
   assert.deepEqual(availableSportsbookQuotes(quotes, 'FL').map(q => q.id), ['a','b']);
   assert.deepEqual(availableSportsbookQuotes(quotes, 'CA'), []);
-  const offers = evRows(quotes, false).filter(row => sportsbookAvailable(row.quote.book, 'FL'));
+  // Every book prices (the odds service); the member's state only limits which prices are offered.
+  const {analytics} = priced(quotes);
+  const offers = quotes.filter(q => analytics.pricingOf(q)).map(q => ({quote:q, fair:analytics.pricingOf(q).fairProbability})).filter(row => sportsbookAvailable(row.quote.book, 'FL'));
   assert.equal(offers.length, 2);
   assert.equal(offers.find(row => row.quote.id === 'a').fair, .5);
   assert.deepEqual(quotes, before);

@@ -3,45 +3,55 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import vm from 'node:vm';
 import {load} from 'cheerio';
-import * as core from '../public/ev-core.js';
+import * as math from '../public/betting-math.js';
+import * as format from '../public/odds-format.js';
+import {isCurrent} from '../public/odds-contract.js';
+import {indexSnapshot} from '../public/odds-client.js';
+import {priced,current} from './helpers/priced.mjs';
+const core={...math,...format};
 import * as views from '../public/ev-secondary-views.js';
 import {wagerCard} from '../public/ev-bet-card.js';
 import {canonicalPlatform, isContestPlatform, PREDICTION_PLATFORMS} from '../public/platform-catalog.js';
 import {TOOL_FILTER_DEFAULTS, oddsWithin} from '../public/ev-filters.js';
 import {withStandardPaytables, paytableSource, breakEven, standardPayout, payoutFactor, payoutKnown} from '../public/dfs-workspace.js';
 import {selectionText, startLabel} from '../public/ev-board.js';
-import {computeAdvancedEv, evCapFor, suiteSettings} from '../public/ev-advanced-math.js';
+import {suiteSettings} from '../public/odds-contract.js';
 
 const source=await fs.readFile(new URL('../public/ev.js',import.meta.url),'utf8');
 const quote=(id,extra={})=>({id,sport:'NBA',event:'BOS vs NYK',player:'Player <One>',market:'Points',type:'prop',side:'Over',line:20.5,book:'FanDuel',odds:120,ts:'2026-09-25T10:00:00Z',...extra});
 const pick=(id,extra={})=>({id,app:'PrizePicks',sport:'NBA',event:'BOS vs NYK',player:'Player '+id,market:'Points',side:'Over',line:20.5,probability:.6,...extra});
 
+// Boards display what /api/odds serves (state.analytics); evRowOf joins its pricing to the quotes.
+const evRowOf=(()=>{const start=source.indexOf('function evRowOf(');return source.slice(start,source.indexOf('\nfunction ',start+1));})();
 function render(name,extra={}) {
   const start=source.indexOf(`function ${name}()`),end=source.indexOf('\nfunction ',start+1);
   assert.ok(start>=0&&end>start);
-  const context=vm.createContext({...core,...views,wagerCard,canonicalPlatform,isContestPlatform,PREDICTION_PLATFORMS,
+  const context=vm.createContext({...core,...views,wagerCard,canonicalPlatform,isContestPlatform,PREDICTION_PLATFORMS,current:quote=>isCurrent(quote),quotePassesTool:()=>true,
     esc:views.toolEsc,fmtLine:String,age:()=> 'Recorded',visible:()=>true,bookAvailable:()=>true,eligibleQuotes:rows=>rows,
     qName:q=>q.player+' '+q.side+' '+q.line,origin:()=>'<span class="ev-status">Manual</span>',
     table:(head,rows)=>`<table><thead><tr>${head.map(text=>`<th>${views.toolEsc(text)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`,
     button:(label,attrs='')=>`<button type="button" ${attrs}>${label}</button>`,action:()=>'',
     toolFilters:{...TOOL_FILTER_DEFAULTS},oddsWithin,filteredEmpty:fallback=>fallback,sportsbookSelected:()=>true,sport:'',ARB_SANITY_LIMIT:.15,feedContracts:[],optimizerVisibleCount:40,startLabel,slipNotice:'',
-    breakEven,standardPayout,payoutFactor,payoutKnown,selectionText,computeAdvancedEv,evCapFor,suite:{settings:()=>({devigMethod:'multiplicative'})},...extra});
+    breakEven,standardPayout,payoutFactor,payoutKnown,selectionText,suite:{settings:()=>({devigMethod:'multiplicative'}),quoteVisible:()=>true},...extra});
   // Parlay computes fair odds from every quote for the sport (quoteSource), not only the listed ones.
   context.quoteSource ??= () => context.state?.quotes ?? context.quotes?.() ?? [];
   // Standard payouts layer under saved tables (public/dfs-workspace.js).
   context.apiPaytables ??= {};
   context.paytables ??= () => withStandardPaytables(context.state?.paytables, context.apiPaytables);
   context.paytableSource ??= paytableSource;
-  const $=load(vm.runInContext(source.slice(start,end)+`\n${name}()`,context));
+  const $=load(vm.runInContext(evRowOf+'\n'+source.slice(start,end)+`\n${name}()`,context));
   assert.equal($('.wager-card button button').length,0,'actions are separate controls');
   return {$,context};
 }
 
 test('promotion cards keep the selected price and opposing hedge connected to the calculator',()=>{
-  const a=quote('promo-a'),b=quote('hedge-b',{side:'Under',book:'DraftKings',odds:-110});
-  // Each book prices both sides, as real books do (one-sided prices never pair).
-  const others=[quote('promo-a-under',{side:'Under',odds:-150}),quote('hedge-b-over',{book:'DraftKings',odds:-110})];
-  const {$}=render('renderPromo',{quotes:()=>[a,b,...others],fresh:()=>true,promoInput:{kind:'bonus',stake:100,promoOdds:150,hedgeOdds:-130,boost:50}});
+  // Current prices (observed a minute ago); each book prices both sides, as real books do (one-sided prices never pair).
+  const ts=new Date(Date.now()-60_000).toISOString();
+  const a=quote('promo-a',{ts}),b=quote('hedge-b',{side:'Under',book:'DraftKings',odds:-110,ts});
+  const others=[quote('promo-a-under',{side:'Under',odds:-150,ts}),quote('hedge-b-over',{book:'DraftKings',odds:-110,ts})];
+  // The odds service pairs each promotion price with its best hedges; the conversion is the page's calculator.
+  const served=priced([a,b,...others]);
+  const {$}=render('renderPromo',{state:{quotes:served.quotes,analytics:served.analytics},quotes:()=>served.quotes,promoInput:{kind:'bonus',stake:100,promoOdds:150,hedgeOdds:-130,boost:50}});
   const card=$('.evc-promo .evc-card[data-wager-id="promo-promo-a"]');
   const plan=core.promoConversion({kind:'bonus',stake:100,promoOdds:120,hedgeOdds:-110,boost:0});
   assert.equal(card.find('.evc-metric strong').text(),core.percent(plan.conversion),'pairs are scored at the current promotion settings');
@@ -57,8 +67,9 @@ test('promotion cards keep the selected price and opposing hedge connected to th
 
 test('parlay leg cards retain selection state and the actual offered price',()=>{
   const a=quote('a'),b=quote('b',{event:'NYK vs DEN',player:'Player Two'});
-  const {$}=render('renderParlay',{state:{quotes:[a,b]},quotes:()=>[a,b],parlayIds:['a'],parlayVisibleCount:40,
-    computeAdvancedEv:()=>[{quote:a,fair:.55,ev:.21,consensus:{books:[{},{}]}},{quote:b,fair:.5,ev:.1,consensus:{books:[{},{}]}}]});
+  // An /api/odds answer pricing both legs.
+  const quotes=[current(a),current(b)], analytics=indexSnapshot({quotes,pricing:[{quoteId:'a',fairProbability:.55,fairOdds:-122,ev:.21,plausible:true,bookCount:2},{quoteId:'b',fairProbability:.5,fairOdds:100,ev:.1,plausible:true,bookCount:2}]});
+  const {$}=render('renderParlay',{state:{quotes,analytics},quotes:()=>quotes,parlayIds:['a'],parlayVisibleCount:40});
   const card=$('.evc-parlay .evc-card[data-wager-id="parlay-a"]');
   assert.equal(card.find('.evc-pick .evb-price').text(),'+120');
   assert.equal($('.evc-board [data-parlay="a"]').attr('aria-pressed'),'true');
@@ -76,8 +87,9 @@ test('parlay legs get a fair chance whatever their EV; the Leg EV filter decides
   const quotes=[...market(''),...market('2')];
   const settings=suiteSettings({});
   // One FanDuel ticket: a -11.5% leg and a 0% leg from different games.
-  const listed=legEv=>render('renderParlay',{state:{quotes},quotes:()=>quotes,parlayIds:['FanDuel-Over','FanDuel-Under2'],parlayVisibleCount:40,
-    toolFilters:{...TOOL_FILTER_DEFAULTS,legEv},suite:{settings:()=>settings}}).$;
+  const served=priced(quotes,{settings});
+  const listed=legEv=>render('renderParlay',{state:{quotes:served.quotes,analytics:served.analytics},quotes:()=>served.quotes,parlayIds:['FanDuel-Over','FanDuel-Under2'],parlayVisibleCount:40,
+    toolFilters:{...TOOL_FILTER_DEFAULTS,legEv},suite:{settings:()=>settings,quoteVisible:()=>true}}).$;
   // FanDuel's Over at -130 is about -11.5% EV against DraftKings' even market: listed under "Any", not "Positive".
   const any=listed('');
   assert.equal(any('.evc-board [data-parlay="FanDuel-Over"]').length,1);

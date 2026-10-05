@@ -2,12 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from 'cheerio';
 import { createEvMarketViews } from '../public/ev-market-views.js';
+import { implied } from '../public/betting-math.js';
 
 const NOW = Date.parse('2026-10-03T06:17:08Z');
 const at = minutesAgo => new Date(NOW - minutesAgo * 60_000).toISOString();
-// A moneyline side at one book; `game` names the event.
-const quote = (id, book, game, side, odds, extra = {}) => ({ id, sport: 'NFL', event: `Game ${game}`, market: 'Moneyline', type: 'moneyline', line: '', side, book, odds, live: false, ts: at(1), source: 'local-api', ...extra });
-const observation = (q, minutes, odds) => ({ id: `h-${q.id}-${minutes}`, quoteId: q.id, sport: q.sport, event: q.event, market: q.market, side: q.side, book: q.book, line: q.line, odds, ts: at(minutes), source: 'local-api' });
+// A moneyline side at one book as /api/odds serves it (current until its expiry, with its implied
+// probability); `game` names the event. Observations are what the page recorded from served prices.
+const quote = (id, book, game, side, odds, extra = {}) => ({ id, sport: 'NFL', event: `Game ${game}`, market: 'Moneyline', type: 'moneyline', line: '', side, book, odds, live: false, ts: at(1), source: 'local-api', status: 'open', expiresAt: at(-14), impliedProbability: implied(odds), ...extra });
+const observation = (q, minutes, odds) => ({ id: `h-${q.id}-${minutes}`, quoteId: q.id, sport: q.sport, event: q.event, market: q.market, side: q.side, book: q.book, line: q.line, odds, impliedProbability: implied(odds), ts: at(minutes), source: 'local-api' });
 function views(state) {
   return createEvMarketViews({ getState: () => state, save() {}, redraw() {}, navigate() {}, getSettings: () => ({}) });
 }

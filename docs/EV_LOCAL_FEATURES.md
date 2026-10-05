@@ -20,7 +20,8 @@ The localhost files are under the main project `public/` directory. Open http://
 | Feature area | Primary source |
 | --- | --- |
 | Suite integration, settings, saved views, +EV, arb/middle UI, parlay builder, alerts, bet links | `ev-suite.js`, `ev.js` |
-| Eligibility, exact identity, devig, weighted consensus, interpolation, constrained stakes, middle outcomes, parlay and performance math | `ev-advanced-math.js`, `ev-core.js` |
+| Eligibility, exact identity, weighted consensus, interpolation, +EV, arbitrage, middles, holds, Smart Money (server; the browser displays the results) | `lib/odds/engine.mjs` via `/api/odds` ([odds-architecture.md](odds-architecture.md)) |
+| Formulas: devig, odds conversion, Kelly, constrained stakes, middle outcomes, parlay, DFS payouts, CLV and performance math | `betting-math.js` |
 | Odds Screen, sportsbook order, history, wallet-fill markers, DFS overlays, Smart Money | `ev-market-views.js`, `ev-market-views.css` |
 | DFS research, app comparison, payout tables, combination search, slip history and manual grades | `ev-fantasy-lab.js`, `ev-fantasy-lab.css`, `dfs-workspace.js` |
 | Shared bet storage, snapshots, warnings, tags, CSV, profit/ROI/CLV | `ev-ledger.js`, `ev-ledger.css`, `bet-utils.js`, `bet-legs.js` |

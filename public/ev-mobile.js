@@ -1,3 +1,4 @@
+import { isCurrent } from './odds-contract.js';
 // Phone controls use the existing filter inputs so a close never discards an edit.
 export function installMobileWorkspace() {
   if (!document.querySelector('link[href^="/ev-mobile.css"]')) {
@@ -88,9 +89,10 @@ export function preserveReadingOrder(records, previousIds, idOf) {
   return records.sort((a,b) => (rank.get(idOf(a)) ?? Number.MAX_SAFE_INTEGER) - (rank.get(idOf(b)) ?? Number.MAX_SAFE_INTEGER));
 }
 
+// A card changes when its price, line, depth, limit or status does, or when it stops being current at the
+// server's expiry time (odds-contract.js isCurrent; `now` is the server's clock).
 export function quoteRevision(quotes, now = Date.now()) {
-  return quotes.map(q => [q.id,q.odds,q.line,q.liquidity,q.limit,q.suspended,
-    q.live ? Number.isFinite(Date.parse(q.ts)) && now - Date.parse(q.ts) <= 90_000 && Date.parse(q.ts) <= now + 5_000 : true].join('|')).join('\n');
+  return quotes.map(q => [q.id,q.odds,q.line,q.liquidity,q.limit,q.suspended,q.status,isCurrent(q, now)].join('|')).join('\n');
 }
 
 // Keep the full comparison template on desktop, with optional details on phones.

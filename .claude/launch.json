@@ -24,6 +24,17 @@
         "PORT": "3103"
       },
       "port": 3103
+    },
+    {
+      "name": "odds-preview",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/odds-preview.mjs"
+      ],
+      "env": {
+        "PORT": "3104"
+      },
+      "port": 3104
     }
   ]
 }

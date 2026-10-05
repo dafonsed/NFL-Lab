@@ -2,14 +2,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from 'cheerio';
 import { buildOddsBoard, createOddsScreen } from '../public/odds-screen.js';
-import { devig } from '../public/ev-advanced-math.js';
+import { devig } from '../public/betting-math.js';
+import { priced } from './helpers/priced.mjs';
 
 // Prices are observed a minute before the real clock; games start tomorrow.
 const now = Date.now(), ts = new Date(now - 60_000).toISOString(), start = new Date(now + 86_400_000).toISOString();
 const game = {sport:'NFL',event:'Away @ Home',displayEvent:'Away @ Home',eventId:'NFL:away @ home',ts,startTime:start};
 const moneyline = (book, side, odds, extra = {}) => ({...game,id:`${book}-${side}`,market:'moneyline',displayMarket:'Moneyline',marketId:'moneyline|NFL:away @ home',type:'moneyline',side,selection:side === 'home' ? 'Home' : 'Away',book,odds,...extra});
 const pair = (book, home, away, extra) => [moneyline(book,'home',home,extra),moneyline(book,'away',away,extra)];
-const screen = (quotes, options = {}) => createOddsScreen({getQuotes:()=>quotes,brandMark:()=>'',redraw:()=>{},onSport:()=>{},...options});
+// The screen shows prices as /api/odds serves them, priced with the member's settings.
+const screen = (quotes, options = {}) => {
+  const served = priced(quotes, {settings:options.getSettings?.() || {}, now});
+  return createOddsScreen({getQuotes:()=>served.quotes,getAnalytics:()=>served.analytics,now:()=>now,brandMark:()=>'',redraw:()=>{},onSport:()=>{},...options});
+};
+const board = (quotes, books) => { const served = priced(quotes, {now}); return buildOddsBoard(served.quotes, books, now, served.analytics); };
 const rows = (quotes, options) => load(screen(quotes, options).render({sport:'NFL'}));
 const implied = odds => odds < 0 ? -odds / (-odds + 100) : 100 / (odds + 100);
 const american = probability => { const d = 1 / probability; return d >= 2 ? `+${Math.round((d - 1) * 100)}` : String(Math.round(-100 / (d - 1))); };
@@ -33,15 +39,15 @@ test('a 1X2 market missing an outcome shows no fair price', () => {
 
 test('best odds skip an unverified one-sided price and a price far longer than the other books', () => {
   const prop = (book, side, odds, extra = {}) => ({...game,id:`${book}-${side}`,market:'Rec Yards',displayMarket:'Rec Yards',marketId:'prop|NFL:away @ home|receiving yards',type:'prop',player:'Pat Receiver',line:50.5,side,selection:side === 'over' ? 'Over' : 'Under',book,odds,...extra});
-  const board = buildOddsBoard([prop('Fanatics','over',200,{sideVerified:false}),prop('DraftKings','over',-110),prop('DraftKings','under',-110)],['Fanatics','DraftKings'],now);
-  const over = board[0].markets[0].sides.find(row => row.side === 'over');
+  const result = board([prop('Fanatics','over',200,{sideVerified:false}),prop('DraftKings','over',-110),prop('DraftKings','under',-110)],['Fanatics','DraftKings']);
+  const over = result[0].markets[0].sides.find(row => row.side === 'over');
   assert.equal(over.best.book,'DraftKings');
   assert.equal(over.average,1 + 100 / 110,'the average skips it too');
   // With its own Under the unverified side is a real two-sided market again.
-  const paired = buildOddsBoard([prop('Fanatics','over',105,{sideVerified:false}),prop('Fanatics','under',-135,{sideVerified:false}),prop('DraftKings','over',-110)],['Fanatics','DraftKings'],now);
+  const paired = board([prop('Fanatics','over',105,{sideVerified:false}),prop('Fanatics','under',-135,{sideVerified:false}),prop('DraftKings','over',-110)],['Fanatics','DraftKings']);
   assert.equal(paired[0].markets[0].sides.find(row => row.side === 'over').best.book,'Fanatics');
   // +300 (25%) against -110 / -105 (about 52%) is more than 10 points longer than the median.
-  const outlier = buildOddsBoard([moneyline('FanDuel','home',300),moneyline('DraftKings','home',-110),moneyline('Pinnacle','home',-105)],['FanDuel','DraftKings','Pinnacle'],now);
+  const outlier = board([moneyline('FanDuel','home',300),moneyline('DraftKings','home',-110),moneyline('Pinnacle','home',-105)],['FanDuel','DraftKings','Pinnacle']);
   assert.equal(outlier[0].markets[0].sides[0].best.book,'Pinnacle');
   const $ = rows([moneyline('FanDuel','home',300),moneyline('DraftKings','home',-110),moneyline('Pinnacle','home',-105)]);
   assert.equal($('.os-book-cell.is-best').attr('data-open-quote'),'Pinnacle-home');
@@ -105,10 +111,12 @@ test('the fair column is priced from every book, not only the books the memberâ€
   const all = [...pair('DraftKings',-150,130), ...pair('BetMGM',-110,-110)];
   const shown = all.filter(quote => quote.book !== 'BetMGM');
   const home = book => devig(book === 'DraftKings' ? [implied(-150),implied(130)] : [implied(-110),implied(-110)],'multiplicative')[0];
-  const $ = rows(shown,{getReferenceQuotes:()=>all});
+  // The odds service prices from every book; the screen shows only the member's columns.
+  const served = priced(all, {now});
+  const $ = load(createOddsScreen({getQuotes:()=>served.quotes.filter(quote => quote.book !== 'BetMGM'),getAnalytics:()=>served.analytics,now:()=>now,brandMark:()=>'',redraw:()=>{},onSport:()=>{}}).render({sport:'NFL'}));
   assert.equal($('[data-os-book="BetMGM"]').length,0,'BetMGM is not a column');
   // The home side is listed last.
   assert.match(fairTitle($), new RegExp(`no-vig fair ${american((home('DraftKings') + home('BetMGM')) / 2).replace('+','\\+')}$`));
-  // Without separate reference prices the shown books are the reference.
+  // Priced from the shown books alone, they are the reference.
   assert.match(fairTitle(rows(shown)), new RegExp(`no-vig fair ${american(home('DraftKings')).replace('+','\\+')}$`));
 });

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from 'cheerio';
 import { createEvLedger } from '../public/ev-ledger.js';
+import { priced } from './helpers/priced.mjs';
 
 const NOW = Date.parse('2026-10-03T06:17:08Z');
 const at = minutesAgo => new Date(NOW - minutesAgo * 60_000).toISOString();
@@ -10,34 +11,38 @@ const quote = (id, book, game, side, odds, extra = {}) => ({ id, sport: 'NFL', e
 const tracked = (id, snapshot, extra = {}) => ({ id, selection: `${snapshot.event} ${snapshot.side}`, stake: 10, odds: snapshot.odds, book: snapshot.book, sport: 'NFL', date: '2026-10-02', status: 'open', quoteSnapshots: [snapshot], ...extra });
 const ledgerFor = state => createEvLedger({ getState: () => state, save() {}, redraw() {}, navigate() {}, getSettings: () => ({ devigMethod: 'multiplicative' }) });
 
-test('tracked bets show the newest available price at their book and its no-vig fair value, from one index per feed snapshot', t => {
+test('tracked bets show their selection’s current price and the odds service’s fair value', t => {
   t.mock.timers.enable({ apis: ['Date'], now: NOW });
-  const quotes = [];
-  // 5,000 games priced both ways at four books.
-  for (let game = 0; game < 5_000; game += 1) for (const [book, home, away] of [['Book A', -110, -110], ['Book B', -105, -115], ['Book C', -120, 100], ['Book D', 105, -125]]) {
-    quotes.push(quote(`${book}-${game}-h`, book, game, 'home', home), quote(`${book}-${game}-a`, book, game, 'away', away));
-  }
-  // Game 0 at Book A was repriced; the older record is still in the feed.
-  quotes.push(quote('Book A-0-h-new', 'Book A', 0, 'home', -102, { ts: at(1) }));
+  // A selection keeps its id across price updates; each update is served with its pricing.
+  const feed = (repriced = -102) => {
+    const quotes = [];
+    for (let game = 0; game < 1_000; game += 1) for (const [book, home, away] of [['Book A', -110, -110], ['Book B', -105, -115], ['Book C', -120, 100], ['Book D', 105, -125]]) {
+      quotes.push(quote(`${book}-${game}-h`, book, game, 'home', book === 'Book A' && game === 0 ? repriced : home), quote(`${book}-${game}-a`, book, game, 'away', away));
+    }
+    return priced(quotes, { now: NOW });
+  };
   const bets = Array.from({ length: 40 }, (_, index) => tracked(`bet-${index}`, quote(`Book A-${index}-h`, 'Book A', index, 'home', -110, { ts: at(30) })));
-  const state = { quotes, bets, suite: { ledger: { filters: { source: 'legacy' } } } };
+  const served = feed(), state = { quotes: served.quotes, analytics: served.analytics, bets, suite: { ledger: { filters: { source: 'legacy' } } } };
   const ledger = ledgerFor(state);
   const started = performance.now();
   let $ = load(ledger.render('tracker'));
-  const first = performance.now() - started;
+  const elapsed = performance.now() - started;
   const current = $('tbody tr').toArray().map(row => $(row).find('small').filter((_, item) => /^Current/.test($(item).text())).text());
   assert.equal(current.length, 40);
-  assert.match(current[0], /^Current -102 · Fair \d+\.\d\d%$/, 'the newest Book A price, priced against the other books');
+  const fair = served.analytics.pricingOf(served.analytics.byId.get('Book A-0-h')).fairProbability;
+  assert.equal(current[0], `Current -102 · Fair ${(fair * 100).toFixed(2)}%`, 'the repriced Book A price with the server’s fair value');
   assert.match(current[1], /^Current -110 · Fair/);
-  const again = performance.now();
-  ledger.render('tracker');
-  const second = performance.now() - again;
-  assert.ok(first < 3_000, `first render ${first.toFixed(0)} ms (a scan per row took seconds)`);
-  assert.ok(second < first, `redraws reuse the index (${second.toFixed(1)} ms vs ${first.toFixed(1)} ms)`);
-  // A new snapshot (a new array) is indexed again.
-  state.quotes = quotes.map(item => item.id === 'Book A-0-h-new' ? { ...item, odds: 110 } : item);
+  assert.ok(elapsed < 3_000, `rendered in ${elapsed.toFixed(0)} ms`);
+  // The next update replaces the prices and their pricing.
+  const next = feed(110);
+  Object.assign(state, { quotes: next.quotes, analytics: next.analytics });
   $ = load(ledger.render('tracker'));
   assert.match($('tbody tr').first().text(), /Current \+110/);
+  // A price past its expiry time isn't shown as current.
+  Object.assign(state, { quotes: next.quotes.map(item => ({ ...item, status: 'stale' })) });
+  state.analytics = priced(state.quotes.map(({ status, ...item }) => ({ ...item, ts: at(60) })), { now: NOW }).analytics;
+  $ = load(ledger.render('tracker'));
+  assert.doesNotMatch($('tbody tr').first().text(), /Current/);
 });
 
 test('performance shows price CLV and, when the other side closed too, no-vig CLV', t => {

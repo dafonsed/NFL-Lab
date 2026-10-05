@@ -1,4 +1,6 @@
 import './trends-controls.js';
+// The calculator pages run the shared formulas (betting-math.js) on the numbers a reader enters.
+import { decimal as decimalOdds, implied as impliedProbability, decimalToAmerican, fractionalOdds, expectedReturn, kellyFraction, devig, constrainedArb, promoConversion, parlay } from './betting-math.js';
 
 const form = document.querySelector('#bet-form');
 const search = document.querySelector('#bet-search');
@@ -12,17 +14,19 @@ const number = (data, name) => {
   return value;
 };
 const american = odds => {
-  if (!Number.isFinite(odds) || odds === 0 || (odds > -100 && odds < 100)) throw Error('Enter valid American odds, such as -110 or +125.');
-  return odds > 0 ? 1 + odds / 100 : 1 + 100 / Math.abs(odds);
+  const value = decimalOdds(odds);
+  if (!Number.isFinite(value)) throw Error('Enter valid American odds, such as -110 or +125.');
+  return value;
 };
-const implied = odds => 1 / american(odds);
+const implied = odds => { american(odds); return impliedProbability(odds); };
 const profit = (stake, odds) => stake * (american(odds) - 1);
+// Expected net value of a stake at a win probability.
+const expectedNet = (stake, probability, odds) => { american(odds); return stake * expectedReturn(probability, odds); };
 const pct = value => `${(value * 100).toFixed(2)}%`;
 const money = value => `${value < 0 ? '−' : ''}$${Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const amerText = decimal => {
-  if (!Number.isFinite(decimal) || decimal <= 1) return 'No finite odds';
-  const raw = decimal >= 2 ? (decimal - 1) * 100 : -100 / (decimal - 1);
-  return `${raw > 0 ? '+' : ''}${Math.round(raw)}`;
+  const odds = decimalToAmerican(decimal);
+  return Number.isFinite(odds) ? `${odds > 0 ? '+' : ''}${odds}` : 'No finite odds';
 };
 const result = (title, note, metrics, status = 'neutral') => ({ title, note, metrics, status });
 const get = (data, names) => Object.fromEntries(names.map(name => [name, number(data, name)]));
@@ -43,8 +47,8 @@ function calculate(kind, formData) {
     if (combined >= 1) return result('No arbitrage at these prices', `Combined implied probability is ${pct(combined)}. The pair needs to be below 100% to balance a positive return.`, [
       ['Combined implied probability', pct(combined)], ['Break-even gap', pct(1 - combined)], ['Bankroll', money(bankroll)]
     ], 'negative');
-    const stakeA = bankroll * pA / combined, stakeB = bankroll * pB / combined;
-    const payout = bankroll / combined, net = payout - bankroll;
+    const plan = constrainedArb([{ odds: oddsA }, { odds: oddsB }], bankroll), [stakeA, stakeB] = plan.stakes;
+    const payout = Math.min(...plan.payouts), net = plan.minProfit;
     return result('The entered prices form an arbitrage', `Balanced stakes return the same amount whichever outcome wins. This estimate assumes both wagers are accepted and settle alike.`, [
       ['Outcome A stake', money(stakeA)], ['Outcome B stake', money(stakeB)], ['Equal gross return', money(payout)], ['Estimated net profit', money(net)], ['Bankroll return', pct(net / bankroll)]
     ], 'positive');
@@ -52,7 +56,7 @@ function calculate(kind, formData) {
   if (kind === 'ev') {
     const { stake, odds } = get(formData, ['stake', 'odds']);
     positive(stake, 'Stake');
-    const p = probabilityInput(number(formData, 'probability')), pBreak = implied(odds), ev = p * profit(stake, odds) - (1 - p) * stake;
+    const p = probabilityInput(number(formData, 'probability')), pBreak = implied(odds), ev = expectedNet(stake, p, odds);
     return result(ev >= 0 ? 'Positive expected value at this estimate' : 'Negative expected value at this estimate', 'Expected value is a long-run average under your probability estimate, not a prediction for this wager.', [
       ['Expected net value', money(ev)], ['Expected return on stake', pct(ev / stake)], ['Break-even probability', pct(pBreak)], ['Estimated probability edge', `${((p - pBreak) * 100).toFixed(2)} percentage points`], ['Potential net profit', money(profit(stake, odds))]
     ], ev > 0 ? 'positive' : ev < 0 ? 'negative' : 'neutral');
@@ -67,9 +71,9 @@ function calculate(kind, formData) {
     if (!legs.length) throw Error('Select at least one parlay leg.');
     const { stake } = get(formData, ['stake']);
     positive(stake, 'Stake');
-    const decimal = legs.reduce((total, leg) => total * leg.decimal, 1);
-    const chance = legs.reduce((total, leg) => total * leg.probability, 1);
-    const payout = stake * decimal, ev = chance * (payout - stake) - (1 - chance) * stake;
+    const ticket = legs.length > 1 ? parlay(legs.map((leg, index) => ({ event: index, odds: leg.odds, probability: leg.probability }))) : { payout: legs[0].decimal, probability: legs[0].probability };
+    const decimal = ticket.payout, chance = ticket.probability;
+    const payout = stake * decimal, ev = stake * (chance * decimal - 1);
     return result('Parlay payout and value estimate', 'Probability and expected value multiply the selected leg estimates and assume the legs are independent.', [
       ['Selections included', `${legs.length}`], ['Combined American odds', amerText(decimal)], ['Combined decimal odds', decimal.toFixed(3)], ['Estimated chance all legs win', pct(chance)], ['Break-even probability', pct(1 / decimal)], ['Gross payout if all win', money(payout)], ['Net profit if all win', money(payout - stake)], ['Estimated expected value', money(ev)]
     ], ev > 0 ? 'positive' : ev < 0 ? 'negative' : 'neutral');
@@ -77,8 +81,8 @@ function calculate(kind, formData) {
   if (kind === 'freebet') {
     const { token, oddsA, oddsB } = get(formData, ['token', 'oddsA', 'oddsB']);
     positive(token, 'Free bet value');
-    const dA = american(oddsA), dB = american(oddsB), hedge = token * (dA - 1) / dB;
-    const cashValue = hedge * (dB - 1);
+    american(oddsA); american(oddsB);
+    const conversion = promoConversion({ stake: token, promoOdds: oddsA, hedgeOdds: oddsB, kind: 'bonus' }), hedge = conversion.hedge, cashValue = conversion.ifHedgeWins;
     return result('Estimated bonus bet conversion', 'This balances a stake-not-returned free bet against an opposing cash wager in a two-outcome market.', [
       ['Opposing hedge stake', money(hedge)], ['Estimated cash value', money(cashValue)], ['Conversion rate', pct(cashValue / token)], ['Free bet token', money(token)], ['Net if either side wins', money(cashValue)]
     ], 'positive');
@@ -88,8 +92,8 @@ function calculate(kind, formData) {
     positive(stake, 'Stake');
     const p0 = probabilityInput(number(formData, 'cover')), p1 = p0 + probabilityInput(number(formData, 'added'));
     if (p1 > 1) throw Error('Current cover probability plus added probability cannot exceed 100%.');
-    const ev0 = p0 * profit(stake, oldOdds) - (1 - p0) * stake;
-    const ev1 = p1 * profit(stake, newOdds) - (1 - p1) * stake;
+    const ev0 = expectedNet(stake, p0, oldOdds);
+    const ev1 = expectedNet(stake, p1, newOdds);
     const delta = ev1 - ev0;
     return result(delta > 0 ? 'The alternate line adds expected value' : delta < 0 ? 'The alternate line reduces expected value' : 'The two estimates are equal', 'The value of the added probability is your input. It varies by sport, market, and number.', [
       ['Current line EV', money(ev0)], ['Half-point line EV', money(ev1)], ['Estimated EV change', money(delta)], ['Alternate line probability', pct(p1)], ['Added cover probability', pct(p1 - p0)]
@@ -98,7 +102,7 @@ function calculate(kind, formData) {
   if (['hold', 'novig', 'vig'].includes(kind)) {
     const { oddsA, oddsB } = get(formData, ['oddsA', 'oddsB']);
     const pA = implied(oddsA), pB = implied(oddsB), overround = pA + pB;
-    const fairA = pA / overround, fairB = pB / overround;
+    const [fairA, fairB] = devig([pA, pB], 'multiplicative');
     const label = kind === 'hold' ? 'Estimated market hold' : kind === 'vig' ? 'Estimated sportsbook vig' : 'No-vig fair odds';
     return result(label, 'Proportional no-vig probabilities normalize the two entered sides to 100%.', [
       ['Outcome A raw probability', pct(pA)], ['Outcome B raw probability', pct(pB)], ['Combined implied probability', pct(overround)], ['Estimated overround', pct(overround - 1)], ['Outcome A fair probability', pct(fairA)], ['Outcome B fair probability', pct(fairB)], ['Fair American odds', `${amerText(1 / fairA)} / ${amerText(1 / fairB)}`]
@@ -106,14 +110,7 @@ function calculate(kind, formData) {
   }
   if (kind === 'implied' || kind === 'odds') {
     const { odds } = get(formData, ['odds']), decimal = american(odds), p = 1 / decimal;
-    const fraction = (() => {
-      const raw = decimal - 1;
-      let bestN = 0, bestD = 1, gap = Infinity;
-      for (let d = 1; d <= 100; d++) { const n = Math.round(raw * d), nextGap = Math.abs(raw - n / d); if (nextGap < gap) { bestN = n; bestD = d; gap = nextGap; } }
-      const gcd = (a, b) => b ? gcd(b, a % b) : a;
-      const divisor = gcd(bestN, bestD);
-      return `${bestN / divisor}/${bestD / divisor}`;
-    })();
+    const fraction = (fractionalOdds(decimal) || [0, 1]).join('/');
     return result(kind === 'odds' ? 'Converted betting odds' : 'Implied break-even probability', `A $100 stake at these odds has a potential net profit of ${money(profit(100, odds))}. The probability includes market margin.`, [
       ['Implied probability', pct(p)], ['Decimal odds', decimal.toFixed(3)], ['Fractional odds', fraction], ['Profit on $100 stake', money(profit(100, odds))], ['Total return on $100 win', money(100 * decimal)]
     ]);
@@ -122,8 +119,8 @@ function calculate(kind, formData) {
     const { bankroll, odds, fraction } = get(formData, ['bankroll', 'odds', 'fraction']);
     positive(bankroll, 'Bankroll');
     if (fraction < 0 || fraction > 100) throw Error('Kelly fraction must be between 0% and 100%.');
-    const p = probabilityInput(number(formData, 'probability')), d = american(odds), b = d - 1, q = 1 - p;
-    const full = Math.max(0, (b * p - q) / b), stake = bankroll * full * fraction / 100;
+    const p = probabilityInput(number(formData, 'probability')), d = american(odds);
+    const full = kellyFraction(p, d), stake = bankroll * full * fraction / 100;
     return result(stake > 0 ? 'Estimated Kelly stake' : 'No positive Kelly stake at this estimate', 'Kelly staking is sensitive to probability error. Fractional Kelly scales down the full-Kelly bankroll share.', [
       ['Full Kelly fraction', pct(full)], ['Selected Kelly fraction', `${fraction}%`], ['Suggested stake', money(stake)], ['Share of bankroll staked', pct(stake / bankroll)], ['Break-even probability', pct(1 / d)]
     ], stake > 0 ? 'positive' : 'negative');
@@ -194,7 +191,7 @@ function calculate(kind, formData) {
     positive(stake, 'Stake');
     const p = probabilityInput(number(formData, 'probability'));
     const originalProfit = profit(stake, original), boostedProfit = profit(stake, boosted);
-    const originalEv = p * originalProfit - (1 - p) * stake, boostedEv = p * boostedProfit - (1 - p) * stake;
+    const originalEv = expectedNet(stake, p, original), boostedEv = expectedNet(stake, p, boosted);
     return result('Odds boost comparison', 'Expected value uses your win probability estimate and assumes the full stake qualifies for the promotion.', [
       ['Original net profit on win', money(originalProfit)], ['Boosted net profit on win', money(boostedProfit)], ['Additional profit on win', money(boostedProfit - originalProfit)], ['Original price EV', money(originalEv)], ['Boosted price EV', money(boostedEv)], ['Estimated EV added', money(boostedEv - originalEv)]
     ], boostedEv > originalEv ? 'positive' : 'neutral');

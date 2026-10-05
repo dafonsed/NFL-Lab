@@ -1,4 +1,6 @@
 import './trends-controls.js';
+// Article widgets run the shared formulas (betting-math.js) on the reader's numbers.
+import { implied, decimal, expectedReturn, probabilityToAmerican, breakEven as tableBreakEven, fantasySlip } from './betting-math.js';
 
 const money = value => Number.isFinite(value) ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(value) : '—';
 const tone = value => !Number.isFinite(value) || value === 0 ? 'neutral' : value > 0 ? 'positive' : 'negative';
@@ -9,9 +11,9 @@ const readNumber = (input, min = -Infinity, max = Infinity) => {
   input.setAttribute('aria-invalid', String(!valid));
   return valid ? value : NaN;
 };
-const americanProfit = (odds, stake) => odds > 0 ? stake * odds / 100 : stake * 100 / Math.abs(odds);
-const americanImplied = odds => odds > 0 ? 100 / (odds + 100) : Math.abs(odds) / (Math.abs(odds) + 100);
-const validAmerican = odds => Number.isFinite(odds) && odds !== 0 && Math.abs(odds) >= 100;
+const americanProfit = (odds, stake) => stake * (decimal(odds) - 1);
+const americanImplied = odds => implied(odds);
+const validAmerican = odds => Number.isFinite(decimal(odds));
 
 document.querySelectorAll('[data-article-widget="comparison"]').forEach(widget => {
   const inputs = [...widget.querySelectorAll('[data-comparison-price]')];
@@ -58,7 +60,7 @@ document.querySelectorAll('[data-article-widget="ev"]').forEach(widget => {
     const valid = validAmerican(odds) && Number.isFinite(stake);
     oddsInput.setAttribute('aria-invalid', String(!validAmerican(odds)));
     const profit = valid ? americanProfit(odds, stake) : NaN;
-    const ev = valid ? probability * profit - (1 - probability) * stake : NaN;
+    const ev = valid ? stake * expectedReturn(probability, odds) : NaN;
     widget.querySelector('[data-ev-breakeven]').textContent = valid ? percent(stake / (stake + profit)) : '—';
     widget.querySelector('[data-ev-value]').textContent = money(ev);
     widget.querySelector('[data-ev-value]').dataset.tone = tone(ev);
@@ -79,12 +81,14 @@ document.querySelectorAll('[data-article-widget="pickem"]').forEach(widget => {
     const multiplier = readNumber(multiplierInput, 1.01, 100);
     const stake = readNumber(stakeInput, 0.01, 1000000);
     const perLeg = Number(probabilityInput.value) / 100;
+    // A power entry pays the multiplier only when every leg hits (the DFS tools' slip and break-even).
+    const table = [...Array(legs).fill(0), multiplier], slip = Number.isFinite(multiplier) && Number.isFinite(stake) ? fantasySlip(Array.from({ length: legs }, () => ({ probability: perLeg })), table, stake) : null;
     const allHit = perLeg ** legs;
-    const breakEven = Number.isFinite(multiplier) ? (1 / multiplier) ** (1 / legs) : NaN;
-    const ev = Number.isFinite(multiplier) && Number.isFinite(stake) ? allHit * stake * multiplier - stake : NaN;
+    const breakEvenChance = Number.isFinite(multiplier) ? tableBreakEven(table) ?? NaN : NaN;
+    const ev = slip ? slip.expectedProfit : NaN;
     widget.querySelector('[data-pickem-probability-label]').textContent = percent(perLeg);
     widget.querySelector('[data-pickem-all-hit]').textContent = percent(allHit);
-    widget.querySelector('[data-pickem-breakeven]').textContent = percent(breakEven);
+    widget.querySelector('[data-pickem-breakeven]').textContent = percent(breakEvenChance);
     widget.querySelector('[data-pickem-ev]').textContent = money(ev);
     widget.querySelector('[data-pickem-ev]').dataset.tone = tone(ev);
   };
@@ -160,8 +164,7 @@ document.querySelectorAll('[data-article-widget="contract-converter"]').forEach(
     widget.querySelector('[data-converter-probability]').textContent = percent(probability);
     fields.cents.value = String(Math.max(1, Math.min(99, Math.round(probability * 100))));
     fields.decimal.value = (1 / probability).toFixed(2);
-    const american = probability < 0.5 ? Math.round(100 * (1 - probability) / probability) : -Math.round(100 * probability / (1 - probability));
-    fields.american.value = String(american === -100 ? 100 : american);
+    fields.american.value = String(probabilityToAmerican(probability));
     fields.fractional.value = approximateFraction((1 - probability) / probability);
     for (const [name, field] of Object.entries(fields)) if (name !== source) field.setAttribute('aria-invalid', 'false');
     note.textContent = 'Converted prices are rounded equivalents, not independent forecasts or guaranteed event probabilities.';

@@ -1,6 +1,11 @@
 import { accountStorage, accountReady, accountSyncState } from './account-sync.js';
 import { readBets, writeBets, validateBet, betReturns, STATUSES, SPORTS, BET_STORAGE_KEY } from './bet-utils.js?v=4';
-import { performanceSummary, marketIdentity, quoteAvailable, consensusPrice } from './ev-advanced-math.js';
+// The member's own records: profit, ROI and CLV come from the shared calculator (betting-math.js) on what
+// they entered; a tracked selection's current price and fair value are the odds service's.
+import { performanceSummary, decimalToAmerican } from './betting-math.js';
+import { isCurrent } from './odds-contract.js';
+import { serverNow } from './odds-client.js';
+import { marketIdentity } from './market-identity.js';
 
 await accountReady;
 
@@ -16,10 +21,12 @@ const numeric = value => value !== '' && value != null && typeof value !== 'bool
 const cash = value => Number.isFinite(value) ? new Intl.NumberFormat('en-US', { style:'currency', currency:'USD' }).format(value) : '—';
 const pct = value => Number.isFinite(value) ? `${(100 * value).toFixed(2)}%` : '—';
 const price = (value, format = 'american') => Number.isFinite(numeric(value)) ? format === 'decimal' ? Number(value).toFixed(3) : `${value > 0 ? '+' : ''}${value}` : '—';
-const toAmerican = (value, format) => format !== 'decimal' ? numeric(value) : numeric(value) > 1 ? Number(value) >= 2 ? (Number(value) - 1) * 100 : -100 / (Number(value) - 1) : NaN;
+// Unrounded, so CLV compares the exact booked and closing prices.
+const toAmerican = (value, format) => format !== 'decimal' ? numeric(value) : decimalToAmerican(numeric(value), { round: false });
 const uid = () => crypto.randomUUID();
 const today = () => { const time = new Date(); return new Date(time.getTime() - time.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
 const clone = value => JSON.parse(JSON.stringify(value));
+// One selection and line, at any book (duplicate-ticket warnings).
 const selectedKey = quote => `${marketIdentity(quote)}|${String(quote.side || '').trim().toLowerCase()}`;
 const eventKey = quote => JSON.stringify([quote.sport, quote.league || quote.sport, quote.eventId || quote.event]);
 // "Dallas Cowboys +3 · Spread · Dallas Cowboys @ Houston Texans": team and game, not the feed's home/away key.
@@ -32,7 +39,6 @@ const select = (name, label, value, options, filter = false) => `<label class="e
 const statusName = status => STATUSES[status] || ({live:'Live',ungraded:'Needs grading',settled:'Settled'})[status] || status;
 const tone = value => Number.isFinite(value) ? value > 0 ? 'evl-positive' : value < 0 ? 'evl-negative' : '' : '';
 const isMap = value => value && typeof value === 'object' && !Array.isArray(value);
-const marketCache = new WeakMap();
 function manualLeg(quote, index = 0, result = 'open') {
   const side = String(quote.side || '').toLowerCase(), type = String(quote.type || '').toLowerCase();
   const moneyline = ['moneyline','three-way','1x2','future'].includes(type) || /moneyline/i.test(quote.market || '')
@@ -141,35 +147,14 @@ export function createEvLedger({ getState, save, redraw, navigate, getSettings =
     const settings=meta.devigSettings,rules=Array.isArray(settings.bookRules)?settings.bookRules.filter(rule=>rule.enabled!==false):[];
     return `<details class="evl-calculation"><summary>Calculation snapshot</summary><p>${esc(settings.devigMethod||'multiplicative')} devig · ${esc(settings.minSharpBooks||1)} minimum reference book${Number(settings.minSharpBooks||1)===1?'':'s'}<br>${esc(rules.map(rule=>`${rule.book}: ${rule.weight??1}${rule.required?' (required)':''}`).join(' · ')||'All eligible reference books')}${meta.probabilityBasis?'<br>'+esc(meta.probabilityBasis):''}</p></details>`;
   }
-  // Current price and fair value for each tracked bet. Scanning every quote (and pricing consensus
-  // from all of them) per row took 5 s for a 40-row page on the 20k-quote feed, on every redraw. The
-  // feed replaces the quote array on each sync, so one index per array serves every redraw until then
-  // (rebuilt when settings change or after 30 s, as quotes age out of availability).
-  function market() {
-    const list = quotes(), settings = getSettings() || {}, settingsKey = JSON.stringify(settings), now = Date.now(), cached = marketCache.get(list);
-    if (cached && cached.length === list.length && cached.settingsKey === settingsKey && now - cached.at < 30_000) return cached;
-    // Newest available quote per selection and book, and available quotes per market identity (the
-    // index consensusPrice accepts, built from the same quotes, settings and time).
-    const newest = new Map(), byMarket = new Map();
-    for (const quote of list) {
-      if (!quoteAvailable(quote,settings,now)) continue;
-      const identity = marketIdentity(quote), rows = byMarket.get(identity);
-      if (rows) rows.push(quote); else byMarket.set(identity,[quote]);
-      const id = `${identity}|${String(quote.side || '').trim().toLowerCase()}|${quote.book}`, previous = newest.get(id);
-      if (!previous || Date.parse(quote.ts) > Date.parse(previous.ts)) newest.set(id,quote);
-    }
-    const entry = { length:list.length, settingsKey, at:now, settings:{ ...settings, now }, newest, byMarket, consensus:new Map() };
-    marketCache.set(list,entry);
-    return entry;
-  }
+  // Current price and fair value for each tracked bet: a selection keeps its id (book, market, line and
+  // side) across price updates, so the tracked snapshot's id finds today's price and its fair value.
   function marketNow(row) {
     const snapshots = row.meta.quoteSnapshots || [], original = snapshots.length === 1 ? snapshots[0] : null;
-    if (!original) return '';
-    const index = market(), current = index.newest.get(`${selectedKey(original)}|${original.book}`);
-    if (!current) return '';
-    if (!index.consensus.has(current.id)) index.consensus.set(current.id,consensusPrice(current,quotes(),index.settings,index.byMarket));
-    const consensus = index.consensus.get(current.id);
-    return `<small>Current ${esc(price(current.odds))}${Number.isFinite(consensus.probability) ? ` · Fair ${pct(consensus.probability)}` : ''}</small>`;
+    const analytics = getState().analytics, current = original && analytics?.byId.get(original.id);
+    if (!current || !isCurrent(current, serverNow())) return '';
+    const fair = analytics.pricingOf(current)?.fairProbability;
+    return `<small>Current ${esc(price(current.odds))}${fair != null ? ` · Fair ${pct(fair)}` : ''}</small>`;
   }
   function tracker(rows) {
     const pages = Math.max(1,Math.ceil(rows.length/40)); page = Math.max(1,Math.min(page,pages));

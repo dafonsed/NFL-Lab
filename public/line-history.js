@@ -16,20 +16,14 @@ export const LINE_HISTORY_RANGES = [
 export const LINE_HISTORY_COLORS = ['#e8a95a', '#f5d98f', '#c9772f', '#f0c36b', '#b8651f', '#dca06e', '#f7c98a', '#a85a24'];
 const AVG_COLOR = '#fbeab8';
 
+import { implied as impliedProbability, probabilityToAmerican as probabilityToOdds } from './betting-math.js';
+
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const toTime = ts => typeof ts === 'number' ? ts : ts instanceof Date ? ts.getTime() : Date.parse(ts);
 
-// American odds -> implied probability (NaN for anything that is not a valid price).
-export function impliedProbability(odds) {
-  const n = Number(odds);
-  return n >= 100 ? 100 / (n + 100) : n <= -100 ? -n / (-n + 100) : NaN;
-}
-
-// Implied probability -> rounded American odds.
-export function probabilityToOdds(p) {
-  if (!(p > 0 && p < 1)) return NaN;
-  return Math.round(p < .5 ? (1 - p) / p * 100 : -p / (1 - p) * 100);
-}
+// The chart places prices on an implied-probability scale (better prices sit higher) and draws the
+// books' average; both are display transforms of the recorded prices (betting-math.js conversions).
+export { impliedProbability, probabilityToOdds };
 
 // Raw history entries [{book, ts, odds, line}] -> [{book, points:[{ts, odds, line}]}]
 // sorted by time, one point per timestamp, repeated prices collapsed.

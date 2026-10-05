@@ -1,5 +1,10 @@
-import { quoteAvailable, marketIdentity } from './ev-advanced-math.js';
-import { decimal, implied, money, oddsLabel } from './ev-core.js';
+// Arranges prices and recorded observations: grouping by market identity, ordering and display formats.
+// Implied probabilities are the odds service's (each quote and each recorded observation carries one).
+import { marketIdentity } from './market-identity.js';
+import { decimal } from './betting-math.js';
+import { money, oddsLabel } from './odds-format.js';
+import { isCurrent } from './odds-contract.js';
+import { serverNow } from './odds-client.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
 const validNumber = value => value !== '' && value !== null && value !== undefined && Number.isFinite(Number(value));
@@ -90,7 +95,8 @@ export function createEvMarketViews({ getState, save, redraw, navigate, getSetti
     if (keyCache) renderLatest = quotes;
     return quotes;
   }
-  const available = quote => quoteAvailable(quote, settings()) && Number.isFinite(decimal(quote.odds));
+  // Current until the server's expiry time for the price.
+  const available = quote => isCurrent(quote, serverNow()) && Number.isFinite(decimal(quote.odds));
   const booksFor = quotes => {
     const names = [...new Set(quotes.map(quote => quote.book).filter(Boolean))], order = options().bookOrder;
     return [...order.filter(name => names.includes(name)), ...names.filter(name => !order.includes(name)).sort()];
@@ -261,7 +267,7 @@ export function createEvMarketViews({ getState, save, redraw, navigate, getSetti
     if (candidates.length) {
       const wanted = new Set(candidates.map(quote => selectionKey(quote)));
       for (const quote of latest) if (wanted.has(selectionKey(quote)) && available(quote)) group(bySelection,selectionKey(quote),quote);
-      for (const record of historyRecords()) if (Number.isFinite(implied(record.odds)) && within(record.ts,opt.signalRange)) group(historyBy,JSON.stringify([record.book,selectionKey(record)]),record);
+      for (const record of historyRecords()) if (Number.isFinite(record.impliedProbability) && within(record.ts,opt.signalRange)) group(historyBy,JSON.stringify([record.book,selectionKey(record)]),record);
     }
     const signals = candidates.map(quote => {
       const liquidity = number(quote.liquidity), id = selectionKey(quote);
@@ -269,7 +275,7 @@ export function createEvMarketViews({ getState, save, redraw, navigate, getSetti
       const byTime = new Map(records.map(record => [Date.parse(record.ts),record]));
       const observations = [...byTime.values()].sort((a,b) => Date.parse(a.ts) - Date.parse(b.ts));
       const first = observations[0], last = observations.at(-1);
-      const movement = observations.length > 1 ? (implied(last.odds) - implied(first.odds)) * 100 : null;
+      const movement = observations.length > 1 ? (last.impliedProbability - first.impliedProbability) * 100 : null;
       // The first of the highest prices, as the stable sort it replaces picked.
       const better = (bySelection.get(id) || []).reduce((best,other) => other.book !== quote.book && decimal(other.odds) > decimal(quote.odds) && (!best || decimal(other.odds) > decimal(best.odds)) ? other : best,undefined);
       return { quote,liquidity,observations,movement,first,last,better };

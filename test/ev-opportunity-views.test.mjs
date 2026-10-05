@@ -3,23 +3,28 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import vm from 'node:vm';
 import {load} from 'cheerio';
-import * as core from '../public/ev-core.js';
+import * as math from '../public/betting-math.js';
+import * as format from '../public/odds-format.js';
+import {isCurrent} from '../public/odds-contract.js';
+import {priced} from './helpers/priced.mjs';
 import * as views from '../public/ev-secondary-views.js';
 import {wagerCard} from '../public/ev-bet-card.js';
 import {boardIcon,bookLogo,startLabel,selectionText,renderBetPanel} from '../public/ev-board.js';
 import {leagueMark,teamMark} from '../public/sports-identity.js';
-import {constrainedArb,middleOutcomes,devig} from '../public/ev-advanced-math.js';
+const {middleOutcomes}=math, core=format;
 import {TOOL_FILTER_DEFAULTS,oddsWithin} from '../public/ev-filters.js';
 
 const source = await fs.readFile(new URL('../public/ev.js',import.meta.url),'utf8');
 const quote = (id, overrides={}) => ({id,sport:'NBA',event:'Home & Away',market:'Player points',player:'Ada <Example>',
   type:'prop',line:20.5,side:'Over',book:'DraftKings',odds:120,live:false,source:'manual',ts:new Date().toISOString(),...overrides});
 
+// The boards display what /api/odds serves: the fixtures run through the real engine first.
 function render(name,quotes,extra={},args='') {
-  const notice={dataset:{},textContent:''};
-  const context=vm.createContext({...core,...views,wagerCard,boardIcon,bookLogo,startLabel,leagueMark,teamMark,selectionText,renderBetPanel,constrainedArb,middleOutcomes,devig,
-    suite:{quoteVisible:()=>true,settings:()=>({}),displayOdds:core.oddsLabel},sharpSort:'liquidity',sportsbookNames:[],
-    preserveLiveOrder:false,state:{quotes},quotes:()=>quotes,eligibleQuotes:items=>items,hasApiSnapshot:()=>false,
+  const notice={dataset:{},textContent:''}, served=priced(quotes);
+  const context=vm.createContext({...math,...format,...views,wagerCard,boardIcon,bookLogo,startLabel,leagueMark,teamMark,selectionText,renderBetPanel,
+    suite:{quoteVisible:()=>true,settings:()=>({}),displayOdds:format.oddsLabel},sharpSort:'liquidity',sportsbookNames:[],
+    preserveLiveOrder:false,state:{quotes:served.quotes,analytics:served.analytics},quotes:()=>served.quotes,eligibleQuotes:items=>items,hasApiSnapshot:()=>false,
+    current:quote=>isCurrent(quote),visible:()=>true,quotePassesTool:()=>true,
     sportsbookSelected:()=>true,bookAvailable:()=>true,quotePassesDesign:()=>true,designSort:'recommended',marketType:'',sport:'',bookmaker:'',search:'',
     designFilters:{minEdge:0},stake:100,flatMultiplier:1,bankroll:5000,expandedSharpKey:'',sharpSelectedBook:'',sharpFiltersOpen:false,
     esc:views.toolEsc,fmtLine:value=>views.toolEsc(value),age:()=> 'Just now',$:()=>notice,
@@ -48,12 +53,16 @@ test('arbitrage rows retain both quote actions and calculated stakes, with no de
   assert.equal(row.find('[data-pair-open-both]').attr('data-pair-open-both'),'first|hedge');
   assert.equal(row.find('[data-pair-toggle]').attr('aria-expanded'),'false');
   assert.equal(row.children('td').length,4);
-  const legs=quotes.slice(0,2),allocation=constrainedArb(legs,5000),plan=constrainedArb(legs,100*allocation.actualTotal/allocation.stakes[0]);
-  assert.equal(row.find('.arb-pill').text(),(plan.margin*100).toFixed(2)+'%');
+  // The return and stake shares are the server's; the page scales them to a $100 first stake.
+  const opportunity=context.state.analytics.arbitrage.find(item=>item.id==='first|hedge'),shares=opportunity.legs.map(leg=>leg.stakeFraction);
+  const total=Math.min(5000,100/shares[0]),plan={stakes:shares.map(share=>Math.round(total*share*100)/100),profit:total*opportunity.margin};
+  assert.ok(Math.abs(opportunity.margin-(1/(1/2.2+105/205)-1))<1e-5,'+120 / -105 at different books');
+  assert.equal(row.find('.arb-pill').text(),(opportunity.margin*100).toFixed(2)+'%');
   assert.equal(row.find('.arb-leg-a .arb-stake strong').text(),core.money(plan.stakes[0]));
+  assert.equal(row.find('.arb-leg-a .arb-stake strong').text(),'$100.00','the first stake is the member’s');
   assert.equal(row.find('.arb-leg-b .arb-stake strong').text(),core.money(plan.stakes[1]));
-  assert.equal(row.find('.arb-leg-a .arb-profit strong').text(),core.money(plan.profits[0]));
-  assert.equal(row.find('.arb-leg-b .arb-profit strong').text(),core.money(plan.profits[1]));
+  assert.equal(row.find('.arb-leg-a .arb-profit strong').text(),core.money(plan.profit));
+  assert.equal(row.find('.arb-leg-b .arb-profit strong').text(),core.money(plan.profit));
   assert.match(row.find('.arb-leg-a .arb-leg-link').text(),/Ada <Example> Over 20\.5/);
   assert.equal(row.find('example').length,0,'player text cannot become markup');
   assert.equal($('.ev-arb-demo-note').length,0,'no simulated-opportunity banner');
@@ -82,14 +91,20 @@ test('middle rows keep unequal lines, both stakes and the possible one-side loss
     quote('under',{type:'total',market:'Game total',player:'',side:'Under',line:45.5,book:'FanDuel',odds:-110})];
   const otherSides=[quote('over-under',{type:'total',market:'Game total',player:'',side:'Under',line:43.5,odds:-110}),
     quote('under-over',{type:'total',market:'Game total',player:'',line:45.5,book:'FanDuel',odds:-110})];
-  const {$,detail}=render('renderMiddles',[...quotes,...otherSides]),row=$('.evb-row[data-pair-row="over|under"]'),plan=constrainedArb(quotes.map(q=>({odds:q.odds})),100);
+  const {$,detail,context}=render('renderMiddles',[...quotes,...otherSides]),row=$('.evb-row[data-pair-row="over|under"]');
+  // The server's stake shares and per-unit outcomes, scaled to the $100 outlay.
+  const middle=context.state.analytics.middles.find(item=>item.id==='over|under'),plan={stakes:middle.stakeFractions.map(share=>Math.round(100*share*100)/100)};
   assert.equal(row.length,1);
   assert.equal(row.find('.pair-leg-a strong').text(),'Over 43.5');
   assert.equal(row.find('.pair-leg-b strong').text(),'Under 45.5');
   assert.equal(row.find('.pair-leg-a .pair-leg-note').text(),'Stake '+core.money(plan.stakes[0]));
   assert.equal(row.find('.pair-leg-b .pair-leg-note').text(),'Stake '+core.money(plan.stakes[1]));
-  assert.equal(row.find('.pair-outside .is-negative').text(),core.money(middleOutcomes(...quotes,...plan.stakes,42).profit));
-  assert.equal(row.find('.evb-ev strong').text(),core.money(middleOutcomes(...quotes,...plan.stakes,44.5).profit));
+  assert.equal(row.find('.pair-outside .is-negative').text(),core.money(middle.perUnit.outside*100));
+  assert.equal(row.find('.evb-ev strong').text(),core.money(middle.perUnit.inside*100));
+  // The same outcomes as the middle calculator gives for those stakes (within a cent of rounding).
+  const cash=text=>Number(text.replace(/[$,]/g,''));
+  assert.ok(Math.abs(cash(row.find('.pair-outside .is-negative').text())-middleOutcomes(...quotes,...plan.stakes,42).profit)<=.011);
+  assert.ok(Math.abs(cash(row.find('.evb-ev strong').text())-middleOutcomes(...quotes,...plan.stakes,44.5).profit)<=.011);
   assert.equal(row.find('[data-suite-action="middle"]').attr('data-hedge'),'under');
   assert.equal($('#ev-bankroll').attr('value'),'100','the stake control is retained');
   const open=detail('over|under');

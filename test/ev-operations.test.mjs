@@ -5,8 +5,9 @@ import { createEvOperations } from '../public/ev-operations.js';
 
 const NOW = Date.parse('2026-10-03T06:17:08Z');
 const at = minutesAgo => new Date(NOW - minutesAgo * 60_000).toISOString();
-// Feed prices as the page holds them after a sync (source 'local-api', the feed's own side and event text).
-const feedQuote = (id, book, extra = {}) => ({ id, sport: 'NFL', event: 'IND Colts @ WAS Commanders', displayEvent: 'Indianapolis Colts @ Washington Commanders', market: 'moneyline', displayMarket: 'Moneyline', type: 'moneyline', line: '', side: 'away', selection: 'IND Colts', book, odds: -208, live: false, ts: at(1), source: 'local-api', ...extra });
+// Feed prices as the page holds them after a sync (source 'local-api', the feed's own side and event text),
+// current until the expiry time the odds service gave them.
+const feedQuote = (id, book, extra = {}) => ({ id, sport: 'NFL', event: 'IND Colts @ WAS Commanders', displayEvent: 'Indianapolis Colts @ Washington Commanders', market: 'moneyline', displayMarket: 'Moneyline', type: 'moneyline', line: '', side: 'away', selection: 'IND Colts', book, odds: -208, live: false, ts: at(1), source: 'local-api', status: 'open', expiresAt: at(-14), ...extra });
 const STATUS = { datasets: {
   fanduel: { status: 'ok', last_update: '2026-10-03T06:16:28+00:00', items: 268, anomaly: null },
   oddsjam: { status: 'degraded', last_update: '2026-10-03T06:16:29+00:00', items: 53, anomaly: 'Item count dropped from ~456 to 53 (89% below average)' },

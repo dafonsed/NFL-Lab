@@ -1,5 +1,7 @@
 # EV API handoff for all VisualOdds tools
 
+> **Where pricing happens:** the website's frontend no longer computes fair odds, EV, arbitrage or any other betting analytics. The browser reads finished values from the website API (`/api/odds/*`), which today prices the raw quote feed on the server and will pass through the odds API's own values once it returns them. What that API must return is in [odds-architecture.md](odds-architecture.md).
+
 ## What is already configured
 
 The endpoint and key (`EV_TOOL_API_URL`, `EV_TOOL_API_KEY`, `EV_TOOL_API_ALLOW_HTTP`) are set in the Vercel project environment. The VisualOdds server forwards the documented health, status, quotes, matches and reserved scrape routes, attaching `X-API-Key` to every request. Credentials do not belong in browser code or examples.
@@ -34,7 +36,7 @@ A check of the production `GET /quotes` response (18,729 quotes, 689 events, 13 
 
 These are workarounds, not replacements for fixing the feed:
 
-All of this is in `public/ev-feed-normalize.js` (run in a background worker, `public/ev-feed-worker.js`) and `public/ev-event-match.js`.
+All of this runs on the website's server, in `lib/odds/normalize.mjs` and `lib/odds/event-match.mjs`, before the prices are priced (`lib/odds/engine.mjs`) and sent to the browser. Once the odds API cleans its own feed, these steps have nothing left to repair.
 
 - **Sides rebuilt from `selection_name`:** totals become over/under, and spreads and moneylines take the named team, with the line from that team's view. When a spread's selection has no line and names the other team, it is skipped. So are records whose selection is a different bet: another game's team, "/ Tie", Yes/No, or a doubles pair inside a singles match. Soccer `1`/`X`/`2` selections become a three-way market. Quotes without a `selection_name` (theScore Bet, BetMGM, exchanges) keep the feed's `side`.
 - **Team-name matching (NFL, NBA, NHL, WNBA):** games are matched by team nickname, so `CIN Bengals`, `Bengals` and `Cincinnati Bengals` line up, and each game and team shows the fullest name any book uses. MLB is excluded because the same teams play on back-to-back days and the feed's times can't tell those games apart.

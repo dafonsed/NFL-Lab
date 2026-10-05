@@ -1,6 +1,6 @@
 const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const decimal = value => Number(value) >= 100 ? 1 + Number(value)/100 : Number(value) <= -100 ? 1 + 100/-Number(value) : NaN;
-const american = value => value >= 2 ? '+' + Math.round((value-1)*100) : String(Math.round(-100/(value-1)));
+import { decimal, decimalToAmerican } from './betting-math.js';
+const american = value => { const odds = decimalToAmerican(value); return odds > 0 ? '+' + odds : String(odds); };
 const odds = value => Number.isFinite(decimal(value)) ? (Number(value)>0 ? '+' : '')+Number(value) : '—';
 const numericalLine = value => value == null || typeof value === 'boolean' || String(value).trim()==='' ? NaN : Number(value);
 const line = value => Number.isFinite(numericalLine(value)) ? String(Number(Number(value).toFixed(3))) : '—';

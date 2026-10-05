@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validateBet, closingLineValue, priceClosingLineValue, noVigClosingLineValue, betsCsv } from '../public/bet-utils.js';
-import { comparableClv, devig } from '../public/ev-advanced-math.js';
+import { comparableClv, devig } from '../public/betting-math.js';
 
 const ticket = (extra = {}) => validateBet({ selection: 'Colts +3.5', book: 'FanDuel', sport: 'NFL', type: 'single', status: 'open', date: '2026-10-03', oddsFormat: 'american', odds: 100, stake: 10, closingOdds: -110, ...extra });
 

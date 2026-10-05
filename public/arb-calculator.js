@@ -1,10 +1,11 @@
-import { decimal } from './ev-core.js';
+// The arbitrage calculator on the prices, boosts and stakes the member enters (betting-math.js).
+import { decimal, boostDecimal, hedgeStake, decimalToAmerican as toAmerican } from './betting-math.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
 const currency = value => Number.isFinite(value) ? new Intl.NumberFormat('en-US', { style:'currency', currency:'USD' }).format(value) : '—';
 const signedCurrency = value => Number.isFinite(value) ? `${value >= 0 ? '+' : '−'}${currency(Math.abs(value))}` : '—';
 const stakeValue = value => Number.isFinite(value) ? value.toFixed(2).replace(/\.00$/, '') : '';
-const decimalToAmerican = value => String(value >= 2 ? Math.round((value - 1) * 100) : Math.round(-100 / (value - 1)));
+const americanText = value => String(toAmerican(value));
 const parseOdds = (value, mode) => {
   const parsed = mode === 'decimal' ? Number(value) : decimal(value);
   return Number.isFinite(parsed) && parsed > 1 ? parsed : NaN;
@@ -12,10 +13,10 @@ const parseOdds = (value, mode) => {
 
 export function calculateArbitragePreview({ odds, boosts, stakes, balance = true, locked = 0 }) {
   const effective = odds.map((value, index) => value > 1 && Number.isFinite(value) && boosts[index] >= 0 && boosts[index] <= 1000
-    ? 1 + (value - 1) * (1 + boosts[index] / 100) : NaN);
+    ? boostDecimal(value, boosts[index]) : NaN);
   const amounts = stakes.map(Number);
   if (effective.some(value => !Number.isFinite(value)) || amounts.some(value => !Number.isFinite(value) || value < 0) || (balance && !(amounts[locked] > 0))) return null;
-  if (balance) amounts[1 - locked] = Math.round(amounts[locked] * effective[locked] / effective[1 - locked] * 100) / 100;
+  if (balance) amounts[1 - locked] = Math.round(hedgeStake(amounts[locked], effective[locked], effective[1 - locked]) * 100) / 100;
   const totalStake = amounts[0] + amounts[1];
   if (!(totalStake > 0)) return null;
   const payouts = amounts.map((value, index) => value * effective[index]);
@@ -31,7 +32,7 @@ export function openArbCalculator({ first, second, stake, flatMultiplier, bankro
   const initialOdds = quotes.map(quote => decimal(quote.odds));
   const hedgeRatio = initialOdds[0] / initialOdds[1];
   const anchor = Math.min(Number(stake) * Number(flatMultiplier), Number(bankroll) / (1 + hedgeRatio));
-  const initialStakes = [anchor, Math.round(anchor * hedgeRatio * 100) / 100];
+  const initialStakes = [anchor, Math.round(hedgeStake(anchor, initialOdds[0], initialOdds[1]) * 100) / 100];
   const state = { mode:'american', boosts:[0, 0], stakes:[...initialStakes], balance:true, locked:0 };
   const market = `${first.player ? `${first.player} · ` : ''}${first.displayMarket || first.market}`;
   const columns = quotes.map((quote, index) => `<div class="arb-calc-book" id="arb-calc-book-${index}"><span class="arb-calc-book-mark" aria-hidden="true">${brandMark(quote.book)}</span><span><strong>${esc(quote.book)}</strong><small>${esc(quote.side)}${quote.line !== '' && quote.line != null ? ` ${esc(quote.line)}` : ''}</small></span></div>`).join('');
@@ -103,7 +104,7 @@ export function openArbCalculator({ first, second, stake, flatMultiplier, bankro
     if (mode && mode.dataset.arbMode !== state.mode) {
       const oldOdds = oddsInputs.map((input, index) => parseOdds(input.value, state.mode) || initialOdds[index]);
       state.mode = mode.dataset.arbMode;
-      oddsInputs.forEach((input, index) => { input.value = state.mode === 'decimal' ? oldOdds[index].toFixed(4).replace(/0+$/, '').replace(/\.$/, '') : decimalToAmerican(oldOdds[index]); });
+      oddsInputs.forEach((input, index) => { input.value = state.mode === 'decimal' ? oldOdds[index].toFixed(4).replace(/0+$/, '').replace(/\.$/, '') : americanText(oldOdds[index]); });
       all('[data-arb-mode]').forEach(button => button.setAttribute('aria-pressed', String(button === mode)));
       return update();
     }

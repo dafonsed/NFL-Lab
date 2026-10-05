@@ -11,7 +11,8 @@ test('odds and implied probability round-trip, rejecting invalid American prices
   assert.equal(impliedProbability(-110).toFixed(4), '0.5238');
   assert.ok(Number.isNaN(impliedProbability(50)));
   assert.ok(Number.isNaN(impliedProbability('x')));
-  for (const odds of [-250, -110, -100, 120, 450]) assert.equal(probabilityToOdds(impliedProbability(odds)), odds === 100 ? -100 : odds);
+  // One conversion site-wide (betting-math.js): even money is +100, as books quote it.
+  for (const odds of [-250, -110, -100, 120, 450]) assert.equal(probabilityToOdds(impliedProbability(odds)), odds === -100 ? 100 : odds);
   assert.ok(Number.isNaN(probabilityToOdds(0)));
 });
 
@@ -57,7 +58,7 @@ test('averageLine averages implied probability of started books at every change'
   const a = [{ ts:0, odds:100 }, { ts:10, odds:100 }], b = [{ ts:5, odds:-150 }, { ts:10, odds:-150 }];
   const average = averageLine([a, b]);
   assert.deepEqual(average.map(point => point.ts), [0, 5, 10]);
-  assert.equal(average[0].odds, -100);
+  assert.equal(average[0].odds, 100);
   assert.equal(average[1].odds, probabilityToOdds((.5 + .6) / 2));
   assert.deepEqual(averageLine([a]), []);
 });
