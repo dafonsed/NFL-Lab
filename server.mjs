@@ -1,4 +1,5 @@
 import { handleReferralLink } from './lib/accounts/referrals.mjs';
+import { trendsPreload } from './lib/trends-preload.mjs';
 import { handlePreviewLogin, previewLoginButton } from './lib/preview-login.mjs';
 import { renderContentSitemap } from './lib/content/registry.mjs';
 import { renderBeginnerGuide, renderLearnLibrary } from './lib/learn-library.mjs';
@@ -84,6 +85,14 @@ const allowRefresh = createRefreshGate({ windowMs: 60_000 });
 // Same test as accountRuntime(): configured account services that failed to start are not "no accounts".
 const accountsConfigured = () => Boolean(process.env.BETTER_AUTH_SECRET && process.env.BETTER_AUTH_URL);
 function json(res, data, status = 200) { return sendPublicResponse(res.req, res, JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } }); }
+// Research boards are the same for every visitor and are built only from the query, but a cold build
+// takes seconds (the NFL board 37 s on 4 Oct 2026: nflverse data, lines for every game, injuries,
+// weather). Vercel's CDN keeps each for a minute; after that it serves the last copy (for up to a day)
+// while one request rebuilds it in the background, so visitors stop waiting on cold builds and a busy
+// board is never more than about a minute behind. The page shows when its board was built, and a forced
+// refresh (refresh=1, the Refresh button) is never cached.
+const SHARED_DATA = 'public, max-age=0, s-maxage=60, stale-while-revalidate=86400';
+function sharedJson(res, data, fresh = false) { return sendPublicResponse(res.req, res, JSON.stringify(data), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': fresh ? 'no-store' : SHARED_DATA } }); }
 export const server = http.createServer(async (req, res) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
@@ -251,7 +260,7 @@ export const server = http.createServer(async (req, res) => {
     if(url.pathname==='/api/paper')return json(res,await (url.searchParams.get('sport')==='mlb'?mlb:store).paperPerformance(Object.fromEntries(url.searchParams)));
     if (url.pathname === '/api/performance') return json(res,await store.performance(Object.fromEntries(url.searchParams)));
     if (url.pathname === '/api/health') return json(res, { ok: true, app: 'independent-nfl-workspace', syncing, lastSync, refreshMinutes: REFRESH_MS / 60_000 });
-    if (url.pathname === '/api/simulation/catalog') return json(res, await simulation.catalog(Object.fromEntries(url.searchParams)));
+    if (url.pathname === '/api/simulation/catalog') return sharedJson(res, await simulation.catalog(Object.fromEntries(url.searchParams)));
     if (url.pathname === '/api/simulation/run') return json(res, await simulation.run(Object.fromEntries(url.searchParams)));
     if (url.pathname === '/api/simulation/props') return json(res, await simulationProps.board(Object.fromEntries(url.searchParams)));
     if (url.pathname === '/api/bets/catalog') return json(res,await betTracker.catalog(Object.fromEntries(url.searchParams)));
@@ -260,16 +269,16 @@ export const server = http.createServer(async (req, res) => {
     const liveRoute = /^\/api\/(nba|wnba|mlb)\/live$/.exec(url.pathname);
     if (liveRoute) return json(res, await liveSports.board({ ...Object.fromEntries(url.searchParams), sport: liveRoute[1] }));
     if (url.pathname === '/api/sports/performance') return json(res,await sports.performance(Object.fromEntries(url.searchParams)));
-    if (url.pathname === '/api/sports/catalog') return json(res, await sports.catalog(Object.fromEntries(url.searchParams),forceRefresh));
-    if (url.pathname === '/api/sports/board') return json(res, await sports.board(Object.fromEntries(url.searchParams),forceRefresh));
-    if (url.pathname === '/api/mlb/board') return json(res, await mlb.board(Object.fromEntries(url.searchParams), forceRefresh));
+    if (url.pathname === '/api/sports/catalog') return sharedJson(res, await sports.catalog(Object.fromEntries(url.searchParams),forceRefresh), forceRefresh);
+    if (url.pathname === '/api/sports/board') return sharedJson(res, await sports.board(Object.fromEntries(url.searchParams),forceRefresh), forceRefresh);
+    if (url.pathname === '/api/mlb/board') return sharedJson(res, await mlb.board(Object.fromEntries(url.searchParams), forceRefresh), forceRefresh);
     if (url.pathname === '/api/mlb/model') return json(res, mlbModelReport());
-    if (url.pathname === '/api/mlb/evidence') return json(res, await mlb.evidence(Object.fromEntries(url.searchParams)));
-    if (url.pathname === '/api/evidence') return json(res, await store.evidence(Object.fromEntries(url.searchParams)));
-    if (url.pathname === '/api/catalog') { const {current,weeks}=await store.catalog(forceRefresh); return json(res,{current,weeks}); }
-    if (url.pathname === '/api/landing/research') return json(res, landingResearch(await store.board({ market: 'rec_yds' })));
-    if (url.pathname === '/api/nfl/research') { const board=await store.board(Object.fromEntries(url.searchParams)); const player=board.players.find(p=>p.playerId===url.searchParams.get('player')); if(!player)return json(res,{error:'Player not found in this matchup.'},404); return json(res,{player,current:board.current,sources:board.datasets,definitions:board.definitions}); }
-    if (url.pathname === '/api/board') return json(res, compactNflBoard(await store.board(Object.fromEntries(url.searchParams), forceRefresh)));
+    if (url.pathname === '/api/mlb/evidence') return sharedJson(res, await mlb.evidence(Object.fromEntries(url.searchParams)));
+    if (url.pathname === '/api/evidence') return sharedJson(res, await store.evidence(Object.fromEntries(url.searchParams)));
+    if (url.pathname === '/api/catalog') { const {current,weeks}=await store.catalog(forceRefresh); return sharedJson(res,{current,weeks},forceRefresh); }
+    if (url.pathname === '/api/landing/research') return sharedJson(res, landingResearch(await store.board({ market: 'rec_yds' })));
+    if (url.pathname === '/api/nfl/research') { const board=await store.board(Object.fromEntries(url.searchParams)); const player=board.players.find(p=>p.playerId===url.searchParams.get('player')); if(!player)return json(res,{error:'Player not found in this matchup.'},404); return sharedJson(res,{player,current:board.current,sources:board.datasets,definitions:board.definitions}); }
+    if (url.pathname === '/api/board') return sharedJson(res, compactNflBoard(await store.board(Object.fromEntries(url.searchParams), forceRefresh)), forceRefresh);
     const names = { '/docs':'docs.html', '/docs.html':'docs.html', '/docs.css':'docs.css', '/docs.js':'docs.js', '/bets':'bets.html', '/bets/':'bets.html', '/bets.js':'bets.js', '/bet-legs.js':'bet-legs.js', '/bet-editor.js':'bet-editor.js', '/bet-utils.js':'bet-utils.js', '/presentation.js':'presentation.js', '/bets.css':'bets.css', '/wnba':'sports.html','/wnba/':'sports.html','/nba':'sports.html','/nhl':'sports.html','/soccer':'sports.html','/sports.js':'sports.js','/sports-view.js':'sports-view.js','/sports.css':'sports.css', '/nfl/live':'live.html', '/nfl/live/':'live.html', '/live.js':'live.js', '/live-game.js':'live-game.js', '/live.css':'live.css', '/live-utils.js':'live-utils.js', '/paper':'paper.html','/paper.js':'paper.js','/context-ui.js':'context-ui.js','/context.css':'context.css', '/performance':'performance.html', '/performance.js':'performance.js', '/forecast.css':'forecast.css', '/': 'index.html', '/nfl': 'index.html', '/mlb': 'mlb.html', '/mlb/': 'mlb.html', '/mlb.js': 'mlb.js', '/mlb-model.js':'mlb-model.js', '/mlb.css': 'mlb.css', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/manifest.webmanifest': 'manifest.webmanifest' };
     const pagePath = url.pathname.replace(/\/$/, '') || '/';
     for (const file of ['admin.js', 'admin.css', 'admin-catalog.js', 'admin-store.js', 'admin-values.js']) names['/' + file] = file;
@@ -338,7 +347,7 @@ export const server = http.createServer(async (req, res) => {
     if (!name) return errorResponse(req, res, url, 'Not found.', 404);
     const bytes = await fs.readFile(path.join(publicDir, name));
     const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.gz': 'application/gzip', '.webmanifest': 'application/manifest+json' };
-    const body = name === 'docs.html' ? withSiteChrome(bytes.toString('utf8'), { current: 'api' }).replace('</head>', siteChromeAssets() + '</head>') : name === 'login.html' && previewLoginButton(req, url) ? bytes.toString('utf8').replace('<p class="account-switch">', previewLoginButton(req, url) + '<p class="account-switch">') : ['login.html', 'register.html', ...Object.values(accountPages)].includes(name) ? bytes : name.endsWith('.html') ? renderSitePage(bytes.toString('utf8'), url, { features: req.sportslabFeatures || null, group: preferredGroup }) : bytes;
+    const body = name === 'docs.html' ? withSiteChrome(bytes.toString('utf8'), { current: 'api' }).replace('</head>', siteChromeAssets() + '</head>') : name === 'login.html' && previewLoginButton(req, url) ? bytes.toString('utf8').replace('<p class="account-switch">', previewLoginButton(req, url) + '<p class="account-switch">') : ['login.html', 'register.html', ...Object.values(accountPages)].includes(name) ? bytes : name === 'trends.html' ? trendsPreload(renderSitePage(bytes.toString('utf8'), url, { features: req.sportslabFeatures || null, group: preferredGroup }), url) : name.endsWith('.html') ? renderSitePage(bytes.toString('utf8'), url, { features: req.sportslabFeatures || null, group: preferredGroup }) : bytes;
     await sendPublicResponse(req, res, body, { headers: { 'Content-Type': (types[path.extname(name)] || 'text/plain') + '; charset=utf-8', 'Cache-Control': 'no-cache' } });
   } catch (e) { console.error('[request] Request failed.'); const status = e.status || 500; errorResponse(req, res, url, 'This request could not be completed. Please try again.', status); }
 });
