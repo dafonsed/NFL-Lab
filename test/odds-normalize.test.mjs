@@ -406,7 +406,7 @@ test('DFS lines match a book that labels the game with another sport; payout mul
   assert.equal(sportless.skip, undefined, 'a quote without a sport is kept');
   assert.equal(sportless.sport, 'Other');
   const { picks } = normalizeDfsRecords([{ id: 'g', sport: 'nfl', event: 'IND @ WAS', player: 'Josh Downs', market: 'Receiving Yards', line: 30.5, side: 'higher', app: 'PrizePicks', odds_type: 'goblin', payout_multiplier: 0.7, ts, startTime: start }], { syncedAt: ts });
-  assert.equal(picks[0].payoutMultiplier, 0.7);
+  assert.equal(picks[0].payoutMultiplier, undefined, 'the static 0.7 goblin default is not a real payout');
   assert.equal(normalizeRecord({ id: 'q', sport: 'nfl', event: 'IND @ WAS', market: 'Receiving Yards', side: 'over', book: 'PrizePicks', ts, type: 'prop', line: 90.5, player: 'Josh Downs', oddsType: 'demon', payoutMultiplier: 1.55 }).payoutMultiplier, 1.55);
 });
 
@@ -418,6 +418,8 @@ test('a payout multiplier repeated on nearly every goblin or demon line is a def
   assert.ok(flat.every(pick => pick.payoutMultiplier === undefined), 'the same 1.55 on all 25 demons is not a per-pick value');
   const varied = dfsPicks(Array.from({ length: 25 }, (_, i) => demon(i, 1.2 + (i % 5) * 0.25)), []);
   assert.deepEqual([...new Set(varied.map(pick => pick.payoutMultiplier))].sort(), [1.2, 1.45, 1.7, 1.95, 2.2]);
+  const small = dfsPicks([demon(1, 1), demon(2, 1.3)], []);
+  assert.deepEqual(small.map(pick => pick.payoutMultiplier), [undefined, 1.3], 'a flat 1x demon is never treated as a payout');
 });
 
 test('bet links that name the game instead of the book id are dropped; a future game is not live', async () => {

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { handleOddsApi } from '../lib/odds/http.mjs';
-import { createTransitionProvider } from '../lib/odds/providers.mjs';
+import { createTimeToLiveCache, createTransitionProvider } from '../lib/odds/providers.mjs';
 import { parseEvApiConfig } from '../lib/ev-api-proxy.mjs';
 import { MARKET_CONTROL_SCOPE, sourceControlKey } from '../lib/admin-market-controls.mjs';
 import { CONTRACT_ID, decodeSnapshot, encodeTable, QUOTE_DICTIONARY } from '../public/odds-contract.js';
@@ -162,6 +162,16 @@ test('DFS lines are priced on the server with the payout tables; missing apps ar
   assert.equal(lines.status, 200);
   assert.ok(lines.body.lines[0].probability > .5);
   assert.equal(lines.body.lines[1].probability, null, 'no sportsbook market: unknown, not made up');
+});
+
+test('a failed cached feed section serves its last result briefly, then fails', async () => {
+  const cache = createTimeToLiveCache(5, 20);
+  assert.equal(await cache('props', async () => 'first'), 'first');
+  await new Promise(resolve => setTimeout(resolve, 6));
+  assert.equal(await cache('props', async () => { throw new Error('upstream down'); }), 'first');
+  await new Promise(resolve => setTimeout(resolve, 21));
+  await assert.rejects(cache('props', async () => { throw new Error('upstream down'); }), /upstream down/);
+  assert.equal(await cache('props', async () => 'second'), 'second');
 });
 
 test('line history and prediction contracts come through the server, cleaned', async () => {
