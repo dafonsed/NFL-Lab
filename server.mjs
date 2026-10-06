@@ -1,6 +1,7 @@
 import { handleReferralLink } from './lib/accounts/referrals.mjs';
 import { trendsPreload } from './lib/trends-preload.mjs';
 import { createParlayPool } from './lib/parlay-pool.mjs';
+import { waitUntil } from '@vercel/functions';
 import { handlePreviewLogin, previewLoginButton } from './lib/preview-login.mjs';
 import { renderContentSitemap } from './lib/content/registry.mjs';
 import { renderBeginnerGuide, renderLearnLibrary } from './lib/learn-library.mjs';
@@ -56,7 +57,8 @@ const liveSports = new LiveSportsStore({ provider: sports.provider });
 const betTracker = new BetTrackerStore();
 const simulation = new SimulationStore({ nflProvider: store.provider, provider: sports.provider });
 const simulationProps = new SimulationPropsStore(createSimulationPropStores({ nfl: store, mlb, sports }));
-const parlayPool = createParlayPool({ nfl: store, mlb, sports });
+// Background pool rebuilds outlive the response on Vercel only when registered with waitUntil.
+const parlayPool = createParlayPool({ nfl: store, mlb, sports }, { defer: task => { try { waitUntil(task); } catch {} return task; } });
 let syncing = false, lastSync = null;
 async function sync() {
   if (syncing) return;
@@ -257,7 +259,10 @@ export const server = http.createServer(async (req, res) => {
     if (['/api/cron/predictions','/api/cron/mlb-predictions'].includes(url.pathname)) {
       const expected=process.env.CRON_SECRET ? Buffer.from('Bearer '+process.env.CRON_SECRET) : null, actual=Buffer.from(req.headers.authorization||'');
       if(!expected||expected.length!==actual.length||!timingSafeEqual(expected,actual))return json(res,{error:'Unauthorized'},401);
-      return json(res,await (url.pathname.includes('/mlb-')?mlb:store).captureDaily());
+      const captured=await (url.pathname.includes('/mlb-')?mlb:store).captureDaily();
+      // Pre-build the sport's parlay pool so the first visitor of the day doesn't wait for it.
+      const parlayPools=await parlayPool.warm([url.pathname.includes('/mlb-')?'mlb':'nfl']).catch(error=>({error:error.message}));
+      return json(res,{...captured,parlayPools});
     }
     // Data APIs: a coarse per-IP ceiling (accounts have their own exact limiter).
     if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth/') && !url.pathname.startsWith('/api/account/') && !allowApiRequest(clientIp(req))) {
@@ -286,7 +291,7 @@ export const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/catalog') { const {current,weeks}=await store.catalog(forceRefresh); return sharedJson(res,{current,weeks},forceRefresh); }
     if (url.pathname === '/api/landing/research') return sharedJson(res, landingResearch(await store.board({ market: 'rec_yds' })));
     if (url.pathname === '/api/nfl/research') { const board=await store.board(Object.fromEntries(url.searchParams)); const player=board.players.find(p=>p.playerId===url.searchParams.get('player')); if(!player)return json(res,{error:'Player not found in this matchup.'},404); return sharedJson(res,{player,current:board.current,sources:board.datasets,definitions:board.definitions}); }
-    if (url.pathname === '/api/trends/parlay') return sharedJson(res, await parlayPool(Object.fromEntries(url.searchParams), forceRefresh), forceRefresh);
+    if (url.pathname === '/api/trends/parlay') { const pool = await parlayPool(Object.fromEntries(url.searchParams), forceRefresh); return sharedJson(res, pool, forceRefresh || pool.refreshing === true); }
     if (url.pathname === '/api/board') return sharedJson(res, compactNflBoard(await store.board(Object.fromEntries(url.searchParams), forceRefresh)), forceRefresh);
     const names = { '/docs':'docs.html', '/docs.html':'docs.html', '/docs.css':'docs.css', '/docs.js':'docs.js', '/bets':'bets.html', '/bets/':'bets.html', '/bets.js':'bets.js', '/bet-legs.js':'bet-legs.js', '/bet-editor.js':'bet-editor.js', '/bet-utils.js':'bet-utils.js', '/presentation.js':'presentation.js', '/bets.css':'bets.css', '/wnba':'sports.html','/wnba/':'sports.html','/nba':'sports.html','/nhl':'sports.html','/soccer':'sports.html','/sports.js':'sports.js','/sports-view.js':'sports-view.js','/sports.css':'sports.css', '/nfl/live':'live.html', '/nfl/live/':'live.html', '/live.js':'live.js', '/live-game.js':'live-game.js', '/live.css':'live.css', '/live-utils.js':'live-utils.js', '/paper':'paper.html','/paper.js':'paper.js','/context-ui.js':'context-ui.js','/context.css':'context.css', '/performance':'performance.html', '/performance.js':'performance.js', '/forecast.css':'forecast.css', '/': 'index.html', '/nfl': 'index.html', '/mlb': 'mlb.html', '/mlb/': 'mlb.html', '/mlb.js': 'mlb.js', '/mlb-model.js':'mlb-model.js', '/mlb.css': 'mlb.css', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/manifest.webmanifest': 'manifest.webmanifest' };
     const pagePath = url.pathname.replace(/\/$/, '') || '/';
