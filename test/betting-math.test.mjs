@@ -87,3 +87,17 @@ test('DFS break-even has one definition for the DFS board and the fantasy lab', 
   assert.equal(breakEven([0, 2, 1]), null, 'more hits never pay less');
   assert.equal(breakEven([1.2, 0, 3]), null, 'a table that returns more than the stake with no hits');
 });
+
+test('Shin devig: equals additive on two-way markets, shades longshots harder than multiplicative, and is a pricing setting', async () => {
+  const { devig, implied, DEVIG_METHODS } = await import('../public/betting-math.js');
+  const { parsePreferences } = await import('../public/odds-contract.js');
+  const close = (a, b) => a.every((value, index) => Math.abs(value - b[index]) < 1e-9);
+  const twoWay = [1000, -2000].map(implied), threeWay = [150, 230, 190].map(implied);
+  assert.ok(close(devig(twoWay, 'shin'), devig(twoWay, 'additive')), 'two outcomes: Shin and additive agree');
+  assert.ok(devig(twoWay, 'shin')[0] < devig(twoWay, 'multiplicative')[0], 'the longshot keeps less of the margin than multiplicative gives it');
+  const shin = devig(threeWay, 'shin');
+  assert.ok(Math.abs(shin.reduce((a, b) => a + b, 0) - 1) < 1e-8 && !close(shin, devig(threeWay, 'additive')), 'three outcomes: sums to one, differs from additive');
+  assert.ok(close(devig([0.5, 0.5], 'shin'), [0.5, 0.5]), 'no margin: nothing to remove');
+  assert.ok(DEVIG_METHODS.includes('shin'));
+  assert.equal(parsePreferences(JSON.stringify({ devigMethod: 'shin' })).devigMethod, 'shin');
+});

@@ -40,7 +40,7 @@ export type ValueState = 'authoritative' | 'calculated' | 'unavailable' | 'stale
 // ---- Pricing preferences ----
 
 /** Devig methods (public/betting-math.js DEVIG_METHODS). An odds API may report others. */
-export type DevigMethod = 'multiplicative' | 'additive' | 'power' | 'probit' | (string & {});
+export type DevigMethod = 'multiplicative' | 'additive' | 'power' | 'probit' | 'shin' | (string & {});
 
 /** A member's reference-book rule (Pricing & filters → Sharp-book rules). */
 export interface BookRule {

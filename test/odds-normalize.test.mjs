@@ -201,7 +201,7 @@ test('raw two-sided odds → implied → devig → fair probability, with the me
   assert.equal(pct(power2), 57.74);
   assert.equal(pct(b.fair[0] - power2), -0.29, '57.45% fair does not clear a 2-pick Power slip');
   assert.equal(pct(fairFromAmerican([-170, 140]).fair[0] - power2), 2.44, '60.18% fair does');
-  assert.deepEqual([...DEVIG_METHODS], ['multiplicative', 'additive', 'power', 'probit']);
+  assert.deepEqual([...DEVIG_METHODS], ['multiplicative', 'additive', 'power', 'probit', 'shin']);
   for (const method of DEVIG_METHODS) {
     const [over, under] = fairFromAmerican([-150, 125], method).fair;
     assert.ok(Math.abs(over + under - 1) < 1e-8, `${method} sums to 1`);

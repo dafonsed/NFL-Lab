@@ -121,7 +121,7 @@ function legCard(c, index, result) {
 const relaxLabel = c => c.threshold !== undefined ? `Lower the trend to ${c.threshold}%` : c.perGame ? 'Allow same-game legs' : c.maxFavorite === null ? 'Remove the odds limit' : c.side ? 'Use Overs and Unders' : c.skipInjured === false ? 'Include injury-listed players' : c.altLines ? 'Use alternate lines' : 'Use every market';
 const relaxButton = (t, primary = false) => `<button class="${primary ? 'pb-cta' : 'pb-pill'}" type="button" data-relax='${esc(JSON.stringify(t.changes))}'>${esc(relaxLabel(t.changes))} <span class="pb-soft">→ ${t.legs} leg${t.legs === 1 ? '' : 's'}</span></button>`;
 const emptyState = (glyph, title, text, actions = '') => `<div class="pb-empty"><span class="pb-cta-icon" aria-hidden="true">${icon(glyph)}</span><strong>${esc(title)}</strong><p>${esc(text)}</p>${actions ? `<div class="pb-empty-actions">${actions}</div>` : ''}</div>`;
-const skeleton = () => `<div class="pb-skeleton" aria-hidden="true"><div class="pb-skeleton-summary"><b></b><b></b></div>${[0, 1, 2].map(() => '<div class="pb-skeleton-row"><i></i><span><b></b><b></b></span><em></em></div>').join('')}</div><p class="pb-faint pb-loading-note">Gathering every posted line and each player's recent games. The first load after a quiet spell can take up to a minute.</p>`;
+const skeleton = () => `<div class="pb-skeleton" aria-hidden="true"><div class="pb-skeleton-summary"><b></b><b></b></div>${[0, 1, 2].map(() => '<div class="pb-skeleton-row"><i></i><span><b></b><b></b></span><em></em></div>').join('')}</div><p class="pb-faint pb-loading-note">Gathering every posted line and each player's recent games. This first build of the slate takes a little while; after that it opens instantly.</p>`;
 
 function whyText(result) {
   const s = settings, t = result.ticket, n = result.legs.length, kind = s.side === 'over' ? 'Over' : s.side === 'under' ? 'Under' : 'side';
@@ -171,7 +171,7 @@ function methodView() {
 function hero(result) {
   const pool = state.pool, now = Date.now(), open = pool ? pool.legs.filter(l => Date.parse(l.start) > now) : [];
   $('#pb-slate').textContent = pool ? slateLabel() : 'Loading the slate';
-  $('#pb-asof').textContent = pool?.linesAt ? 'Lines as of ' + new Date(pool.linesAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'Posted lines';
+  $('#pb-asof').textContent = (pool?.linesAt ? 'Lines as of ' + new Date(pool.linesAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'Posted lines') + (state.updating ? ' · Updating…' : '');
   $('#pb-stat-lines').textContent = pool ? open.length.toLocaleString('en-US') : '—';
   $('#pb-stat-players').textContent = pool ? new Set(open.map(l => l.gameId + ':' + l.playerId)).size.toLocaleString('en-US') : '—';
   $('#pb-stat-games').textContent = pool ? new Set(open.map(l => l.gameId)).size.toLocaleString('en-US') : '—';
@@ -207,10 +207,28 @@ function render() {
   if (result.bench.length) { $('#pb-bench').hidden = false; $('#pb-bench-list').innerHTML = benchView(result); }
 }
 
-async function load({ force = false } = {}) {
-  const id = ++requestId; controller?.abort(); controller = new AbortController();
-  $('#pb-refresh').disabled = true; $('#pb-result').setAttribute('aria-busy', 'true');
-  if (!state.pool) $('#pb-result').innerHTML = skeleton();
+// The last pool for each slate is kept on this device (not account sync: it's ~100 KB and public data)
+// and shown at once on the next visit while fresh lines load. Older than a day, it's not shown.
+const POOL_CACHE = 'vo-parlay-pool-v1:';
+const poolKey = () => POOL_CACHE + sport + ':' + (sport === 'nfl' ? (state.season && state.week ? state.season + '-' + state.week : 'current') : state.date);
+function cachedPool() {
+  try { const pool = JSON.parse(globalThis.localStorage.getItem(poolKey())); return pool && Date.now() - Date.parse(pool.builtAt) < 86400000 && Array.isArray(pool.legs) ? pool : null; } catch { return null; }
+}
+function keepPool(pool) {
+  try { const { refreshing, ...saved } = pool; globalThis.localStorage.setItem(poolKey(), JSON.stringify(saved)); } catch { /* Storage full or disabled: the page still works. */ }
+}
+let followUp = null;
+function updating(on) { state.updating = on; $('#pb-asof').classList.toggle('is-updating', on); hero(state.pool ? buildParlay(state.pool, { ...settings, excluded: [...state.excluded] }) : null); }
+
+async function load({ force = false, quiet = false } = {}) {
+  const id = ++requestId; controller?.abort(); controller = new AbortController(); clearTimeout(followUp);
+  $('#pb-refresh').disabled = true;
+  if (!state.pool && !quiet) {
+    const cached = cachedPool();
+    if (cached) { state.pool = cached; render(); }
+  }
+  if (!state.pool) { $('#pb-result').setAttribute('aria-busy', 'true'); $('#pb-result').innerHTML = skeleton(); }
+  else updating(true);
   const q = new URLSearchParams({ sport });
   if (sport === 'nfl') { if (state.season && state.week) { q.set('season', state.season); q.set('week', state.week); } }
   else q.set('date', state.date);
@@ -218,6 +236,10 @@ async function load({ force = false } = {}) {
   try {
     const pool = await requestData('/api/trends/parlay?' + q, { signal: controller.signal, timeout: 150000 });
     if (id !== requestId) return;
+    state.updating = false; $('#pb-asof').classList.remove('is-updating');
+    // The server sent its saved pool and is building a newer one: ask again once it should be ready.
+    if (pool.refreshing) followUp = setTimeout(() => load({ quiet: true }), 20000);
+    keepPool(pool);
     state.pool = pool;
     const known = Object.keys(pool.markets);
     if (settings.markets.length && known.length) settings.markets = settings.markets.filter(m => known.includes(m));
@@ -229,10 +251,12 @@ async function load({ force = false } = {}) {
     updateUrl(); render();
   } catch (error) {
     if (id !== requestId || error.name === 'AbortError') return;
-    state.pool = null; hero(null);
+    // A saved slate already on screen stays up; only an empty page shows the error.
+    if (state.pool) { $('#pb-asof').textContent = 'Couldn’t refresh · showing lines as of ' + new Date(state.pool.linesAt || state.pool.builtAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); return; }
+    hero(null);
     $('#pb-result').setAttribute('aria-busy', 'false');
     $('#pb-result').innerHTML = emptyState('info', 'Lines could not load', error.message, '<button class="pb-cta" type="button" data-retry>Try again</button>');
-  } finally { if (id === requestId) $('#pb-refresh').disabled = false; }
+  } finally { if (id === requestId) { $('#pb-refresh').disabled = false; if (state.updating) { state.updating = false; $('#pb-asof').classList.remove('is-updating'); } } }
 }
 
 // ---------------------------------------------------------------- wiring
@@ -253,8 +277,8 @@ $('#pb-favorite').addEventListener('change', e => change({ maxFavorite: e.target
 $('#pb-stake').addEventListener('change', e => change({ stake: Number(e.target.value) }));
 $('#pb-injured').addEventListener('change', e => change({ skipInjured: e.target.checked }));
 $('#pb-alt').addEventListener('change', e => change({ altLines: e.target.checked }));
-$('#pb-week').addEventListener('change', e => { [state.season, state.week] = e.target.value ? e.target.value.split(':') : ['', '']; state.excluded.clear(); load(); });
-$('#pb-date').addEventListener('change', e => { if (!e.target.value) return; state.date = e.target.value; state.excluded.clear(); load(); });
+$('#pb-week').addEventListener('change', e => { [state.season, state.week] = e.target.value ? e.target.value.split(':') : ['', '']; state.excluded.clear(); state.pool = null; load(); });
+$('#pb-date').addEventListener('change', e => { if (!e.target.value) return; state.date = e.target.value; state.excluded.clear(); state.pool = null; load(); });
 document.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   const segment = b.closest('.pb-segment');
@@ -276,8 +300,8 @@ document.addEventListener('click', e => {
   }
   if (b.hasAttribute('data-reset-swaps')) { state.excluded.clear(); render(); }
   if (b.dataset.relax) { try { change(JSON.parse(b.dataset.relax)); } catch {} }
-  if (b.dataset.week) { [state.season, state.week] = b.dataset.week.split(':'); state.excluded.clear(); load(); }
-  if (b.dataset.date) { state.date = b.dataset.date; $('#pb-date').value = state.date; state.excluded.clear(); load(); }
+  if (b.dataset.week) { [state.season, state.week] = b.dataset.week.split(':'); state.excluded.clear(); state.pool = null; load(); }
+  if (b.dataset.date) { state.date = b.dataset.date; $('#pb-date').value = state.date; state.excluded.clear(); state.pool = null; load(); }
   if (b.hasAttribute('data-retry')) load({ force: true });
 });
 syncControls(); hero(null);

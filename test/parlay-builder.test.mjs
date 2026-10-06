@@ -2,7 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { HALF_LIFE, BASE_WEIGHT, FAR_LINE, milestoneSteps, bestAlternateLine, evaluateSide, qualifyingSides, buildParlay, relaxations, legReasons, legSummary, slateBaseRates, weightedTrend, record, toAmerican, toDecimal } from '../public/parlay-builder.js';
-import { boardLegs, createParlayPool } from '../lib/parlay-pool.mjs';
+import { boardLegs, createParlayPool, createSnapshotStore } from '../lib/parlay-pool.mjs';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { requiredFeature } from '../lib/accounts/entitlements.mjs';
 import { productTools, sportDestination, workspaceProduct } from '../public/navigation.js';
 import { siteContext } from '../lib/site-layout.mjs';
@@ -10,6 +13,7 @@ import { siteContext } from '../lib/site-layout.mjs';
 const NOW = Date.parse('2026-10-05T12:00:00Z'), LATER = '2026-10-06T00:15:00.000Z';
 const history = (values, { home = 1, opponent = 'LV', versus = [] } = {}) => values.map((value, i) => [`2026-09-${String(28 - i).padStart(2, '0')}`, value, home, versus.includes(i) ? 1 : 0, opponent]);
 const leg = (overrides = {}) => ({ id: 'g1:p1:rec_yds', key: 'nfl:g1:p1:rec_yds', player: 'Player One', playerId: 'p1', team: 'NO', opponent: 'ATL', position: 'WR', gameId: 'g1', game: 'ATL @ NO', home: true, start: LATER, market: 'rec_yds', line: 50.5, book: 'FanDuel', books: 3, over: -110, under: -110, projection: null, status: 'Active', concern: false, lineup: null, matchup: null, pitcher: null, games: history([60, 70, 40, 80, 55, 65, 30, 90, 75, 52]), ...overrides });
+const memorySnapshots = () => { const saved = new Map(); return { saved, read: async key => saved.get(key) ?? null, write: async (key, value) => { saved.set(key, JSON.parse(JSON.stringify(value))); } }; };
 
 test('odds conversions', () => {
   assert.equal(toDecimal(-110).toFixed(4), '1.9091');
@@ -173,8 +177,8 @@ test('the pool keeps open, priced, unexpired lines with the trends history and o
 test('the pool covers every market, reuses a recent build and reports a market that failed', async () => {
   let calls = 0;
   const nfl = { board: async ({ market }) => { calls++; if (market === 'pass_yds') throw Error('down'); return { ...nflBoard(), market }; } };
-  let time = NOW;
-  const pool = createParlayPool({ nfl }, { now: () => time });
+  let time = NOW, background = null;
+  const pool = createParlayPool({ nfl }, { now: () => time, snapshots: memorySnapshots(), defer: task => (background = task) });
   const data = await pool({ sport: 'nfl' });
   assert.equal(calls, 11);
   assert.deepEqual(data.slate, { season: 2026, week: 4 });
@@ -185,10 +189,14 @@ test('the pool covers every market, reuses a recent build and reports a market t
   await pool({ sport: 'nfl' });
   assert.equal(calls, 11, 'cached');
   time += 121_000;
-  await pool({ sport: 'nfl' });
-  assert.equal(calls, 22, 'rebuilt after two minutes');
+  const stale = await pool({ sport: 'nfl' });
+  assert.equal(stale.refreshing, true, 'after two minutes the saved pool is served at once while a new one builds');
+  assert.equal(stale.legs.length, 10);
+  await background;
+  assert.equal(calls, 22, 'rebuilt in the background');
+  assert.equal((await pool({ sport: 'nfl' })).refreshing, undefined, 'the fresh build is served next');
   await assert.rejects(pool({ sport: 'golf' }), /supported sport/);
-  const soccer = await createParlayPool({}, { now: () => NOW })({ sport: 'soccer', date: '2026-10-05' });
+  const soccer = await createParlayPool({}, { now: () => NOW, snapshots: memorySnapshots() })({ sport: 'soccer', date: '2026-10-05' });
   assert.deepEqual(soccer.legs, []);
   assert.ok(soccer.notes[0].includes('soccer'));
 });
@@ -260,4 +268,46 @@ test('a ticket with an alternate leg has no payout; swapping drops that alternat
   const priced = buildParlay({ legs: [pool.legs[1], leg({ id: 'g3:p3:rec_yds', playerId: 'p3', gameId: 'g3' })] }, { ...settings, altLines: false }, NOW);
   assert.equal(priced.ticket.priced, true);
   assert.ok(priced.ticket.payout > 0);
+});
+
+test('a cold server serves the saved pool at once and rebuilds it in the background', async () => {
+  let calls = 0, time = NOW, background = null;
+  const nfl = { board: async ({ market }) => { calls++; return { ...nflBoard(), market }; } };
+  const snapshots = memorySnapshots();
+  await createParlayPool({ nfl }, { now: () => time, snapshots })({ sport: 'nfl' });
+  assert.equal(calls, 11);
+  assert.equal(snapshots.saved.size, 1, 'the finished pool is saved');
+  // A new instance (empty memory) an hour later: answers from the snapshot without waiting on a build.
+  time += 3600_000;
+  const fresh = createParlayPool({ nfl }, { now: () => time, snapshots, defer: task => (background = task) });
+  const served = await fresh({ sport: 'nfl' });
+  assert.equal(served.refreshing, true);
+  assert.equal(served.legs.length, 11);
+  await background;
+  assert.equal(calls, 22);
+  // Older than a day, a snapshot isn't served: lines have moved, so the request waits for a build.
+  time += 25 * 3600_000;
+  const old = createParlayPool({ nfl }, { now: () => time, snapshots });
+  const rebuilt = await old({ sport: 'nfl' });
+  assert.equal(rebuilt.refreshing, undefined);
+  assert.equal(calls, 33);
+});
+
+test('saved pools are files when Blob is not configured, and a failed save is not an error', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'pool-'));
+  try {
+    const files = createSnapshotStore({ dir, cloud: false });
+    assert.equal(files.kind, 'file');
+    assert.equal(await files.read('missing'), null);
+    await files.write('["nfl","","",""]', { builtAt: '2026-10-05T12:00:00.000Z', legs: [1] });
+    assert.deepEqual(await files.read('["nfl","","",""]'), { builtAt: '2026-10-05T12:00:00.000Z', legs: [1] });
+    const blobs = new Map(), blob = { put: async (key, body) => blobs.set(key, body), get: async key => blobs.has(key) ? { stream: new Response(blobs.get(key)).body } : null };
+    const cloud = createSnapshotStore({ cloud: true, environment: 'production', blob });
+    await cloud.write('k', { builtAt: 'x' });
+    assert.ok([...blobs.keys()][0].startsWith('parlay-pools/production/'));
+    assert.deepEqual(await cloud.read('k'), { builtAt: 'x' });
+    const failing = { read: async () => null, write: async () => { throw Error('disk full'); } };
+    const pool = createParlayPool({ nfl: { board: async ({ market }) => ({ ...nflBoard(), market }) } }, { now: () => NOW, snapshots: failing });
+    assert.equal((await pool({ sport: 'nfl' })).legs.length, 11, 'the member still gets the pool');
+  } finally { await rm(dir, { recursive: true, force: true }); }
 });
