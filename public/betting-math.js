@@ -98,7 +98,7 @@ function normalQuantile(p) {
 }
 
 /** Devig methods the website implements. Multiplicative is the default. */
-export const DEVIG_METHODS = Object.freeze(['multiplicative', 'additive', 'power', 'probit']);
+export const DEVIG_METHODS = Object.freeze(['multiplicative', 'additive', 'power', 'probit', 'shin']);
 /** Version of this devig implementation, reported with every fair price it produces. */
 export const DEVIG_VERSION = 'visualodds-devig/1';
 
@@ -142,6 +142,23 @@ export function devig(probabilities, method = 'multiplicative') {
       if (total(middle) > 1) low = middle; else high = middle;
     }
     fair = scores.map(score => normalCdf(score - (low + high) / 2));
+  } else if (method === 'shin') {
+    // Shin (1993): the margin protects the book from a share z of informed money, so longshots carry more of
+    // it. z solves Σ p_i = 1 with p_i = (√(z² + 4(1 − z)·π_i²/Σπ) − z) / (2(1 − z)). With no margin (Σπ ≤ 1)
+    // there is no informed share to remove and the prices only need scaling to 100%.
+    /** @param {number} z */
+    const shares = z => values.map(value => (Math.sqrt(z * z + 4 * (1 - z) * value * value / sum) - z) / (2 * (1 - z)));
+    /** @param {number} z */
+    const total = z => shares(z).reduce((result, value) => result + value, 0);
+    if (sum <= 1) fair = values.map(value => value / sum);
+    else {
+      let low = 0, high = 1 - 1e-12;
+      for (let iteration = 0; iteration < 100; iteration++) {
+        const middle = (low + high) / 2;
+        if (total(middle) > 1) low = middle; else high = middle;
+      }
+      fair = shares((low + high) / 2);
+    }
   } else return [];
   return fair.every(value => value > 0 && value < 1) && Math.abs(fair.reduce((total, value) => total + value, 0) - 1) < 1e-8 ? fair : [];
 }
