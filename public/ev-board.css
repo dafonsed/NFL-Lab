@@ -147,7 +147,8 @@
 #ev-view .evb-bet .evb-bet-market{display:none}
 
 @media (max-width:1360px){
-  #ev-view .evb-table>thead th:nth-child(3),#ev-view .evb-table td.evb-market{display:none}
+  /* Boards that still have a Market column (tools rendered by ev.js) fold it into the bet below; the Positive EV board puts the market inside its Bet cell. */
+  #ev-view .evb-table:not(:has(.evb-pick))>thead th:nth-child(3),#ev-view .evb-table td.evb-market{display:none}
   #ev-view .evb-bet .evb-bet-market{display:block;color:var(--evb-sub)}
   #ev-view .evb-event{min-width:170px}
   #ev-view .evb-bet{min-width:190px}
@@ -174,6 +175,12 @@
   #ev-view .evb-event{grid-area:event;min-width:0}
   #ev-view .evb-market{display:none!important}
   #ev-view td.evb-bet{grid-area:bet;display:flex!important;align-items:center;min-width:0}
+  #ev-view td.evb-pick{grid-area:bet;min-width:0}
+  #ev-view td.evb-book-price{display:flex!important;align-items:center;gap:8px;white-space:nowrap}
+  #ev-view td.evb-book-price>span:not(.evb-book-logo){display:flex;flex-direction:column}
+  #ev-view .evb-pick-market{display:block;margin-bottom:3px;color:var(--evb-sub);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+  #ev-view .evb-pick>strong{display:block;color:var(--evb-text);font-size:15px;line-height:1.3}
+  #ev-view .evb-ev .evb-ev-per{display:block;margin-top:4px;color:var(--evb-sub);font-size:11px}
   #ev-view .evb-odds{grid-area:odds}
   #ev-view .evb-prob{grid-area:prob}
   #ev-view .evb-stake{grid-area:stake}

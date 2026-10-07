@@ -6,8 +6,9 @@ export function workspaceProduct(section) {
   return ['trends', 'trends-home', 'parlay'].includes(section) ? 'trends' : 'models';
 }
 export function productDashboardUrl(product, sport) {
-  const selected = Object.hasOwn(SPORTS, sport) ? sport : product === 'ev' ? 'all' : 'mlb';
-  return (product === 'ev' ? '/ev/dashboard' : product === 'trends' ? '/trends' : '/models') + '?sport=' + selected;
+  if (product === 'ev') return '/ev/dashboard';
+  const selected = Object.hasOwn(SPORTS, sport) ? sport : 'mlb';
+  return (product === 'trends' ? '/trends' : '/models') + '?sport=' + selected;
 }
 export function productTools(product, sport) {
   const selected = Object.hasOwn(SPORTS, sport) ? sport : 'mlb';
@@ -18,13 +19,16 @@ export function productTools(product, sport) {
   ];
   return sportTools(sport).filter(tool => !['ev', 'trends'].includes(tool.key)).map(tool => tool.key === 'research' ? { ...tool, label: 'Projections' } : tool);
 }
-export function betTrackerUrl(sport) {
-  return '/ev/tracker' + (Object.hasOwn(SPORTS, sport) ? '?sport=' + sport : '');
+// The bet tracker is part of +EV: one address, sport is a filter on the page.
+export function betTrackerUrl() {
+  return '/ev/tracker';
 }
 export function legacyBetTrackerUrl(url) {
   const path = url.pathname.replace(/\/$/, '');
   if (['/bets', '/bets.html'].includes(path) || path === '/ev' && url.hash === '#tracker') {
-    return '/ev/tracker' + url.search;
+    // Old links keep their other parameters; sport is a filter on the page now.
+    const params = new URLSearchParams(url.search); params.delete('sport');
+    return '/ev/tracker' + (params.size ? '?' + params : '');
   }
   return null;
 }
@@ -44,7 +48,7 @@ export function sportDestination(sport, section) {
   if (!Object.hasOwn(SPORTS, sport)) return '/research';
   if (section === 'home') return '/research?sport=' + sport;
   if (section === 'bets') return betTrackerUrl(sport);
-  if (section === 'ev') return '/ev?sport=' + sport;
+  if (section === 'ev') return '/ev';
   if (section === 'parlay') return '/' + sport + '?view=parlay';
   return sportTools(sport).find(tool => tool.key === section)?.href || '/' + sport;
 }

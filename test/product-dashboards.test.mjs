@@ -36,7 +36,7 @@ test('each workspace has its own dashboard focused on that product', () => {
   // Other products' panels never leak into a dashboard.
   assert.equal(load(renderProductDashboard(new URL('http://localhost/models?sport=nfl')))('#hd-ev,#hd-trends,#hd-tracker').length,0);
   assert.equal(load(renderProductDashboard(new URL('http://localhost/trends?sport=nfl')))('#hd-ev,#hd-picks,#hd-tracker').length,0);
-  assert.equal(load(renderProductDashboard(new URL('http://localhost/ev/dashboard?sport=all')))('#hd-picks,#hd-trends,#hd-games').length,0);
+  assert.equal(load(renderProductDashboard(new URL('http://localhost/ev/dashboard')))('#hd-picks,#hd-trends,#hd-games').length,0);
 });
 
 test('dashboards are the first link in each sidebar group and keep sport-aware links', () => {
@@ -47,9 +47,9 @@ test('dashboards are the first link in each sidebar group and keep sport-aware l
     assert.equal(group.attr('data-group'),product);
     const first=group.find('a').first();
     assert.equal(first.text().trim(),'Dashboard');
-    assert.equal(first.attr('href'),`${path}?sport=${sport}`);
+    assert.equal(first.attr('href'),product==='ev'?path:`${path}?sport=${sport}`,'+EV has one address; the other dashboards are per sport');
     assert.equal(first.attr('aria-current'),'page');
-    assert.equal(header(`.dashboard-primary-link[href="/ev/tracker?sport=${sport}"]`).length,1);
+    assert.equal(header(`.dashboard-primary-link[href="/ev/tracker"]`).length,1);
     assert.equal(header('.dashboard-primary-link[data-dashboard-section=home]').length,0,'no combined dashboard link');
     assert.equal(header('.dashboard-mobile-bar [data-sidebar-toggle]').attr('aria-controls'),'dashboard-sidebar');
   }

@@ -1,6 +1,8 @@
 import { browserAlertsControl, deliverAlerts, toggleBrowserAlerts } from './alert-delivery.js?v=1';
 import { wagerCard } from './ev-bet-card.js';
-import { renderEvBoard, renderEvBoardDetail, renderBetPanel, boostedOffer, boardIcon, bookLogo, startLabel, selectionText } from './ev-board.js?v=7';
+import { renderEvBoard, renderEvBoardDetail, renderBetPanel, boostedOffer, boardIcon, bookLogo, startLabel, selectionText, marketLabel } from './ev-board.js?v=7';
+// Feed quotes that only carry a raw market key ("football_player_touchdowns") get a readable name for display.
+const readableMarkets = quotes => { for (const q of quotes || []) if (q && !q.displayMarket && typeof q.market === 'string' && q.market.includes('_') && !/s/.test(q.market)) q.displayMarket = marketLabel(q.market); return quotes; };
 import { createEvSuite, EV_SUITE_TOOLS } from './ev-suite.js?v=local-suite-7';
 import { readSuiteState, writeSuiteState } from './ev-suite-storage.js?v=2';
 import { installMobileWorkspace, quoteRevision, preserveReadingOrder } from './ev-mobile.js';
@@ -110,7 +112,7 @@ void readQuoteCache().then(cache => {
   if (Array.isArray(cache.history) && !state.history.some(item => item.source === 'local-api')) state.history = trimHistory([...state.history, ...cache.history.filter(item => item?.source === 'local-api')]);
   // A cache older than 15 minutes holds prices the books may no longer offer; wait for the sync.
   if (Date.now() - Date.parse(cache.apiSyncedAt || 0) > 15 * 60_000 || (state.apiSyncedAt && Date.parse(state.apiSyncedAt) >= Date.parse(cache.apiSyncedAt || 0))) return;
-  state.quotes = [...state.quotes.filter(q => q.source !== 'local-api'), ...cache.quotes.filter(q => q?.source === 'local-api')];
+  state.quotes = readableMarkets([...state.quotes.filter(q => q.source !== 'local-api'), ...cache.quotes.filter(q => q?.source === 'local-api')]);
   // Cached prices show with the analytics they came with; each price's expiry still decides whether it is current.
   state.analytics = indexSnapshot({ ...(cache.snapshot || {}), quotes: state.quotes });
   // Cached pick'em lines stand in for the props request until it answers.
@@ -136,7 +138,8 @@ let expandedSharpKey = '';
 let sharpFiltersOpen = true, sharpSelectedBook = '', sharpSort = 'liquidity';
 const sportsbookNames = SPORTSBOOK_PLATFORMS;
 const fantasyNames = DFS_PLATFORMS;
-const brandMarks = Object.fromEntries([...SITE_PLATFORMS.map(item => item.name),'DraftKings Pick6','Pinnacle'].map(name => [name,platformAsset(name)]));
+// Logo for any platform name or feed slug, looked up from the catalog on demand.
+const brandMarks = new Proxy({}, { get: (_, name) => typeof name === 'string' ? platformAsset(name) : undefined });
 const brandMark = (name, cls = '') => platformAsset(name)
   ? `<img class="ev-brand-mark ${cls}" src="${platformAsset(name)}" alt="">`
   : `<span class="ev-brand-fallback ${cls}" aria-hidden="true">${esc(name.slice(0,2))}</span>`;
@@ -151,9 +154,17 @@ try {
   if (Number(saved?.kelly) >= 0 && Number(saved?.kelly) <= 1) kelly = Number(saved.kelly);
   if (Number(saved?.flatMultiplier) > 0 && Number(saved?.flatMultiplier) <= 10) flatMultiplier = Number(saved.flatMultiplier);
 } catch { /* Keep usable defaults when storage is unavailable. */ }
-const initialSport = new URLSearchParams(location.search).get('sport')?.toUpperCase();
-// Any sport the feed carries (Tennis, MMA ...) can be chosen, not only the six major leagues.
-let sport = initialSport === 'ALL' ? '' : knownSport(initialSport) || 'NFL';
+// Sport is a filter inside each tool, not part of the address: an old ?sport= link sets it once, then the
+// browser remembers the last choice. Any sport the feed carries (Tennis, MMA ...) can be chosen.
+const SPORT_KEY = 'sportslab-ev-sport';
+const readSavedSport = () => { try { return localStorage.getItem(SPORT_KEY); } catch { return null; } };
+const handedSport = /(?:^|;\s*)sl-ev-sport=([a-z]+)/.exec(document.cookie)?.[1];
+if (handedSport) document.cookie = 'sl-ev-sport=; Path=/; Max-Age=0; SameSite=Lax';
+const initialSport = (new URLSearchParams(location.search).get('sport') ?? handedSport ?? readSavedSport() ?? 'NFL').toUpperCase();
+let sport = initialSport === 'ALL' || initialSport === '' ? '' : knownSport(initialSport) || 'NFL';
+const rememberSport = () => { try { localStorage.setItem(SPORT_KEY, sport || 'all'); } catch {} };
+const toolAddress = () => location.pathname + '#' + active;
+if (location.search) history.replaceState(history.state, '', location.pathname + location.hash);
 let parlayIds = Array.isArray(state.suite?.builderIds) ? state.suite.builderIds.filter(id=>state.quotes.some(q=>q.id===id)) : [], fantasyIds = [], fantasyApp = '', stake = 100, fantasyStake = 10, slipNotice = '';
 // Adds a pick to the slip the way the app builds entries: one pick per player (a new pick of a player
 // replaces their old one, including the other side of the same line), no more picks than the app's
@@ -194,7 +205,7 @@ let editing = null;
 // Published standard payouts fill in until the member saves their own table for an app and size.
 const paytables = () => withStandardPaytables(state.paytables, apiPaytables);
 const dfsWorkspace = createDfsWorkspace({onDeleteSlip:id=>{state.slips=state.slips.filter(slip=>slip.id!==id);commit();},getState:()=>({...state,quotes:eligibleQuotes(state.quotes),bookAvailable,paytables:paytables(),devigMethod:suite.settings().devigMethod,payoutSource:(app,size)=>paytableSource(state.paytables,app,size,apiPaytables),dfsLoading:dfsLoading&&!dfsLoaded}),redraw:()=>redrawDfsBoard(),onSave:slip=>{state.slips.push(slip);commit();},onConfigure:picks=>{fantasyIds=picks.map(item=>item.id);fantasyApp=picks[0].app;setTool('slip');}});
-const oddsScreen = createOddsScreen({storage:localStorage,defaultFormat:getAccountPreferences().oddsFormat,getSettings:()=>suite.settings(),getQuotes:()=>eligibleQuotes(oddsQuotes()),getAnalytics:()=>state.analytics,now:serverNow,getSportsbookState:()=>sportsbookState,onAllSportsbooks:()=>{const saved=saveSportsbookState('');document.dispatchEvent(new CustomEvent(STATE_CHANGE_EVENT,{detail:{state:'',saved}}));},brandMark,redraw:()=>render(),onSport:value=>{sport=value;history.replaceState(history.state,'',`${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}#odds`);}});
+const oddsScreen = createOddsScreen({storage:localStorage,defaultFormat:getAccountPreferences().oddsFormat,getSettings:()=>suite.settings(),getQuotes:()=>eligibleQuotes(oddsQuotes()),getAnalytics:()=>state.analytics,now:serverNow,getSportsbookState:()=>sportsbookState,onAllSportsbooks:()=>{const saved=saveSportsbookState('');document.dispatchEvent(new CustomEvent(STATE_CHANGE_EVENT,{detail:{state:'',saved}}));},brandMark,redraw:()=>render(),onSport:value=>{sport=value;rememberSport();}});
 const suite = createEvSuite({
   getState:()=>state, save:persist, redraw:render, navigate:key=>setTool(key==='tracker'&&!accountSyncState().userId?'ledger':key), getTool:()=>active,
   nativeViews:['ev-pre','ev-live','arb-pre','arb-live','middles','odds','sharp','parlay'],
@@ -351,7 +362,7 @@ async function syncLocalApi() {
   const { snapshot, dropped } = result;
   if (state !== workspace) throw Object.assign(Error('The workspace changed during sync. Try again after your import. Saved prices were kept.'), { retryable: false });
   const existing = new Map(state.quotes.map(quote => [quote.id, quote]));
-  state.quotes = snapshot.quotes;
+  state.quotes = readableMarkets(snapshot.quotes);
   state.analytics = indexSnapshot(snapshot);
   lastSnapshot = snapshot;
   for (const quote of snapshot.quotes) {
@@ -432,7 +443,7 @@ function renderNav() {
 }
 // Tool dialogs belong to the tool that opened them; switching tools closes them.
 const closeToolDialogs = () => document.querySelectorAll('dialog#evx-dialog[open]').forEach(dialog => dialog.close());
-function setTool(key) { if (key === 'tracker') return location.assign(betTrackerUrl(sport.toLowerCase())); if (!toolMeta[key]) return; closeToolDialogs(); active = key; pairVisibleCount = 40; bookmaker = ''; marketType = ''; showAllBooks = false; bookMenuOpen = false; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; $('.ev-tool-details').open = false; history.replaceState(history.state, '', location.pathname + location.search + '#' + key); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function setTool(key) { if (key === 'tracker') return location.assign(betTrackerUrl()); if (!toolMeta[key]) return; closeToolDialogs(); active = key; pairVisibleCount = 40; bookmaker = ''; marketType = ''; showAllBooks = false; bookMenuOpen = false; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; $('.ev-tool-details').open = false; history.replaceState(history.state, '', location.pathname + location.search + '#' + key); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 // Sportsbook prices come only from the quote API, so there is no manual "add price" action.
 function action(label, type, extra = '') { return type === 'quote' ? '' : button(label, `data-add="${type}" ${extra}`); }
 const filterIcons = {
@@ -531,9 +542,7 @@ function render() {
     if (link.closest('.site-sports')) return;
     const url = new URL(link.href);
     if (!['/ev', '/ev/tracker', '/ev/dashboard'].includes(url.pathname)) return;
-    if (sport) url.searchParams.set('sport', sport.toLowerCase());
-    else if (url.pathname === '/ev') url.searchParams.set('sport', 'all');
-    else url.searchParams.delete('sport');
+    url.searchParams.delete('sport');
     link.href = url.pathname + url.search + url.hash;
   });
   // Sport menus list the major leagues plus every other sport present in the feed.
@@ -952,7 +961,8 @@ let pairVisibleCount = 40;
 const pairDetails = new Map();
 const pairContext = extra => ({oddsLabel, age, bookAvailable, bookOrder:sportsbookNames, pinned:id => Boolean(state.suite?.flags?.[id]?.pin), ...extra});
 const pairKey = (a, b) => `${a.id}|${b.id}`;
-const pairMarket = q => q.displayMarket || (q.player ? String(q.market).replace(q.player, '').trim() : q.market);
+// Raw market keys ("football_team_points") read as names ("Team points"); kept self-contained for the row tests.
+const pairMarket = q => { const text = String((q.displayMarket || (q.player ? String(q.market).replace(q.player, '').trim() : q.market)) ?? ''); if (!text.includes('_') || /\s/.test(text)) return text; const words = text.replace(/^(?:americanfootball|football|basketball|baseball|icehockey|hockey|soccer|tennis|mma|golf|esports)_/i, '').replace(/_+/g, ' ').trim(); return words.charAt(0).toUpperCase() + words.slice(1); };
 const pairBar = ratio => Math.max(6, Math.min(100, ratio * 100)).toFixed(1);
 const pairCapacity = plan => plan.limitsKnown && Number.isFinite(plan.maximumFeasibleTotal) ? money(plan.maximumFeasibleTotal) : Number.isFinite(plan.maximumFeasibleTotal) ? `≤ ${money(plan.maximumFeasibleTotal)}` : 'Not supplied';
 const pairOldest = (...quotes) => quotes.map(q => q.ts).sort()[0];
@@ -1646,7 +1656,7 @@ function fieldMarkup(field, item) {
   return `<label>${esc(label)}<input name="${name}" type="${type}" value="${esc(adjusted)}" ${required ? 'required' : ''} ${attributes} ${type === 'text' ? 'maxlength="180"' : ''}></label>`;
 }
 function openForm(type, id = null, presets = {}) {
-  if (type === 'bet') return location.assign(betTrackerUrl(sport.toLowerCase()));
+  if (type === 'bet') return location.assign(betTrackerUrl());
   if (type === 'quote') return;
   const old = id ? state[collection[type]].find(x => x.id === id) : null;
   const item = { sport: sport || 'NFL', type:'game', side:'Over', live:false, exchange:false, liquidity:0, probability:.5, date:new Date().toISOString().slice(0,10), result:'open', kind:'price', threshold:0, enabled:true, ...old, ts:now(), ...presets };
@@ -1765,13 +1775,13 @@ $('#ev-timing-toggle').addEventListener('click', () => {
   active = active === 'ev-live' ? 'ev-pre' : 'ev-live';
   detailQuoteId = '';
   bookMenuOpen = false;
-  history.replaceState(history.state, '', location.pathname + location.search + '#' + active);
+  history.replaceState(history.state, '', toolAddress());
   render();
 });
 document.querySelector('[data-ev-focus-search]')?.addEventListener('click', () => { if (active === 'odds') { $('#os-search')?.focus(); return; } if (active === 'fantasy') { $('#dfs-search')?.focus(); return; } document.body.classList.toggle('ev-search-open'); $('#ev-search').focus(); });
 $('#ev-search').addEventListener('keydown', event => { if (event.key === 'Escape') { document.body.classList.remove('ev-search-open'); document.querySelector('[data-ev-focus-search]')?.focus(); } });
 $('#ev-odds-tabs').addEventListener('click', event => { const tab = event.target.closest('[data-odds-tab]'); if (tab) { marketType = tab.dataset.oddsTab; render(); } });
-$('#ev-reset-filters').addEventListener('click', () => { bookmaker = ''; selectedSportsbooks = null; bookMenuOpen = false; marketType = ''; search = ''; evLeague = ''; evDateRange = 'all'; evMaxOdds = '200'; toolFilters = { ...toolFilters, evMinOdds:'', minEv:'', minProb:'' }; saveToolFilters(toolFilters, window.localStorage); evSort = 'ev'; designSort = 'recommended'; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; if (sport !== '') { sport = ''; history.replaceState(history.state, '', location.pathname + '?sport=all' + location.hash); } render(); });
+$('#ev-reset-filters').addEventListener('click', () => { bookmaker = ''; selectedSportsbooks = null; bookMenuOpen = false; marketType = ''; search = ''; evLeague = ''; evDateRange = 'all'; evMaxOdds = '200'; toolFilters = { ...toolFilters, evMinOdds:'', minEv:'', minProb:'' }; saveToolFilters(toolFilters, window.localStorage); evSort = 'ev'; designSort = 'recommended'; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; if (sport !== '') { sport = ''; rememberSport(); } render(); });
 $('#ev-market-type').addEventListener('change', event => { marketType = event.target.value; render(); });
 $('#ev-reference-market').addEventListener('change', event => { marketType = event.target.value; render(); });
 $('#ev-reference-league').addEventListener('change', event => { evLeague = event.target.value; render(); });
@@ -1788,7 +1798,7 @@ $('.ev-filter-panel').addEventListener('change', event => {
   if (!control) return;
   const value = control.value;
   switch (control.dataset.filter) {
-    case 'sport': sport = value; history.replaceState(history.state, '', location.pathname + '?sport=' + encodeURIComponent((sport || 'all').toLowerCase()) + location.hash); break;
+    case 'sport': sport = value; rememberSport(); break;
     case 'platform': bookmaker = value; break;
     case 'league': designFilters.league = value; break;
     case 'market': marketType = value; break;
@@ -1797,7 +1807,7 @@ $('.ev-filter-panel').addEventListener('change', event => {
       if (active === 'arb-pre' || active === 'arb-live') {
         active = value === 'live' ? 'arb-live' : 'arb-pre';
         designFilters.period = 'all';
-        history.replaceState(history.state, '', location.pathname + location.search + '#' + active);
+        history.replaceState(history.state, '', toolAddress());
       } else designFilters.period = value;
       break;
     case 'side': designFilters.side = value; break;
@@ -1843,12 +1853,12 @@ $('#ev-detail').addEventListener('click', event => {
 });
 $('#ev-sport').addEventListener('change', event => {
   sport = event.target.value;
-  history.replaceState(history.state, '', `${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}${location.hash}`);
+  rememberSport();
   render();
 });
 $('#ev-reference-sport').addEventListener('change', event => {
   sport = event.target.value;
-  history.replaceState(history.state, '', `${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}${location.hash}`);
+  rememberSport();
   render();
 });
 $('#ev-search').addEventListener('input', event => { search = event.target.value.toLowerCase().trim(); evVisibleCount = 40; render(); });
@@ -1906,7 +1916,7 @@ $('#ev-view').addEventListener('click', event => {
   if (target.dataset.sharpAnalysis) { const actions = target.closest('.sm-panel-actions'); if (!actions) return; showBetComparison(target.dataset.sharpAnalysis, 'quote', {anchor:actions}); return actions.nextElementSibling?.matches('.bet-inline-mount') && actions.nextElementSibling.scrollIntoView({block:'nearest'}); }
   if (target.hasAttribute('data-sharp-filters')) { sharpFiltersOpen = !sharpFiltersOpen; return render(); }
   if (target.hasAttribute('data-sharp-refresh')) { render(); $('#ev-notice').textContent = state.quotes.length ? 'Comparison refreshed from the latest prices.' : 'No prices yet. They appear once the quote feed updates.'; return; }
-  if (target.hasAttribute('data-sharp-clear')) { search = ''; marketType = ''; bookmaker = ''; sport = ''; history.replaceState(history.state, '', `${location.pathname}?sport=all${location.hash}`); localStorage.setItem('sportslab-ev-sharp-min','1000'); return render(); }
+  if (target.hasAttribute('data-sharp-clear')) { search = ''; marketType = ''; bookmaker = ''; sport = ''; rememberSport(); localStorage.setItem('sportslab-ev-sharp-min','1000'); return render(); }
   if (target.dataset.sort) { evSort = target.dataset.sort; return render(); }
   if (target.dataset.evbToggle) return toggleEvBoardRow(target.dataset.evbToggle);
   if (target.dataset.evbRefresh) { toggleEvBoardRow(target.dataset.evbRefresh); toggleEvBoardRow(target.dataset.evbRefresh); return $('#ev-view').querySelector(`[data-evb-refresh="${CSS.escape(target.dataset.evbRefresh)}"]`)?.focus({preventScroll:true}); }
@@ -1939,7 +1949,7 @@ $('#ev-view').addEventListener('click', event => {
   }
   if (target.dataset.sharpExpand) { expandedSharpKey = expandedSharpKey === target.dataset.sharpExpand ? '__closed__' : target.dataset.sharpExpand; return render(); }
   if (target.dataset.tool) return setTool(target.dataset.tool);
-  if (target.hasAttribute('data-tool-clear')) { search = ''; sport = ''; history.replaceState(history.state, '', `${location.pathname}?sport=all${location.hash}`); return render(); }
+  if (target.hasAttribute('data-tool-clear')) { search = ''; sport = ''; rememberSport(); return render(); }
   if (target.hasAttribute('data-replay-live')) return $('#ev-view-actions [data-replay-live]')?.click();
   if (target.hasAttribute('data-arb-clear')) return $('#ev-reset-filters').click();
   if (target.dataset.add) return openForm(target.dataset.add, null, { kind:target.dataset.kind || 'price', live:target.dataset.live === 'true', exchange:target.dataset.exchange === 'true' });
@@ -1984,8 +1994,8 @@ $('#ev-view').addEventListener('change', event => {
   if (active === 'fantasy' && dfsWorkspace.change(event)) return;
   const t = event.target;
   if (t.dataset.toolFilter) { toolFilters = { ...toolFilters, [t.dataset.toolFilter]: t.value }; saveToolFilters(toolFilters, window.localStorage); pairVisibleCount = 40; parlayVisibleCount = 40; slipVisibleCount = 40; render(); $(`[data-tool-filter="${t.dataset.toolFilter}"]`)?.focus(); return; }
-  if (t.hasAttribute('data-tool-sport')) { sport = t.value; history.replaceState(history.state, '', `${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}${location.hash}`); render(); return; }
-  if (t.id === 'sharp-sport') { sport = t.value; history.replaceState(history.state, '', `${location.pathname}?sport=${encodeURIComponent((sport || 'all').toLowerCase())}${location.hash}`); render(); }
+  if (t.hasAttribute('data-tool-sport')) { sport = t.value; rememberSport(); render(); return; }
+  if (t.id === 'sharp-sport') { sport = t.value; rememberSport(); render(); }
   else if (t.id === 'sharp-market') { marketType = t.value; render(); }
   else if (t.id === 'sharp-min') { localStorage.setItem('sportslab-ev-sharp-min', String(Math.max(0,Number(t.value)||0))); render(); }
   else if (t.id === 'ev-bankroll') { stake = Math.max(.01,Number(t.value)||100); render(); }

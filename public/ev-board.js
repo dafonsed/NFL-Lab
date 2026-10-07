@@ -1,6 +1,6 @@
 // Positive EV board: one dense, sortable row per opportunity with an inline
 // book-by-book price grid. Rendering only; ev.js supplies data and handlers.
-import { platformAsset } from './platform-catalog.js';
+import { platformAsset, platformLabel } from './platform-catalog.js';
 import { leagueMark } from './sports-identity.js';
 import { effectiveDecimal, decimalToAmerican, expectedValue } from './betting-math.js';
 import { money, percent } from './odds-format.js';
@@ -42,8 +42,17 @@ export function startLabel(quote) {
 }
 
 const lineText = quote => quote.line === '' || quote.line == null ? '' : ` ${quote.type === 'spread' && Number(quote.line) > 0 ? '+' : ''}${quote.line}`;
+// Raw market keys ("football_player_touchdowns") read as labels ("Player touchdowns"); readable names pass through.
+export const marketLabel = value => {
+  const text = String(value ?? '');
+  if (!text.includes('_') || /\s/.test(text)) return text;
+  const words = text.replace(/^(?:americanfootball|football|basketball|baseball|icehockey|hockey|soccer|tennis|mma|golf|esports)_/i, '').replace(/_+/g, ' ').trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
+// Raw feed keys ("sports_interaction") read as names; names the feed already cased ("DraftKings") pass through.
+export const bookName = name => /_|^[a-z0-9]+$/.test(String(name ?? '')) ? platformLabel(name) : String(name ?? '');
 // Feed quotes carry `selection` (team, Over/Under, Draw); `side` is the internal home/away/over key.
-const propStat = quote => quote.player && quote.displayMarket && !/^player prop$/i.test(quote.displayMarket) && quote.displayMarket !== quote.player ? quote.displayMarket : '';
+const propStat = quote => quote.player && quote.displayMarket && !/^player prop$/i.test(quote.displayMarket) && quote.displayMarket !== quote.player ? marketLabel(quote.displayMarket) : '';
 export const selectionText = quote => {
   const stat = propStat(quote), pick = String(quote.selection || quote.side);
   // Yes/no props read as the bet: "Darren Waller Last Touchdown Scorer", "... Last Touchdown Scorer: No".
@@ -66,15 +75,15 @@ export function renderEvBoard(ctx) {
     const width = Math.max(6, Math.min(100, ev / maxEv * 100));
     const tier = ev >= .05 ? 'high' : ev >= .02 ? 'mid' : 'low';
     const sportKey = String(q.sport || '').toLowerCase();
-    const market = q.displayMarket || (q.player ? String(q.market).replace(q.player, '').trim() : q.market);
+    const market = marketLabel(q.displayMarket || (q.player ? String(q.market).replace(q.player, '').trim() : q.market));
     const fairOdds = fairAmerican != null ? oddsLabel(fairAmerican) : '—';
+    // Row order follows the scan: edge, the bet itself, the game, where to place it, then fair value and stake.
     return `<tr class="evb-row${open ? ' is-open' : ''}${flags.pin ? ' is-pinned' : ''}" data-evb-row="${esc(q.id)}" data-wager-id="${esc(q.id)}">
-      <td class="evb-ev" data-tier="${tier}"><strong>${(ev * 100).toFixed(2)}%</strong><span class="evb-ev-bar" aria-hidden="true"><i style="width:${width.toFixed(1)}%"></i></span>${flags.pin ? `<small class="evb-pin">${boardIcon('pin', 12)}Pinned</small>` : ''}</td>
-      <td class="evb-event"><small>${esc(startLabel(q))}</small><strong>${esc(q.displayEvent || q.event)}</strong><span class="evb-league">${leagueMark(sportKey) || ''}<span>${esc(q.sport)}${q.league && q.league !== q.sport ? ` · ${esc(q.league)}` : ''}</span></span></td>
-      <td class="evb-market"><span>${esc(market)}</span>${q.alt ? '<small class="evb-alt" title="An alternate line, not the book’s main line">Alt line</small>' : ''}${q.live ? '<small class="evb-live-dot">Live</small>' : ''}</td>
-      <td class="evb-bet"><span class="evb-book-logo">${bookLogo(q.book, 30)}</span><span><strong>${esc(selectionText(q))}</strong><small class="evb-bet-market">${esc(market)}</small><small>${esc(q.book)}${Number(q.liquidity) > 0 ? ` · ${money(Number(q.liquidity))} avail.` : ''}</small></span></td>
-      <td class="evb-odds"><span class="evb-price">${esc(oddsLabel(q.odds))}</span><small>Fair ${esc(fairOdds)}</small></td>
-      <td class="evb-prob"${fairBooks.length ? ` title="Fair price from ${esc(fairBooks.join(', '))}"` : ''}><strong>${Number.isFinite(fair) ? percent(fair) : '—'}</strong><small>${fairBooks.length ? `Fair from ${fairBooks.length} ${fairBooks.length === 1 ? 'book' : 'books'}` : 'No-vig'}</small></td>
+      <td class="evb-ev" data-tier="${tier}"><strong>${(ev * 100).toFixed(2)}%</strong><small class="evb-ev-per">+${money(ev * 100)} per $100</small><span class="evb-ev-bar" aria-hidden="true"><i style="width:${width.toFixed(1)}%"></i></span>${flags.pin ? `<small class="evb-pin">${boardIcon('pin', 12)}Pinned</small>` : ''}</td>
+      <td class="evb-pick"><small class="evb-pick-market">${esc(market)}${q.alt ? '<span class="evb-alt" title="An alternate line, not the book’s main line">Alt</span>' : ''}${q.live ? '<span class="evb-live-dot">Live</span>' : ''}</small><strong>${esc(selectionText(q))}</strong></td>
+      <td class="evb-event"><strong>${esc(q.displayEvent || q.event)}</strong><span class="evb-league">${leagueMark(sportKey) || ''}<span>${esc(q.sport)}${q.league && q.league !== q.sport ? ` · ${esc(q.league)}` : ''}</span><small>${esc(startLabel(q))}</small></span></td>
+      <td class="evb-odds evb-book-price"><span class="evb-book-logo">${bookLogo(q.book, 30)}</span><span><span class="evb-price">${esc(oddsLabel(q.odds))}</span><small>${esc(bookName(q.book))}${Number(q.liquidity) > 0 ? ` · ${money(Number(q.liquidity))}` : ''}</small></span></td>
+      <td class="evb-prob"${fairBooks.length ? ` title="Fair price from ${esc(fairBooks.join(', '))}"` : ''}><strong>Fair ${esc(fairOdds)}</strong><small>${Number.isFinite(fair) ? percent(fair) : '—'} ${fairBooks.length ? `from ${fairBooks.length} ${fairBooks.length === 1 ? 'book' : 'books'}` : 'no-vig'}</small></td>
       <td class="evb-stake"><strong>${money(stake)}</strong><small>${esc(ctx.kellyLabel)}</small></td>
       <td class="evb-actions"><div>
         ${hasBetLink(q) ? `<button type="button" class="evb-link" data-suite-action="link" data-id="${esc(q.id)}" aria-label="Open ${esc(q.book)} bet link">Bet${boardIcon('link', 13)}</button>` : ''}
@@ -84,7 +93,7 @@ export function renderEvBoard(ctx) {
       </div></td>
     </tr>${open ? renderEvBoardDetail(ctx, q, fair, ev) : ''}`;
   }).join('');
-  return `<div class="evb-table-wrap"><table class="evb-table" aria-label="${ctx.live ? 'Live' : 'Pregame'} positive EV bets"><thead><tr>${sortHeader('+EV%', 'ev', sort, 'class="evb-col-ev"')}${sortHeader('Event', 'event', sort)}<th scope="col">Market</th><th scope="col">Bet &amp; book</th>${sortHeader('Odds', 'odds', sort)}<th scope="col" title="Consensus no-vig probability from the other books">Probability</th><th scope="col" title="Uses your bankroll and Kelly multiplier">Rec. bet</th><th scope="col" class="evb-col-actions"><span class="sr-only">Actions</span></th></tr></thead><tbody>${body}</tbody></table></div>`;
+  return `<div class="evb-table-wrap"><table class="evb-table" aria-label="${ctx.live ? 'Live' : 'Pregame'} positive EV bets"><thead><tr>${sortHeader('+EV%', 'ev', sort, 'class="evb-col-ev"')}<th scope="col">Bet</th>${sortHeader('Event', 'event', sort)}${sortHeader('Best price', 'odds', sort)}<th scope="col" title="Consensus no-vig price and probability from the other books">Fair value</th><th scope="col" title="Uses your bankroll and Kelly multiplier">Rec. bet</th><th scope="col" class="evb-col-actions"><span class="sr-only">Actions</span></th></tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
 // Expanded bet panel shared by Positive EV, DFS and Arbitrage: boost inputs and
@@ -125,7 +134,7 @@ export function renderEvBoardDetail(ctx, quote, fair) {
       best:bestIndex >= 0 ? { book:model.columns[bestIndex].name, value:row.prices[bestIndex].value } : null,
       cells:row.prices.map(price => ({ value:price.value, sub:price.liquidity, best:price.best })) };
   });
-  return renderBetPanel({ id:`evb-detail-${id}`, colspan:8, label:`Price comparison for ${selectionText(quote)}`,
+  return renderBetPanel({ id:`evb-detail-${id}`, colspan:7, label:`Price comparison for ${selectionText(quote)}`,
     boosts:[{ book:quote.book, attrs:`data-evb-boost="${esc(id)}" data-odds="${esc(quote.odds)}" data-fair="${esc(fair)}"` }],
     tools:[
       { icon:'calculator', label:'Full analysis and calculator', attrs:`data-evb-analysis="${esc(id)}"` },

@@ -53,7 +53,7 @@ test('dashboard and EV navigation share one tracker route and retain sport conte
     assert.equal(sportDestination(sport,'bets'),destination);
     const dashboard=load(siteHeader(new URL('https://sportslab.local/'+sport)));
     const ev=load(siteHeader(new URL('https://sportslab.local/ev?sport='+sport)));
-    assert.equal(dashboard('.site-product-menu [data-product=ev]').attr('href'),'/ev/dashboard?sport='+sport);
+    assert.equal(dashboard('.site-product-menu [data-product=ev]').attr('href'),'/ev/dashboard');
     const overview=load(siteHeader(new URL('https://sportslab.local/ev/dashboard?sport='+sport)));
     assert.equal(overview(`.dashboard-primary-link[href="${destination}"]`).length,1);
     assert.equal(ev(`.dashboard-primary-link[href="${destination}"]`).length,1);
@@ -67,8 +67,8 @@ test('dashboard and EV navigation share one tracker route and retain sport conte
   }
   for(const route of ['/bets','/bets/','/bets.html','/ev#tracker']) {
     const url=new URL(route,'https://sportslab.local');url.search='?sport=mlb&test=preserve';
-    assert.equal(legacyBetTrackerUrl(url),'/ev/tracker?sport=mlb&test=preserve');
+    assert.equal(legacyBetTrackerUrl(url),'/ev/tracker?test=preserve','other parameters survive; sport is dropped');
   }
   assert.equal(legacyBetTrackerUrl(new URL('https://sportslab.local/ev#fantasy')),null);
-  assert.equal(legacyBetTrackerUrl(new URL('https://sportslab.local/ev/tracker?sport=mlb')),null);
+  assert.equal(legacyBetTrackerUrl(new URL('https://sportslab.local/ev/tracker')),null);
 });

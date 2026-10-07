@@ -303,7 +303,7 @@ export const server = http.createServer(async (req, res) => {
     for (const file of ['platform-catalog.js', 'ev-tool-catalog.js', 'ev-more-menu.js', 'ev-secondary-views.js', 'ev-more-tools.css', 'ev-filters.js', 'ev-quote-cache.js']) names['/' + file] = file;
     // The odds client and the shared calculators (lib/odds prices the feed; the browser displays it).
     for (const file of ['odds-client.js', 'odds-contract.js', 'odds-alerts.js', 'odds-format.js', 'betting-math.js', 'market-identity.js', 'sport-names.js']) names['/' + file] = file;
-    for (const file of ['research-filters.css', 'research-details.css', 'tool-dropdowns.css', 'arb-calculator.js', 'arb-calculator.css', 'bet-comparison.js', 'bet-comparison.css', 'bet-dashboard-v2.js', 'bet-dashboard-v3.js', 'bet-history.js', 'bet-inline.js', 'bet-inline.css',   'bet-tracker-reference.css', 'ev-arb-reference.css', 'ev-book-picker.css', 'ev-filter-polish.css',  'sites-redesign.css', 'smart-money.css']) names['/' + file] = file;
+    for (const file of ['ev-open.css', 'studio.css', 'research-filters.css', 'research-details.css', 'tool-dropdowns.css', 'arb-calculator.js', 'arb-calculator.css', 'bet-comparison.js', 'bet-comparison.css', 'bet-dashboard-v2.js', 'bet-dashboard-v3.js', 'bet-history.js', 'bet-inline.js', 'bet-inline.css',   'bet-tracker-reference.css', 'ev-arb-reference.css', 'ev-book-picker.css', 'ev-filter-polish.css',  'sites-redesign.css', 'smart-money.css']) names['/' + file] = file;
     if (/^\/ev-icons\/(date|leagues|markets|odds|sports)\.svg$/.test(pagePath)) names[pagePath] = pagePath.slice(1);
     if (['/product-switcher.js','/product-switcher.css'].includes(pagePath)) names[pagePath] = pagePath.slice(1);
     if (['/sportsbook-availability.js','/sportsbook-state.js','/sportsbook-state.css'].includes(pagePath)) names[pagePath] = pagePath.slice(1);
@@ -351,6 +351,13 @@ export const server = http.createServer(async (req, res) => {
     for (const file of ['bet-expanded.js','bet-expanded.css','bet-reference-history.js']) names['/' + file] = file;
     for (const file of ['parlay.js','parlay.css','parlay-builder.js']) names['/' + file] = file;
     const preferredGroup = /(?:^|;\s*)sl-group=(trends|models|ev)(?:;|$)/.exec(req.headers.cookie || '')?.[1] || null;
+    // +EV has one address per tool; old links that carried a sport (?sport=mlb) land on the plain address.
+    // Browsers keep the #tool fragment across the redirect.
+    if (['/ev', '/ev/dashboard', '/ev/tracker'].includes(pagePath) && url.searchParams.has('sport')) {
+      // The old link's sport still applies once, as the page's sport filter.
+      const oldSport = String(url.searchParams.get('sport') || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12);
+      res.writeHead(301, { Location: pagePath, 'Cache-Control': 'no-store', ...(oldSport ? { 'Set-Cookie': `sl-ev-sport=${oldSport}; Path=/; Max-Age=120; SameSite=Lax` } : {}) }); return res.end();
+    }
     if (pagePath === '/research') {
       // The combined Dashboard became one dashboard per workspace; open the viewer's current one.
       const { sport } = siteContext(url), player = url.searchParams.get('researchPlayer');

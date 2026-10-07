@@ -69,16 +69,31 @@ export function enhanceTrendControls(root=document,selector=selectors) {
       search?.addEventListener('input',()=>{const q=search.value.trim().toLowerCase();for(const item of list.children)item.hidden=!item.textContent.toLowerCase().includes(q);empty.hidden=[...list.children].some(item=>!item.hidden);});
       menu.hidden=false;trigger.setAttribute('aria-expanded','true');active={wrap,close};
       menu.showPopover();
-      const bounds=trigger.getBoundingClientRect(),below=innerHeight-bounds.bottom-12,above=bounds.top-12;
+      // A list row can host its menu: with --choice-anchor:row in CSS the menu opens flush under the whole row, at its width.
+      const row=getComputedStyle(wrap).getPropertyValue('--choice-anchor').trim()==='row'?wrap.parentElement:null;
+      if(active?.wrap===wrap)active.row=row;
+      const bounds=(row||trigger).getBoundingClientRect(),below=innerHeight-bounds.bottom-12,above=bounds.top-12;
       const opensAbove=below<180&&above>below;
       menu.style.setProperty('max-height',Math.max(100,Math.min(520,opensAbove?above:below))+'px','important');
-      menu.style.setProperty('width',Math.min(Math.max(bounds.width,300),420,innerWidth-24)+'px','important');menu.style.setProperty('min-width','0','important');
+      menu.style.setProperty('width',Math.min(row?bounds.width:Math.max(bounds.width,300),420,innerWidth-24)+'px','important');menu.style.setProperty('min-width','0','important');
       const box=menu.getBoundingClientRect();menu.style.left=Math.max(12,Math.min(bounds.left,innerWidth-box.width-12))+'px';menu.style.top=(opensAbove?Math.max(12,bounds.top-box.height-6):bounds.bottom+6)+'px';
       const selected=menu.querySelector('[aria-selected=true]:not(:disabled)');
       (search||selected||menu.querySelector('button:not(:disabled)'))?.focus({preventScroll:true});
       if(selected&&!search)list.scrollTop=Math.max(0,selected.offsetTop-list.offsetTop-list.clientHeight/2);
     };
     trigger.addEventListener('click',()=>menu.hidden?open():close());
+    // A row that hosts its menu (--choice-anchor:row) is clickable anywhere, not only on the value.
+    // Pressing the row must not move focus to the page first: that would close an open menu, and the click would reopen it.
+    wrap.parentElement?.addEventListener('mousedown',e=>{
+      if(getComputedStyle(wrap).getPropertyValue('--choice-anchor').trim()!=='row')return;
+      if(menu.contains(e.target)||e.target.closest('input,textarea,select,a'))return;
+      e.preventDefault();
+    });
+    wrap.parentElement?.addEventListener('click',e=>{
+      if(getComputedStyle(wrap).getPropertyValue('--choice-anchor').trim()!=='row')return;
+      if(trigger.contains(e.target)||menu.contains(e.target)||e.target===select||e.target.closest('input,textarea,a'))return;
+      e.preventDefault();menu.hidden?open():close();
+    });
     trigger.addEventListener('keydown',e=>{if(['ArrowDown','ArrowUp'].includes(e.key)){e.preventDefault();open();}});
     menu.addEventListener('keydown',e=>{
       if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close(true);return;}
@@ -98,8 +113,8 @@ export function enhanceTrendControls(root=document,selector=selectors) {
 }
 
 if(typeof document!=='undefined') {
-  document.addEventListener('click',e=>{if(active&&!active.wrap.contains(e.target))active.close();});
-  document.addEventListener('focusin',e=>{if(active&&!active.wrap.contains(e.target))active.close();});
+  document.addEventListener('click',e=>{if(active&&!(active.row||active.wrap).contains(e.target))active.close();});
+  document.addEventListener('focusin',e=>{if(active&&!(active.row||active.wrap).contains(e.target))active.close();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&active){e.preventDefault();active.close(true);}});
   window.addEventListener('resize',()=>active?.close());
   document.addEventListener('scroll',e=>{if(active&&!active.wrap.contains(e.target))active.close();},true);

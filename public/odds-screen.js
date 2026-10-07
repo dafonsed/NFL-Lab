@@ -2,7 +2,7 @@
 // screen arranges them (best price per row = the highest current price shown).
 import { decimal, decimalToAmerican } from './betting-math.js';
 import { isCurrent } from './odds-contract.js';
-import { boardIcon, bookLogo } from './ev-board.js?v=7';
+import { boardIcon, bookLogo, marketLabel as readableMarket } from './ev-board.js?v=7';
 import { leagueMark, teamLogo } from './sports-identity.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -187,7 +187,7 @@ export function createOddsScreen({ getQuotes, getAnalytics = () => null, now: cl
     const propLabels = new Map();
     for (const q of leagueQuotes) if (propStat(q)) { const key = marketTab(q), counts = propLabels.get(key) || new Map(); counts.set(marketName(q), (counts.get(marketName(q)) || 0) + 1); propLabels.set(key, counts); }
     const tabLabels = new Map([...propLabels].map(([key,counts]) => [key,[...counts].sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0]]));
-    const tabLabel = key => tabLabels.get(key) ?? key;
+    const tabLabel = key => tabLabels.get(key) ?? readableMarket(key);
     const markets = [...new Set(leagueQuotes.map(marketTab))].filter(Boolean).sort((a,b) => tabLabel(a).localeCompare(tabLabel(b)));
     if (!events.includes(eventFilter)) eventFilter = '';
     const leagueGroups = MARKET_GROUPS.filter(([,,test]) => leagueQuotes.some(test));
@@ -240,7 +240,7 @@ export function createOddsScreen({ getQuotes, getAnalytics = () => null, now: cl
       let rowIndex = 0;
       const markets = [...event.markets].sort((a,b) => typeRank(a.first) - typeRank(b.first) || (Number(normalizedLine(a.first)) || 0) - (Number(normalizedLine(b.first)) || 0)).map(market => {
         const q = market.first;
-        const marketLabel = [marketName(q),q.period && q.period !== 'full' ? q.displayPeriod || q.period : ''].filter(Boolean).join(' · ');
+        const marketLabel = [readableMarket(marketName(q)),q.period && q.period !== 'full' ? q.displayPeriod || q.period : ''].filter(Boolean).join(' · ');
         const currentQuotes = market.sides.flatMap(row => row.prices.filter(quote => currentPrice(quote, renderNow)));
         const sides = market.sides.map(row => {
           const current = currentQuotes.filter(quote => quote.side === row.side).sort((a,b) => decimal(b.odds) - decimal(a.odds));
