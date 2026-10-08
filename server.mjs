@@ -41,6 +41,8 @@ import { SimulationPropsStore, createSimulationPropStores } from './lib/simulati
 import { renderBettingPage } from './lib/betting-pages.mjs';
 import { renderOddsApiPage } from './lib/odds-api-page.mjs';
 import { handleBettingToolsApi } from './lib/oddsjam/routes.mjs';
+import { ojBridgeFetch } from './lib/oddsjam/bridge.mjs';
+import { computePositiveEV, computeArbitrage, computeSharpMoney } from './lib/oddsjam/tools.mjs';
 import { handleEvApi } from './lib/ev-api-proxy.mjs';
 import { handleOddsApi } from './lib/odds/http.mjs';
 import { OddsError } from './public/odds-contract.js';
@@ -156,6 +158,7 @@ export const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       return res.end(html);
     }
+    // OddsJam direct — /ev frontend calls /api/oddsjam/* directly, no SmartStake
     if (url.pathname.startsWith('/api/ev/')) return await handleEvApi(req, res, url, { loadControls });
     if (oddsApi) return await handleOddsApi(req, res, url, { loadControls, defer: task => { try { waitUntil(task); } catch {} return task; } });
     if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, { error: 'Method not allowed.' }, 405);

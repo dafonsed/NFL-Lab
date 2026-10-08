@@ -90,26 +90,32 @@ export function createEvOperations({getState,save,redraw,navigate}) {
     const bankForm=form('bankroll',field('amount','Available bankroll ($)',b.amount??1000,'number','required min="0" step="any"')+field('exposure','Open exposure ($)',b.exposure??0,'number','required min="0" step="any"')+field('risk','Maximum bankroll risk per bet (%)',b.risk??1,'number','required min="0" max="100" step="any"')+field('probability','Estimated win probability (0–1)',b.probability??0.55,'number','required min="0" max="1" step="any"')+field('odds','American odds',b.odds??-110,'number','required step="any"')+field('fraction','Kelly fraction (0–1)',b.fraction??0.25,'number','required min="0" max="1" step="any"'),'Calculate stake');
     return panel('Promotion directory',`<div class="evx-toolbar">${select('offer-filter','Offers',filters.offers,[['active','Active offers'],['all','All saved offers']])}${button('Refresh active offers','refresh-offers')}</div>${offers.length?table(['Offer','Type','Expiry','Terms','Link','Actions'],offers.map(x=>`<tr><td><strong>${esc(x.title)}</strong><small>${esc(x.brand)}</small></td><td>${esc(x.kind)}</td><td>${x.expiry?date(x.expiry):'Not specified'}${x.expiry&&Date.parse(x.expiry)<=now?'<small>Expired</small>':''}</td><td>${esc(x.terms)}</td><td>${link(x.url,'View offer')}</td><td>${actions('offer',x.id)}</td></tr>`)):empty('Add offers you want to compare. Refresh hides expired offers; offer availability is confirmed at its source.')}`)+panel(edit.offer?'Edit promotion':'Add promotion',editor)+panel('Promo converter and boost calculator',calc+result,'Bonus stake is not returned. Insurance values are entered cash amounts. A hedge assumes exactly complementary outcomes, no push and available odds; it excludes unentered fees and restrictions.')+panel('Bankroll and stake sizing',bankForm+(bankroll?`<div class="evx-stats">${statistic('Available after exposure',cash(bankroll.available))}${statistic('Risk cap',cash(bankroll.cap))}${statistic('Fractional Kelly stake',cash(bankroll.kelly))}${statistic('Suggested stake within cap',cash(bankroll.stake))}</div>`:''));
   }
-  // Per-source collection status from the quote feed (GET /api/ev/status), fetched when this tool
+  // OddsJam bridge status (GET /api/oddsjam/status), fetched when this tool
   // renders and at most once a minute. The panel is updated in place so a form being filled in on
   // this page is not redrawn.
   function loadFeedStatus(force=false) {
     if(feedStatus.pending||(!force&&Date.now()-feedStatus.at<60_000))return;
     feedStatus={...feedStatus,pending:true};
     Promise.resolve().then(()=>getSourceStatus())
-      .then(body=>{if(!body?.datasets||typeof body.datasets!=='object'||Array.isArray(body.datasets))throw new Error('The feed answered without its collection status.');return body;})
+      .then(body=>{if(!body||typeof body!=='object')throw new Error('The feed answered without status.');return body;})
       .then(data=>{feedStatus={at:Date.now(),pending:false,data,error:''};},failure=>{feedStatus={...feedStatus,at:Date.now(),pending:false,error:failure?.code==='TIMEOUT'?'The feed did not answer in time.':failure?.message||'The feed could not be reached.'};})
       .finally(()=>{const target=typeof document!=='undefined'&&document.querySelector('.evx-operations [data-evx-feed-status]');if(target)target.innerHTML=feedStatusContent();});
   }
-  function feedStatusContent() {
-    const {data,error,pending,at}=feedStatus, again=button(pending?'Checking…':'Check again','refresh-status','',pending?'disabled':'');
-    if(!data)return error?`<p class="evx-note" role="status">Source status is unavailable right now. ${esc(error)}</p>${again}`:'<p class="evx-note" role="status">Checking the quote feed…</p>';
-    const rows=Object.entries(data.datasets).filter(([,value])=>value&&typeof value==='object').map(([name,value])=>({name,status:DATASET_STATUS[value.status]?value.status:'unknown',items:Number(value.items),updated:value.last_update,anomaly:typeof value.anomaly==='string'?value.anomaly:''}))
-      .sort((a,b)=>STATUS_ORDER.indexOf(a.status)-STATUS_ORDER.indexOf(b.status)||a.name.localeCompare(b.name));
-    const count=status=>rows.filter(row=>row.status===status).length, total=key=>Number.isFinite(Number(data[key]))?Number(data[key]).toLocaleString():'—';
-    return `<div class="evx-stats">${statistic('OK',count('ok'))}${statistic('Degraded',count('degraded'))}${statistic('Error',count('error'))}${statistic('Idle (not collecting)',count('idle'))}${statistic('Quotes / props / contracts',`${total('total_quotes')} / ${total('total_props')} / ${total('total_contracts')}`)}</div>${rows.length?table(['Source','Status','Items','Last update'],rows.map(row=>`<tr><td>${esc(row.name)}</td><td><span class="evx-badge">${esc(DATASET_STATUS[row.status]||'Unknown')}</span>${row.anomaly?`<small>${esc(row.anomaly)}</small>`:''}</td><td>${Number.isFinite(row.items)?row.items.toLocaleString():'—'}</td><td>${date(row.updated)}</td></tr>`)):empty('The feed reported no sources.')}<p class="evx-note">Checked ${esc(date(at))}${error?` · The latest check failed: ${esc(error)}`:''}</p>${again}`;
+    function feedStatusContent() {
+    const {data,error,pending,at}=feedStatus, again=button(pending?'Checking\u2026':'Check again','refresh-status','',pending?'disabled':'');
+    if(!data)return error?'<p class="evx-note" role="status">Source status is unavailable right now. '+esc(error)+'</p>'+again:'<p class="evx-note" role="status">Checking the OddsJam feed\u2026</p>';
+    const active=data.active?'ok':'degraded', mode=data.client||'none', bypass=data.cfBypass||'unknown';
+    const bridgeBadge=data.active?'<span class="evx-badge">OK</span>':'<span class="evx-badge">Degraded</span>';
+    const cfBadge=data.cfBypass?'<span class="evx-badge">OK</span>':'<span class="evx-badge">Blocked</span>';
+    const slBadge=data.serverless?'<span class="evx-badge">Yes</span>':'<span class="evx-badge">No</span>';
+    const rows=[
+      ['OddsJam bridge',bridgeBadge,'Mode: '+esc(mode)+' \u00b7 Bypass: '+esc(bypass)],
+      ['Cloudflare',cfBadge,data.needsProxy?'Proxy needed':'Direct'],
+      ['Serverless',slBadge,data.serverless?'Direct fetch mode':'CycleTLS mode']
+    ];
+    return '<div class="evx-stats">'+statistic('Bridge',data.active?'Connected':'Disconnected')+statistic('Mode',esc(mode))+statistic('CF Bypass',esc(bypass))+statistic('Requests',Number(data.requests||0).toLocaleString())+statistic('Data pulled',esc(data.totalMB||'0')+' MB')+'</div>'+table(['Component','Status','Detail'],rows)+'<p class="evx-note">Checked '+esc(date(at))+(error?' \u00b7 The latest check failed: '+esc(error):'')+' \u00b7 Provider: OddsJam</p>'+again;
   }
-  function feedSummary() {
+function feedSummary() {
     const root=getState(), feed=quotes().filter(q=>q.source==='local-api');
     return {synced:root.apiSyncedAt,prices:feed.length,live:feed.filter(q=>q.live).length,exchange:feed.filter(q=>q.exchange).length,linked:feed.filter(hasBetLink).length,dfs:(Array.isArray(root.dfs)?root.dfs:[]).filter(pick=>pick?.source==='local-api').length};
   }

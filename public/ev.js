@@ -13,8 +13,8 @@ import { SECONDARY_TOOLS } from './ev-tool-catalog.js';
 import { emptyWorkspace, purgeDemoData, clearLegacyDemoStorage } from './ev-workspace-clean.js?v=1';
 import { createQuoteFeedControls, toolDataLabel } from './ev-feed.js?v=9';
 import { knownSport } from './sport-names.js';
-import { getDfs, getLineMovement, getPredictionContracts, getSmartstakeDataset, getSmartstakeInventory, indexSnapshot, emptyIndex, serverNow } from './odds-client.js?v=dfs-cache-4';
-import { getRelayDfsData } from './relay-dfs.js?v=4';
+import { getDfs, getLineMovement, getPredictionContracts, getOddsjamEv, getOddsjamArbitrage, getOddsjamSharpMoney, getOddsjamOdds, indexSnapshot, emptyIndex, serverNow } from './odds-client.js?v=dfs-cache-4';
+import { getRelayDfsData } from './relay-dfs.js?v=oddsjam-1';
 import { mergeDfsFeed } from './dfs-feed-merge.js?v=1';
 import { isCurrent, snapshotStale, valueState } from './odds-contract.js';
 import { alertMatches } from './odds-alerts.js';
@@ -25,7 +25,7 @@ import { betTrackerUrl, legacyBetTrackerUrl } from './navigation.js?v=tracker-1'
 // Prices and every betting value on these boards come from /api/odds (odds-client.js); this page displays
 // them. betting-math.js runs only the calculators on numbers a member chooses (parlay legs, promo stakes,
 // boosts, DFS slips, recorded results).
-import { decimal, decimalToAmerican, constrainedArb, promoConversion, parlay, fantasySlip, pearson } from './betting-math.js';
+import { decimal, decimalToAmerican, implied as americanToImpliedProb, constrainedArb, promoConversion, parlay, fantasySlip, pearson } from './betting-math.js';
 import { money, percent, signed } from './odds-format.js';
 import { teamMark, leagueMark } from './sports-identity.js';
 import { comparisonAnnotations } from './bet-comparison.js?v=4';
@@ -328,337 +328,95 @@ function ensureContracts() {
     .catch(() => { contractsAt = Date.now() - 30_000; })
     .finally(() => { contractsLoading = false; if (active === 'prediction') render(); });
 }
-async function ensureRelayBoards() {
-  if (active !== 'relay-boards' || relayLoading || Date.now() - relayAt < 60_000 || document.hidden && relayAt) return;
-  relayLoading = true;
-  try {
-    const inventoryBody = await getSmartstakeInventory();
-    relayInventory = Array.isArray(inventoryBody.datasets) ? inventoryBody.datasets : [];
-    relayError = '';
-    await Promise.all(relayInventory.map(async summary => {
-      const body = await getSmartstakeDataset(summary.dataset, { limit: 100 });
-      relayDatasets.set(summary.dataset, Array.isArray(body.records) ? body.records : []);
-    }));
-  } catch (error) {
-    relayError = error.message || 'The relayed boards are unavailable.';
-    relayAt = Date.now() - 30_000;
-  } finally {
-    relayLoading = false;
-    relayAt = Date.now();
-    if (active === 'relay-boards') render();
-  }
-}
-function ensureDfsFeed() {
-  if (!DFS_TOOLS.has(active)) return;
-  // The first load runs even in a background tab so the lines are ready when it is opened; refreshes
-  // wait for the tab to be visible.
-  if (dfsLoading || Date.now() < dfsRetryAt || (dfsLoaded && !dfsPrimaryFailed && (Date.now() - dfsSyncedAt < 60_000 || document.hidden))) return;
-  dfsLoading = true;
-  let changed = false;
-  let primary = null, relay = null;
-  const paint = () => {
-    if (!primary && !relay) return;
-    if (dfsError) changed = true;
-    dfsSyncedAt = Date.now(); dfsPrimaryFailed = !primary;
-    if (primary) { dfsFailures = 0; dfsRetryAt = 0; dfsError = ''; }
-    const apiWarning = primary?.meta.partial ? primary.meta.warnings.join(' ') || 'Some full-feed DFS data is missing.' : '';
-    const warning = primary ? apiWarning : relay ? 'The full DFS feed is unavailable; relayed lines are shown.' : '';
-    if (warning !== dfsWarning) changed = true;
-    dfsWarning = warning;
-    const revision = [primary ? primary.meta.provenance.generatedAt : '', relay ? relay.generatedAt : '', primary ? 'api' : '', relay ? 'relay' : ''].join('|');
-    if (revision !== dfsGeneratedAt || !dfsLoaded) {
-      dfsGeneratedAt = revision;
-      apiPaytables = primary?.payouts && Object.keys(primary.payouts).length ? primary.payouts : apiPaytables;
-      setFeedDfs(mergeDfsFeed(primary?.picks || [], relay?.picks || [])); evaluateAlerts(); persist(); changed = true;
-    }
-  };
-  const primaryPromise = getDfs({ settings: suite.settings(), sport, limit: 5000 }).then(result => {
-    primary = result; paint();
-  }, error => { throw error; });
-  const relayPromise = getRelayDfsData({ sport, devigMethod: suite.settings().devigMethod }).then(result => {
-    relay = result; paint();
-  }, error => { throw error; });
-  void Promise.allSettled([primaryPromise, relayPromise]).then(([apiResult, relayResult]) => {
-    if (relayResult.status === 'fulfilled' && apiResult.status === 'rejected') {
-      dfsFailures += 1; dfsRetryAt = Date.now() + Math.min(60_000, 15_000 * 2 ** Math.min(dfsFailures, 3));
-      return;
-    }
-    if (apiResult.status === 'fulfilled' || relayResult.status === 'fulfilled') return;
-    // A failed request keeps the last lines and says so; retries back off up to 5 minutes.
-    dfsFailures += 1; dfsRetryAt = Date.now() + Math.min(300_000, 15_000 * 2 ** Math.min(dfsFailures, 5));
-    dfsError = apiResult.reason?.code === 'TIMEOUT' || relayResult.reason?.code === 'TIMEOUT' ? 'The DFS lines request timed out.' : 'The DFS lines could not be loaded.'; changed = true;
-  }).finally(() => {
-    // The first answer, even an empty or failed one, replaces the loading message.
-    const first = !dfsLoaded;
-    dfsLoading = false; dfsLoaded = true;
-    if (DFS_TOOLS.has(active) && (changed || first)) renderKeepingView();
-  });
-}
-// An OddsError → the error the feed controls show (ev-feed.js): retryable or not, and how long to wait.
-function feedFailure(error) {
-  const text = typeof error?.message === 'string' && error.message ? error.message.replace(/\.?$/, '.') : 'The odds service is unavailable.';
-  const failure = Error(error?.code === 'TIMEOUT' ? 'The request timed out. Saved prices were kept.' : `${text} Saved prices were kept.`);
-  if (error?.code === 'TIMEOUT') failure.name = 'TimeoutError';
-  failure.retryable = error?.retryable !== false;
-  if (Number.isFinite(error?.retryAfterSeconds)) failure.retryAfterMs = Math.min(86_400_000, error.retryAfterSeconds * 1000);
-  return failure;
-}
-const stableRelayKey = value => {
-  let hash = 2166136261;
-  for (let index = 0; index < value.length; index++) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0).toString(36);
-};
-const RELAY_SPORT_NAME_TO_CODE = { football: 'NFL', basketball: 'NBA', hockey: 'NHL', baseball: 'MLB', soccer: 'SOCCER', tennis: 'TENNIS' };
-const relaySportOf = record => {
-  const league = String(record.league || '').toLowerCase();
-  if (league && league !== 'none' && league !== 'other') return league.toUpperCase();
-  const sport = String(record.sport || '').toLowerCase();
-  if (sport && sport !== 'other' && RELAY_SPORT_NAME_TO_CODE[sport]) return RELAY_SPORT_NAME_TO_CODE[sport];
-  if (sport && sport !== 'other' && ['nfl','nba','wnba','nhl','mlb','soccer','ncaaf','ncaab'].includes(sport)) return sport.toUpperCase();
-  const market = String(record.market || '').toLowerCase();
-  if (market.startsWith('football')) return 'NFL';
-  if (market.startsWith('basketball')) return 'NBA';
-  if (market.startsWith('hockey')) return 'NHL';
-  if (market.startsWith('baseball')) return 'MLB';
-  if (market.startsWith('soccer')) return 'SOCCER';
-  return '';
-};
-const relayAmericanOdds = record => Number.isFinite(Number(record.americanOdds)) ? Number(record.americanOdds) : (() => {
-  const odds = decimalToAmerican(record.odds);
-  return Number.isFinite(odds) ? odds : 0;
-})();
-const relayAmericanProbability = probability => decimalToAmerican(1 / probability);
+async function ensureRelayBoards() { /* OddsJam mode: relay boards handled by snapshot functions */ }
 async function getRelayEvSnapshot({ sport, books, limit = 2000, live = false }) {
-  const body = await getSmartstakeDataset('positive-ev', { limit });
-  const records = Array.isArray(body.records) ? body.records : [];
-  const offered = books?.length ? new Set(books.map(book => book.toLowerCase())) : null;
-  const observed = records.map(record => Date.parse(record.observedAt)).filter(Number.isFinite).sort((a,b) => b-a)[0] || Date.now();
-  const quotes = [];
-  const pricing = [];
-  for (const record of records) {
-    const recordSport = relaySportOf(record);
-    if (sport && recordSport !== sport) continue;
-    if (live !== Boolean(record.is_live)) continue;
-    const decimal = Number(record.odds), fair = Number(record.fairProbability);
-    if (!Number.isFinite(decimal) || decimal <= 1 || !Number.isFinite(fair) || fair <= 0 || fair >= 1) continue;
-    const side = String(record.selection || '').toLowerCase();
-    const market = String(record.market || 'prop');
-    const event = String(record.event || '');
-    const player = String(record.player || '');
-    const marketKey = `relay-market:${stableRelayKey([record.event_id,event,market,player,record.line].join('|'))}`;
-    const startTime = Date.parse(record.startTime) > 0 ? new Date(record.startTime).toISOString() : new Date(observed).toISOString();
-    const implied = 1 / decimal, ev = Number.isFinite(Number(record.ev)) ? Number(record.ev) : decimal * fair - 1;
-
-    // Create a quote for every book that prices this market, not just the best one,
-    // so the detail view can show the full comparison table.
-    const bookPrices = Array.isArray(record.bookPrices) && record.bookPrices.length ? record.bookPrices : [{ book: record.bookmaker, odds: record.odds, americanOdds: record.americanOdds, line: record.line }];
-    for (const bp of bookPrices) {
-      const bpBook = String(bp.book || '');
-      if (!bpBook) continue;
-      if (offered && !offered.has(bpBook.toLowerCase())) continue;
-      const bpDecimal = Number(bp.odds);
-      if (!Number.isFinite(bpDecimal) || bpDecimal <= 1) continue;
-      const identity = [bpBook,record.event_id,event,market,player,record.line,side].join('|');
-      const id = `relay-ev:${stableRelayKey(identity)}`;
-      const bpImplied = 1 / bpDecimal;
-      const bpEv = bpDecimal * fair - 1;
-      quotes.push({
-        id, sport: recordSport, event, displayEvent: event, eventId: `relay:${record.event_id || event}`, market, displayMarket: market,
-        marketId: `relay:${market}:${record.event_id || event}`, player, period: 'full', league: '', startTime, type: 'prop',
-        line: Number(record.line), side, selection: side.charAt(0).toUpperCase() + side.slice(1), book: bpBook,
-        odds: Number.isFinite(Number(bp.americanOdds)) ? Number(bp.americanOdds) : relayDecimalToAmerican(bpDecimal),
-        outcomes: 2, live: Boolean(record.is_live), exchange: false, ts: new Date(observed).toISOString(),
-        source: 'local-api', displayMarketClass: 'prop', seriesId: id, marketKey, impliedProbability: bpImplied,
-        expiresAt: new Date(observed + 15 * 60_000).toISOString(), status: 'open', consistent: true, outlier: false,
-      });
-      pricing.push({
-        quoteId: id, fairProbability: fair, fairOdds: relayAmericanProbability(fair), devigMethod: 'smartstake',
-        devigVersion: 'smartstake-relay/1', bookCount: Number(record.referenceBooks) || 1, references: [], edge: fair - bpImplied,
-        ev: bpEv, kellyFraction: Math.max(0, bpEv / (bpDecimal - 1)), plausible: true, estimated: false, conditionalOnNoPush: false,
-      });
-    }
+  const sports = sport ? [sport.toLowerCase()] : ['nfl', 'nba', 'mlb', 'nhl'];
+  const body = await getOddsjamEv({ sports, market: 'moneyline', minEv: 0.5, devig: 'power' });
+  const rows = Array.isArray(body.data) ? body.data : [];
+  const quotes = [], pricing = [];
+  for (const row of rows) {
+    if (!Number.isFinite(Number(row.price)) || !Number.isFinite(Number(row.fairProb))) continue;
+    const id = 'oj-ev:' + stableRelayKey([row.gameId, row.book, row.market, row.betName, row.betPoints].join('|'));
+    const impliedProb = americanToImpliedProb(Number(row.price));
+    const quote = oddsjamQuoteBase({
+      id, sport: oddsjamSportOf(sport), event: row.matchup || '', market: row.market || 'moneyline',
+      book: row.book, side: row.betName || '', odds: Number(row.price), line: row.betPoints,
+      player: row.betName || '', startTime: null, impliedProb,
+    });
+    quotes.push(quote);
+    pricing.push({
+      quoteId: id, fairProbability: Number(row.fairProb), fairOdds: Number(row.fairPrice),
+      devigMethod: body.devigMethod || 'power', devigVersion: 'oddsjam/1',
+      bookCount: 1, references: [], edge: Number(row.fairProb) - impliedProb,
+      ev: Number(row.evPct) / 100, kellyFraction: Number(row.kellyPct) / 100,
+      plausible: true, estimated: false, conditionalOnNoPush: false,
+    });
     if (quotes.length >= limit) break;
   }
-  const generatedAt = new Date().toISOString();
-  return { snapshot: {
-    quotes, pricing, markets: [],
-    meta: { provenance: { provider: 'smartstake-relay', engine: 'smartstake-free-board', engineVersion: '1', generatedAt },
-      snapshotAt: generatedAt, staleAfter: new Date(observed + 5 * 60_000).toISOString(), stale: false, warmingUp: false, partial: false, warnings: [],
-      scope: { sport: sport || null }, controlsApplied: false, counts: { records: records.length, quotes: quotes.length, skipped: {}, dropped: 0 } }
-  }, dropped: { quotes: 0 } };
+  return { snapshot: { quotes, pricing, markets: [], meta: oddsjamSnapshotMeta(sport, quotes, rows.length, 'oddsjam', 'oddsjam-ev') }, dropped: { quotes: 0 } };
 }
-
-const relayDecimalToAmerican = value => { const odds = decimalToAmerican(value); return Number.isFinite(odds) ? odds : 0; };
-const relayQuoteBase = ({ record, sport, book, side, odds, observed, id }) => ({
-  id, sport, event: record.event || [record.homeCompetitor, record.awayCompetitor].filter(Boolean).join(' @ ') || '', displayEvent: record.event || '', eventId: `relay:${record.event_id || record.matchKey || ''}`,
-  market: record.market || '', displayMarket: record.market || '', player: record.playerName || record.player || '',
-  period: 'full', league: record.league || '', startTime: Date.parse(record.startDate || record.startTime) > 0 ? new Date(record.startDate || record.startTime).toISOString() : new Date(observed).toISOString(),
-  type: 'prop', line: Number(record.selectionPoints ?? record.line ?? 0), side: String(side || record.selectionLine || '').toLowerCase(),
-  selection: String(side || record.selectionLine || '').charAt(0).toUpperCase() + String(side || record.selectionLine || '').slice(1),
-  book: String(book || record.bookmaker || ''), odds: relayDecimalToAmerican(Number(odds ?? record.odds)), outcomes: 2, live: Boolean(record.is_live),
-  exchange: Boolean(record.exchange), ts: new Date(observed).toISOString(), source: 'local-api', displayMarketClass: 'prop', seriesId: id,
-  impliedProbability: Number(odds ?? record.odds) > 1 ? 1 / Number(odds ?? record.odds) : 0,
-  expiresAt: new Date(observed + 15 * 60_000).toISOString(), status: 'open', consistent: true, outlier: false,
-});
 
 async function getRelayArbSnapshot({ sport, books, limit = 500 }) {
-  const body = await getSmartstakeDataset('matched-bets', { limit });
-  const records = Array.isArray(body.records) ? body.records : [];
-  const offered = books?.length ? new Set(books.map(book => book.toLowerCase())) : null;
-  const observed = records.map(r => Date.parse(r.observedAt)).filter(Number.isFinite).sort((a,b) => b-a)[0] || Date.now();
+  const sports = sport ? [sport.toLowerCase()] : ['nfl', 'nba', 'mlb', 'nhl'];
+  const body = await getOddsjamArbitrage({ sports, market: 'moneyline', minProfit: 0 });
+  const rows = Array.isArray(body.data) ? body.data : [];
   const quotes = [], arbitrage = [];
-  for (const record of records) {
-    const recordSport = relaySportOf(record);
-    if (sport && recordSport !== sport) continue;
-    if (offered && ![record.bookmakerLeft, record.bookmakerRight].some(book => offered.has(String(book || '').toLowerCase()))) continue;
-    const leftOdds = Number(record.oddsLeft), rightOdds = Number(record.oddsRight);
-    if (!Number.isFinite(leftOdds) || leftOdds <= 1 || !Number.isFinite(rightOdds) || rightOdds <= 1) continue;
-    const leftId = `relay-arb:${stableRelayKey([record.event_id, record.market, record.line, record.leftSide, record.bookmakerLeft].join('|'))}`;
-    const rightId = `relay-arb:${stableRelayKey([record.event_id, record.market, record.line, record.rightSide, record.bookmakerRight].join('|'))}`;
-    const marketKey = `relay-market:${stableRelayKey([record.event_id, record.event, record.market, record.line].join('|'))}`;
-    quotes.push({ ...relayQuoteBase({ record, sport: recordSport, book: record.bookmakerLeft, side: record.leftSide, odds: leftOdds, observed, id: leftId }), marketKey });
-    quotes.push({ ...relayQuoteBase({ record, sport: recordSport, book: record.bookmakerRight, side: record.rightSide, odds: rightOdds, observed, id: rightId }), marketKey });
-    const totalImplied = 1 / leftOdds + 1 / rightOdds;
-    const margin = Number.isFinite(Number(record.roi)) ? Number(record.roi) : 1 - totalImplied;
-    if (margin <= 0) continue;
+  for (const row of rows) {
+    const pairId = stableRelayKey([row.gameId, row.market, row.sideA?.book, row.sideB?.book].join('|'));
+    const aId = 'oj-arb-a:' + pairId, bId = 'oj-arb-b:' + pairId;
+    if (row.sideA) {
+      quotes.push(oddsjamQuoteBase({ id: aId, sport: oddsjamSportOf(sport), event: row.matchup || '', market: row.market || 'moneyline', book: row.sideA.book, side: row.sideA.name || 'Side A', odds: Number(row.sideA.price), line: null, player: row.sideA.name || '', startTime: null, impliedProb: americanToImpliedProb(Number(row.sideA.price)) }));
+    }
+    if (row.sideB) {
+      quotes.push(oddsjamQuoteBase({ id: bId, sport: oddsjamSportOf(sport), event: row.matchup || '', market: row.market || 'moneyline', book: row.sideB.book, side: row.sideB.name || 'Side B', odds: Number(row.sideB.price), line: null, player: row.sideB.name || '', startTime: null, impliedProb: americanToImpliedProb(Number(row.sideB.price)) }));
+    }
     arbitrage.push({
-      legs: [
-        { quoteId: leftId, stakeFraction: (1 / leftOdds) / totalImplied },
-        { quoteId: rightId, stakeFraction: (1 / rightOdds) / totalImplied },
-      ],
-      margin, live: Boolean(record.is_live), limitsKnown: false, capacity: null, pushPossible: false,
-      lowestPerUnit: margin,
+      quoteIds: [aId, bId], profit: Number(row.profitPct) / 100,
+      stakeFractions: [Number(row.sideA?.stakePct) / 100 || 0.5, Number(row.sideB?.stakePct) / 100 || 0.5],
     });
-    if (arbitrage.length >= limit) break;
+    if (quotes.length >= limit * 2) break;
   }
-  const generatedAt = new Date().toISOString();
-  return { snapshot: {
-    quotes, pricing: [], markets: [], arbitrage, middles: [],
-    meta: { provenance: { provider: 'smartstake-relay', engine: 'smartstake-matched-bets', engineVersion: '1', generatedAt },
-      snapshotAt: generatedAt, staleAfter: new Date(observed + 5 * 60_000).toISOString(), stale: false, warmingUp: false, partial: false, warnings: [],
-      scope: { sport: sport || null }, controlsApplied: false, counts: { records: records.length, quotes: quotes.length, skipped: {}, dropped: 0 } }
-  }, dropped: { quotes: 0 } };
+  return { snapshot: { quotes, pricing: [], markets: [], arbitrage, meta: oddsjamSnapshotMeta(sport, quotes, rows.length, 'oddsjam', 'oddsjam-arb') }, dropped: { quotes: 0 } };
 }
 
-const RELAY_EXCHANGE_BOOKS = new Set(['kalshi', 'polymarket', 'polymarket_us', 'predictit', 'smark', 'dominionmarkets', 'forecastex', 'clob']);
-const isRelayExchange = book => RELAY_EXCHANGE_BOOKS.has(String(book || '').toLowerCase());
-
 async function getRelaySharpSnapshot({ sport, books, limit = 1000 }) {
-  const body = await getSmartstakeDataset('smart-money-depth', { limit });
-  const records = Array.isArray(body.records) ? body.records : [];
-  const offered = books?.length ? new Set(books.map(book => book.toLowerCase())) : null;
-  const observed = records.map(r => Date.parse(r.observedAt)).filter(Number.isFinite).sort((a,b) => b-a)[0] || Date.now();
-  const byLineKey = new Map();
-  for (const record of records) {
-    const key = record.lineKey || record.middleKey || record.selectionKey;
-    if (!key) continue;
-    if (!byLineKey.has(key)) byLineKey.set(key, []);
-    byLineKey.get(key).push(record);
-  }
+  const sports = sport ? [sport.toLowerCase()] : ['nfl', 'nba', 'mlb', 'nhl'];
+  const body = await getOddsjamSharpMoney({ sports, market: 'moneyline', minMove: 0.5 });
+  const rows = Array.isArray(body.data) ? body.data : [];
   const quotes = [], sharp = [];
-  const seenExchange = new Map();
-  for (const [lineKey, group] of byLineKey) {
-    const exchangeRecords = group.filter(r => isRelayExchange(r.bookmaker));
-    const sportsbookRecords = group.filter(r => !isRelayExchange(r.bookmaker) && r.bookmaker && r.bookmaker.toLowerCase() !== 'none');
-    if (!exchangeRecords.length || !sportsbookRecords.length) continue;
-    for (const ex of exchangeRecords) {
-      const recordSport = relaySportOf(ex);
-      if (sport && recordSport !== sport) continue;
-      if (offered && !sportsbookRecords.some(sb => offered.has(String(sb.bookmaker || '').toLowerCase()))) continue;
-      const liquidity = Number(ex.maxBetSize) || 0;
-      if (liquidity < 1) continue;
-      const exId = `relay-sharp:${stableRelayKey([ex.selectionKey, ex.bookmaker, ex.selectionLine].join('|'))}`;
-      const opposite = exchangeRecords.find(r => r.selectionLine !== ex.selectionLine);
-      const oppositeId = opposite ? `relay-sharp:${stableRelayKey([opposite.selectionKey, opposite.bookmaker, opposite.selectionLine].join('|'))}` : null;
-      if (!seenExchange.has(exId)) {
-        seenExchange.set(exId, true);
-        quotes.push({ ...relayQuoteBase({ record: ex, sport: recordSport, book: ex.bookmaker, side: ex.selectionLine, odds: ex.odds, observed, id: exId }),
-          exchange: true, liquidity: liquidity, marketKey: `relay-market:${stableRelayKey(lineKey)}`, type: ex.selectionPoints != null ? 'total' : 'prop' });
-      }
-      const best = sportsbookRecords.filter(sb => offered === null || offered.has(String(sb.bookmaker || '').toLowerCase()))
-        .sort((a, b) => Number(b.odds || 0) - Number(a.odds || 0))[0];
-      if (!best) continue;
-      const sbId = `relay-sharp:${stableRelayKey([best.selectionKey, best.bookmaker, best.selectionLine].join('|'))}`;
-      if (!seenExchange.has(sbId)) {
-        seenExchange.set(sbId, true);
-        quotes.push({ ...relayQuoteBase({ record: best, sport: recordSport, book: best.bookmaker, side: best.selectionLine, odds: best.odds, observed, id: sbId }),
-          exchange: false, liquidity: 0, marketKey: `relay-market:${stableRelayKey(lineKey)}` });
-      }
-      const exDecimal = Number(ex.odds), sbDecimal = Number(best.odds);
-      sharp.push({ exchangeQuoteId: exId, sportsbookQuoteId: sbId, oppositeExchangeQuoteId: oppositeId, liquidity,
-        improvement: Number.isFinite(exDecimal) && Number.isFinite(sbDecimal) && exDecimal > 0 ? sbDecimal / exDecimal - 1 : NaN });
-      if (sharp.length >= limit) break;
-    }
-    if (sharp.length >= limit) break;
+  for (const row of rows) {
+    const id = 'oj-sharp:' + stableRelayKey([row.gameId, row.sharpBook, row.betName, row.market].join('|'));
+    quotes.push(oddsjamQuoteBase({ id, sport: oddsjamSportOf(sport), event: row.matchup || '', market: row.market || 'moneyline', book: row.sharpBook, side: row.betName || '', odds: Number(row.currentPrice) || 0, line: row.line, player: row.betName || '', startTime: null, impliedProb: Number.isFinite(Number(row.currentPrice)) ? americanToImpliedProb(Number(row.currentPrice)) : null }));
+    sharp.push({
+      quoteId: id, sharpBook: row.sharpBook || 'Pinnacle',
+      previousOdds: Number(row.previousPrice) || 0, currentOdds: Number(row.currentPrice) || 0,
+      movePct: Number(row.movePct) || 0, direction: row.direction || '',
+    });
+    if (quotes.length >= limit) break;
   }
-  const generatedAt = new Date().toISOString();
-  return { snapshot: {
-    quotes, pricing: [], markets: [], sharp,
-    meta: { provenance: { provider: 'smartstake-relay', engine: 'smartstake-smart-money-depth', engineVersion: '1', generatedAt },
-      snapshotAt: generatedAt, staleAfter: new Date(observed + 5 * 60_000).toISOString(), stale: false, warmingUp: false, partial: false, warnings: [],
-      scope: { sport: sport || null }, controlsApplied: false, counts: { records: records.length, quotes: quotes.length, skipped: {}, dropped: 0 } }
-  }, dropped: { quotes: 0 } };
+  return { snapshot: { quotes, pricing: [], markets: [], sharp, meta: oddsjamSnapshotMeta(sport, quotes, rows.length, 'oddsjam', 'oddsjam-sharp') }, dropped: { quotes: 0 } };
 }
 
 async function getRelayMarketPairsSnapshot({ sport, books, limit = 2000 }) {
-  const body = await getSmartstakeDataset('matched-bets', { limit });
-  const records = Array.isArray(body.records) ? body.records : [];
-  const offered = books?.length ? new Set(books.map(book => book.toLowerCase())) : null;
-  const observed = records.map(r => Date.parse(r.observedAt)).filter(Number.isFinite).sort((a,b) => b-a)[0] || Date.now();
-  const quotes = [], middles = [], holds = [], hedges = [];
-  for (const record of records) {
-    const recordSport = relaySportOf(record);
-    if (sport && recordSport !== sport) continue;
-    if (offered && ![record.bookmakerLeft, record.bookmakerRight].some(book => offered.has(String(book || '').toLowerCase()))) continue;
-    const leftOdds = Number(record.oddsLeft), rightOdds = Number(record.oddsRight);
-    if (!Number.isFinite(leftOdds) || leftOdds <= 1 || !Number.isFinite(rightOdds) || rightOdds <= 1) continue;
-    const leftId = `relay-pair:${stableRelayKey([record.event_id, record.market, record.line, record.leftSide, record.bookmakerLeft].join('|'))}`;
-    const rightId = `relay-pair:${stableRelayKey([record.event_id, record.market, record.line, record.rightSide, record.bookmakerRight].join('|'))}`;
-    const marketKey = `relay-market:${stableRelayKey([record.event_id, record.event, record.market, record.line].join('|'))}`;
-    quotes.push({ ...relayQuoteBase({ record, sport: recordSport, book: record.bookmakerLeft, side: record.leftSide, odds: leftOdds, observed, id: leftId }), marketKey });
-    quotes.push({ ...relayQuoteBase({ record, sport: recordSport, book: record.bookmakerRight, side: record.rightSide, odds: rightOdds, observed, id: rightId }), marketKey });
-    const totalImplied = 1 / leftOdds + 1 / rightOdds;
-    const margin = 1 - totalImplied;
-    const leftImplied = 1 / leftOdds, rightImplied = 1 / rightOdds;
-    const fairLeft = totalImplied > 0 ? leftImplied / totalImplied : .5;
-    const fairRight = totalImplied > 0 ? rightImplied / totalImplied : .5;
-    // Holds: every two-sided market, sorted by hold
-    holds.push({
-      quoteIds: [leftId, rightId], hold: Math.max(0, totalImplied - 1), margin,
-      fairProbabilities: [fairLeft, fairRight],
-      fairOdds: [fairLeft > 0 ? 1 / fairLeft : null, fairRight > 0 ? 1 / fairRight : null],
-    });
-    // Middles: pairs with a window where both sides can win (line gap)
-    const line = Number(record.line) || 0;
-    if (line > 0 && record.leftSide !== record.rightSide) {
-      const width = 1;
-      const cost = totalImplied - 1;
-      middles.push({
-        firstQuoteId: leftId, secondQuoteId: rightId,
-        stakeFractions: [(1 / leftOdds) / totalImplied, (1 / rightOdds) / totalImplied],
-        kind: 'total', width, cost,
-        window: { label: `${line - 0.5}–${line + 0.5}` },
-        ladder: null,
-        perUnit: { inside: margin, outside: -cost, atLower: null, atUpper: null },
-        limitsKnown: false, capacity: null,
-      });
+  const sports = sport ? [sport.toLowerCase()] : ['nfl', 'nba', 'mlb', 'nhl'];
+  const body = await getOddsjamOdds({ sports, market: 'moneyline' });
+  const games = Array.isArray(body.data) ? body.data : [];
+  const quotes = [], holds = [], middles = [];
+  for (const game of games) {
+    for (const row of (game.rows || [])) {
+      for (const [bookName, odd] of Object.entries(row.books || {})) {
+        if (!Number.isFinite(Number(odd.price))) continue;
+        const id = 'oj-odds:' + stableRelayKey([game.id, row.label, bookName, odd.points].join('|'));
+        quotes.push(oddsjamQuoteBase({ id, sport: oddsjamSportOf(sport), event: game.name || '', market: body.market || 'moneyline', book: bookName, side: row.label || '', odds: Number(odd.price), line: odd.points, player: row.label || '', startTime: null, impliedProb: americanToImpliedProb(Number(odd.price)) }));
+        if (quotes.length >= limit) break;
+      }
+      if (quotes.length >= limit) break;
     }
-    // Hedges: opposing prices for promo tool
-    hedges.push({ promoQuoteId: leftId, hedges: [{ quoteId: rightId }] });
-    if (quotes.length >= limit * 2) break;
+    if (quotes.length >= limit) break;
   }
-  holds.sort((a, b) => a.hold - b.hold);
-  const generatedAt = new Date().toISOString();
-  return { snapshot: {
-    quotes, pricing: [], markets: [], arbitrage: [], middles, holds, hedges,
-    meta: { provenance: { provider: 'smartstake-relay', engine: 'smartstake-matched-bets-pairs', engineVersion: '1', generatedAt },
-      snapshotAt: generatedAt, staleAfter: new Date(observed + 5 * 60_000).toISOString(), stale: false, warmingUp: false, partial: false, warnings: [],
-      scope: { sport: sport || null }, controlsApplied: false, counts: { records: records.length, quotes: quotes.length, skipped: {}, dropped: 0 } }
-  }, dropped: { quotes: 0 } };
+  return { snapshot: { quotes, pricing: [], markets: [], meta: oddsjamSnapshotMeta(sport, quotes, games.length, 'oddsjam', 'oddsjam-screen') }, dropped: { quotes: 0 } };
 }
+
 async function getToolSnapshot({ tool, settings, sport, books }) {
   const options = { settings, sport, live: tool.endsWith('-live'), limit: 2000, books };
   if (tool === 'ev-pre' || tool === 'ev-live') return getRelayEvSnapshot(options);
@@ -1938,7 +1696,7 @@ function renderRelayBoards() {
   const content = relayError ? toolEmpty('Relayed boards unavailable', relayError, '', 'live')
     : relayLoading && !relayInventory.length ? toolEmpty('Loading relayed boards', 'Fetching the current tool-board inventory.', '', 'research')
     : names.length ? names.map(board).join('') : toolEmpty('No relayed boards yet', 'The VPS relay has not sent a tool-board snapshot yet.', '', 'research');
-  return `<div class="ev-stack">${toolStats([['Datasets',relayInventory.length],['Relayed records',total.toLocaleString()],['Last update',updated ? new Date(updated).toLocaleTimeString() : '—']])}${content}${toolNote('These read-only boards are relayed server-side. Rows keep their source bookmaker slugs exactly as supplied; they are not re-labeled as SmartStake.')}</div>`;
+  return `<div class="ev-stack">${toolStats([['Datasets',relayInventory.length],['Relayed records',total.toLocaleString()],['Last update',updated ? new Date(updated).toLocaleTimeString() : '—']])}${content}${toolNote('These read-only boards are relayed server-side. Rows keep their source bookmaker slugs exactly as supplied; they are not re-labeled.')}</div>`;
 }
 
 function renderTrends() {
