@@ -11,7 +11,7 @@ import { readBets, writeBets, validateBet, betReturns } from './bet-utils.js?v=4
 import { createEvOperations } from './ev-operations.js?v=2';
 import { createEvMarketViews } from './ev-market-views.js?v=2';
 import { createEvLedger, suiteLedgerStorage } from './ev-ledger.js?v=2';
-import { createEvFantasyLab } from './ev-fantasy-lab.js?v=2';
+import { createEvFantasyLab } from './ev-fantasy-lab.js?v=3';
 
 export const EV_SUITE_TOOLS = [
   ['Records','ledger','Ticket details & grading','Record tickets, grade individual legs, and keep notes with each selection.'],

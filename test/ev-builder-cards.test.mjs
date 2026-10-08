@@ -100,7 +100,7 @@ test('parlay legs get a fair chance whatever their EV; the Leg EV filter decides
 });
 
 test('optimizer cards pair only legs above break-even, keep payout rules and both pick IDs',()=>{
-  const rows=[pick('a',{probability:.65}),pick('b',{probability:.6}),pick('c',{probability:.5})];
+  const rows=[pick('custom',{app:'Chalkboard',probability:.1661,ev:.1944,customOdds:true}),pick('a',{probability:.65}),pick('b',{probability:.6}),pick('c',{probability:.5})];
   const state={dfs:rows,paytables:{PrizePicks:{2:[0,0,3]}}};
   const {$}=render('renderOptimizer',{state,dfs:()=>rows});
   const best=$('.evc-optimizer .evc-card').first();
@@ -108,12 +108,13 @@ test('optimizer cards pair only legs above break-even, keep payout rules and bot
   assert.equal(best.find('[data-optimize]').attr('data-optimize'),'a,b');
   assert.equal(best.find('.evc-stat strong').text(),'3×');
   assert.equal(best.find('.evc-stat small').text(),'Full-hit payout');
-  assert.equal(best.find('.evc-metric strong').text(),core.signed(core.fantasySlip(rows.slice(0,2),[0,0,3]).ev));
+  assert.equal(best.find('.evc-metric strong').text(),core.signed(core.fantasySlip(rows.slice(1,3),[0,0,3]).ev));
   assert.equal(best.find('.evc-ring strong').text(),'39.0%');
   assert.equal(best.find('.evc-combo-pick').length,2,'both picks are shown');
   // 2-pick 3× break-even is √(1/3) = 57.74%: c (50%) has a negative edge and does not qualify.
   assert.equal($('.evc-optimizer .evc-card').length,1);
   assert.equal($('[data-optimize*="c"]').length,0);
+  assert.equal($('[data-optimize*="custom"]').length,0,'custom-odds EV is not a pick’em edge and cannot qualify without payout rules');
 });
 
 test('slip pick cards pair each line\'s Over and Under and keep edit and select actions distinct',()=>{

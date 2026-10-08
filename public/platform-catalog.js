@@ -19,7 +19,7 @@ export const SITE_PLATFORMS = Object.freeze([
   platform('DraftKings Fantasy','DraftKings Fantasy','fantasy','draftkings',['DraftKings DFS']),
   platform('FanDuel Fantasy','FanDuel Fantasy','fantasy','fanduel',['FanDuel DFS']),
   platform('PrizePicks','PrizePicks','fantasy','prizepicks'),
-  platform('Underdog Fantasy','Underdog Fantasy','fantasy','underdog',['Underdog']),
+  platform('Underdog Fantasy','Underdog Fantasy','fantasy','underdog',['Underdog','Underdog DFS','underdog_dfs','underdog_dfs_best']),
   platform('Sleeper Picks','Sleeper Picks','fantasy','sleeper',['Sleeper']),
   platform('Betr Picks','Betr Picks','fantasy','betr',['Betr']),
   platform('Dabble','Dabble','fantasy','dabble'),
@@ -37,11 +37,25 @@ export const SITE_PLATFORMS = Object.freeze([
 ]);
 // Preserve existing Pick6 entries and the sharp-book comparison benchmark.
 const legacyPlatforms = [platform('DraftKings Pick6','DraftKings Pick6','fantasy','draftkings'), platform('Pinnacle','Pinnacle','sportsbook','pinnacle')];
+const SMARTSTAKE_BOOKS = Object.freeze(JSON.parse('{"4caster":"4Caster","4cx":"4CX","888sport":"888sport","action247":"Action247","bally_bet":"Bally Bet","bet_jack":"Bet Jack","bet_monarch":"Bet Monarch","bet_sacaren":"Bet Sacaren","bet105":"Bet105","bet365":"Bet365","bet99":"Bet99","bet99_ca":"Bet99 (CA)","betano":"Betano","betanything":"BetAnything","betcris":"Betcris","betfair":"betfair","betfred":"Betfred","betinia":"Betinia","betinia_nj":"Betinia (NJ)","betly":"Betly","betmgm":"Betmgm","betnow":"BetNow","betonline":"Betonline","betparx":"BetParx","betphoenix":"Betphoenix","betr":"Betr","betr_best":"Betr","betrivers":"Betrivers","betsafe":"Betsafe","betus":"Betus","betvictor":"BetVictor","betway":"BetWay","bleachernation":"Bleacher Nation","bleachernation_best":"BleacherNation","bodog":"Bodog","bookmaker":"Bookmaker","boomfantasy":"BoomFantasy","borgata":"Borgata","bovada":"Bovada","bracco":"Bracco","bwin":"Bwin","caesars":"Caesars","casumo":"Casumo","chalkboard":"Chalkboard","circa":"Circa","clutchbet":"Clutchbet","comeon":"ComeOn","coolbet":"Coolbet","courtside":"Courtside","crab_sports":"Crab Sports","dabble":"Dabble","dabble_best":"Dabble","daznbet":"DAZN Bet","desert_diamond":"Desert Diamond","draftkings":"Draftkings","draftkings6":"DraftKings Pick6","draftkings6_best":"Draftkings Pick6","drf":"DRF","eagle":"Eagle","epick":"EPICK","espn_bet":"ESPN Bet","everygame":"everygame","fanatics":"Fanatics","fanduel":"Fanduel","fanduelpicks":"Fanduel Picks","firekeepers":"FireKeepers","fitzdares":"Fitzdares","fliff":"Fliff","four_winds":"Four Winds","goalserve":"goalserve","golden_nugget":"Golden Nugget","gun_lake":"Gun Lake","hard_rock":"Hard Rock","hardrock_fl":"Hardrock (FL)","hardrock_il":"Hardrock (IL,OH)","hardrock_on":"Hardrock (ON)","heritage":"Heritage Sports","jazzsports":"Jazz Sports","justbet":"JustBet","kalshi":"Kalshi","leovegas":"Leovegas","letsbetmd":"Letsbetmd","miseojeu":"Mise-o-jeu","monopoly":"Monopoly","mvgbet":"MVGBet","mybookie":"Mybookie","neobet":"Neo.bet","northstar_bets":"Northstar Bets","novig":"Novig","oaklawn":"Oaklawn","onyx":"Onyx","ownersbox":"Owners Box","ownersbox_best":"Owners Box","parlayplay":"ParlayPlay","partysports":"Partysports","pinnacle":"Pinnacle","playfallsview":"Playfallsview","playnow":"Playnow","pointsbet_ca":"Pointsbet","pokerstars":"Pokerstars","polymarket":"Polymarket","polymarket_us":"Polymarket US","powerplay":"Powerplay","prime_sports":"Prime Sports","prizepicks":"PrizePicks","prizepicks_best":"PrizePicks","proline":"Proline","propbuilder":"Propbuilder","prophetx":"ProphetX","ps3838":"ps3838","q_sportsbook":"Q Sportsbook","rebet":"Rebet","resorts_world":"Resorts World","rivalry":"Rivalry","si_sportsbook":"Si Sportsbook","sleeper":"Sleeper","smarkets":"Smarkets","smartstake":"SmartStake","splashsports":"SplashSports","splashsports_best":"SplashSports","sports_interaction":"Sports Interaction","sporttrade":"SportTrade","sportzino":"Sportzino","stake":"Stake","stnsports":"STN Sports","stx":"Stx","sugar_house":"Sugar House","swiper":"Swiper","swisstony":"x010123","thescore":"theScore","tipico":"Tipico","titan_play":"Titan Play","tonybet":"Tonybet","tooniebet":"Tooniebet","underdog":"Underdog","underdog_dfs":"Underdog DFS","underdog_dfs_best":"Underdog DFS","wagerattack":"WagerAttack","wannaparlay":"WannaParlay","wind_creek":"Wind Creek","xbet":"Xbet","youwager":"YouWager","zensports":"Zensports"}'));
+export const SMARTSTAKE_BOOK_COUNT = Object.keys(SMARTSTAKE_BOOKS).length;
+export const SMARTSTAKE_SPORTSBOOK_PLATFORMS = Object.freeze(Object.keys(SMARTSTAKE_BOOKS).filter(name => name !== 'smartstake'));
+// Books on one odds platform are one opinion, not three. The server's dynamic 70% overlap detector
+// unions these known groups first; relayed DFS data uses the same groups in the browser.
+export const SPORTSBOOK_PRICE_FAMILIES = Object.freeze([
+  Object.freeze(['BetRivers', 'Desert Diamond Sports', 'Bally Bet', 'Betly', 'Leovegas']),
+  Object.freeze(['BetMGM', 'Sports Interaction', 'Bwin', 'PartySports']),
+  Object.freeze(['theScore', 'ESPN Bet']),
+  Object.freeze(['Bookmaker', 'Prime Sports', 'Betcris']),
+  Object.freeze(['MyBookie', 'Xbet']),
+  Object.freeze(['Bodog', 'Bovada']),
+]);
 const key = value => String(value ?? '').replace(/\s*\(example\)$/i,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+const SMARTSTAKE_BOOK_LOOKUP = new Map(Object.entries(SMARTSTAKE_BOOKS).map(([slug,label]) => [key(slug),label]));
 const lookup = new Map([...SITE_PLATFORMS, ...legacyPlatforms].flatMap(item => [item.name,item.label,...item.aliases].map(name => [key(name),item])));
 export const findPlatform = value => lookup.get(key(value)) || null;
-export const canonicalPlatform = value => findPlatform(value)?.name || String(value ?? '').replace(/\s*\(example\)$/i,'').trim();
-export const platformLabel = value => findPlatform(value)?.label || String(value ?? '');
+export const canonicalPlatform = value => findPlatform(value)?.name || SMARTSTAKE_BOOK_LOOKUP.get(key(value)) || String(value ?? '').replace(/\s*\(example\)$/i,'').trim();
+export const platformLabel = value => SMARTSTAKE_BOOK_LOOKUP.get(key(value)) || findPlatform(value)?.label || String(value ?? '');
 // Feed book slugs that share a brand's artwork, plus books with their own file in /assets/brands.
 const BOOK_ASSETS = Object.freeze({
   'draftkings6':'draftkings', 'draftkings6best':'draftkings', 'fanduelpicks':'fanduel',
@@ -69,7 +83,7 @@ export const platformAsset = value => findPlatform(value)?.asset || bookAsset(va
 export const SPORTSBOOK_PLATFORMS = Object.freeze(SITE_PLATFORMS.filter(item => item.category === 'sportsbook').map(item => item.name));
 export const FANTASY_PLATFORMS = Object.freeze(['PrizePicks','Underdog Fantasy','DraftKings Pick6','Sleeper Picks','ParlayPlay','Dabble','Chalkboard','Betr Picks','OwnersBox','Boom Fantasy','Vivid Picks','DraftKings Fantasy','FanDuel Fantasy']);
 export const PREDICTION_PLATFORMS = Object.freeze(SITE_PLATFORMS.filter(item => item.category === 'prediction').map(item => item.name));
-export const EXCHANGE_PLATFORMS = Object.freeze(['Novig','ProphetX','Sporttrade','BettorEdge']);
+export const EXCHANGE_PLATFORMS = Object.freeze(['Novig','ProphetX','Sporttrade','Kalshi','BettorEdge']);
 export const isFantasyPlatform = value => findPlatform(value)?.category === 'fantasy';
 export const isContestPlatform = value => ['DraftKings Fantasy','FanDuel Fantasy'].includes(canonicalPlatform(value));
 const esc = value => String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

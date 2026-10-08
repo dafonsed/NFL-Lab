@@ -13,6 +13,7 @@ export const MORE_TOOL_GROUPS = Object.freeze([
   ]},
   {label:'Research & alerts',tools:[
     {key:'prediction',label:'Prediction markets',description:'Contracts, positions and trades',icon:'research'},
+    {key:'relay-boards',label:'Relayed tool boards',description:'Positive EV, arb and market depth',icon:'performance'},
     {key:'trends',label:'Player prop trends',description:'Hit rates and paired results',icon:'trends'},
     {key:'fantasy-alerts',label:'Fantasy alerts',description:'Watch for new player props',icon:'bookmark'},
     {key:'line-alerts',label:'Price & movement alerts',description:'Follow prices and line changes',icon:'live'}

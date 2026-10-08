@@ -18,7 +18,7 @@ test('consensus prices a selection from the other books’ complete markets', ()
   // A future without every outcome listed has no fair price; a complete 1X2 does.
   const incomplete = [{ ...offer, type: 'future', side: 'Arizona' }, { ...offer, id: 'other', type: 'future', side: 'Seattle' }];
   assert.ok(Number.isNaN(consensusPrice(incomplete[0], incomplete, { now: now() }).probability));
-  const threeWay = ['Home', 'Draw', 'Away'].flatMap((side, i) => ['Book A', 'Book B'].map(book => ({ ...offer, id: `${book}-${side}`, event: 'Example soccer', type: 'three-way', line: '', side, book, odds: [180, 220, 160][i] })));
+  const threeWay = ['Home', 'Draw', 'Away'].flatMap((side, i) => ['Pinnacle', 'Circa'].map(book => ({ ...offer, id: `${book}-${side}`, event: 'Example soccer', type: 'three-way', line: '', side, book, odds: [180, 220, 160][i] })));
   assert.ok(Number.isFinite(consensusPrice(threeWay[0], threeWay, { now: now() }).probability));
 });
 

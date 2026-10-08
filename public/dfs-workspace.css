@@ -258,3 +258,13 @@ body.ev-page[data-ev-screen="fantasy"] .dfs-workspace :is(.dfs-prop-list,.dfs-sl
 .dfs-odds-type[data-odds-type="goblin"]{color:#7ee0a1}
 .dfs-odds-type[data-odds-type="demon"]{color:#ff8f8f}
 .dfs-odds-type[data-odds-type="part"]{color:#f2c46d}
+
+/* Goblin and demon lines: visually distinct from standard O/U */
+.evb-row.dfs-alt-line{opacity:.82;background:rgba(255,143,143,.03)}
+.evb-row.dfs-alt-line .dfs-pick-line{text-decoration:underline dotted}
+.evb-row.dfs-alt-line .dfs-market-title::after{content:' ALT';font-size:9px;opacity:.65;letter-spacing:.08em;font-weight:800}
+.dfs-offer .dfs-unweighted-note{font-style:italic;opacity:.6}
+
+.dfs-offer .dfs-unweighted-note{font-style:italic;opacity:.55;font-size:9px}
+
+.dfs-fair-fallback{font-style:italic;font-size:9px;opacity:.6;text-transform:uppercase;letter-spacing:.06em}

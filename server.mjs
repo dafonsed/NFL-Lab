@@ -40,10 +40,12 @@ import { SimulationStore } from './lib/simulation-source.mjs';
 import { SimulationPropsStore, createSimulationPropStores } from './lib/simulation-props.mjs';
 import { renderBettingPage } from './lib/betting-pages.mjs';
 import { renderOddsApiPage } from './lib/odds-api-page.mjs';
+import { handleBettingToolsApi } from './lib/oddsjam/routes.mjs';
 import { handleEvApi } from './lib/ev-api-proxy.mjs';
 import { handleOddsApi } from './lib/odds/http.mjs';
 import { OddsError } from './public/odds-contract.js';
 import { accountRuntime } from './lib/accounts/runtime.mjs';
+import { PLAN_CATALOG } from './lib/accounts/entitlements.mjs';
 import { accountJson, enforceAccountAccess } from './lib/accounts/http.mjs';
 import { readMarketControlsWithFallback } from './lib/admin-market-controls.mjs';
 import { sendPublicResponse } from './lib/http-compression.mjs';
@@ -91,6 +93,18 @@ const allowEvRequest = createIpLimiter({ max: 120, windowMs: 60_000 });
 const allowRefresh = createRefreshGate({ windowMs: 60_000 });
 // Same test as accountRuntime(): configured account services that failed to start are not "no accounts".
 const accountsConfigured = () => Boolean(process.env.BETTER_AUTH_SECRET && process.env.BETTER_AUTH_URL);
+const publicBillingPlans = () => ({
+  configured: false,
+  plans: Object.values(PLAN_CATALOG).map(plan => ({
+    id: plan.id,
+    name: plan.name,
+    features: [...plan.features],
+    previewMonthly: plan.previewMonthly,
+    checkoutEnabled: false,
+    unavailableReason: plan.unavailableReason || null,
+    prices: [],
+  })),
+});
 function json(res, data, status = 200) { return sendPublicResponse(res.req, res, JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } }); }
 // Research boards are the same for every visitor and are built only from the query, but a cold build
 // takes seconds (the NFL board 37 s on 4 Oct 2026: nflverse data, lines for every game, injuries,
@@ -116,6 +130,8 @@ export const server = http.createServer(async (req, res) => {
     const accountApi = /^\/api\/(?:auth(?:\/|$)|account(?:\/|$)|admin(?:\/|$)|content$|billing\/webhook$|cron\/accounts$)/.test(url.pathname);
     if (accountApi) {
       if (!accounts && req.method === 'GET' && url.pathname === '/api/auth/get-session') return accountJson(res, null);
+      if (!accounts && req.method === 'GET' && url.pathname === '/api/account/billing/plans') return accountJson(res, publicBillingPlans());
+      if (!accounts && req.method === 'GET' && url.pathname === '/api/account/providers') return accountJson(res, { providers: [] });
       if (!accounts) return accountJson(res, { error: 'Account services are not configured yet. Please try again later.', code: 'ACCOUNTS_UNAVAILABLE' }, 503);
       if (await accounts.handle(req, res, url)) return;
       return accountJson(res, { error: 'Account route not found.' }, 404);
@@ -134,8 +150,14 @@ export const server = http.createServer(async (req, res) => {
     // Distribution controls fail closed: a database error is a 503, never an unfiltered snapshot. Only a
     // server with no account services configured (so no controls can exist) serves without them.
     const loadControls = accounts ? () => readMarketControlsWithFallback(accounts.system.db) : accountsConfigured() ? async () => { throw new Error('Account services are unavailable.'); } : null;
+        if (url.pathname.startsWith('/api/oddsjam/')) return await handleBettingToolsApi(req, res, url);
+    if (url.pathname === '/betting-tools' || url.pathname === '/betting-tools/') {
+      const html = await fs.readFile(path.join(publicDir, 'betting-tools.html'), 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      return res.end(html);
+    }
     if (url.pathname.startsWith('/api/ev/')) return await handleEvApi(req, res, url, { loadControls });
-    if (oddsApi) return await handleOddsApi(req, res, url, { loadControls });
+    if (oddsApi) return await handleOddsApi(req, res, url, { loadControls, defer: task => { try { waitUntil(task); } catch {} return task; } });
     if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, { error: 'Method not allowed.' }, 405);
     const helpRequest = resolveHelpCenterRequest(url, { host });
     if (helpRequest) {
@@ -302,7 +324,7 @@ export const server = http.createServer(async (req, res) => {
     for (const file of ['ev-suite.js', 'ev-suite.css', 'ev-suite-storage.js', 'ev-operations.js', 'ev-operations.css', 'ev-market-views.js', 'ev-market-views.css', 'ev-ledger.js', 'ev-ledger.css', 'ev-fantasy-lab.js', 'ev-fantasy-lab.css', 'ev.webmanifest', 'ev-sw.js', 'ev-app-icon.svg']) names['/' + file] = file;
     for (const file of ['platform-catalog.js', 'ev-tool-catalog.js', 'ev-more-menu.js', 'ev-secondary-views.js', 'ev-more-tools.css', 'ev-filters.js', 'ev-quote-cache.js']) names['/' + file] = file;
     // The odds client and the shared calculators (lib/odds prices the feed; the browser displays it).
-    for (const file of ['odds-client.js', 'odds-contract.js', 'odds-alerts.js', 'odds-format.js', 'betting-math.js', 'market-identity.js', 'sport-names.js']) names['/' + file] = file;
+    for (const file of ['odds-client.js', 'odds-contract.js', 'odds-alerts.js', 'odds-format.js', 'betting-math.js', 'market-identity.js', 'sport-names.js', 'relay-dfs.js', 'dfs-feed-merge.js']) names['/' + file] = file;
     for (const file of ['ev-open.css', 'studio.css', 'research-filters.css', 'research-details.css', 'tool-dropdowns.css', 'arb-calculator.js', 'arb-calculator.css', 'bet-comparison.js', 'bet-comparison.css', 'bet-dashboard-v2.js', 'bet-dashboard-v3.js', 'bet-history.js', 'bet-inline.js', 'bet-inline.css',   'bet-tracker-reference.css', 'ev-arb-reference.css', 'ev-book-picker.css', 'ev-filter-polish.css',  'sites-redesign.css', 'smart-money.css']) names['/' + file] = file;
     if (/^\/ev-icons\/(date|leagues|markets|odds|sports)\.svg$/.test(pagePath)) names[pagePath] = pagePath.slice(1);
     if (['/product-switcher.js','/product-switcher.css'].includes(pagePath)) names[pagePath] = pagePath.slice(1);

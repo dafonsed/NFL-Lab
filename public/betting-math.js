@@ -98,7 +98,7 @@ function normalQuantile(p) {
 }
 
 /** Devig methods the website implements. Multiplicative is the default. */
-export const DEVIG_METHODS = Object.freeze(['multiplicative', 'additive', 'power', 'probit', 'shin']);
+export const DEVIG_METHODS = Object.freeze(['multiplicative', 'additive', 'power', 'probit', 'shin', 'worst']);
 /** Version of this devig implementation, reported with every fair price it produces. */
 export const DEVIG_VERSION = 'visualodds-devig/1';
 
@@ -112,12 +112,15 @@ export const DEVIG_VERSION = 'visualodds-devig/1';
  * Returns [] when the inputs or the method can't produce valid probabilities.
  * @param {unknown[]} probabilities
  * @param {string} [method]
+ * @returns {number[]}
  */
 export function devig(probabilities, method = 'multiplicative') {
   if (!Array.isArray(probabilities) || probabilities.length < 2) return [];
+  /** @type {number[]} */
   const values = probabilities.map(number);
   if (values.some(value => !(value > 0 && value < 1))) return [];
   const sum = values.reduce((total, value) => total + value, 0);
+  /** @type {number[]} */
   let fair;
   if (method === 'multiplicative') fair = values.map(value => value / sum);
   else if (method === 'additive') fair = values.map(value => value - (sum - 1) / values.length);
@@ -159,8 +162,28 @@ export function devig(probabilities, method = 'multiplicative') {
       }
       fair = shares((low + high) / 2);
     }
+  } else if (method === 'worst') {
+    const perMethod = ['additive', 'multiplicative', 'power', 'probit'].map(inner => devig(values, inner));
+    if (perMethod.some(fairs => fairs.length !== values.length)) return [];
+    fair = values.map((value, index) => {
+      const candidates = perMethod.map(fairs => Number(fairs[index])).filter(f => Number.isFinite(f) && f > 0);
+      if (!candidates.length) return 0;
+      return Math.min(...candidates);
+    });
+    const fairTotal = fair.reduce((total, value) => total + value, 0);
+    if (fairTotal > 0) fair = fair.map(value => value / fairTotal);
+    else return [];
   } else return [];
   return fair.every(value => value > 0 && value < 1) && Math.abs(fair.reduce((total, value) => total + value, 0) - 1) < 1e-8 ? fair : [];
+}
+
+/** The most conservative fair probability for a selection: the minimum across additive, multiplicative, power and probit. @param {unknown[]} probabilities @param {number} [selectionIndex] */
+export function worstCaseProbability(probabilities, selectionIndex = 0) {
+  const values = ['additive', 'multiplicative', 'power', 'probit']
+    .map(method => devig(probabilities, method))
+    .filter(fair => fair.length > selectionIndex && Number.isFinite(fair[selectionIndex]) && fair[selectionIndex] > 0)
+    .map(fair => fair[selectionIndex]);
+  return values.length ? Math.min(...values) : 0;
 }
 
 /**

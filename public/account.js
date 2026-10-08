@@ -296,6 +296,8 @@ function setupSectionNav() {
 const refreshSectionNav = setupSectionNav();
 
 try {
+  await accountReady;
+  if (!accountSyncState().userId) throw Object.assign(new Error('Sign in required'), { status: 401 });
   await loadAccount(); $('#account-load-status').hidden = true; $('#account-content').hidden = false; $('#sign-out').disabled = false;
   loadReferral();
   if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
@@ -303,7 +305,7 @@ try {
   const notice = new URLSearchParams(location.search).get('notice');
   if (notice === 'UPGRADE_REQUIRED') message($('#account-load-status'), 'Your current plan does not include that tool. Review the available plans below to change your access.');
   if (['MFA_REQUIRED', 'ADMIN_MFA_REQUIRED'].includes(notice)) message($('#account-load-status'), 'This area requires two-step verification. Set up an authenticator in Security, then sign in with an authenticator code.');
-  const outcomes = await Promise.allSettled([loadSessions(), loadPlans(), accountReady]);
+  const outcomes = await Promise.allSettled([loadSessions(), loadPlans()]);
   if (outcomes[0].status === 'rejected') fail(securityStatus, outcomes[0].reason);
   if (outcomes[1].status === 'rejected') fail($('#billing-status'), outcomes[1].reason);
   const legacy = legacyDataSummary();

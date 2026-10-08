@@ -39,17 +39,17 @@ const timedOut = error => { const name = error && typeof error === 'object' ? /*
  * @template [T=unknown]
  * @param {string} path
  * @param {Record<string, string | number | boolean | null | undefined>} [params]
- * @param {{ timeout?: number, transform?: (body: unknown) => T }} [options]
+ * @param {{ timeout?: number, cacheMode?: RequestCache, transform?: (body: unknown) => T }} [options]
  * @returns {Promise<T>}
  */
-async function request(path, params = {}, { timeout = 45_000, transform = /** @type {(body: unknown) => T} */ (body => body) } = {}) {
+async function request(path, params = {}, { timeout = 45_000, cacheMode = 'no-store', transform = /** @type {(body: unknown) => T} */ (body => body) } = {}) {
   const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '').map(([key, value]) => [key, String(value)]));
   const search = query.toString(), url = search ? `${path}?${search}` : path;
   const shared = inflight.get(url);
   if (shared) return /** @type {Promise<T>} */ (shared);
   const pending = (async () => {
     let response;
-    try { response = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(timeout) }); }
+    try { response = await fetch(url, { cache: cacheMode, headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(timeout) }); }
     catch (error) {
       throw new OddsError(timedOut(error) ? 'TIMEOUT' : 'UNAVAILABLE', timedOut(error) ? 'The odds request timed out.' : 'The odds service could not be reached.');
     }
@@ -119,11 +119,11 @@ const probabilityOrNull = value => value !== null && value !== undefined && valu
 
 /**
  * Pick'em (DFS) lines priced against the sportsbooks, with each app's payout tables.
- * @param {{ settings?: Settings }} [options]
+ * @param {{ settings?: Settings, sport?: string, limit?: number }} [options]
  * @returns {Promise<{ meta: SnapshotMeta, payouts: DfsResponse['payouts'], picks: DfsPick[] }>}
  */
-export async function getDfs({ settings } = {}) {
-  const body = fieldsOf(await request('/api/odds/dfs', { prefs: prefsOf(settings) }));
+export async function getDfs({ settings, sport, limit } = {}) {
+  const body = fieldsOf(await request('/api/odds/dfs', { prefs: prefsOf(settings), sport, limit }, { timeout: 240_000, cacheMode: 'default' }));
   if (body.contract !== CONTRACT_ID || !Array.isArray(body.picks)) throw new OddsError('MALFORMED');
   return { meta: decodeMeta(body.meta), payouts: /** @type {DfsResponse['payouts']} */ (fieldsOf(body.payouts)),
     picks: body.picks.map(fieldsOf).filter(pick => typeof pick.id === 'string' && typeof pick.app === 'string').map(pick => /** @type {DfsPick} */ ({ ...pick, probability: probabilityOrNull(pick.probability) })) };
@@ -157,6 +157,26 @@ export async function getPredictionContracts({ platform } = {}) {
   const body = fieldsOf(await request('/api/odds/contracts', { platform }, { timeout: 20_000 }));
   if (body.contract !== CONTRACT_ID || !Array.isArray(body.contracts)) throw new OddsError('MALFORMED');
   return body.contracts;
+}
+
+/** Inventory of the read-only SmartStake boards relayed through the website API. */
+export async function getSmartstakeInventory() {
+  return request('/api/ev/smartstake/datasets');
+}
+
+const smartstakeCache = new Map();
+/**
+ * One read-only SmartStake board, already structured as records by the relay.
+ * @param {string} dataset
+ * @param {{ limit?: number, sport?: string }} [options]
+ * @returns {Promise<unknown>}
+ */
+export async function getSmartstakeDataset(dataset, { limit, sport } = {}) {
+  const key = JSON.stringify([dataset, limit || null, sport || null]), cached = smartstakeCache.get(key);
+  if (cached && Date.now() - cached.at < 60_000) return cached.promise;
+  const promise = request(`/api/ev/site/smartstake/datasets/${encodeURIComponent(dataset)}`, { limit, sport });
+  smartstakeCache.set(key, { at: Date.now(), promise });
+  try { return await promise; } catch (error) { smartstakeCache.delete(key); throw error; }
 }
 /** The quote source's collection status (per book), for the coverage view. @returns {Promise<unknown>} */
 export async function getSourceStatus() {

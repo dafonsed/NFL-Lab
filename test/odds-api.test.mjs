@@ -122,7 +122,7 @@ test('an upstream outage is a retryable 503 with no upstream detail; a held-over
   const fetcher = fixtureFetcher(fixtureRecords(), { fail: () => failing }), provider = createTransitionProvider();
   assert.equal(decodeSnapshot((await call('/api/odds/snapshot', { fetcher, provider })).body).snapshot.meta.stale, false);
   failing = true;
-  t.mock.timers.tick(10_000);
+  t.mock.timers.tick(61_000);
   const held = decodeSnapshot((await call('/api/odds/snapshot', { fetcher, provider })).body).snapshot;
   assert.equal(held.meta.stale, true);
   assert.ok(held.quotes.length > 0);
@@ -137,22 +137,29 @@ test('holds and hedge pairs choose best prices among the member’s books', asyn
   assert.ok(two.hedges.every(row => [row.promoQuoteId, ...row.hedges.map(hedge => hedge.quoteId)].every(id => ['DraftKings', 'FanDuel'].includes(two.quotes.find(quote => quote.id === id).book))));
 });
 
-test('DFS lines are priced on the server with the payout tables; missing apps are requested on their own', async () => {
+test('DFS lines are sport-scoped, priced on the server with payout tables; missing apps are requested on their own', async () => {
   const urls = [];
   const base = fixtureFetcher(fixtureRecords(), { payouts: [...fixturePayouts(), { app: 'Underdog', payouts: { 2: { power: { multiplier: 3 } } } }] });
-  const prop = (id, app) => ({ id, app, sport: 'nfl', event: 'Fixture Falcons @ Fixture Saints', player: 'Fixture Runner 1', market: 'Rushing Yards', line: 60.5, side: 'higher', ts: new Date().toISOString() });
+  const prop = (id, app, player, line, sport = 'nfl') => ({ id, app, sport, event: 'Fixture Falcons @ Fixture Saints', player, market: 'Rushing Yards', line, side: 'higher', ts: new Date().toISOString() });
   const fetcher = async (url, init) => {
     const target = new URL(url);
     if (target.pathname !== '/site/dfs/props') return base(url, init);
     urls.push(target.search);
     const app = target.searchParams.get('app');
-    return new Response(JSON.stringify(!app ? [prop('a', 'PrizePicks'), prop('roster', 'Sleeper')] : app === 'Underdog' ? [prop('c', 'Underdog'), prop('a', 'PrizePicks')] : []), { status: 200 });
+    return new Response(JSON.stringify(!app ? [prop('a', 'PrizePicks', 'Fixture Runner 1', 60.5), prop('runner-2', 'PrizePicks', 'Fixture Runner 2', 65.5), prop('roster', 'Sleeper', 'Fixture Runner 1', 60.5), prop('baseball', 'PrizePicks', 'Fixture Runner 1', 60.5, 'mlb')]
+      : app === 'Underdog' ? [prop('c', 'Underdog', 'Fixture Runner 1', 60.5), prop('underdog-2', 'Underdog', 'Fixture Runner 2', 65.5), prop('a', 'PrizePicks', 'Fixture Runner 1', 60.5), prop('extra-baseball', 'Underdog', 'Fixture Runner 1', 60.5, 'mlb')] : []), { status: 200 });
   };
-  const result = await call('/api/odds/dfs', { fetcher });
+  const result = await call('/api/odds/dfs?sport=NFL', { fetcher });
   assert.equal(result.status, 200);
-  assert.deepEqual(urls, ['', '?app=Underdog'], 'apps already in the unfiltered answer are not asked again');
+  assert.equal(result.headers['Cache-Control'], 'no-store', 'DFS responses are never CDN-cached; the function cache handles warm requests');
+  assert.deepEqual(urls, ['?sport=nfl', '?sport=nfl&app=Underdog'], 'the sport and missing app requests stay scoped');
   assert.deepEqual(Object.keys(result.body.payouts).sort(), ['PrizePicks', 'Underdog Fantasy']);
-  const runner = result.body.picks.filter(pick => pick.player === 'Fixture Runner 1' && pick.side === 'Over');
+  assert.ok(result.body.picks.length > 0 && result.body.picks.every(pick => pick.sport === 'NFL'), 'the selected sport is the only one served');
+  const one = await call('/api/odds/dfs?sport=NFL&limit=1', { fetcher });
+  assert.equal(one.body.picks.length, 1);
+  assert.ok(Number.isFinite(one.body.picks[0].probability), 'a low cap keeps a priced candidate, not an unpriced row');
+  assert.equal(one.body.meta.truncated, true);
+  const runner = result.body.picks.filter(pick => pick.player === 'Fixture Runner 1' && pick.side === 'Over' && Number.isFinite(pick.probability));
   assert.ok(runner.length >= 2 && runner.every(pick => pick.probability > .5 && pick.probability < .55), JSON.stringify(runner.map(pick => [pick.app, pick.probability])));
   assert.ok(runner.every(pick => pick.fairOdds < 0 && pick.probabilityMethod === 'multiplicative'));
   // Every line says when it stops being current, as quotes do: the page never ages lines itself.

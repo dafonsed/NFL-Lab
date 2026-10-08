@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { access } from 'node:fs/promises';
-import { SITE_PLATFORMS, SPORTSBOOK_PLATFORMS, FANTASY_PLATFORMS, PREDICTION_PLATFORMS, canonicalPlatform, findPlatform, platformAsset, detectPlatform, platformOptions } from '../public/platform-catalog.js';
+import { SITE_PLATFORMS, SMARTSTAKE_BOOK_COUNT, SMARTSTAKE_SPORTSBOOK_PLATFORMS, SPORTSBOOK_PLATFORMS, FANTASY_PLATFORMS, PREDICTION_PLATFORMS, canonicalPlatform, findPlatform, platformAsset, detectPlatform, platformOptions } from '../public/platform-catalog.js';
 import { inlineBookMark } from '../public/bet-inline.js';
 import { parseBetSlip } from '../public/bet-slip-parser.js';
-import { sportsbookStatus } from '../public/sportsbook-availability.js';
+import { sportsbookAvailable, sportsbookStatus } from '../public/sportsbook-availability.js';
 import { createDfsWorkspace } from '../public/dfs-workspace.js';
 import { dfsPreview } from './fixtures/dfs-props.mjs';
 import { validateBet, readBets, writeBets } from '../public/bet-utils.js';
@@ -34,6 +34,16 @@ test('aliases keep fantasy products separate and map legacy sportsbook names to 
   assert.equal(sportsbookStatus('DraftKings Fantasy','AZ'),'unverified');
   assert.equal(sportsbookStatus('Kalshi','AZ'),'unverified');
   assert.equal(canonicalPlatform('My custom platform'),'My custom platform');
+});
+
+test('relayed sportsbooks remain native and unverified coverage stays selectable', () => {
+  assert.equal(SMARTSTAKE_SPORTSBOOK_PLATFORMS.length, SMARTSTAKE_BOOK_COUNT - 1);
+  assert.ok(SMARTSTAKE_SPORTSBOOK_PLATFORMS.includes('888sport'));
+  assert.ok(SMARTSTAKE_SPORTSBOOK_PLATFORMS.includes('bet99'));
+  assert.ok(SMARTSTAKE_SPORTSBOOK_PLATFORMS.includes('sportzino'));
+  assert.ok(!SMARTSTAKE_SPORTSBOOK_PLATFORMS.includes('smartstake'));
+  assert.equal(sportsbookStatus('888sport','AZ'),'unverified');
+  assert.equal(sportsbookAvailable('888sport','AZ'),true);
 });
 
 test('platform identities survive tracker validation, save and reload', () => {

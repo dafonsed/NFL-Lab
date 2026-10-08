@@ -4,6 +4,7 @@ data-independent/
 reports/*.json
 reports/espn/
 logs/
+__pycache__/
 node_modules/
 .vercel/
 .env

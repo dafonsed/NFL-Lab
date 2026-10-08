@@ -52,7 +52,7 @@ test('Vercel can import the default server without starting a listener or backgr
       for (const route of ['/ev?sport=nfl','/ev/dashboard?sport=nfl','/ev/tracker?sport=nfl']) {
         const response=await fetch(base+route); assert.equal(response.status,200,route);
         const $=load(await response.text());
-        assert.equal($('[data-more-tool]').length,12,route);
+        assert.equal($('[data-more-tool]').length,13,route);
         $('script[src],link[rel="stylesheet"]').each((_,element)=>assets.add(new URL($(element).attr('src')||$(element).attr('href'),base).href));
       }
       for (const asset of assets) {
