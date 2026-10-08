@@ -1,8 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { consensusPrice, computeAdvancedEv, quoteAvailable, marketFairPrice, evCapFor, EV_SANITY_LIMIT, EV_SINGLE_BOOK_LIMIT,
-  SHARP_MAX_VIG_PERCENT, MIN_EXCHANGE_IMPLIED_SUM } from '../lib/odds/engine.mjs';
+  SHARP_MAX_VIG_PERCENT, MIN_EXCHANGE_IMPLIED_SUM, BOOK_WEIGHTS } from '../lib/odds/engine.mjs';
 import { devig, priceClv, noVigClv, comparableClv, performanceSummary } from '../public/betting-math.js';
+
+test('operator book weights give Kalshi 50', () => {
+  assert.equal(BOOK_WEIGHTS.kalshi, 50);
+});
+
+test('operator book weights give Kalshi 50', () => {
+  assert.equal(BOOK_WEIGHTS.kalshi, 50);
+});
 
 // Fixed clock: every quote is a minute old and the game starts the next day.
 const now = Date.parse('2026-10-03T06:00:00Z');
@@ -43,11 +51,11 @@ test('the default sharp weight applies only to a low-margin market and never ove
   const offered = quote('FanDuel', 'home', 150);
   const weightOf = (rows, settings = {}) => consensusPrice(offered, [offered, ...rows], { now, ...settings }).books.find(book => book.book === 'Pinnacle').weight;
   assert.equal(SHARP_MAX_VIG_PERCENT, 6);
-  assert.equal(weightOf(pair('Pinnacle', -105, -105)), 3, '2.4% margin is a sharp price');
-  assert.equal(weightOf(pair('Pinnacle', -125, -125)), 1, 'an 11% MMA-style hold is not');
+  assert.equal(weightOf(pair('Pinnacle', -105, -105)), 100, '2.4% margin is a sharp price');
+  assert.equal(weightOf(pair('Pinnacle', -125, -125)), 25, 'an 11% MMA-style hold is capped at the recreational weight');
   assert.equal(weightOf(pair('Pinnacle', -125, -125), { bookRules: [{ book: 'Pinnacle', weight: 2 }] }), 2, 'saved weights are used as entered');
   const mixed = consensusPrice(offered, [offered, ...pair('Pinnacle', -125, -125), ...pair('DraftKings', -150, 130)], { now });
-  assert.ok(Math.abs(mixed.probability - (fairOf(-125, -125) + fairOf(-150, 130)) / 2) < 1e-12, 'a wide Pinnacle market counts once, like any book');
+  assert.ok(Math.abs(mixed.probability - (fairOf(-125, -125) + fairOf(-150, 130)) / 2) < 1e-12, 'a wide Pinnacle market caps at the same weight as DraftKings (25): a 1:1 ratio');
 });
 
 test('an exchange pair implying well under 100% is not a reference market', () => {
@@ -83,8 +91,8 @@ test('EV sanity caps are shared: 25%, 10% with one reference book, none with a s
 test('the market fair price counts every complete book, the offered one included, and needs every outcome', () => {
   const rows = [...pair('FanDuel', -150, 130), ...pair('BetRivers', -120, 100, { priceFamily: 'Kambi' }), ...pair('Desert Diamond Sports', -120, 100, { priceFamily: 'Kambi' })];
   const fair = marketFairPrice(rows[0], rows, { now });
-  assert.ok(Math.abs(fair.probability - (fairOf(-150, 130) + fairOf(-120, 100)) / 2) < 1e-12, 'mirrors count once');
-  assert.ok(Math.abs(marketFairPrice(rows[0], rows, { now, devigMethod: 'additive' }).probability - (fairOf(-150, 130, 'additive') + fairOf(-120, 100, 'additive')) / 2) < 1e-12);
+  assert.ok(Math.abs(fair.probability - fairOf(-150, 130)) < 1e-12, 'only listed books count (BetRivers/Desert Diamond weight 0)');
+  assert.ok(Math.abs(marketFairPrice(rows[0], rows, { now, devigMethod: 'additive' }).probability - fairOf(-150, 130, 'additive')) < 1e-12);
   const threeWay = (book, side, odds) => quote(book, side, odds, { type: 'three-way', outcomes: 3, marketId: 'three-way|NFL:a @ b' });
   const twoOfThree = [threeWay('FanDuel', 'home', 150), threeWay('FanDuel', 'away', 180), threeWay('Pinnacle', 'home', 160), threeWay('Pinnacle', 'away', 170)];
   assert.ok(Number.isNaN(marketFairPrice(twoOfThree[0], twoOfThree, { now }).probability), 'a 1X2 without the draw has no fair price');

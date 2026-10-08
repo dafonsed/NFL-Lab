@@ -6,10 +6,13 @@ import { isCurrent } from './odds-contract.js';
 import { serverNow } from './odds-client.js';
 export { breakEven };
 import { teamLogo } from './sports-identity.js';
-import { FANTASY_PLATFORMS, SPORTSBOOK_PLATFORMS, canonicalPlatform, platformAsset, isFantasyPlatform, isContestPlatform } from './platform-catalog.js';
+import { FANTASY_PLATFORMS, SPORTSBOOK_PLATFORMS, canonicalPlatform, platformAsset, isFantasyPlatform, isContestPlatform } from './platform-catalog.js?v=2';
 import { boardIcon, renderBetPanel } from './ev-board.js?v=7';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+// Books with consensus weight in the server engine (lib/odds/engine.mjs BOOK_WEIGHTS); only these price the fair probability.
+const WEIGHTED_BOOKS = new Set(['pinnacle','circa','circa sports','sporttrade','novig','prophetx','kalshi','4caster','fanduel','betonline','bookmaker','propbuilder','draftkings','betmgm','caesars','betano']);
+const weightedBook = book => WEIGHTED_BOOKS.has(String(book).toLowerCase().trim());
 const normalize = value => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 // App-name lookups run for every one of ~30k lines on each render; the answers never change.
 const memo = fn => { const cache = new Map(); return value => { const key = String(value ?? ''); if (!cache.has(key)) cache.set(key, fn(value)); return cache.get(key); }; };
@@ -52,7 +55,9 @@ export const isDfsPlatform = memo(isFantasyPlatform);
 // picks and same-game combinations change real payouts; saved tables override these.
 const allHit = (size, multiplier) => [...Array(size).fill(0), multiplier];
 export const STANDARD_PAYTABLES = Object.freeze({
-  PrizePicks: { 2: allHit(2, 3), 3: allHit(3, 6), 4: allHit(4, 10), 5: allHit(5, 20), 6: allHit(6, 37.5) },
+  PrizePicks: { 2: allHit(2, 3), 3: allHit(3, 6), 4: allHit(4, 10), 5: allHit(5, 20), 6: allHit(6, 37.5),
+    // Flex: partial payouts by picks correct (published by PrizePicks, rechecked 2 Oct 2026).
+    flex: { 3: [0, 0, 1, 3], 4: [0, 0, 0, 1.5, 6], 5: [0, 0, 0, 0.4, 2, 10], 6: [0, 0, 0, 0, 0.5, 2, 10], 7: [0, 0, 0, 0, 0, 0.5, 2, 15], 8: [0, 0, 0, 0, 0, 0, 0.5, 2, 20] } },
   'Underdog Fantasy': { 2: allHit(2, 3.5), 3: allHit(3, 6.5), 4: allHit(4, 12), 5: allHit(5, 20), 6: allHit(6, 35), 7: allHit(7, 65), 8: allHit(8, 120) },
 });
 /**
@@ -252,8 +257,12 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure,onDeleteS
   const SPORT_GROUPS = {NFL:'Football',NCAAF:'Football',NBA:'Basketball',WNBA:'Basketball',NCAAB:'Basketball',MLB:'Baseball',NHL:'Hockey',MLS:'Soccer',EPL:'Soccer'};
   const leagueLabel = item => { const league = item.league || item.sport || '', group = SPORT_GROUPS[league] || SPORT_GROUPS[item.sport] || item.sport; return group && group !== league ? `${group} | ${league}` : league; };
   // Team-code "players" (WAS, JAC, esports teams) are team stats; combos ("A + B") already name the combo market.
-  const marketTitle = item => (/^player\b/i.test(item.market) || / \+ /.test(item.player || '') ? item.market : `${/^[A-Z]{2,4}$/.test(item.player || '') ? 'Team' : 'Player'} ${item.market}`).replace(/(^|\s)([a-z])/g,(_,space,char) => space+char.toUpperCase());
-  const edgeFor = (item, threshold) => validProbability(item.probability) && threshold != null && payoutKnown(item) ? Number(item.probability) - threshold : NaN;
+  const marketTitle = item => (/\bplayer\b/i.test(item.market) || / \+ /.test(item.player || '') ? item.market : `${/^[A-Z]{2,4}$/.test(item.player || '') ? 'Team' : 'Player'} ${item.market}`).replace(/(^|\s)([a-z])/g,(_,space,char) => space+char.toUpperCase());
+  // A pick'em edge is always fair probability minus the app's break-even. Custom-odds EV from apps
+  // such as Chalkboard is a different bet type: a 16% prop at +519 can be +EV as a single wager, but
+  // it is not a 55% break-even pick'em edge and must never rank above one on this board.
+  const edgeFor = (item, threshold) => validProbability(item.probability) && threshold != null && payoutKnown(item)
+    ? Number(item.probability) - threshold : NaN;
   // An entry's payout table scaled by its picks' payout factors (NaN-free only when all are known).
   const slipFactor = picks => picks.reduce((product, item) => product * payoutFactor(item), 1);
   // Estimate vs the slip's break-even: clear edge, within about a point, or below.
@@ -325,12 +334,12 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure,onDeleteS
   // One prop per row: market and event, selection, best book price, fair probability, then round actions.
   function row(item) {
     const open = expanded === item.id, picked = selected.has(item.id), id = esc(item.id), name = esc(label(item));
-    const rowOffers = bookOffers(item, String(item.side).toLowerCase() === 'under' ? 'Under' : 'Over'), offer = rowOffers[0] || null, edge = edgeFor(item, thresholdFor(item)), league = leagueLabel(item);
-    return `<tr class="evb-row dfs-prop${picked ? ' is-selected' : ''}${open ? ' is-open' : ''}" data-dfs-row="${id}">
+    const allOffers = bookOffers(item, String(item.side).toLowerCase() === 'under' ? 'Under' : 'Over'), weighted = allOffers.filter(offer => weightedBook(offer.book)), rowOffers = weighted.length ? weighted : allOffers, offer = rowOffers[0] || null, edge = edgeFor(item, thresholdFor(item)), league = leagueLabel(item);
+    return `<tr class="evb-row dfs-prop${['goblin','demon'].includes(item.oddsType) ? ' dfs-alt-line' : ''}${picked ? ' is-selected' : ''}${open ? ' is-open' : ''}" data-dfs-row="${id}">
       <td class="dfs-event-cell"><strong class="dfs-market-title">${esc(marketTitle(item))}</strong><span class="dfs-event-name">${esc(eventLabel(item.event) || (item.source === 'local-api' ? 'Matchup not in feed' : 'Matchup not entered'))}</span><small>${esc(whenLabel(item))}${league ? ` · ${esc(league)}` : ''}</small></td>
       <td class="dfs-pick-cell" title="DFS line at ${esc(item.app)}"><strong class="dfs-selection"><span class="dfs-player">${esc(item.player)}</span> <span class="dfs-pick-line">${esc(item.side)} ${esc(item.line)}</span>${typeBadge(item) ? ` <span class="dfs-odds-type" data-odds-type="${esc(item.oddsType)}">${esc(typeBadge(item))}</span>` : ''}${partGame(item) ? ` <span class="dfs-odds-type" data-odds-type="part" title="${esc(PART_GAME)}">Part game</span>` : ''}</strong><small>${platform ? 'Selection' : esc(appName(item.app))}</small></td>
-      <td class="dfs-offer" title="${offer ? esc(`${item.app} line · best recorded ${offer.book} price${offer.ts ? ` · Observed ${offer.ts}` : ''}`) : 'No matching sportsbook quote recorded for this selection'}"><span class="dfs-sharp">${offer ? brand(offer.book) : ''}<strong>${esc(item.line)} · ${offer ? oddsLabel(offer.odds) : '—'}</strong></span><small>${offer ? `${esc(offer.book)}${rowOffers.length > 1 ? ` · best of ${rowOffers.length} books` : ''}` : 'No book price'}</small></td>
-      <td class="dfs-probability" data-heat="${heat(edge)}"><strong class="dfs-prob">${percent(item.probability)}</strong><small title="${esc(validProbability(item.probability) ? `Fair probability: ${(item.probabilityBooks || []).length || 'the'} sportsbook market${(item.probabilityBooks || []).length === 1 ? '' : 's'} devigged (${item.probabilityMethod || current().devigMethod || 'multiplicative'})` : partGame(item) ? PART_GAME : 'No two-sided sportsbook market for this player, market and line')}">${validProbability(item.probability) ? 'Fair (no-vig)' : partGame(item) ? 'Not compared' : 'No book odds'}</small>${Number.isFinite(edge) ? `<small class="dfs-vs-be">vs BE ${signed(edge)}</small>` : validProbability(item.probability) && !payoutKnown(item) ? '<small class="dfs-vs-be" title="Goblin and demon picks change the payout; the feed did not send this pick’s multiplier, so break-even is unknown">Payout varies</small>' : ''}</td>
+      <td class="dfs-offer"><span class="dfs-sharp">${offer ? brand(offer.book) : ''}<strong>${esc(item.line)} · ${offer ? oddsLabel(offer.odds) : validProbability(item.probability) && Number.isFinite(item.fairOdds) ? oddsLabel(item.fairOdds) : '—'}</strong></span><small>${offer ? `${esc(offer.book)}${rowOffers.length > 1 ? ` · best of ${rowOffers.length} books` : ''}${!weightedBook(offer.book) ? ' <span class="dfs-unweighted-note">(unweighted)</span>' : ''}` : validProbability(item.probability) ? 'Fair odds (no book line)' : 'No book price'}</small></td>
+      <td class="dfs-probability" data-heat="${heat(edge)}"><strong class="dfs-prob">${percent(item.probability)}</strong><small title="${esc(validProbability(item.probability) ? `Fair probability: ${(item.probabilityBooks || []).length || 'the'} sportsbook market${(item.probabilityBooks || []).length === 1 ? '' : 's'} devigged (${item.probabilityMethod || current().devigMethod || 'multiplicative'})` : partGame(item) ? PART_GAME : 'No two-sided sportsbook market for this player, market and line')}">${validProbability(item.probability) ? 'Fair (no-vig)' : partGame(item) ? 'Not compared' : (Array.isArray(item.bookLines) && item.bookLines.length) ? 'One-sided market' : 'No book market'}</small>${Number.isFinite(edge) ? `<small class="dfs-vs-be">vs BE ${signed(edge)}</small>` : validProbability(item.probability) && !payoutKnown(item) ? '<small class="dfs-vs-be" title="Goblin and demon picks change the payout; the feed did not send this pick’s multiplier, so break-even is unknown">Payout varies</small>' : ''}</td>
       <td class="dfs-actions"><div>
         <button type="button" class="dfs-round dfs-hide" data-dfs-hide="${id}" aria-label="Hide ${esc(item.player)} prop" title="Hide prop">${boardIcon('hide',17)}</button>
         <button type="button" class="dfs-round dfs-pick" data-dfs-pick="${id}" aria-pressed="${picked}" aria-label="${picked ? `Remove ${name} from slip` : `Add ${name} to slip`}" title="${picked ? 'Remove from slip' : partGame(item) ? 'Part-game line: can’t be priced in a slip' : 'Add to slip'}" ${isContestPlatform(platform || item.app) ? 'disabled' : ''}>${boardIcon('pin',17)}</button>
@@ -409,7 +418,7 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure,onDeleteS
     if (!selected.size) slipAppName = '';
     slipType = chosenType().id;
     // Sports in the feed, the major leagues first; a sport picked from the URL stays listed.
-    if (filterSport) sportSet.add(filterSport);
+    for (const name of ['NFL','MLB','NBA','WNBA','NHL','NCAAF','NCAAB','Soccer']) sportSet.add(name);
     const sports = [...sportSet].sort((a, b) => (SPORT_ORDER.indexOf(a) + 1 || 99) - (SPORT_ORDER.indexOf(b) + 1 || 99) || a.localeCompare(b));
     const app = slipApp(), payoutFrom = workspace.payoutSource?.(app, chosenType().size);
     const payoutNote = payoutFrom === 'api' ? `${app} payouts from the quote feed` : payoutFrom === 'standard' ? `${app}'s published standard payouts` : payoutFrom === 'saved' ? `Your saved ${app} payouts` : `${app} payout rules needed`;
@@ -491,7 +500,7 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure,onDeleteS
     const target=event.target;
     if (['dfs-platform','dfs-sport','dfs-market','dfs-line-type','dfs-sort'].includes(target.id)) rowLimit=ROW_PAGE;
     if (target.id==='dfs-platform') {platform=target.value;slipAppName='';selected.clear();hidden.clear();expanded='';feedback='';repaint('#dfs-platform');}
-    else if (target.id==='dfs-sport') {filterSport=target.value;market='';repaint('#dfs-sport');}
+    else if (target.id==='dfs-sport') {filterSport=target.value;market='';if(typeof window!=='undefined'&&typeof window.dispatchEvent==='function')window.dispatchEvent(new CustomEvent('dfs-sport-change',{detail:{sport:target.value}}));repaint('#dfs-sport');}
     else if (target.id==='dfs-market') {market=target.value;repaint('#dfs-market');}
     else if (target.id==='dfs-line-type') {lineType=target.value;repaint('#dfs-line-type');}
     else if (target.id==='dfs-sort') {sort=target.value;repaint('#dfs-sort');}

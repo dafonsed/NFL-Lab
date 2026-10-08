@@ -3,7 +3,7 @@ import { wagerCard } from './ev-bet-card.js';
 import { renderEvBoard, renderEvBoardDetail, renderBetPanel, boostedOffer, boardIcon, bookLogo, startLabel, selectionText, marketLabel } from './ev-board.js?v=7';
 // Feed quotes that only carry a raw market key ("football_player_touchdowns") get a readable name for display.
 const readableMarkets = quotes => { for (const q of quotes || []) if (q && !q.displayMarket && typeof q.market === 'string' && q.market.includes('_') && !/s/.test(q.market)) q.displayMarket = marketLabel(q.market); return quotes; };
-import { createEvSuite, EV_SUITE_TOOLS } from './ev-suite.js?v=local-suite-7';
+import { createEvSuite, EV_SUITE_TOOLS } from './ev-suite.js?v=local-suite-8';
 import { readSuiteState, writeSuiteState } from './ev-suite-storage.js?v=2';
 import { installMobileWorkspace, quoteRevision, preserveReadingOrder } from './ev-mobile.js';
 import { accountStorage as localStorage, accountReady, getAccountPreferences, accountSyncState } from './account-sync.js';
@@ -13,24 +13,26 @@ import { SECONDARY_TOOLS } from './ev-tool-catalog.js';
 import { emptyWorkspace, purgeDemoData, clearLegacyDemoStorage } from './ev-workspace-clean.js?v=1';
 import { createQuoteFeedControls, toolDataLabel } from './ev-feed.js?v=9';
 import { knownSport } from './sport-names.js';
-import { getSnapshot, getDfs, getLineMovement, getPredictionContracts, indexSnapshot, emptyIndex, serverNow } from './odds-client.js';
+import { getDfs, getLineMovement, getPredictionContracts, getSmartstakeDataset, getSmartstakeInventory, indexSnapshot, emptyIndex, serverNow } from './odds-client.js?v=dfs-cache-4';
+import { getRelayDfsData } from './relay-dfs.js?v=4';
+import { mergeDfsFeed } from './dfs-feed-merge.js?v=1';
 import { isCurrent, snapshotStale, valueState } from './odds-contract.js';
 import { alertMatches } from './odds-alerts.js';
 import { readQuoteCache, createThrottledCacheWriter } from './ev-quote-cache.js?v=3';
 import { START_WINDOWS, MIN_ODDS, MIN_EV, MIN_WIN_CHANCE, TOOL_FILTERS, TOOL_FILTER_DEFAULTS, activeFilterCount, startsWithin, oddsWithin, quoteMatches, readToolFilters, saveToolFilters, toolFilterBar } from './ev-filters.js?v=2';
-import { SITE_PLATFORMS, SPORTSBOOK_PLATFORMS, PREDICTION_PLATFORMS, EXCHANGE_PLATFORMS, canonicalPlatform, platformAsset, platformLabel, platformOptions, isContestPlatform } from './platform-catalog.js';
+import { SITE_PLATFORMS, SMARTSTAKE_SPORTSBOOK_PLATFORMS, SPORTSBOOK_PLATFORMS, PREDICTION_PLATFORMS, EXCHANGE_PLATFORMS, canonicalPlatform, platformAsset, platformLabel, platformOptions, isContestPlatform } from './platform-catalog.js?v=3';
 import { betTrackerUrl, legacyBetTrackerUrl } from './navigation.js?v=tracker-1';
 // Prices and every betting value on these boards come from /api/odds (odds-client.js); this page displays
 // them. betting-math.js runs only the calculators on numbers a member chooses (parlay legs, promo stakes,
 // boosts, DFS slips, recorded results).
-import { decimal, constrainedArb, promoConversion, parlay, fantasySlip, pearson } from './betting-math.js';
+import { decimal, decimalToAmerican, constrainedArb, promoConversion, parlay, fantasySlip, pearson } from './betting-math.js';
 import { money, percent, signed } from './odds-format.js';
 import { teamMark, leagueMark } from './sports-identity.js';
 import { comparisonAnnotations } from './bet-comparison.js?v=4';
 import { inlineBetCard as betComparisonCard, bindInlineComparison as bindComparison } from './bet-inline.js?v=card-click-4';
 import { openArbCalculator } from './arb-calculator.js?v=2';
 import { openLineHistory, buildLineSeries } from './line-history.js?v=1';
-import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource, breakEven, payoutFactor, payoutKnown } from './dfs-workspace.js?v=24';
+import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource, breakEven, payoutFactor, payoutKnown } from './dfs-workspace.js?v=27';
 import { createOddsScreen } from './odds-screen.js?v=11';
 
 import {readSportsbookState, saveSportsbookState, sportsbookAvailable, availableSportsbookQuotes, STATE_CHANGE_EVENT} from './sportsbook-availability.js';
@@ -54,6 +56,7 @@ const TOOLS = [
   ['Fantasy', 'slip', 'Fantasy slip builder', 'Calculate exact hit-count probabilities and projected payout for your selected slip.'],
   ['Fantasy', 'fantasy-alerts', 'Fantasy alerts', 'Watch for newly entered props and their estimated hit rates.'],
   ['Records', 'prediction', 'Prediction traders', 'Track bid, ask, order book snapshots, traders, positions and trades.'],
+  ['Records', 'relay-boards', 'Relayed tool boards', 'Read relayed positive-EV, arbitrage, liquidity, insider-position and lineup-movement boards.'],
   ['Records', 'tracker', 'Bet tracker & CLV', 'Grade entered bets and compare booked odds with the closing price.'],
   ['Records', 'trends', 'Player prop trends', 'Review entered game results, recent hit rates and paired-game correlations.'],
   ['Records', 'line-alerts', 'Movement & price alerts', 'Review price snapshots and manage local threshold alerts.'],
@@ -128,7 +131,7 @@ const oddsQuotes = () => state.quotes;
 let active = toolMeta[location.hash.slice(1)] ? location.hash.slice(1) : 'ev-pre';
 let search = '';
 let bookmaker = '', marketType = '', showAllBooks = false, selectedSportsbooks = null, bookMenuOpen = false, bankroll = 5000, kelly = .25, flatMultiplier = 1, evSort = 'ev', detailQuoteId = '';
-let evLeague = '', evDateRange = 'all', evMaxOdds = '200';
+let evLeague = '', evDateRange = 'all', evMaxOdds = 'all';
 // Filters for Middles, Low holds, Parlay and Promo plus the extra Positive EV thresholds.
 let toolFilters = readToolFilters(window.localStorage);
 let bookSearch = '';
@@ -136,7 +139,13 @@ let designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0',
 let designSort = 'recommended';
 let expandedSharpKey = '';
 let sharpFiltersOpen = true, sharpSelectedBook = '', sharpSort = 'liquidity';
-const sportsbookNames = SPORTSBOOK_PLATFORMS;
+const seenSportsbookNames = new Set();
+const sportsbookNames = Object.freeze([...SMARTSTAKE_SPORTSBOOK_PLATFORMS, ...SPORTSBOOK_PLATFORMS].filter(name => {
+  const normalized = name.toLowerCase();
+  if (seenSportsbookNames.has(normalized)) return false;
+  seenSportsbookNames.add(normalized);
+  return true;
+}));
 const fantasyNames = DFS_PLATFORMS;
 // Logo for any platform name or feed slug, looked up from the catalog on demand.
 const brandMarks = new Proxy({}, { get: (_, name) => typeof name === 'string' ? platformAsset(name) : undefined });
@@ -300,16 +309,17 @@ function sectionsFor(tool) {
 }
 // The sportsbooks the member can bet in their chosen state (no state chosen: every book). Holds and hedge
 // pairs pick their best prices among these.
-const offerBooks = () => sportsbookState ? SPORTSBOOK_PLATFORMS.filter(bookAvailable) : undefined;
+const offerBooks = () => sportsbookState ? sportsbookNames.filter(bookAvailable) : undefined;
 // A tool opened without its section loaded asks for it right away instead of waiting for the next refresh.
 const missingSection = () => sectionsFor(active).some(section => !state.analytics.has(section));
 const sectionsShown = () => sectionsFor(active).filter(section => state.analytics.has(section)).join(',');
 // DFS lines (GET /api/odds/dfs: about 30k lines priced against the sportsbooks, with each app's payout
 // tables) load while a DFS tool is open and refresh every minute.
-let dfsSyncedAt = 0, dfsLoading = false, dfsLoaded = false, dfsError = '', dfsWarning = '', dfsFailures = 0, dfsRetryAt = 0, apiPaytables = {}, dfsGeneratedAt = '';
+let dfsSyncedAt = 0, dfsLoading = false, dfsLoaded = false, dfsError = '', dfsWarning = '', dfsFailures = 0, dfsRetryAt = 0, apiPaytables = {}, dfsGeneratedAt = '', dfsPrimaryFailed = false;
 // Prediction contracts from the quote API (GET /api/odds/contracts), shown read-only beside the member's
 // own. The server leaves out events it can't tell apart and crossed books.
 let feedContracts = [], contractsLoading = false, contractsAt = 0;
+let relayInventory = [], relayDatasets = new Map(), relayLoading = false, relayError = '', relayAt = 0;
 function ensureContracts() {
   if (active !== 'prediction' || contractsLoading || Date.now() - contractsAt < 60_000 || document.hidden && contractsAt) return;
   contractsLoading = true;
@@ -318,26 +328,65 @@ function ensureContracts() {
     .catch(() => { contractsAt = Date.now() - 30_000; })
     .finally(() => { contractsLoading = false; if (active === 'prediction') render(); });
 }
+async function ensureRelayBoards() {
+  if (active !== 'relay-boards' || relayLoading || Date.now() - relayAt < 60_000 || document.hidden && relayAt) return;
+  relayLoading = true;
+  try {
+    const inventoryBody = await getSmartstakeInventory();
+    relayInventory = Array.isArray(inventoryBody.datasets) ? inventoryBody.datasets : [];
+    relayError = '';
+    await Promise.all(relayInventory.map(async summary => {
+      const body = await getSmartstakeDataset(summary.dataset, { limit: 100 });
+      relayDatasets.set(summary.dataset, Array.isArray(body.records) ? body.records : []);
+    }));
+  } catch (error) {
+    relayError = error.message || 'The relayed boards are unavailable.';
+    relayAt = Date.now() - 30_000;
+  } finally {
+    relayLoading = false;
+    relayAt = Date.now();
+    if (active === 'relay-boards') render();
+  }
+}
 function ensureDfsFeed() {
   if (!DFS_TOOLS.has(active)) return;
   // The first load runs even in a background tab so the lines are ready when it is opened; refreshes
   // wait for the tab to be visible.
-  if (dfsLoading || Date.now() < dfsRetryAt || (dfsLoaded && (Date.now() - dfsSyncedAt < 60_000 || document.hidden))) return;
+  if (dfsLoading || Date.now() < dfsRetryAt || (dfsLoaded && !dfsPrimaryFailed && (Date.now() - dfsSyncedAt < 60_000 || document.hidden))) return;
   dfsLoading = true;
   let changed = false;
-  void getDfs({ settings: suite.settings() }).then(result => {
+  let primary = null, relay = null;
+  const paint = () => {
+    if (!primary && !relay) return;
     if (dfsError) changed = true;
-    dfsSyncedAt = Date.now(); dfsFailures = 0; dfsRetryAt = 0; dfsError = '';
-    // A partial answer (payout tables or the props feed missing) says so beside the data label.
-    const warning = result.meta.partial ? result.meta.warnings.join(' ') || 'Some DFS data is missing.' : '';
-    if (warning !== dfsWarning) { dfsWarning = warning; changed = true; }
-    if (Object.keys(result.payouts).length) apiPaytables = result.payouts;
-    // The same pricing run as last time: nothing to redraw.
-    if (result.meta.provenance.generatedAt !== dfsGeneratedAt || !dfsLoaded) { dfsGeneratedAt = result.meta.provenance.generatedAt; setFeedDfs(result.picks); evaluateAlerts(); persist(); changed = true; }
-  }, error => {
+    dfsSyncedAt = Date.now(); dfsPrimaryFailed = !primary;
+    if (primary) { dfsFailures = 0; dfsRetryAt = 0; dfsError = ''; }
+    const apiWarning = primary?.meta.partial ? primary.meta.warnings.join(' ') || 'Some full-feed DFS data is missing.' : '';
+    const warning = primary ? apiWarning : relay ? 'The full DFS feed is unavailable; relayed lines are shown.' : '';
+    if (warning !== dfsWarning) changed = true;
+    dfsWarning = warning;
+    const revision = [primary ? primary.meta.provenance.generatedAt : '', relay ? relay.generatedAt : '', primary ? 'api' : '', relay ? 'relay' : ''].join('|');
+    if (revision !== dfsGeneratedAt || !dfsLoaded) {
+      dfsGeneratedAt = revision;
+      apiPaytables = primary?.payouts && Object.keys(primary.payouts).length ? primary.payouts : apiPaytables;
+      setFeedDfs(mergeDfsFeed(primary?.picks || [], relay?.picks || [])); evaluateAlerts(); persist(); changed = true;
+    }
+  };
+  const primaryPromise = getDfs({ settings: suite.settings(), sport, limit: 5000 }).then(result => {
+    primary = result; paint();
+  }, error => { throw error; });
+  const relayPromise = getRelayDfsData({ sport, devigMethod: suite.settings().devigMethod }).then(result => {
+    relay = result; paint();
+  }, error => { throw error; });
+  void Promise.allSettled([primaryPromise, relayPromise]).then(([apiResult, relayResult]) => {
+    if (relayResult.status === 'fulfilled' && apiResult.status === 'rejected') {
+      dfsFailures += 1; dfsRetryAt = Date.now() + Math.min(60_000, 15_000 * 2 ** Math.min(dfsFailures, 3));
+      return;
+    }
+    if (apiResult.status === 'fulfilled' || relayResult.status === 'fulfilled') return;
     // A failed request keeps the last lines and says so; retries back off up to 5 minutes.
     dfsFailures += 1; dfsRetryAt = Date.now() + Math.min(300_000, 15_000 * 2 ** Math.min(dfsFailures, 5));
-    dfsError = error?.code === 'TIMEOUT' ? 'The DFS lines request timed out.' : 'The DFS lines could not be loaded.'; changed = true;
+    dfsError = apiResult.reason?.code === 'TIMEOUT' || relayResult.reason?.code === 'TIMEOUT' ? 'The DFS lines request timed out.' : 'The DFS lines could not be loaded.'; changed = true;
   }).finally(() => {
     // The first answer, even an empty or failed one, replaces the loading message.
     const first = !dfsLoaded;
@@ -354,10 +403,274 @@ function feedFailure(error) {
   if (Number.isFinite(error?.retryAfterSeconds)) failure.retryAfterMs = Math.min(86_400_000, error.retryAfterSeconds * 1000);
   return failure;
 }
+const stableRelayKey = value => {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index++) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+};
+const RELAY_SPORT_NAME_TO_CODE = { football: 'NFL', basketball: 'NBA', hockey: 'NHL', baseball: 'MLB', soccer: 'SOCCER', tennis: 'TENNIS' };
+const relaySportOf = record => {
+  const league = String(record.league || '').toLowerCase();
+  if (league && league !== 'none' && league !== 'other') return league.toUpperCase();
+  const sport = String(record.sport || '').toLowerCase();
+  if (sport && sport !== 'other' && RELAY_SPORT_NAME_TO_CODE[sport]) return RELAY_SPORT_NAME_TO_CODE[sport];
+  if (sport && sport !== 'other' && ['nfl','nba','wnba','nhl','mlb','soccer','ncaaf','ncaab'].includes(sport)) return sport.toUpperCase();
+  const market = String(record.market || '').toLowerCase();
+  if (market.startsWith('football')) return 'NFL';
+  if (market.startsWith('basketball')) return 'NBA';
+  if (market.startsWith('hockey')) return 'NHL';
+  if (market.startsWith('baseball')) return 'MLB';
+  if (market.startsWith('soccer')) return 'SOCCER';
+  return '';
+};
+const relayAmericanOdds = record => Number.isFinite(Number(record.americanOdds)) ? Number(record.americanOdds) : (() => {
+  const odds = decimalToAmerican(record.odds);
+  return Number.isFinite(odds) ? odds : 0;
+})();
+const relayAmericanProbability = probability => decimalToAmerican(1 / probability);
+async function getRelayEvSnapshot({ sport, books, limit = 2000, live = false }) {
+  const body = await getSmartstakeDataset('positive-ev', { limit });
+  const records = Array.isArray(body.records) ? body.records : [];
+  const offered = books?.length ? new Set(books.map(book => book.toLowerCase())) : null;
+  const observed = records.map(record => Date.parse(record.observedAt)).filter(Number.isFinite).sort((a,b) => b-a)[0] || Date.now();
+  const quotes = [];
+  const pricing = [];
+  for (const record of records) {
+    const recordSport = relaySportOf(record);
+    if (sport && recordSport !== sport) continue;
+    if (live !== Boolean(record.is_live)) continue;
+    const decimal = Number(record.odds), fair = Number(record.fairProbability);
+    if (!Number.isFinite(decimal) || decimal <= 1 || !Number.isFinite(fair) || fair <= 0 || fair >= 1) continue;
+    const side = String(record.selection || '').toLowerCase();
+    const market = String(record.market || 'prop');
+    const event = String(record.event || '');
+    const player = String(record.player || '');
+    const marketKey = `relay-market:${stableRelayKey([record.event_id,event,market,player,record.line].join('|'))}`;
+    const startTime = Date.parse(record.startTime) > 0 ? new Date(record.startTime).toISOString() : new Date(observed).toISOString();
+    const implied = 1 / decimal, ev = Number.isFinite(Number(record.ev)) ? Number(record.ev) : decimal * fair - 1;
+
+    // Create a quote for every book that prices this market, not just the best one,
+    // so the detail view can show the full comparison table.
+    const bookPrices = Array.isArray(record.bookPrices) && record.bookPrices.length ? record.bookPrices : [{ book: record.bookmaker, odds: record.odds, americanOdds: record.americanOdds, line: record.line }];
+    for (const bp of bookPrices) {
+      const bpBook = String(bp.book || '');
+      if (!bpBook) continue;
+      if (offered && !offered.has(bpBook.toLowerCase())) continue;
+      const bpDecimal = Number(bp.odds);
+      if (!Number.isFinite(bpDecimal) || bpDecimal <= 1) continue;
+      const identity = [bpBook,record.event_id,event,market,player,record.line,side].join('|');
+      const id = `relay-ev:${stableRelayKey(identity)}`;
+      const bpImplied = 1 / bpDecimal;
+      const bpEv = bpDecimal * fair - 1;
+      quotes.push({
+        id, sport: recordSport, event, displayEvent: event, eventId: `relay:${record.event_id || event}`, market, displayMarket: market,
+        marketId: `relay:${market}:${record.event_id || event}`, player, period: 'full', league: '', startTime, type: 'prop',
+        line: Number(record.line), side, selection: side.charAt(0).toUpperCase() + side.slice(1), book: bpBook,
+        odds: Number.isFinite(Number(bp.americanOdds)) ? Number(bp.americanOdds) : relayDecimalToAmerican(bpDecimal),
+        outcomes: 2, live: Boolean(record.is_live), exchange: false, ts: new Date(observed).toISOString(),
+        source: 'local-api', displayMarketClass: 'prop', seriesId: id, marketKey, impliedProbability: bpImplied,
+        expiresAt: new Date(observed + 15 * 60_000).toISOString(), status: 'open', consistent: true, outlier: false,
+      });
+      pricing.push({
+        quoteId: id, fairProbability: fair, fairOdds: relayAmericanProbability(fair), devigMethod: 'smartstake',
+        devigVersion: 'smartstake-relay/1', bookCount: Number(record.referenceBooks) || 1, references: [], edge: fair - bpImplied,
+        ev: bpEv, kellyFraction: Math.max(0, bpEv / (bpDecimal - 1)), plausible: true, estimated: false, conditionalOnNoPush: false,
+      });
+    }
+    if (quotes.length >= limit) break;
+  }
+  const generatedAt = new Date().toISOString();
+  return { snapshot: {
+    quotes, pricing, markets: [],
+    meta: { provenance: { provider: 'smartstake-relay', engine: 'smartstake-free-board', engineVersion: '1', generatedAt },
+      snapshotAt: generatedAt, staleAfter: new Date(observed + 5 * 60_000).toISOString(), stale: false, warmingUp: false, partial: false, warnings: [],
+      scope: { sport: sport || null }, controlsApplied: false, counts: { records: records.length, quotes: quotes.length, skipped: {}, dropped: 0 } }
+  }, dropped: { quotes: 0 } };
+}
+
+const relayDecimalToAmerican = value => { const odds = decimalToAmerican(value); return Number.isFinite(odds) ? odds : 0; };
+const relayQuoteBase = ({ record, sport, book, side, odds, observed, id }) => ({
+  id, sport, event: record.event || [record.homeCompetitor, record.awayCompetitor].filter(Boolean).join(' @ ') || '', displayEvent: record.event || '', eventId: `relay:${record.event_id || record.matchKey || ''}`,
+  market: record.market || '', displayMarket: record.market || '', player: record.playerName || record.player || '',
+  period: 'full', league: record.league || '', startTime: Date.parse(record.startDate || record.startTime) > 0 ? new Date(record.startDate || record.startTime).toISOString() : new Date(observed).toISOString(),
+  type: 'prop', line: Number(record.selectionPoints ?? record.line ?? 0), side: String(side || record.selectionLine || '').toLowerCase(),
+  selection: String(side || record.selectionLine || '').charAt(0).toUpperCase() + String(side || record.selectionLine || '').slice(1),
+  book: String(book || record.bookmaker || ''), odds: relayDecimalToAmerican(Number(odds ?? record.odds)), outcomes: 2, live: Boolean(record.is_live),
+  exchange: Boolean(record.exchange), ts: new Date(observed).toISOString(), source: 'local-api', displayMarketClass: 'prop', seriesId: id,
+  impliedProbability: Number(odds ?? record.odds) > 1 ? 1 / Number(odds ?? record.odds) : 0,
+  expiresAt: new Date(observed + 15 * 60_000).toISOString(), status: 'open', consistent: true, outlier: false,
+});
+
+async function getRelayArbSnapshot({ sport, books, limit = 500 }) {
+  const body = await getSmartstakeDataset('matched-bets', { limit });
+  const records = Array.isArray(body.records) ? body.records : [];
+  const offered = books?.length ? new Set(books.map(book => book.toLowerCase())) : null;
+  const observed = records.map(r => Date.parse(r.observedAt)).filter(Number.isFinite).sort((a,b) => b-a)[0] || Date.now();
+  const quotes = [], arbitrage = [];
+  for (const record of records) {
+    const recordSport = relaySportOf(record);
+    if (sport && recordSport !== sport) continue;
+    if (offered && ![record.bookmakerLeft, record.bookmakerRight].some(book => offered.has(String(book || '').toLowerCase()))) continue;
+    const leftOdds = Number(record.oddsLeft), rightOdds = Number(record.oddsRight);
+    if (!Number.isFinite(leftOdds) || leftOdds <= 1 || !Number.isFinite(rightOdds) || rightOdds <= 1) continue;
+    const leftId = `relay-arb:${stableRelayKey([record.event_id, record.market, record.line, record.leftSide, record.bookmakerLeft].join('|'))}`;
+    const rightId = `relay-arb:${stableRelayKey([record.event_id, record.market, record.line, record.rightSide, record.bookmakerRight].join('|'))}`;
+    const marketKey = `relay-market:${stableRelayKey([record.event_id, record.event, record.market, record.line].join('|'))}`;
+    quotes.push({ ...relayQuoteBase({ record, sport: recordSport, book: record.bookmakerLeft, side: record.leftSide, odds: leftOdds, observed, id: leftId }), marketKey });
+    quotes.push({ ...relayQuoteBase({ record, sport: recordSport, book: record.bookmakerRight, side: record.rightSide, odds: rightOdds, observed, id: rightId }), marketKey });
+    const totalImplied = 1 / leftOdds + 1 / rightOdds;
+    const margin = Number.isFinite(Number(record.roi)) ? Number(record.roi) : 1 - totalImplied;
+    if (margin <= 0) continue;
+    arbitrage.push({
+      legs: [
+        { quoteId: leftId, stakeFraction: (1 / leftOdds) / totalImplied },
+        { quoteId: rightId, stakeFraction: (1 / rightOdds) / totalImplied },
+      ],
+      margin, live: Boolean(record.is_live), limitsKnown: false, capacity: null, pushPossible: false,
+      lowestPerUnit: margin,
+    });
+    if (arbitrage.length >= limit) break;
+  }
+  const generatedAt = new Date().toISOString();
+  return { snapshot: {
+    quotes, pricing: [], markets: [], arbitrage, middles: [],
+    meta: { provenance: { provider: 'smartstake-relay', engine: 'smartstake-matched-bets', engineVersion: '1', generatedAt },
+      snapshotAt: generatedAt, staleAfter: new Date(observed + 5 * 60_000).toISOString(), stale: false, warmingUp: false, partial: false, warnings: [],
+      scope: { sport: sport || null }, controlsApplied: false, counts: { records: records.length, quotes: quotes.length, skipped: {}, dropped: 0 } }
+  }, dropped: { quotes: 0 } };
+}
+
+const RELAY_EXCHANGE_BOOKS = new Set(['kalshi', 'polymarket', 'polymarket_us', 'predictit', 'smark', 'dominionmarkets', 'forecastex', 'clob']);
+const isRelayExchange = book => RELAY_EXCHANGE_BOOKS.has(String(book || '').toLowerCase());
+
+async function getRelaySharpSnapshot({ sport, books, limit = 1000 }) {
+  const body = await getSmartstakeDataset('smart-money-depth', { limit });
+  const records = Array.isArray(body.records) ? body.records : [];
+  const offered = books?.length ? new Set(books.map(book => book.toLowerCase())) : null;
+  const observed = records.map(r => Date.parse(r.observedAt)).filter(Number.isFinite).sort((a,b) => b-a)[0] || Date.now();
+  const byLineKey = new Map();
+  for (const record of records) {
+    const key = record.lineKey || record.middleKey || record.selectionKey;
+    if (!key) continue;
+    if (!byLineKey.has(key)) byLineKey.set(key, []);
+    byLineKey.get(key).push(record);
+  }
+  const quotes = [], sharp = [];
+  const seenExchange = new Map();
+  for (const [lineKey, group] of byLineKey) {
+    const exchangeRecords = group.filter(r => isRelayExchange(r.bookmaker));
+    const sportsbookRecords = group.filter(r => !isRelayExchange(r.bookmaker) && r.bookmaker && r.bookmaker.toLowerCase() !== 'none');
+    if (!exchangeRecords.length || !sportsbookRecords.length) continue;
+    for (const ex of exchangeRecords) {
+      const recordSport = relaySportOf(ex);
+      if (sport && recordSport !== sport) continue;
+      if (offered && !sportsbookRecords.some(sb => offered.has(String(sb.bookmaker || '').toLowerCase()))) continue;
+      const liquidity = Number(ex.maxBetSize) || 0;
+      if (liquidity < 1) continue;
+      const exId = `relay-sharp:${stableRelayKey([ex.selectionKey, ex.bookmaker, ex.selectionLine].join('|'))}`;
+      const opposite = exchangeRecords.find(r => r.selectionLine !== ex.selectionLine);
+      const oppositeId = opposite ? `relay-sharp:${stableRelayKey([opposite.selectionKey, opposite.bookmaker, opposite.selectionLine].join('|'))}` : null;
+      if (!seenExchange.has(exId)) {
+        seenExchange.set(exId, true);
+        quotes.push({ ...relayQuoteBase({ record: ex, sport: recordSport, book: ex.bookmaker, side: ex.selectionLine, odds: ex.odds, observed, id: exId }),
+          exchange: true, liquidity: liquidity, marketKey: `relay-market:${stableRelayKey(lineKey)}`, type: ex.selectionPoints != null ? 'total' : 'prop' });
+      }
+      const best = sportsbookRecords.filter(sb => offered === null || offered.has(String(sb.bookmaker || '').toLowerCase()))
+        .sort((a, b) => Number(b.odds || 0) - Number(a.odds || 0))[0];
+      if (!best) continue;
+      const sbId = `relay-sharp:${stableRelayKey([best.selectionKey, best.bookmaker, best.selectionLine].join('|'))}`;
+      if (!seenExchange.has(sbId)) {
+        seenExchange.set(sbId, true);
+        quotes.push({ ...relayQuoteBase({ record: best, sport: recordSport, book: best.bookmaker, side: best.selectionLine, odds: best.odds, observed, id: sbId }),
+          exchange: false, liquidity: 0, marketKey: `relay-market:${stableRelayKey(lineKey)}` });
+      }
+      const exDecimal = Number(ex.odds), sbDecimal = Number(best.odds);
+      sharp.push({ exchangeQuoteId: exId, sportsbookQuoteId: sbId, oppositeExchangeQuoteId: oppositeId, liquidity,
+        improvement: Number.isFinite(exDecimal) && Number.isFinite(sbDecimal) && exDecimal > 0 ? sbDecimal / exDecimal - 1 : NaN });
+      if (sharp.length >= limit) break;
+    }
+    if (sharp.length >= limit) break;
+  }
+  const generatedAt = new Date().toISOString();
+  return { snapshot: {
+    quotes, pricing: [], markets: [], sharp,
+    meta: { provenance: { provider: 'smartstake-relay', engine: 'smartstake-smart-money-depth', engineVersion: '1', generatedAt },
+      snapshotAt: generatedAt, staleAfter: new Date(observed + 5 * 60_000).toISOString(), stale: false, warmingUp: false, partial: false, warnings: [],
+      scope: { sport: sport || null }, controlsApplied: false, counts: { records: records.length, quotes: quotes.length, skipped: {}, dropped: 0 } }
+  }, dropped: { quotes: 0 } };
+}
+
+async function getRelayMarketPairsSnapshot({ sport, books, limit = 2000 }) {
+  const body = await getSmartstakeDataset('matched-bets', { limit });
+  const records = Array.isArray(body.records) ? body.records : [];
+  const offered = books?.length ? new Set(books.map(book => book.toLowerCase())) : null;
+  const observed = records.map(r => Date.parse(r.observedAt)).filter(Number.isFinite).sort((a,b) => b-a)[0] || Date.now();
+  const quotes = [], middles = [], holds = [], hedges = [];
+  for (const record of records) {
+    const recordSport = relaySportOf(record);
+    if (sport && recordSport !== sport) continue;
+    if (offered && ![record.bookmakerLeft, record.bookmakerRight].some(book => offered.has(String(book || '').toLowerCase()))) continue;
+    const leftOdds = Number(record.oddsLeft), rightOdds = Number(record.oddsRight);
+    if (!Number.isFinite(leftOdds) || leftOdds <= 1 || !Number.isFinite(rightOdds) || rightOdds <= 1) continue;
+    const leftId = `relay-pair:${stableRelayKey([record.event_id, record.market, record.line, record.leftSide, record.bookmakerLeft].join('|'))}`;
+    const rightId = `relay-pair:${stableRelayKey([record.event_id, record.market, record.line, record.rightSide, record.bookmakerRight].join('|'))}`;
+    const marketKey = `relay-market:${stableRelayKey([record.event_id, record.event, record.market, record.line].join('|'))}`;
+    quotes.push({ ...relayQuoteBase({ record, sport: recordSport, book: record.bookmakerLeft, side: record.leftSide, odds: leftOdds, observed, id: leftId }), marketKey });
+    quotes.push({ ...relayQuoteBase({ record, sport: recordSport, book: record.bookmakerRight, side: record.rightSide, odds: rightOdds, observed, id: rightId }), marketKey });
+    const totalImplied = 1 / leftOdds + 1 / rightOdds;
+    const margin = 1 - totalImplied;
+    const leftImplied = 1 / leftOdds, rightImplied = 1 / rightOdds;
+    const fairLeft = totalImplied > 0 ? leftImplied / totalImplied : .5;
+    const fairRight = totalImplied > 0 ? rightImplied / totalImplied : .5;
+    // Holds: every two-sided market, sorted by hold
+    holds.push({
+      quoteIds: [leftId, rightId], hold: Math.max(0, totalImplied - 1), margin,
+      fairProbabilities: [fairLeft, fairRight],
+      fairOdds: [fairLeft > 0 ? 1 / fairLeft : null, fairRight > 0 ? 1 / fairRight : null],
+    });
+    // Middles: pairs with a window where both sides can win (line gap)
+    const line = Number(record.line) || 0;
+    if (line > 0 && record.leftSide !== record.rightSide) {
+      const width = 1;
+      const cost = totalImplied - 1;
+      middles.push({
+        firstQuoteId: leftId, secondQuoteId: rightId,
+        stakeFractions: [(1 / leftOdds) / totalImplied, (1 / rightOdds) / totalImplied],
+        kind: 'total', width, cost,
+        window: { label: `${line - 0.5}–${line + 0.5}` },
+        ladder: null,
+        perUnit: { inside: margin, outside: -cost, atLower: null, atUpper: null },
+        limitsKnown: false, capacity: null,
+      });
+    }
+    // Hedges: opposing prices for promo tool
+    hedges.push({ promoQuoteId: leftId, hedges: [{ quoteId: rightId }] });
+    if (quotes.length >= limit * 2) break;
+  }
+  holds.sort((a, b) => a.hold - b.hold);
+  const generatedAt = new Date().toISOString();
+  return { snapshot: {
+    quotes, pricing: [], markets: [], arbitrage: [], middles, holds, hedges,
+    meta: { provenance: { provider: 'smartstake-relay', engine: 'smartstake-matched-bets-pairs', engineVersion: '1', generatedAt },
+      snapshotAt: generatedAt, staleAfter: new Date(observed + 5 * 60_000).toISOString(), stale: false, warmingUp: false, partial: false, warnings: [],
+      scope: { sport: sport || null }, controlsApplied: false, counts: { records: records.length, quotes: quotes.length, skipped: {}, dropped: 0 } }
+  }, dropped: { quotes: 0 } };
+}
+async function getToolSnapshot({ tool, settings, sport, books }) {
+  const options = { settings, sport, live: tool.endsWith('-live'), limit: 2000, books };
+  if (tool === 'ev-pre' || tool === 'ev-live') return getRelayEvSnapshot(options);
+  if (tool === 'arb-pre' || tool === 'arb-live') return getRelayArbSnapshot(options);
+  if (tool === 'sharp') return getRelaySharpSnapshot(options);
+  if (tool === 'middles' || tool === 'holds' || tool === 'promo') return getRelayMarketPairsSnapshot(options);
+  return getRelayEvSnapshot(options);
+}
 async function syncLocalApi() {
   const workspace = state, tool = active;
   let result;
-  try { result = await getSnapshot({ settings: suite.settings(), include: sectionsFor(tool), books: offerBooks() }); }
+  try { result = await getToolSnapshot({ tool, settings: suite.settings(), sport, books: offerBooks() }); }
   catch (error) { throw feedFailure(error); }
   const { snapshot, dropped } = result;
   if (state !== workspace) throw Object.assign(Error('The workspace changed during sync. Try again after your import. Saved prices were kept.'), { retryable: false });
@@ -387,7 +700,7 @@ async function syncLocalApi() {
     else renderKeepingView();
   }
   // The tool changed while this answer was on its way and needs a section it didn't ask for.
-  if (active !== tool && missingSection()) void feedControls.refresh();
+  if (active !== tool) void feedControls.refresh();
   return { count: snapshot.quotes.length, saved, skipped: lastSkipped, expired: skipped.stale, heldOver: snapshotStale(snapshot.meta, serverNow()) || snapshot.meta.warmingUp, partial: snapshot.meta.partial ? (snapshot.meta.warnings.length ? snapshot.meta.warnings : ['The odds service marked this answer incomplete.']) : [] };
 }
 // Re-render after a price sync without moving the reader: sideways scroll positions and open
@@ -443,7 +756,7 @@ function renderNav() {
 }
 // Tool dialogs belong to the tool that opened them; switching tools closes them.
 const closeToolDialogs = () => document.querySelectorAll('dialog#evx-dialog[open]').forEach(dialog => dialog.close());
-function setTool(key) { if (key === 'tracker') return location.assign(betTrackerUrl()); if (!toolMeta[key]) return; closeToolDialogs(); active = key; pairVisibleCount = 40; bookmaker = ''; marketType = ''; showAllBooks = false; bookMenuOpen = false; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; $('.ev-tool-details').open = false; history.replaceState(history.state, '', location.pathname + location.search + '#' + key); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function setTool(key) { if (key === 'tracker') return location.assign(betTrackerUrl()); if (!toolMeta[key]) return; closeToolDialogs(); active = key; pairVisibleCount = 40; bookmaker = ''; marketType = ''; showAllBooks = false; bookMenuOpen = false; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; $('.ev-tool-details').open = false; history.replaceState(history.state, '', location.pathname + location.search + '#' + key); render(); if (QUOTE_TOOLS.has(active) && feedControls) void feedControls.refresh(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 // Sportsbook prices come only from the quote API, so there is no manual "add price" action.
 function action(label, type, extra = '') { return type === 'quote' ? '' : button(label, `data-add="${type}" ${extra}`); }
 const filterIcons = {
@@ -476,7 +789,7 @@ function renderDesignFilters() {
   if (!fantasy && !odds && !arb && !sharp) { container.innerHTML = ''; return; }
   const records = fantasy ? state.dfs : quoteSource();
   const leagues = [...new Set(records.map(item => item.league || item.sport).filter(Boolean))].sort();
-  const sports = [...new Set(records.map(item => item.sport).filter(Boolean))].sort();
+  const sports = [...new Set([...(fantasy ? ['NFL','MLB','NBA','WNBA','NHL','NCAAF','NCAAB'] : []), ...records.map(item => item.sport).filter(Boolean)])].sort();
   const marketNames = [...new Set(records.map(item => fantasy ? item.market : item.type).filter(Boolean))].sort();
   const availableBooks = [...new Set(records.map(item => fantasy ? canonicalPlatform(item.app) : item.book).filter(Boolean))].sort();
   const sportControl = designSelect('sport','Sports', [['',arb ? 'All sports' : 'Sports'],...sports.map(value => [value,value])],sport,arb ? 'Sport' : '');
@@ -522,6 +835,7 @@ function render() {
   feedControls?.update();
   ensureDfsFeed();
   ensureContracts();
+  void ensureRelayBoards();
   // A tool whose analytics section isn't loaded yet fetches it now (at most every few seconds).
   if (QUOTE_TOOLS.has(active) && feedControls && missingSection() && Date.now() - sectionRequestedAt > 5_000) { sectionRequestedAt = Date.now(); void feedControls.refresh(); }
   if (active === 'tracker') { location.replace(legacyBetTrackerUrl(new URL(location.href)) || betTrackerUrl(sport.toLowerCase())); return; }
@@ -613,7 +927,7 @@ function render() {
   document.body.classList.toggle('ev-detail-mode', positiveScreen && Boolean(detailQuoteId));
   $('#ev-menu-actions').append($('.ev-header-actions'));
   $('.ev-header-actions').append($('#ev-view-actions'), $('.ev-sidebar'));
-  const views = { odds: renderOdds, 'ev-pre': () => renderEv(false), 'ev-live': () => renderEv(true), 'arb-pre': () => renderArb(false), 'arb-live': () => renderArb(true), middles: renderMiddles, holds: renderHolds, promo: renderPromo, parlay: renderParlay, sharp: renderSharp, fantasy: renderFantasy, optimizer: renderOptimizer, slip: renderSlip, 'fantasy-alerts': renderFantasyAlerts, prediction: renderPrediction, trends: renderTrends, 'line-alerts': renderLineAlerts };
+  const views = { odds: renderOdds, 'ev-pre': () => renderEv(false), 'ev-live': () => renderEv(true), 'arb-pre': () => renderArb(false), 'arb-live': () => renderArb(true), middles: renderMiddles, holds: renderHolds, promo: renderPromo, parlay: renderParlay, sharp: renderSharp, fantasy: renderFantasy, optimizer: renderOptimizer, slip: renderSlip, 'fantasy-alerts': renderFantasyAlerts, prediction: renderPrediction, 'relay-boards': renderRelayBoards, trends: renderTrends, 'line-alerts': renderLineAlerts };
   const suiteView = suite.hasView(active);
   const secondary = SECONDARY_TOOLS.some(tool => tool.key === active) || EV_SUITE_TOOLS.some(tool => tool[1] === active);
   document.body.classList.toggle('ev-secondary-mode',secondary);
@@ -639,7 +953,7 @@ function renderBooks() {
   timingToggle.setAttribute('aria-checked', String(active === 'ev-live'));
   timingToggle.title = active === 'ev-live' ? 'Switch to pregame bets' : 'Switch to live bets';
   // One name per app, not one lookup per line (the feed has ~30k DFS lines).
-  const entered = fantasyMode ? [...new Set(state.dfs.map(item => item.app))].filter(isDfsPlatform).map(canonicalPlatform) : state.quotes.filter(q => !sport || q.sport === sport).map(q => q.book);
+  const entered = fantasyMode ? [...new Set(state.dfs.map(item => item.app))].filter(isDfsPlatform).map(canonicalPlatform) : state.quotes.filter(q => (!sport || q.sport === sport) && q.book).map(q => q.book);
   const supported = fantasyMode ? fantasyNames : active === 'sharp' ? ['Pinnacle','DraftKings','FanDuel','bet365',...sportsbookNames.filter(name => !['DraftKings','FanDuel','bet365'].includes(name))] : sportsbookNames;
   const books = [...new Set([...supported, ...entered])].filter(book => fantasyMode || bookAvailable(book));
   const relevant = ['ev-pre','ev-live','odds','arb-pre','arb-live','sharp','fantasy'].includes(active);
@@ -1435,7 +1749,7 @@ function sharpKeydown(event) {
 
 function renderFantasy() {
   // The sport as the board names it ("tennis" in the address is Tennis, not TENNIS).
-  return dfsWorkspace.render({initialSport:initialSport === 'ALL' ? '' : knownSport(initialSport) || ''});
+  return dfsWorkspace.render({initialSport: sport});
 }
 // Filters, sorting, search and picks inside the DFS board change only the board: redraw it in place
 // instead of rebuilding the page around it (its menus, book bar and filter bar scan every quote).
@@ -1592,6 +1906,41 @@ function renderPrediction() {
   return `<div class="tool-stack">${controls}${cards}${toolPanel('Positions','Marks use the executable bid for Yes and 100 − ask for No.',positionTable,{actions:`<label>Trader<select id="ev-trader-filter">${names.length?names.map(name=>`<option value="${esc(name)}" ${name===traderName?'selected':''}>${esc(name)}</option>`).join(''):'<option>No traders yet</option>'}</select></label>${action('Add position','trader')}`})}${toolPanel('Order book history','The latest 100 snapshots for the selected contracts.',historyTable)}${toolPanel('Trade history','Your saved buys and sells.',tradeTable,{actions:action('Add trade','trade')})}${toolNote('Prices and trades are recorded manually. Position marks exclude fees and partial fills; no trades are placed through this workspace.')}</div>`;
 }
 
+const RELAY_DATASET_ORDER = ['positive-ev','matched-bets','fantasy-main-lines','smart-money','smart-money-depth','insiders','insiders-orderbook','insiders-market-breakdown','insiders-market-positions','lineup-dropper','market-counts','all-bookmakers','locations','leagues','sports','markets'];
+const RELAY_COLUMN_ORDER = ['event','awayCompetitor','homeCompetitor','player','playerName','market','marketSlug','selection','selectionLine','selectionPoints','line','previousLine','bookmaker','bookmakerLeft','bookmakerRight','book','books','odds','oddsLeft','oddsRight','previousOdds','americanOdds','price','ev','roi','fairProbability','liquidity','maxBetSize','size','volume','recommendedSide','directionSource','nativeSelectionId','lineKey','league','sport','startTime','startDate','updatedAt','value','label','bookmakerStatus','is_offshore','url'];
+const RELAY_COLUMN_LABELS = {bookmaker:'Sportsbook',bookmakerLeft:'Left sportsbook',bookmakerRight:'Right sportsbook',book:'Sportsbook',books:'Sportsbooks',playerName:'Player',selectionLine:'Side',selectionPoints:'Line',maxBetSize:'Max bet',nativeSelectionId:'Selection ID',startTime:'Start',startDate:'Start',value:'Source slug',label:'Name',bookmakerStatus:'Status',is_offshore:'Offshore'};
+const titleize = value => String(value || '').replace(/[-_]+/g,' ').replace(/\b\w/g,char => char.toUpperCase());
+function renderRelayBoards() {
+  const names = [...RELAY_DATASET_ORDER.filter(name => relayDatasets.has(name)), ...relayInventory.map(item => item.dataset).filter(name => relayDatasets.has(name) && !RELAY_DATASET_ORDER.includes(name))];
+  const total = relayInventory.reduce((sum,item) => sum + Number(item.count || 0), 0);
+  const updated = relayInventory.map(item => Date.parse(item.updatedAt)).filter(Number.isFinite).sort((a,b) => b-a)[0];
+  const filterRecord = record => {
+    const values = Object.values(record).map(value => typeof value === 'object' && value ? JSON.stringify(value) : String(value ?? '')).join(' ').toLowerCase();
+    return (!sport || [record.sport,record.league].some(value => String(value || '').toLowerCase() === sport.toLowerCase())) && (!search || values.includes(search.toLowerCase()));
+  };
+  const cellValue = value => {
+    if (value == null || value === '') return '—';
+    if (typeof value === 'object') return `<code>${esc(JSON.stringify(value).replace(/"([^"]+)":/g,'$1: ').slice(0,220))}</code>`;
+    return esc(value);
+  };
+  const board = name => {
+    const records = (relayDatasets.get(name) || []).filter(filterRecord);
+    const sample = records.find(Boolean) || {};
+    const preferred = RELAY_COLUMN_ORDER.filter(key => Object.prototype.hasOwnProperty.call(sample,key));
+    const columns = [...preferred, ...Object.keys(sample).filter(key => !RELAY_COLUMN_ORDER.includes(key))].slice(0,9);
+    const summary = relayInventory.find(item => item.dataset === name);
+    return toolPanel(
+      esc(titleize(name)),
+      `${Number(summary?.count ?? records.length).toLocaleString()} relayed records${summary?.updatedAt ? ` · updated ${new Date(summary.updatedAt).toLocaleString()}` : ''}`,
+      records.length ? table(columns.map(key => esc(RELAY_COLUMN_LABELS[key] || titleize(key))), records.slice(0,100).map(record => `<tr>${columns.map(key => `<td>${cellValue(record[key])}</td>`).join('')}</tr>`)) : toolEmpty('No matching rows', relayDatasets.has(name) ? 'No relayed rows match the current sport and search filters.' : 'This board has not arrived from the relay yet.', '', 'research')
+    );
+  };
+  const content = relayError ? toolEmpty('Relayed boards unavailable', relayError, '', 'live')
+    : relayLoading && !relayInventory.length ? toolEmpty('Loading relayed boards', 'Fetching the current tool-board inventory.', '', 'research')
+    : names.length ? names.map(board).join('') : toolEmpty('No relayed boards yet', 'The VPS relay has not sent a tool-board snapshot yet.', '', 'research');
+  return `<div class="ev-stack">${toolStats([['Datasets',relayInventory.length],['Relayed records',total.toLocaleString()],['Last update',updated ? new Date(updated).toLocaleTimeString() : '—']])}${content}${toolNote('These read-only boards are relayed server-side. Rows keep their source bookmaker slugs exactly as supplied; they are not re-labeled as SmartStake.')}</div>`;
+}
+
 function renderTrends() {
   const rows = state.results.filter(x => visible(x, ['player', 'market', 'game']));
   const profiles = [...new Set(rows.map(x => `${x.player}|${x.market}|${x.line}`))];
@@ -1656,7 +2005,7 @@ function fieldMarkup(field, item) {
   return `<label>${esc(label)}<input name="${name}" type="${type}" value="${esc(adjusted)}" ${required ? 'required' : ''} ${attributes} ${type === 'text' ? 'maxlength="180"' : ''}></label>`;
 }
 function openForm(type, id = null, presets = {}) {
-  if (type === 'bet') return location.assign(betTrackerUrl());
+  if (type === 'bet') return location.assign(betTrackerUrl(sport.toLowerCase()));
   if (type === 'quote') return;
   const old = id ? state[collection[type]].find(x => x.id === id) : null;
   const item = { sport: sport || 'NFL', type:'game', side:'Over', live:false, exchange:false, liquidity:0, probability:.5, date:new Date().toISOString().slice(0,10), result:'open', kind:'price', threshold:0, enabled:true, ...old, ts:now(), ...presets };
@@ -1781,7 +2130,7 @@ $('#ev-timing-toggle').addEventListener('click', () => {
 document.querySelector('[data-ev-focus-search]')?.addEventListener('click', () => { if (active === 'odds') { $('#os-search')?.focus(); return; } if (active === 'fantasy') { $('#dfs-search')?.focus(); return; } document.body.classList.toggle('ev-search-open'); $('#ev-search').focus(); });
 $('#ev-search').addEventListener('keydown', event => { if (event.key === 'Escape') { document.body.classList.remove('ev-search-open'); document.querySelector('[data-ev-focus-search]')?.focus(); } });
 $('#ev-odds-tabs').addEventListener('click', event => { const tab = event.target.closest('[data-odds-tab]'); if (tab) { marketType = tab.dataset.oddsTab; render(); } });
-$('#ev-reset-filters').addEventListener('click', () => { bookmaker = ''; selectedSportsbooks = null; bookMenuOpen = false; marketType = ''; search = ''; evLeague = ''; evDateRange = 'all'; evMaxOdds = '200'; toolFilters = { ...toolFilters, evMinOdds:'', minEv:'', minProb:'' }; saveToolFilters(toolFilters, window.localStorage); evSort = 'ev'; designSort = 'recommended'; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; if (sport !== '') { sport = ''; rememberSport(); } render(); });
+$('#ev-reset-filters').addEventListener('click', () => { bookmaker = ''; selectedSportsbooks = null; bookMenuOpen = false; marketType = ''; search = ''; evLeague = ''; evDateRange = 'all'; evMaxOdds = 'all'; toolFilters = { ...toolFilters, evMinOdds:'', minEv:'', minProb:'' }; saveToolFilters(toolFilters, window.localStorage); evSort = 'ev'; designSort = 'recommended'; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; if (sport !== '') { sport = ''; rememberSport(); } render(); });
 $('#ev-market-type').addEventListener('change', event => { marketType = event.target.value; render(); });
 $('#ev-reference-market').addEventListener('change', event => { marketType = event.target.value; render(); });
 $('#ev-reference-league').addEventListener('change', event => { evLeague = event.target.value; render(); });
@@ -1798,7 +2147,7 @@ $('.ev-filter-panel').addEventListener('change', event => {
   if (!control) return;
   const value = control.value;
   switch (control.dataset.filter) {
-    case 'sport': sport = value; rememberSport(); break;
+    case 'sport': if (sport !== value) { sport = value; dfsSyncedAt = 0; dfsLoaded = false; } rememberSport(); break;
     case 'platform': bookmaker = value; break;
     case 'league': designFilters.league = value; break;
     case 'market': marketType = value; break;
@@ -1852,12 +2201,21 @@ $('#ev-detail').addEventListener('click', event => {
   if (control.dataset.compareDfs) { const id = control.dataset.compareDfs, item = state.dfs.find(entry => entry.id === id); $('#ev-detail').close(); if (item && !fantasyIds.includes(id)) addSlipPick(id); return setTool('slip'); }
 });
 $('#ev-sport').addEventListener('change', event => {
+  const sportChanged = sport !== event.target.value;
   sport = event.target.value;
+  if (sportChanged) { dfsSyncedAt = 0; dfsLoaded = false; }
   rememberSport();
   render();
 });
 $('#ev-reference-sport').addEventListener('change', event => {
   sport = event.target.value;
+  rememberSport();
+  render();
+});
+window.addEventListener('dfs-sport-change', event => {
+  const newSport = event.detail?.sport || '';
+  const target = newSport ? (knownSport(newSport) || '') : '';
+  if (sport !== target) { sport = target; dfsSyncedAt = 0; dfsLoaded = false; history.replaceState(history.state, '', location.pathname + '?sport=' + encodeURIComponent((sport || 'all').toLowerCase()) + location.hash); }
   rememberSport();
   render();
 });
@@ -2036,16 +2394,17 @@ $('#ev-export').addEventListener('click', () => {
   a.href = url; a.download = `sportslab-ev-${new Date().toISOString().slice(0,10)}.json`; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
-window.addEventListener('hashchange', () => { const key = location.hash.slice(1); if (toolMeta[key]) { if (key !== active) closeToolDialogs(); active = key; bookmaker = ''; marketType = ''; showAllBooks = false; bookMenuOpen = false; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; render(); } });
+window.addEventListener('hashchange', () => { const key = location.hash.slice(1); if (toolMeta[key]) { if (key !== active) closeToolDialogs(); active = key; bookmaker = ''; marketType = ''; showAllBooks = false; bookMenuOpen = false; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; render(); if (QUOTE_TOOLS.has(active) && feedControls) void feedControls.refresh(); } });
 let displayedQuoteRevision = '', displayedSections = '';
 document.addEventListener('ev-tool-change', () => { displayedQuoteRevision = quoteRevision(state.quotes, serverNow()); displayedSections = sectionsShown(); });
 // Coming back to the tab refreshes DFS lines right away instead of on the next tick.
-document.addEventListener('visibilitychange', () => { if (!document.hidden) ensureDfsFeed(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { ensureDfsFeed(); void ensureRelayBoards(); } });
 setInterval(() => {
   if (document.hidden) return;
   ensureDfsFeed();
   const editing = bookMenuOpen || document.fullscreenElement || document.querySelector('dialog[open],.wager-more[open],.bet-comparison-history:not([hidden]),.evx-more[open],.evx-tools-menu[open]') || document.activeElement?.closest('input,textarea,select,[contenteditable],.ev-control-grid,.bet-inline-mount,.ev-reference-mount,.evb-detail');
   if (editing) return;
+  void ensureRelayBoards();
   if (active === 'odds') { if(!suite.hasView(active))oddsScreen.refresh(); return; }
   // Age labels update locally. An unchanged price snapshot must not replace cards,
   // reset focus, or collapse the comparison somebody is reading.

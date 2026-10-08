@@ -12,6 +12,7 @@ const purposes = {
   slip:'Choose your picks, set the payout rules, and see the math behind your entry.',
   'fantasy-alerts':'Keep your player-prop watchlist in one place. Review matches as you add new lines.',
   prediction:'A workspace for contract prices, market depth, and your recorded positions.',
+  'relay-boards':'Read the relayed positive-EV, arbitrage, liquidity and market-position boards side by side.',
   trends:'Read the recent form in your saved results, then compare related player props.',
   'line-alerts':'Set your price targets and follow the moves in your recorded markets.'
 };

@@ -16,12 +16,12 @@ test('tracked bets show their selection’s current price and the odds service�
   // A selection keeps its id across price updates; each update is served with its pricing.
   const feed = (repriced = -102) => {
     const quotes = [];
-    for (let game = 0; game < 1_000; game += 1) for (const [book, home, away] of [['Book A', -110, -110], ['Book B', -105, -115], ['Book C', -120, 100], ['Book D', 105, -125]]) {
-      quotes.push(quote(`${book}-${game}-h`, book, game, 'home', book === 'Book A' && game === 0 ? repriced : home), quote(`${book}-${game}-a`, book, game, 'away', away));
+    for (let game = 0; game < 1_000; game += 1) for (const [book, home, away] of [['Pinnacle', -110, -110], ['Circa', -105, -115], ['FanDuel', -120, 100], ['DraftKings', 105, -125]]) {
+      quotes.push(quote(`${book}-${game}-h`, book, game, 'home', book === 'Pinnacle' && game === 0 ? repriced : home), quote(`${book}-${game}-a`, book, game, 'away', away));
     }
     return priced(quotes, { now: NOW });
   };
-  const bets = Array.from({ length: 40 }, (_, index) => tracked(`bet-${index}`, quote(`Book A-${index}-h`, 'Book A', index, 'home', -110, { ts: at(30) })));
+  const bets = Array.from({ length: 40 }, (_, index) => tracked(`bet-${index}`, quote(`Pinnacle-${index}-h`, 'Pinnacle', index, 'home', -110, { ts: at(30) })));
   const served = feed(), state = { quotes: served.quotes, analytics: served.analytics, bets, suite: { ledger: { filters: { source: 'legacy' } } } };
   const ledger = ledgerFor(state);
   const started = performance.now();
@@ -29,7 +29,7 @@ test('tracked bets show their selection’s current price and the odds service�
   const elapsed = performance.now() - started;
   const current = $('tbody tr').toArray().map(row => $(row).find('small').filter((_, item) => /^Current/.test($(item).text())).text());
   assert.equal(current.length, 40);
-  const fair = served.analytics.pricingOf(served.analytics.byId.get('Book A-0-h')).fairProbability;
+  const fair = served.analytics.pricingOf(served.analytics.byId.get('Pinnacle-0-h')).fairProbability;
   assert.equal(current[0], `Current -102 · Fair ${(fair * 100).toFixed(2)}%`, 'the repriced Book A price with the server’s fair value');
   assert.match(current[1], /^Current -110 · Fair/);
   assert.ok(elapsed < 3_000, `rendered in ${elapsed.toFixed(0)} ms`);
@@ -47,7 +47,7 @@ test('tracked bets show their selection’s current price and the odds service�
 
 test('performance shows price CLV and, when the other side closed too, no-vig CLV', t => {
   t.mock.timers.enable({ apis: ['Date'], now: NOW });
-  const snapshot = quote('q1', 'Book A', 1, 'home', 120);
+  const snapshot = quote('q1', 'Pinnacle', 1, 'home', 120);
   const settled = (id, extra) => tracked(id, snapshot, { status: 'won', odds: 120, closingOdds: 100, closeComparable: true, ...extra });
   const state = { quotes: [], bets: [settled('with-other', { closingOtherOdds: -120 }), settled('price-only', {})], suite: { ledger: { filters: { source: 'legacy' } } } };
   const $ = load(ledgerFor(state).render('performance'));

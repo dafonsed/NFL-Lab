@@ -75,6 +75,10 @@ test('section views, DFS lines, line history, member lines and contracts use the
   const ev = await getEV({ live: false, limit: 50, sport: 'NFL' });
   assert.equal(ev.pricing[0].quoteId, 'a');
   assert.deepEqual(Object.fromEntries(new URL(calls[0].url, 'https://x.test').searchParams), { sport: 'NFL', live: 'false', limit: '50' });
+  const fullDfs = await getDfs({ settings: { devigMethod: 'power' }, sport: 'MLB', limit: 5000 });
+  assert.equal(fullDfs.picks.length, 2);
+  assert.equal(calls[1].init.cache, 'default', 'the heavy full DFS feed may use the shared CDN answer');
+  assert.deepEqual(Object.fromEntries(new URL(calls[1].url, 'https://x.test').searchParams), { prefs: JSON.stringify({ devigMethod: 'power' }), sport: 'MLB', limit: '5000' });
   const dfs = await getDfs();
   assert.deepEqual(dfs.picks.map(pick => pick.probability), [.61, null], 'an unreadable probability is unknown, not 0%');
   assert.deepEqual(dfs.payouts.PrizePicks['2'], [0, 0, 3]);

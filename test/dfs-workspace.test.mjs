@@ -22,6 +22,26 @@ test('DFS break-even includes partial-win payouts and rejects missing rules', ()
   assert.equal((probability*100).toFixed(2), '54.25');
 });
 
+test('custom-odds EV never masquerades as a pick’em edge', t => {
+  const originalDocument=globalThis.document, originalCSS=globalThis.CSS;
+  globalThis.document={querySelector:()=>null};globalThis.CSS={escape:value=>value};
+  t.after(()=>{if(originalDocument===undefined)delete globalThis.document;else globalThis.document=originalDocument;if(originalCSS===undefined)delete globalThis.CSS;else globalThis.CSS=originalCSS;});
+  const base={sport:'MLB',event:'NYY vs BOS',market:'Player Bases',line:0.5,side:'Over',source:'local-api'};
+  const state={dfs:[
+    {...base,id:'custom',app:'Chalkboard',player:'Colson Montgomery',probability:.1661,dfsOdds:519,ev:.1944,customOdds:true},
+    {...base,id:'standard',app:'PrizePicks',player:'Anthony Volpe',market:'Player Bases',probability:.5526},
+  ],quotes:[],paytables:{PrizePicks:{3:[0,0,0,6]}}};
+  const view=createDfsWorkspace({getState:()=>state,redraw:()=>{}});
+  const html=view.render(), $=load(html);
+  assert.equal($('.dfs-prop').length,2);
+  assert.equal($('.dfs-prop').first().find('.dfs-player').text(),'Anthony Volpe','the genuine 55.26% pick’em edge ranks first');
+  assert.equal($('.dfs-prop').last().find('.dfs-player').text(),'Colson Montgomery','custom-odds rows rank by pick’em edge, not their wager EV');
+  const edges=$('.dfs-vs-be').map((_,element)=>$(element).text()).get();
+  assert.equal(edges.length,1,'the app without payout rules gets no invented break-even');
+  assert.match(edges[0],/\+0\.23%/);
+  assert.doesNotMatch(html,/\+19\.44%/);
+});
+
 test('DFS comparison uses only matching fantasy props and preserves line boundaries and missing sides', () => {
   const prop = {sport:'NBA',event:'PHI vs ORL',player:'Tyrese Maxey',market:'Points',line:28.5};
   const base = {...prop,app:'PrizePicks',side:'Under',probability:.55,ts:earlier};
@@ -83,7 +103,7 @@ test('preview and platform options contain DFS providers with lines instead of s
   assert.doesNotMatch(html,/FanDuel(?! Fantasy)|BetMGM|Pinnacle|Sportsbooks|Brandin Podziemski/);
   assert.match(html,/Tyrese Maxey/);
   assert.doesNotMatch(html,/alt="VisualOdds"/);
-  assert.match(html,/No book price/);
+  assert.match(html,/No book price|Fair odds/);
   assert.match(html,/DFS platforms/);
 });
 
@@ -201,7 +221,7 @@ test('DFS rows show the book logo and offered odds, while fair value stays in th
   state.quotes = [];
   view.click({target:{closest:()=>button}});
   assert.equal(load(view.render())('.dfs-offer strong').text(),'249.5 · —');
-  assert.equal(load(view.render())('.dfs-offer small').text(),'No book price');
+  assert.equal(load(view.render())('.dfs-offer small').text(),'Fair odds (no book line)');
   assert.doesNotMatch(view.render(),/Fair value|alt="VisualOdds"/);
   assert.equal(view.click({target:{closest:()=>({dataset:{dfsPick:prop.id},hasAttribute:()=>false})}}),true);
   const selected = load(view.render());
@@ -251,7 +271,7 @@ test('All apps lists every app, keeps a slip to one app and shows the slip payou
   assert.equal($('#dfs-platform option:selected').text(),'All apps');
   assert.equal($('.dfs-prop').length,3,'every app\'s lines are listed');
   assert.match($('.dfs-results-toolbar p').text(),/3 props from all apps/);
-  assert.deepEqual($('#dfs-sport option').map((_,o)=>$(o).text()).get(),['All sports','NBA','Tennis'],'sports come from the feed');
+  assert.deepEqual($('#dfs-sport option').map((_,o)=>$(o).text()).get(),['All sports','NFL','NCAAF','NBA','WNBA','NCAAB','MLB','NHL','Soccer','Tennis'],'major sports always listed; feed sports included');
   assert.equal($('.dfs-slip-trigger strong').text(),'3 Pick · 5× · BE 58.48%','the slip type shows its payout and break-even');
   assert.match($('.dfs-feed-note').text(),/game lines only/,'a missing hit chance is explained');
   assert.equal($('.dfs-prop .dfs-pick-cell small').first().text(),'PrizePicks','each row names its app');

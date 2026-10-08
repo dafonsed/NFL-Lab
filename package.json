@@ -31,16 +31,22 @@
     "better-sqlite3": "13.0.3",
     "cheerio": "^1.2.0",
     "csv-parse": "^7.0.2",
+    "https-proxy-agent": "^9.1.0",
     "kysely": "0.29.6",
     "pg": "8.23.0",
     "qrcode-generator": "1.4.4",
-    "stripe": "22.6.2"
+    "stripe": "22.6.2",
+    "undici": "^8.11.2"
   },
   "devDependencies": {
     "@better-auth/utils": "0.4.2",
     "@playwright/test": "1.56.1",
     "@tesseract.js-data/eng": "1.0.0",
     "autocannon": "8.0.0",
-    "tesseract.js": "7.0.0"
+    "tesseract.js": "7.0.0",
+    "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
   }
 }

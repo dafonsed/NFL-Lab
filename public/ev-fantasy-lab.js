@@ -4,7 +4,7 @@
 import {hitDistribution,expectedPayout,breakEven as tableBreakEven,decimal,DEVIG_METHODS} from './betting-math.js';
 import {isCurrent} from './odds-contract.js';
 import {getDfsLinePrices,serverNow} from './odds-client.js';
-import {withStandardPaytables} from './dfs-workspace.js?v=24';
+import {withStandardPaytables} from './dfs-workspace.js?v=27';
 import {canonicalPlatform} from './platform-catalog.js';
 
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

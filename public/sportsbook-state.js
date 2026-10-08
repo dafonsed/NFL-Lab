@@ -27,7 +27,7 @@ if (picker) {
     picker.querySelector('[data-state-books]').innerHTML = code
       ? `${available.length ? `<div class="ev-state-books" aria-label="Available sportsbooks">${available.map(book => bookRow(book, true)).join('')}</div>` : '<p class="ev-state-empty">None of our supported online sportsbooks are available here. Choose another state to check its coverage.</p>'}${unavailable.length ? `<details class="ev-state-unavailable"><summary><span>Unavailable sportsbooks <b>${unavailable.length}</b></span>${icon('chevron')}</summary><div class="ev-state-books" aria-label="Unavailable sportsbooks">${unavailable.map(book => bookRow(book, false)).join('')}</div></details>` : ''}`
       : '<p class="ev-state-empty">Showing offers across all states. Select your state to check local availability.</p>';
-    picker.querySelector('[data-state-sources]').innerHTML = `<p>Checked ${COVERAGE_CHECKED}. Coverage can change. DFS apps and exchanges have separate rules. Books with unverified coverage are hidden when a state is selected.</p><div class="ev-state-source-links">${books.map(book => `<a href="${SPORTSBOOK_COVERAGE[book].source}" target="_blank" rel="noopener noreferrer">${book}</a>`).join('')}</div>`;
+    picker.querySelector('[data-state-sources]').innerHTML = `<p>Checked ${COVERAGE_CHECKED}. Coverage can change. DFS apps and exchanges have separate rules. Books without verified state coverage remain selectable; confirm eligibility directly with the sportsbook.</p><div class="ev-state-source-links">${books.map(book => `<a href="${SPORTSBOOK_COVERAGE[book].source}" target="_blank" rel="noopener noreferrer">${book}</a>`).join('')}</div>`;
   }
   function change(code, saved = true) {
     render(code, saved);

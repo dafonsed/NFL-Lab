@@ -25,7 +25,7 @@ const fairTitle = $ => $('tbody tr.os-row').last().find('.os-average').attr('tit
 test('no-vig fair uses complete books, counts mirrors once and follows the member’s devig method', () => {
   const quotes = [...pair('DraftKings',-150,130), ...pair('BetRivers',-120,100,{priceFamily:'Kambi'}), ...pair('Desert Diamond Sports',-120,100,{priceFamily:'Kambi'}), moneyline('Fanatics','home',-300)];
   for (const method of ['multiplicative','additive']) {
-    const expected = (devig([implied(-150),implied(130)],method)[0] + devig([implied(-120),implied(100)],method)[0]) / 2;
+    const expected = devig([implied(-150),implied(130)],method)[0];
     assert.match(fairTitle(rows(quotes,{getSettings:()=>({devigMethod:method})})), new RegExp(`no-vig fair ${american(expected).replace('+','\\+')}$`), method);
   }
 });

@@ -18,6 +18,7 @@ export const US_STATES = Object.freeze({
   WA:'Washington', WV:'West Virginia', WI:'Wisconsin', WY:'Wyoming'
 });
 const coverage = (states, source) => Object.freeze({states:Object.freeze(states.split(' ')), source});
+const UNFILTERED_FEEDS = Object.freeze([]);
 export const SPORTSBOOK_COVERAGE = Object.freeze({
   bet365:coverage('AZ CO DC IL IN IA KS KY LA MD MI MO NJ NC OH PA TN VA WV', 'https://help.bet365.com/s/en-us/technical-support/where-can-i-play'),
   DraftKings:coverage('AZ AR CO CT DC IL IN IA KS KY LA ME MD MA MI MO NH NJ NY NC OH OR PA TN VT VA WV WY', 'https://sportsbook.draftkings.com/is-draftkings-available-nationwide-for-sports'),
@@ -60,12 +61,13 @@ export function sportsbookStatus(book, state) {
   const code = normalizeState(state);
   if (!code) return 'unfiltered';
   const name = canonicalPlatform(book).toLowerCase();
+  if (UNFILTERED_FEEDS.includes(name)) return 'unfiltered';
   const canonical = Object.keys(SPORTSBOOK_COVERAGE).find(key => key.toLowerCase() === name);
   if (!canonical) return 'unverified';
   return SPORTSBOOK_COVERAGE[canonical].states.includes(code) ? 'available' : 'unavailable';
 }
 export function sportsbookAvailable(book, state) {
-  return ['unfiltered','available'].includes(sportsbookStatus(book, state));
+  return ['unfiltered','available','unverified'].includes(sportsbookStatus(book, state));
 }
 export function availableSportsbookQuotes(quotes, state) {
   return quotes.filter(quote => sportsbookAvailable(quote.book, state));

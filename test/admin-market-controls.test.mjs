@@ -225,11 +225,11 @@ test('one failed provider refresh serves the last complete snapshot for up to a 
   let calls = 0;
   const flaky = async () => (++calls === 1 ? new Response(JSON.stringify({ quotes })) : new Response('busy', { status: 502 }));
   assert.equal((await proxy('/api/ev/quotes', { fetcher: flaky, loadControls: async () => [] })).body.count, quotes.length);
-  t.mock.timers.tick(5_000);
+  t.mock.timers.tick(61_000);
   const retried = await proxy('/api/ev/quotes', { fetcher: flaky, loadControls: async () => [] });
   assert.equal(retried.status, 200, 'the previous snapshot covers a momentary upstream error');
   assert.equal(retried.body.count, quotes.length);
   assert.equal(calls, 3, 'the failed refresh was tried once more first');
-  t.mock.timers.tick(61_000);
-  assert.equal((await proxy('/api/ev/quotes', { fetcher: flaky, loadControls: async () => [] })).status, 503, 'a snapshot over a minute old is not served');
+  t.mock.timers.tick(240_000);
+  assert.equal((await proxy('/api/ev/quotes', { fetcher: flaky, loadControls: async () => [] })).status, 503, 'a snapshot past the hold-over window is not served');
 });

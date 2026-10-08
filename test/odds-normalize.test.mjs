@@ -69,11 +69,11 @@ test('books that send start times in ts get them moved, and started games drop f
 
 test('mirrored books count once in the consensus', () => {
   const q = (book, side, odds) => ({ id: `${book}-${side}`, sport: 'NFL', event: 'A @ B', eventId: 'NFL:a @ b', market: 'Moneyline', marketId: 'moneyline|NFL:a @ b', type: 'moneyline', line: '', side, book, odds, ts: new Date().toISOString(), live: false, outcomes: '' });
-  const quotes = [q('BetRivers', 'home', -150), q('BetRivers', 'away', 130), q('Bally Bet', 'home', -150), q('Bally Bet', 'away', 130), q('DraftKings', 'home', -110), q('DraftKings', 'away', -110), q('FanDuel', 'home', 120)];
+  const quotes = [q('FanDuel', 'home', -150), q('FanDuel', 'away', 130), q('Novig', 'home', -150), q('Novig', 'away', 130), q('DraftKings', 'home', -110), q('DraftKings', 'away', -110), q('Pinnacle', 'home', 120)];
   markPriceFamilies(quotes, { minShared: 2, minIdentical: 0.7 });
-  assert.equal(quotes[2].priceFamily, 'Bally Bet' < 'BetRivers' ? undefined : 'BetRivers');
+  assert.equal(quotes[2].priceFamily, 'Novig' < 'FanDuel' ? undefined : 'FanDuel');
   const consensus = consensusPrice(quotes.at(-1), quotes, { minSharpBooks: 1 });
-  assert.equal(consensus.bookCount, 2, 'BetRivers and Bally Bet are one reference, DraftKings the other');
+  assert.equal(consensus.bookCount, 2, 'FanDuel and Novig are one reference, DraftKings the other');
 });
 
 test('sport names cover the feed beyond the six major leagues', () => {
@@ -98,10 +98,10 @@ test('pick\'em lines from the feed become DFS picks priced from sportsbook props
   assert.equal(pp.event, ud.event, 'every app shares one game name');
   const noVig = (o, u) => (o > 0 ? 100 / (o + 100) : -o / (-o + 100)) / ((o > 0 ? 100 / (o + 100) : -o / (-o + 100)) + (u > 0 ? 100 / (u + 100) : -u / (-u + 100)));
   // "Pass Yards" at PrizePicks matches "Passing Yards" at the books; Underdog's 263.5 line has no book at that line.
-  assert.ok(Math.abs(pp.probability - (noVig(-120, 100) + noVig(-115, -105)) / 2) < 1e-9);
+  assert.ok(Math.abs(pp.probability - (noVig(-120, 100) * 25 + noVig(-115, -105) * 50) / 75) < 1e-9);
   assert.equal(ud.probability, null);
   const exact = normalizeFeed([prop('dk-o', 'DraftKings', 'over', -120), prop('dk-u', 'DraftKings', 'under', 100), prop('fd-o', 'FanDuel', 'over', -115), prop('fd-u', 'FanDuel', 'under', -105), prop('pp-o', 'PrizePicks', 'over', undefined)], { syncedAt: '2026-09-30T22:00:00.000Z' }).dfs[0];
-  assert.ok(Math.abs(exact.probability - (noVig(-120, 100) + noVig(-115, -105)) / 2) < 1e-9);
+  assert.ok(Math.abs(exact.probability - (noVig(-120, 100) * 25 + noVig(-115, -105) * 50) / 75) < 1e-9);
   assert.deepEqual(exact.probabilityBooks.sort(), ['DraftKings', 'FanDuel']);
 });
 
@@ -201,7 +201,7 @@ test('raw two-sided odds → implied → devig → fair probability, with the me
   assert.equal(pct(power2), 57.74);
   assert.equal(pct(b.fair[0] - power2), -0.29, '57.45% fair does not clear a 2-pick Power slip');
   assert.equal(pct(fairFromAmerican([-170, 140]).fair[0] - power2), 2.44, '60.18% fair does');
-  assert.deepEqual([...DEVIG_METHODS], ['multiplicative', 'additive', 'power', 'probit', 'shin']);
+  assert.deepEqual([...DEVIG_METHODS], ['multiplicative', 'additive', 'power', 'probit', 'shin', 'worst']);
   for (const method of DEVIG_METHODS) {
     const [over, under] = fairFromAmerican([-150, 125], method).fair;
     assert.ok(Math.abs(over + under - 1) < 1e-8, `${method} sums to 1`);
@@ -222,7 +222,7 @@ test('DFS fair probability devigs each book\'s Over/Under prices with the chosen
   const pick = side => ({ book: 'PrizePicks', player: 'Jalen Hurts', market: 'Pass Yards', line: 225.5, side, eventId: 'NFL:eagles', ts, probability: 0.6667 });
   for (const method of ['multiplicative', 'probit']) {
     const [over, under] = dfsPicks([pick('over'), pick('under')], quotes, new Map(), { method });
-    const expected = (fairFromAmerican([-140, 118], method).fair[0] + fairFromAmerican([-150, 125], method).fair[0]) / 2;
+    const expected = (fairFromAmerican([-140, 118], method).fair[0] * 50 + fairFromAmerican([-150, 125], method).fair[0] * 25) / 75;
     assert.ok(Math.abs(over.probability - expected) < 1e-12, `${method}: average of each book's devigged Over`);
     assert.ok(Math.abs(under.probability - (1 - expected)) < 1e-12);
     assert.deepEqual(over.probabilityBooks, ['FanDuel', 'DraftKings'], 'a one-sided book (BetMGM) is not devigged');
@@ -257,7 +257,7 @@ test('a pick prices against the same player, stat and line when the books name t
   const { dfsPicks } = await import('../lib/odds/normalize.mjs');
   const { fairFromAmerican } = await import('../public/betting-math.js');
   const ts = new Date().toISOString();
-  const quote = (side, odds, eventId = 'NBA:wings @ valkyries') => ({ book: 'Fanatics', side, odds, sport: 'NBA', player: 'Veronica Burton', market: 'Points', line: 12.5, eventId, ts });
+  const quote = (side, odds, eventId = 'NBA:wings @ valkyries') => ({ book: 'FanDuel', side, odds, sport: 'NBA', player: 'Veronica Burton', market: 'Points', line: 12.5, eventId, ts });
   const pick = (eventId = 'NBA:dal @ gsv') => ({ book: 'PrizePicks', sport: 'NBA', player: 'Veronica Burton', market: 'Points', line: 12.5, side: 'over', eventId, ts });
   // PrizePicks "DAL @ GSV" and Fanatics "Dallas Wings @ Golden State Valkyries" are one game.
   const [priced] = dfsPicks([pick()], [quote('over', 100), quote('under', -130)]);
@@ -283,19 +283,36 @@ test('PrizePicks line type is read from oddsType or odds_type; unflagged PrizePi
   assert.equal(standard.oddsType, 'standard');
 });
 
-test('a standard pick\'em line sent as More is also listed as Less at the same line; goblins and demons are More only', async () => {
+test('only the side an app publishes becomes a pick; goblins and demons are never mirrored', async () => {
   const { dfsPicks } = await import('../lib/odds/normalize.mjs');
   const { fairFromAmerican } = await import('../public/betting-math.js');
   const ts = new Date().toISOString();
   const pick = (oddsType, line) => ({ book: 'PrizePicks', sport: 'NBA', player: 'Paige Bueckers', market: 'Points', line, side: 'over', eventId: 'NBA:dal @ gsv', ts, oddsType });
-  const quotes = [['over', -110], ['under', -120]].map(([side, odds]) => ({ book: 'Fanatics', side, odds, sport: 'NBA', player: 'Paige Bueckers', market: 'Points', line: 15.5, eventId: 'NBA:dal @ gsv', ts }));
+  const quotes = [['over', -110], ['under', -120]].map(([side, odds]) => ({ book: 'FanDuel', side, odds, sport: 'NBA', player: 'Paige Bueckers', market: 'Points', line: 15.5, eventId: 'NBA:dal @ gsv', ts }));
   const rows = dfsPicks([pick('standard', 15.5), pick('goblin', 10.5), pick('demon', 22.5)], quotes);
-  assert.deepEqual(rows.map(row => [row.line, row.side, row.oddsType]), [[15.5, 'Over', 'standard'], [15.5, 'Under', 'standard'], [10.5, 'Over', 'goblin'], [22.5, 'Over', 'demon']]);
-  const [over, under] = rows, fair = fairFromAmerican([-110, -120]).fair;
-  assert.ok(Math.abs(over.probability - fair[0]) < 1e-12 && Math.abs(under.probability - fair[1]) < 1e-12, 'Less is priced from the same devigged market');
-  assert.notEqual(over.id, under.id);
-  // A Less line the feed already sends is not doubled.
-  assert.equal(dfsPicks([pick('standard', 15.5), { ...pick('standard', 15.5), side: 'under' }], quotes).length, 2);
+  assert.deepEqual(rows.map(row => [row.line, row.side, row.oddsType]), [[15.5, 'Over', 'standard'], [10.5, 'Over', 'goblin'], [22.5, 'Over', 'demon']]);
+  const [over] = rows, fair = fairFromAmerican([-110, -120]).fair;
+  assert.ok(Math.abs(over.probability - fair[0]) < 1e-12, 'the published side is priced from the devigged market');
+  const sent = dfsPicks([pick('standard', 15.5), { ...pick('standard', 15.5), side: 'under' }], quotes);
+  assert.deepEqual(sent.map(row => row.side), ['Over', 'Under'], 'both sides are kept only when the app sends both');
+});
+
+test('a priced SmartStake fantasy-book row is comparison data, not an offered pick', async () => {
+  const { normalizeFeed } = await import('../lib/odds/normalize.mjs');
+  const ts = new Date().toISOString(), startTime = new Date(Date.now() + 3_600_000).toISOString();
+  const line = extra => ({
+    sport: 'mlb', event: 'MIL @ SD', type: 'prop', market: 'prop', propMarket: 'Doubles',
+    player: 'Cooper Pratt', line: .5, side: 'under', ts, startTime, ...extra,
+  });
+  const { picks, quotes } = normalizeFeed([
+    line({ id: 'contaminated', book: 'parlayplay', odds: -1999 }),
+    line({ id: 'offered', book: 'parlayplay' }),
+    line({ id: 'book-over', book: 'DraftKings', side: 'over', odds: 500 }),
+    line({ id: 'book-under', book: 'DraftKings', odds: -2000 }),
+  ], { price: false });
+
+  assert.deepEqual(picks.map(pick => pick.id), ['local-api:offered']);
+  assert.deepEqual(quotes.map(quote => quote.book), ['DraftKings', 'DraftKings'], 'the sportsbook prices remain available to price the real pick');
 });
 
 test('player props show their stat as the market and in the bet; margin bands and round props are not moneylines', async () => {
@@ -343,11 +360,11 @@ test('DFS audit fixes: stat-aware props, sides per book, pregame only, per-app m
   // 2. Each book keeps its own Over and Under; a price family is averaged after devigging.
   const q = (book, side, odds, extra = {}) => ({ book, side, odds, sport: 'NBA', player: 'Luka Doncic', market: 'Rebounds', line: 8.5, eventId: 'NBA:mavericks @ nuggets', ts, startTime: start, ...extra });
   const pick = extra => ({ book: 'PrizePicks', sport: 'NBA', player: 'Luka Doncic', market: 'Rebounds', line: 8.5, side: 'over', eventId: 'NBA:mavericks @ nuggets', ts, startTime: start, ...extra });
-  const family = [q('BetRivers', 'over', -115, { priceFamily: 'kambi' }), q('BetRivers', 'under', -105, { priceFamily: 'kambi' }), q('Bally Bet', 'over', -125, { priceFamily: 'kambi' }), q('Bally Bet', 'under', 105, { priceFamily: 'kambi' })];
+  const family = [q('FanDuel', 'over', -115, { priceFamily: 'kambi' }), q('FanDuel', 'under', -105, { priceFamily: 'kambi' }), q('Novig', 'over', -125, { priceFamily: 'kambi' }), q('Novig', 'under', 105, { priceFamily: 'kambi' })];
   const [priced] = dfsPicks([pick()], family);
   const expected = (fairFromAmerican([-115, -105]).fair[0] + fairFromAmerican([-125, 105]).fair[0]) / 2;
   assert.ok(Math.abs(priced.probability - expected) < 1e-12, 'each book devigged on its own prices, then the family averaged');
-  assert.deepEqual(priced.probabilitySources.map(s => [s.book, s.over, s.under]), [['BetRivers', -115, -105], ['Bally Bet', -125, 105]]);
+  assert.deepEqual(priced.probabilitySources.map(s => [s.book, s.over, s.under]), [['FanDuel', -115, -105], ['Novig', -125, 105]]);
   // 3. Live or period quotes never price a pregame, full-game pick.
   assert.equal(dfsPicks([pick()], [q('DraftKings', 'over', 400, { live: true }), q('DraftKings', 'under', -600, { live: true })])[0].probability, null);
   assert.equal(dfsPicks([pick()], [q('DraftKings', 'over', -110, { period: '1st half' }), q('DraftKings', 'under', -110, { period: '1st half' })])[0].probability, null);
@@ -379,7 +396,7 @@ test('DFS sports for display: college football and WNBA split out by team abbrev
   const row = (sport, event, player) => ({ id: player, sport, event, player, market: 'Points', line: 10.5, side: 'higher', app: 'PrizePicks', ts, startTime: start });
   const { picks } = normalizeDfsRecords([row('nfl', 'PITT @ VT', 'College Player'), row('nfl', 'IND @ WAS', 'Pro Player'), row('nba', 'DAL @ GSV', 'Paige Bueckers'), row('nba', 'DAL @ DEN', 'Luka Doncic')], { syncedAt: ts });
   assert.deepEqual(picks.map(p => [p.player, p.sport]), [['College Player', 'NCAAF'], ['Pro Player', 'NFL'], ['Paige Bueckers', 'WNBA'], ['Luka Doncic', 'NBA']]);
-  const book = ['over', 'under'].map(side => ({ book: 'Fanatics', side, odds: -115, sport: 'NBA', player: 'Paige Bueckers', market: 'Points', line: 10.5, eventId: 'NBA:wings @ valkyries', ts, startTime: start }));
+  const book = ['over', 'under'].map(side => ({ book: 'FanDuel', side, odds: -115, sport: 'NBA', player: 'Paige Bueckers', market: 'Points', line: 10.5, eventId: 'NBA:wings @ valkyries', ts, startTime: start }));
   const [bueckers] = dfsPicks([picks[2]], book);
   assert.equal(bueckers.sport, 'WNBA');
   assert.ok(Math.abs(bueckers.probability - 0.5) < 1e-12, 'still priced from books that label the game NBA');
@@ -560,7 +577,7 @@ test('a line a book moved or a DFS app pulled leaves the feed once the newer one
     prop('a', 'DraftKings', 13.5, 'over', 6), prop('b', 'DraftKings', 13.5, 'under', 6), prop('c', 'DraftKings', 14.5, 'over', 0.5), prop('d', 'DraftKings', 14.5, 'under', 0.5),
     prop('e', 'FanDuel', 13.5, 'over', 0.5), prop('f', 'FanDuel', 13.5, 'under', 0.5), prop('g', 'FanDuel', 19.5, 'over', 0.5), prop('h', 'FanDuel', 19.5, 'under', 0.5),
     // PrizePicks pulled one line of the game eight minutes ago.
-    prop('p1', 'PrizePicks', 13.5, 'over', 0.5, { event: 'NYG @ NO', market: 'Receiving Yards', propMarket: undefined }), prop('p2', 'PrizePicks', 3.5, 'over', 8, { event: 'NYG @ NO', market: 'Receptions', propMarket: undefined }),
+    prop('p1', 'PrizePicks', 13.5, 'over', 0.5, { event: 'NYG @ NO', market: 'Receiving Yards', propMarket: undefined, odds: null }), prop('p2', 'PrizePicks', 3.5, 'over', 8, { event: 'NYG @ NO', market: 'Receptions', propMarket: undefined, odds: null }),
   ], { syncedAt: new Date(now).toISOString() });
   assert.deepEqual(quotes.filter(q => q.book === 'DraftKings').map(q => q.line), [14.5, 14.5]);
   assert.deepEqual(quotes.filter(q => q.book === 'FanDuel').map(q => q.line), [13.5, 13.5, 19.5, 19.5]);
