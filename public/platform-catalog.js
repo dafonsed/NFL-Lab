@@ -42,7 +42,30 @@ const lookup = new Map([...SITE_PLATFORMS, ...legacyPlatforms].flatMap(item => [
 export const findPlatform = value => lookup.get(key(value)) || null;
 export const canonicalPlatform = value => findPlatform(value)?.name || String(value ?? '').replace(/\s*\(example\)$/i,'').trim();
 export const platformLabel = value => findPlatform(value)?.label || String(value ?? '');
-export const platformAsset = value => findPlatform(value)?.asset || '';
+// Feed book slugs that share a brand's artwork, plus books with their own file in /assets/brands.
+const BOOK_ASSETS = Object.freeze({
+  'draftkings6':'draftkings', 'draftkings6best':'draftkings', 'fanduelpicks':'fanduel',
+  'hardrockfl':'hardrock', 'hardrockil':'hardrock', 'hardrockon':'hardrock',
+  'prizepicksbest':'prizepicks', 'dabblebest':'dabble', 'ownersboxbest':'ownersbox', 'underdogdfs':'underdog', 'underdogdfsbest':'underdog',
+  'betrbest':'betr', 'polymarketus':'polymarket',
+  // Each book's own published icon (sources: assets/brands/SOURCES.md).
+  '888sport':'888sport.png', 'action247':'action247.png', 'betjack':'bet-jack.png', 'bet105':'bet105.png', 'bet99':'bet99.png', 'betano':'betano.png',
+  'betanything':'betanything.png', 'betcris':'betcris.png', 'betfair':'betfair.png', 'betinia':'betinia.png', 'betnow':'betnow.png', 'betonline':'betonline.png',
+  'betparx':'betparx.png', 'betphoenix':'betphoenix.png', 'betsafe':'betsafe.png', 'betus':'betus.png', 'betvictor':'betvictor.png', 'betway':'betway.png',
+  'bleachernation':'bleachernation.png', 'bodog':'bodog.png', 'bookmaker':'bookmaker.png', 'borgata':'borgata.png', 'bovada':'bovada.png', 'bwin':'bwin.png',
+  'casumo':'casumo.png', 'circa':'circa.png', 'comeon':'comeon.png', 'crabsports':'crab-sports.png', 'daznbet':'daznbet.png', 'drf':'drf.png',
+  'everygame':'everygame.png', 'firekeepers':'firekeepers.png', 'fitzdares':'fitzdares.png', 'fliff':'fliff.png', 'fourwinds':'four-winds.png', 'goalserve':'goalserve.png',
+  'goldennugget':'golden-nugget.png', 'gunlake':'gun-lake.png', 'heritage':'heritage.png', 'jazzsports':'jazzsports.png', 'justbet':'justbet.png', 'leovegas':'leovegas.png',
+  'letsbetmd':'letsbetmd.png', 'miseojeu':'miseojeu.png', 'monopoly':'monopoly.png', 'mybookie':'mybookie.png', 'neobet':'neobet.png', 'northstarbets':'northstar-bets.png',
+  'oaklawn':'oaklawn.png', 'partysports':'partysports.png', 'playfallsview':'playfallsview.png', 'playnow':'playnow.png', 'pointsbetca':'pointsbet-ca.png', 'pokerstars':'pokerstars.png',
+  'powerplay':'powerplay.png', 'proline':'proline.png', 'ps3838':'ps3838.png', 'rebet':'rebet.png', 'resortsworld':'resorts-world.png', 'rivalry':'rivalry.png',
+  'smarkets':'smarkets.png', 'splashsports':'splashsports.png', 'sportsinteraction':'sports-interaction.png', 'sportzino':'sportzino.png', 'stake':'stake.png', 'tonybet':'tonybet.png',
+  'tooniebet':'tooniebet.png', 'wagerattack':'wagerattack.png', 'wannaparlay':'wannaparlay.png', 'windcreek':'wind-creek.png', 'xbet':'xbet.png', 'youwager':'youwager.png',
+  '4cx':'4cx.png', 'onyx':'onyx.png', 'bet99ca':'bet99.png', 'betinianj':'betinia.png', 'bleachernationbest':'bleachernation.png', 'splashsportsbest':'splashsports.png',
+  'sugarhouse':'betrivers.png'
+});
+const bookAsset = value => { const file = BOOK_ASSETS[key(value)]; return file ? `/assets/brands/${file.includes('.') ? file : file + '.png'}` : ''; };
+export const platformAsset = value => findPlatform(value)?.asset || bookAsset(value);
 export const SPORTSBOOK_PLATFORMS = Object.freeze(SITE_PLATFORMS.filter(item => item.category === 'sportsbook').map(item => item.name));
 export const FANTASY_PLATFORMS = Object.freeze(['PrizePicks','Underdog Fantasy','DraftKings Pick6','Sleeper Picks','ParlayPlay','Dabble','Chalkboard','Betr Picks','OwnersBox','Boom Fantasy','Vivid Picks','DraftKings Fantasy','FanDuel Fantasy']);
 export const PREDICTION_PLATFORMS = Object.freeze(SITE_PLATFORMS.filter(item => item.category === 'prediction').map(item => item.name));

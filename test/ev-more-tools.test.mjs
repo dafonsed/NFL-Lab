@@ -17,18 +17,19 @@ import {TOOL_FILTER_DEFAULTS, oddsWithin} from '../public/ev-filters.js';
 import {withStandardPaytables, paytableSource, standardPayout, payoutFactor, payoutKnown} from '../public/dfs-workspace.js';
 
 test('every secondary destination is reachable from the sidebar with sport context', () => {
-  for (const path of ['/ev?sport=nfl','/ev/tracker?sport=mlb','/ev/dashboard?sport=all']) {
+  for (const path of ['/ev?sport=nfl','/ev/tracker','/ev/dashboard']) {
     const url=new URL(path,'http://localhost'), $=load(siteHeader(url));
     assert.equal($('[data-ev-more]').length,0,'the sidebar uses a persistent disclosure rather than the former hover menu');
-    assert.equal($('.dashboard-more-tools').length,1,path);
-    assert.equal($('.dashboard-tool-groups [data-more-tool]').length,12);
+    assert.equal($('.dashboard-more-tools,#dashboard-tool-groups').length,0,`${path}: no More tools popup`);
+    assert.ok($('.dashboard-tool-section').length>0,path);
+    assert.equal($('.dashboard-tool-nav [data-more-tool]').length,MORE_TOOLS.length);
     for(const tool of MORE_TOOLS) {
       const link=$(`[data-more-tool="${tool.key}"]`);
       assert.equal(link.length,1);
-      assert.equal(link.attr('href'),`/ev?sport=${url.searchParams.get('sport')}#${tool.key}`);
+      assert.equal(link.attr('href'),`/ev#${tool.key}`);
       assert.ok(link.text().includes(tool.label));
     }
-    assert.equal($('.ev-primary-nav [data-more-tool]').length,0,'popup stays outside the scrolling primary nav');
+    assert.equal($('.ev-primary-nav [data-more-tool]').length,0,'secondary tools sit in their own sidebar sections, outside the primary nav');
   }
 });
 
@@ -57,8 +58,8 @@ test('EV pages load shared sidebar behavior after the tool styles', async () => 
   const palette=styles.findIndex(href=>href.startsWith('/workspace-palette.css'));
   const cards=styles.findIndex(href=>href.startsWith('/ev-bet-cards.css'));
   assert.ok(cards>styles.indexOf('/ev-more-tools.css?v=1')&&palette>cards,'shared cards follow tool styles and precede the palette');
-  assert.ok(styles.every((href,index)=>index<=palette||href.startsWith('/mobile-workspace.css')||href.startsWith('/ev-mobile.css')||href.startsWith('/sportslab-2026.css')||/^\/(trends-board|models-board|hub-pages|home-dashboard|player-detail|live-sim|tracker-2026|ev-suite-2026|boards-polish)\.css/.test(href)),'only the shared and EV responsive sheets may follow the palette');
-  assert.ok(styles.slice(styles.findIndex(href=>href.startsWith('/sportslab-2026.css'))+1).every(href=>/^\/(trends-board|models-board|hub-pages|home-dashboard|player-detail|live-sim|tracker-2026|ev-suite-2026|boards-polish)\.css/.test(href)),'only the 2026 area sheets follow the 2026 design system');
+  assert.ok(styles.every((href,index)=>index<=palette||href.startsWith('/mobile-workspace.css')||href.startsWith('/ev-mobile.css')||href.startsWith('/sportslab-2026.css')||/^\/(trends-board|models-board|hub-pages|home-dashboard|player-detail|live-sim|tracker-2026|ev-suite-2026|boards-polish|studio)\.css/.test(href)),'only the shared and EV responsive sheets may follow the palette');
+  assert.ok(styles.slice(styles.findIndex(href=>href.startsWith('/sportslab-2026.css'))+1).every(href=>/^\/(trends-board|models-board|hub-pages|home-dashboard|player-detail|live-sim|tracker-2026|ev-suite-2026|boards-polish|studio)\.css/.test(href)),'only the 2026 area sheets follow the 2026 design system');
 });
 
 test('promo view balances outcomes and never applies a disabled cash boost to a bonus', async () => {

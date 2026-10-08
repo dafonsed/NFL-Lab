@@ -1,0 +1,1627 @@
+/* +EV workspace in the VisualOdds Studio style (see studio.css for the site-wide personality).
+   One calm card holds the filters as a sentence ("Show NFL bets in every league ...") above a strip of
+   settings (bankroll, Kelly, books, timing, Find). Bets sit below as soft rounded rows.
+   Loaded last on /ev (lib/site-layout.mjs). Presentation only: every control keeps its element, id and handler. */
+
+/* ------------------------------------------------------------------ page frame and title */
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    display:grid !important; grid-template-columns:minmax(0,1fr) auto; align-items:center; column-gap:20px; row-gap:16px;
+    padding:30px 34px 56px !important; max-width:1680px !important;
+
+    & > * { grid-column:1 / -1; margin:0 !important; min-width:0; }
+    & > .ev-header { grid-row:1; grid-column:1; display:grid !important; gap:6px; min-height:0 !important; padding:0 !important; border:0 !important; background:none !important; box-shadow:none !important; }
+    & > .ev-header::before { display:none !important; content:none !important; }
+    & > .ev-header::after { content:var(--vo-ev-subtitle, ''); color:var(--sl-muted); font-size:14.5px; font-weight:400; line-height:1.4; }
+    & .ev-header .ev-heading { display:flex !important; align-items:center; gap:12px; min-height:0 !important; }
+    & .ev-header .ev-heading > :not(h1):not(.ev-data-badge) { display:none !important; }
+    & .ev-header :is(.ev-heading, .ev-heading h1)::before { display:none !important; content:none !important; }
+    & #ev-page-title { margin:0 !important; color:var(--sl-text) !important; font-size:28px !important; font-weight:650 !important; line-height:1.15 !important; letter-spacing:-.025em !important; }
+    & #ev-page-title .tool-accent { color:inherit !important; background:none !important; -webkit-text-fill-color:currentColor !important; font-size:inherit !important; }
+    & .ev-data-badge { height:24px !important; padding:0 10px !important; border:1px solid var(--sl-line-2) !important; border-radius:999px !important; background:transparent !important; color:var(--sl-muted) !important; font-size:12px !important; font-weight:500 !important; }
+    & .ev-data-badge::before { background:var(--sl-lime) !important; box-shadow:none !important; }
+
+    /* Feed status: small and quiet, top right. */
+    & > .ev-feed { grid-row:1; grid-column:2; align-self:start; justify-self:end; display:flex !important; flex-wrap:nowrap !important; align-items:center; gap:10px; max-width:100%;
+      min-height:0 !important; padding:4px 0 0 !important; border:0 !important; background:none !important; box-shadow:none !important; font-size:12.5px !important; color:var(--sl-muted) !important; }
+    & > .ev-feed :is(button, select, a) { height:30px !important; min-height:0 !important; padding:0 12px !important; border-radius:999px !important; font-size:12.5px !important; }
+    & > .ev-feed .ev-feed-meta { flex:0 1 auto; min-width:0; max-width:360px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--sl-faint) !important; font-size:12px !important; }
+    & > .ev-feed :is(.ev-feed-summary, .ev-feed-refresh, a) { flex:none; }
+
+    /* Tool tabs (Pricing, Alerts, Table/Detailed, Save view): a quiet text line. */
+    & > #ev-suite-controls { min-height:0 !important; padding:0 !important; border:0 !important; border-radius:0 !important; background:none !important; box-shadow:none !important; }
+    & #ev-suite-controls :is(nav > button, summary, .evx-toolbar-end > button) { height:30px !important; min-height:0 !important; padding:0 12px !important; border-radius:999px !important; color:var(--sl-muted) !important; font-size:13px !important; font-weight:500 !important; }
+    & #ev-suite-controls :is(nav > button, summary, .evx-toolbar-end > button):hover { color:var(--sl-text) !important; background:rgb(255 255 255/.04) !important; }
+    & #ev-suite-controls .evx-view-toggle { height:32px !important; padding:3px !important; border:1px solid var(--sl-line-2) !important; border-radius:999px !important; background:transparent !important; }
+    & #ev-suite-controls .evx-view-toggle button { height:24px !important; padding:0 11px !important; border-radius:999px !important; font-size:12.5px !important; }
+  }
+  html:root body.ev-page[data-site-page="ev"][data-ev-screen="ev-pre"] { --vo-ev-subtitle:'Bets priced above fair value right now'; }
+  html:root body.ev-page[data-site-page="ev"][data-ev-screen="ev-live"] { --vo-ev-subtitle:'Live bets priced above fair value'; }
+  html:root body.ev-page[data-site-page="ev"]:is([data-ev-screen="arb-pre"], [data-ev-screen="arb-live"]) { --vo-ev-subtitle:'Opposite sides at different books that lock in a profit'; }
+  html:root body.ev-page[data-site-page="ev"][data-ev-screen="fantasy"] { --vo-ev-subtitle:'Pick\2019 em lines the sportsbooks say are mispriced'; }
+}
+
+/* ------------------------------------------------------------------ the filter card: sentence + settings strip */
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    & > .ev-control-grid { display:contents !important; }
+    &::before {
+      content:'' !important; display:block !important; position:relative !important; inset:auto !important; grid-row:2 / 4; grid-column:1 / -1; align-self:stretch; z-index:0;
+      width:auto !important; height:auto !important; margin:0 !important; opacity:1 !important; transform:none !important; pointer-events:none;
+      border:1px solid var(--sl-line) !important; border-radius:20px !important; background:var(--sl-panel) !important; box-shadow:var(--sl-shadow) !important;
+    }
+
+    /* Row 2: the sentence. */
+    & > .ev-control-grid > .ev-filter-panel {
+      grid-row:2; grid-column:1 / -1; position:relative; z-index:2; display:flex !important; flex-wrap:wrap !important; align-items:baseline !important; column-gap:8px !important; row-gap:6px !important;
+      margin:0 !important; padding:22px 26px 18px !important; border:0 !important; border-bottom:1px solid var(--sl-line) !important; background:none !important; box-shadow:none !important;
+      color:var(--sl-muted) !important; font-size:18px !important; line-height:1.6 !important; width:auto !important; min-height:0 !important;
+    }
+    & .ev-filter-panel :is(.ev-filter-heading, .ev-reference-filters, .ev-reference-extra, .ev-design-filters) { display:contents !important; }
+    & .ev-filter-panel .ev-filter-heading > strong { display:none !important; }
+    & .ev-filter-panel .ev-toolbar { order:90; }
+    & .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter, .ev-recommend) {
+      order:10; display:inline-flex !important; flex-direction:row !important; align-items:baseline !important; gap:8px !important; flex:none !important;
+      width:auto !important; min-width:0 !important; max-width:none !important; height:auto !important; min-height:0 !important; margin:0 !important; padding:0 !important;
+      border:0 !important; border-radius:0 !important; background:none !important; box-shadow:none !important; color:var(--sl-muted) !important;
+      font-size:18px !important; font-weight:400 !important; line-height:1.6 !important; letter-spacing:0 !important; text-transform:none !important;
+    }
+    & .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter, .ev-recommend)::before { content:var(--vo-word, ''); white-space:nowrap; }
+    & .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter, .ev-recommend)::after { display:none !important; content:none !important; }
+    & .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter) > span:not(.td-choice) { display:none !important; }
+    & .ev-filter-panel .ev-recommend { order:50; font-size:0 !important; }
+    & .ev-filter-panel .ev-recommend::before { font-size:18px; }
+    & .ev-filter-panel .ev-recommend .td-choice { font-size:18px; }
+
+    /* The chosen values: underlined words you can click. */
+    & .ev-filter-panel .td-choice { position:relative !important; display:inline-flex !important; width:auto !important; height:auto !important; min-height:0 !important; }
+    & .ev-filter-panel .td-choice-trigger {
+      position:static !important; display:inline-flex !important; align-items:baseline !important; gap:5px !important; width:auto !important; height:auto !important; min-height:0 !important;
+      padding:0 1px 1px !important; border:0 !important; border-bottom:1.5px dashed rgb(163 240 107/.45) !important; border-radius:0 !important; background:none !important; box-shadow:none !important;
+      color:var(--sl-text) !important; font-size:18px !important; font-weight:600 !important; line-height:1.4 !important; overflow:visible !important;
+    }
+    & .ev-filter-panel .td-choice-trigger::before { display:none !important; content:none !important; }
+    & .ev-filter-panel .td-choice-trigger:is(:hover, [aria-expanded="true"]) { color:var(--sl-lime) !important; border-bottom-color:var(--sl-lime) !important; background:none !important; }
+    & .ev-filter-panel .td-choice-trigger .choice-trigger-copy { display:inline-flex !important; gap:0 !important; overflow:visible !important; }
+    & .ev-filter-panel .td-choice-trigger .choice-trigger-label { display:none !important; }
+    & .ev-filter-panel .td-choice-trigger .choice-trigger-copy > strong {
+      display:inline !important; padding:0 !important; border-radius:0 !important; background:none !important; color:inherit !important; font:inherit !important; text-transform:lowercase;
+    }
+    & .ev-filter-panel .td-choice-trigger[data-empty="true"] .choice-trigger-copy > strong { display:none !important; }
+    & .ev-filter-panel .td-choice-trigger[data-empty="true"] .choice-trigger-copy::after { content:var(--vo-empty, 'any'); }
+    & .ev-filter-panel .td-choice-trigger > svg { flex:none; width:12px !important; height:12px !important; margin:0 !important; color:var(--sl-faint) !important; align-self:center; }
+    & .ev-filter-panel .ev-design-filter input {
+      width:4.2em !important; height:auto !important; min-height:0 !important; padding:0 1px 1px !important; border:0 !important; border-bottom:1.5px dashed rgb(163 240 107/.45) !important; border-radius:0 !important;
+      background:none !important; box-shadow:none !important; color:var(--sl-text) !important; font-size:18px !important; font-weight:600 !important; line-height:1.4 !important;
+    }
+    & .ev-filter-panel #ev-reset-filters {
+      order:60; align-self:center; height:28px !important; min-height:0 !important; margin:0 0 0 8px !important; padding:0 12px !important; border:1px solid var(--sl-line-2) !important; border-radius:999px !important;
+      background:none !important; color:var(--sl-muted) !important; font-size:12.5px !important; font-weight:500 !important;
+    }
+    & .ev-filter-panel #ev-reset-filters:hover { color:var(--sl-text) !important; border-color:var(--sl-line-3) !important; }
+
+    /* Row 3, left: bankroll and Kelly as small labelled fields. */
+    & > .ev-control-grid > .ev-stake-panel {
+      grid-row:3; grid-column:1; justify-self:start; position:relative; z-index:2; display:flex !important; flex-wrap:wrap !important; align-items:center !important; gap:18px !important;
+      width:auto !important; min-height:0 !important; margin:0 !important; padding:14px 0 16px 26px !important; border:0 !important; background:none !important; box-shadow:none !important;
+    }
+    & .ev-stake-panel > :is(label, .ev-multiplier-field) {
+      display:flex !important; flex-wrap:nowrap !important; align-items:center !important; gap:9px !important; width:auto !important; height:auto !important; min-height:0 !important; margin:0 !important; padding:0 !important;
+      border:0 !important; border-radius:0 !important; background:none !important; box-shadow:none !important; color:var(--sl-muted) !important; font-size:13px !important; font-weight:500 !important; letter-spacing:0 !important; text-transform:none !important;
+    }
+    & .ev-stake-panel span[title], & .ev-stake-panel .ev-kelly-stepper { display:none !important; }
+    & .ev-stake-panel .ev-multiplier-field > label { display:inline !important; margin:0 !important; padding:0 !important; border:0 !important; color:inherit !important; font:inherit !important; }
+    & .ev-stake-panel #ev-multiplier-label { color:inherit !important; font:inherit !important; text-transform:none !important; }
+    & .ev-stake-panel .ev-input-wrap {
+      display:flex !important; align-items:center !important; gap:6px !important; width:auto !important; height:32px !important; min-height:0 !important; margin:0 !important; padding:0 10px !important;
+      border:1px solid var(--sl-line-2) !important; border-radius:10px !important; background:var(--sl-sunken) !important; box-shadow:none !important;
+    }
+    & .ev-stake-panel input { width:64px !important; height:30px !important; min-height:0 !important; padding:0 !important; border:0 !important; background:none !important; box-shadow:none !important; color:var(--sl-text) !important; font-size:14px !important; font-weight:600 !important; }
+    & .ev-stake-panel #ev-kelly { width:44px !important; }
+    & .ev-stake-panel em { color:var(--sl-faint) !important; font-size:11.5px !important; font-style:normal !important; }
+
+    /* Row 3, right: books, timing and the one lime action. */
+    & > .ev-bookbar {
+      grid-row:3; grid-column:2; justify-self:end; position:relative; z-index:3; display:flex !important; flex-wrap:nowrap !important; align-items:center !important; gap:14px !important;
+      width:auto !important; min-height:0 !important; margin:0 !important; padding:14px 22px 16px 0 !important; border:0 !important; border-radius:0 !important; background:none !important; box-shadow:none !important;
+    }
+    & .ev-bookbar .ev-book-picker { flex:none !important; width:250px !important; min-width:0 !important; display:flex !important; flex-wrap:nowrap !important; align-items:center !important; gap:10px !important; }
+    & .ev-bookbar .ev-book-picker::before { content:'Books'; flex:none; color:var(--sl-muted); font-size:13px; font-weight:500; }
+    & .ev-bookbar .ev-book-list { display:flex !important; flex-wrap:nowrap !important; gap:0 !important; padding-left:6px !important; min-width:0; }
+    & .ev-bookbar :is(.ev-selected-book, .ev-book-overflow) {
+      position:relative; width:26px !important; height:26px !important; min-width:26px !important; min-height:26px !important; max-height:26px !important; margin:0 0 0 -6px !important; padding:0 !important;
+      border:0 !important; border-radius:50% !important; background:var(--sl-panel-3) !important; box-shadow:0 0 0 2px var(--sl-panel) !important; color:var(--sl-text-2) !important;
+      font-size:9px !important; font-weight:700 !important; text-transform:uppercase; overflow:hidden; transition:transform .12s ease;
+    }
+    & .ev-bookbar :is(.ev-selected-book, .ev-book-overflow):hover { transform:translateY(-2px); z-index:1; }
+    & .ev-bookbar .ev-selected-book .ev-book-symbol { display:grid !important; place-items:center; width:26px; height:26px; }
+    & .ev-bookbar .ev-selected-book img { width:26px !important; height:26px !important; border-radius:50% !important; }
+    & .ev-bookbar :is(.ev-book-remove, .ev-book-divider) { display:none !important; }
+    & .ev-bookbar .ev-book-more { width:26px !important; height:26px !important; min-width:26px !important; min-height:26px !important; padding:0 !important; border:1px dashed var(--sl-line-3) !important; border-radius:50% !important; background:none !important; color:var(--sl-muted) !important; }
+    & #ev-timing-toggle { height:32px !important; padding:3px !important; border:1px solid var(--sl-line-2) !important; border-radius:999px !important; background:var(--sl-sunken) !important; }
+    & #ev-timing-toggle span { height:24px !important; line-height:24px !important; padding:0 12px !important; border-radius:999px !important; font-size:12.5px !important; }
+    & #ev-find {
+      height:38px !important; min-height:0 !important; padding:0 18px !important; border:0 !important; border-radius:12px !important; background:var(--sl-lime) !important; color:var(--sl-lime-ink, #0a200f) !important;
+      font-size:14px !important; font-weight:650 !important; box-shadow:none !important;
+    }
+    & #ev-find:hover { filter:brightness(1.05); }
+  }
+
+  /* The words between the choices. Positive EV: */
+  html:root body.ev-page[data-site-page="ev"] .ev-filter-panel {
+    & label:has(#ev-reference-sport) { --vo-word:'Show'; --vo-empty:'every sport'; }
+    & label:has(#ev-reference-league) { --vo-word:'bets in'; --vo-empty:'every league'; }
+    & label:has(#ev-reference-market) { --vo-word:'for'; --vo-empty:'every market'; }
+    & label:has(#ev-reference-date) { --vo-word:'starting'; }
+    & label:has(#ev-reference-max-odds) { --vo-word:'at odds up to'; }
+    & label:has([data-ev-threshold="evMinOdds"]) { --vo-word:'and no shorter than'; }
+    & label:has([data-ev-threshold="minEv"]) { --vo-word:'with an edge of'; --vo-empty:'any size'; }
+    & label:has([data-ev-threshold="minProb"]) { --vo-word:'and a win chance of'; --vo-empty:'any'; }
+    & .ev-recommend { --vo-word:'sorted by'; }
+    /* Arbitrage: */
+    & .ev-design-filter:has([data-filter="sport"]) { --vo-word:'Show'; --vo-empty:'every sport'; }
+    & .ev-design-filter:has([data-filter="league"]) { --vo-word:'arbs in'; --vo-empty:'every league'; }
+    & .ev-design-filter:has([data-filter="market"]) { --vo-word:'for'; --vo-empty:'every market'; }
+    & .ev-design-filter:has([data-filter="edge"]) { --vo-word:'returning at least'; }
+    & .ev-design-filter:has([data-filter="stake"]) { --vo-word:'with a first stake of $'; }
+    & .ev-design-filter:has([data-filter="date"]) { --vo-word:'starting'; }
+    & .ev-design-filter:has([data-filter="period"]) { --vo-word:'during'; }
+  }
+}
+@media (min-width: 801px) and (max-width: 1180px) {
+  html:root body.ev-page[data-site-page="ev"]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    grid-template-columns:minmax(0,1fr) !important;
+    &::before { grid-row:2 / 5; }
+    & > .ev-feed { grid-row:auto; grid-column:1; justify-self:start; }
+    & > .ev-control-grid > .ev-filter-panel { grid-row:2; }
+    & > .ev-control-grid > .ev-stake-panel { grid-row:3; grid-column:1; padding-bottom:6px !important; }
+    & > .ev-bookbar { grid-row:4; grid-column:1; justify-self:start; padding:6px 26px 16px !important; }
+  }
+}
+
+/* ------------------------------------------------------------------ bets: soft rounded rows */
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    & .evb-board { gap:10px !important; }
+    & .evb-summary { min-height:0 !important; padding:4px 2px 0 !important; color:var(--sl-muted) !important; font-size:13.5px !important; }
+    & .evb-summary strong { color:var(--sl-text) !important; }
+    & .evb-summary dl > div { height:28px !important; padding:0 12px !important; border:1px solid var(--sl-line) !important; border-radius:999px !important; background:transparent !important; font-size:12.5px !important; }
+
+    & .evb-table-wrap { border:0 !important; border-radius:0 !important; background:none !important; box-shadow:none !important; overflow-x:auto; }
+    & .evb-table { border-collapse:separate !important; border-spacing:0 6px !important; margin-top:-6px; }
+    & .evb-table thead th {
+      position:static !important; height:30px !important; padding:0 16px !important; border:0 !important; background:none !important;
+      color:var(--sl-faint) !important; font-size:12px !important; font-weight:500 !important; letter-spacing:0 !important; text-transform:none !important;
+    }
+    & .evb-table thead th .evb-sort { color:inherit !important; font:inherit !important; letter-spacing:inherit !important; text-transform:inherit !important; }
+    & .evb-table thead th .evb-sort.is-active { color:var(--sl-text) !important; }
+    & .evb-table tbody td {
+      height:auto !important; padding:14px 16px !important; vertical-align:middle !important;
+      border:0 !important; border-top:1px solid var(--sl-line) !important; border-bottom:1px solid var(--sl-line) !important; background:var(--sl-panel) !important;
+      transition:background-color .12s ease;
+    }
+    & .evb-table tbody .evb-row > td:first-child { border-left:1px solid var(--sl-line) !important; border-radius:16px 0 0 16px !important; }
+    & .evb-table tbody .evb-row > td:last-child { border-right:1px solid var(--sl-line) !important; border-radius:0 16px 16px 0 !important; }
+    & .evb-row:hover > td { background:var(--sl-panel-2) !important; }
+    & .evb-row.is-open > td { background:var(--sl-panel-2) !important; border-bottom-color:transparent !important; }
+    & .evb-row.is-open > td:first-child { border-bottom-left-radius:0 !important; }
+    & .evb-row.is-open > td:last-child { border-bottom-right-radius:0 !important; }
+
+    /* Edge first: a calm lime number, dollars per $100 beneath. */
+    & .evb-ev { width:118px !important; white-space:nowrap; }
+    & .evb-ev strong {
+      display:block !important; min-width:0 !important; height:auto !important; padding:0 !important; border:0 !important; border-radius:0 !important; background:none !important;
+      color:var(--sl-lime) !important; font-size:20px !important; font-weight:650 !important; line-height:1.15 !important; letter-spacing:-.02em !important;
+    }
+    & .evb-ev:is([data-tier="mid"], [data-tier="low"]) strong { background:none !important; }
+    & .evb-ev[data-tier="low"] strong { color:#c6e9ad !important; }
+    & .evb-ev.is-negative strong { color:var(--sl-red) !important; }
+    & .evb-ev :is(small, .evb-ev-per) { display:block !important; margin-top:3px; color:var(--sl-faint) !important; font-size:12px !important; }
+    & .evb-ev .evb-ev-bar { display:none !important; }
+
+    /* The bet reads like a sentence: market above, selection in plain weight. */
+    & .evb-pick { min-width:220px; }
+    & .evb-pick-market { display:flex !important; align-items:center; gap:6px; margin-bottom:3px; color:var(--sl-faint) !important; font-size:12.5px !important; font-weight:500 !important; letter-spacing:0 !important; text-transform:none !important; }
+    & .evb-pick-market :is(.evb-alt, .evb-live-dot) { padding:0 7px; border-radius:999px; background:rgb(255 255 255/.06); color:var(--sl-text-2); font-size:11px; line-height:18px; }
+    & .evb-pick-market .evb-live-dot { background:var(--sl-red-wash); color:var(--sl-red); }
+    & .evb-pick > strong { display:block; color:var(--sl-text) !important; font-size:15px !important; font-weight:600 !important; line-height:1.35 !important; }
+
+    & .evb-event { display:table-cell !important; max-width:300px; }
+    & .evb-event > strong { display:block !important; color:var(--sl-text-2) !important; font-size:13.5px !important; font-weight:500 !important; line-height:1.35 !important; text-transform:capitalize; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    & .evb-event .evb-league { display:flex !important; align-items:center; gap:6px; margin-top:3px; color:var(--sl-faint) !important; font-size:12px !important; white-space:nowrap; }
+    & .evb-event .evb-league :is(img, svg) { width:13px !important; height:13px !important; }
+    & .evb-event .evb-league small { display:inline !important; color:var(--sl-faint) !important; font-size:12px !important; }
+    & .evb-event .evb-league small::before { content:'·'; margin-right:6px; }
+
+    & .evb-book-price { white-space:nowrap; text-align:left !important; }
+    & .evb-book-price > span { display:inline-flex !important; flex-direction:column; align-items:flex-start; vertical-align:middle; }
+    & .evb-book-price > .evb-book-logo { margin-right:11px; }
+    & :is(.evb-book-price, .evb-bet) .evb-book-logo :is(img, .evb-book-initials) {
+      width:32px !important; height:32px !important; border-radius:10px !important; background:var(--sl-panel-3); display:inline-grid; place-items:center; color:var(--sl-text-2); font-size:10px; font-weight:700;
+    }
+    & .evb-book-price .evb-price { height:auto !important; min-width:0 !important; padding:0 !important; border:0 !important; background:none !important; box-shadow:none !important; color:var(--sl-text) !important; font-size:16px !important; font-weight:650 !important; line-height:1.2 !important; }
+    & .evb-book-price small { margin-top:2px; color:var(--sl-faint) !important; font-size:12px !important; }
+    & :is(.evb-prob, .evb-stake) { white-space:nowrap; }
+    & :is(.evb-prob, .evb-stake) strong { color:var(--sl-text-2) !important; font-size:14px !important; font-weight:550 !important; }
+    & .evb-stake strong { color:var(--sl-text) !important; font-weight:600 !important; }
+    & :is(.evb-prob, .evb-stake) small { display:block; margin-top:3px; color:var(--sl-faint) !important; font-size:12px !important; }
+
+    & .evb-actions > div { gap:4px !important; }
+    & .evb-actions .evb-icon { width:34px !important; height:34px !important; border:0 !important; border-radius:50% !important; background:transparent !important; color:var(--sl-muted) !important; }
+    & .evb-actions .evb-icon:hover { background:rgb(255 255 255/.06) !important; color:var(--sl-text) !important; }
+    & .evb-actions .evb-toggle[aria-expanded="true"] { background:rgb(163 240 107/.12) !important; color:var(--sl-lime) !important; }
+    & .evb-actions .evb-link { height:32px !important; padding:0 12px !important; border-radius:999px !important; font-size:12.5px !important; }
+
+    /* Opened bet: continues the row's card. */
+    & .evb-detail-row > td { padding:0 16px 16px !important; border:1px solid var(--sl-line) !important; border-top:0 !important; border-radius:0 0 16px 16px !important; background:var(--sl-panel-2) !important; }
+    & .evd-panel { margin:0 !important; padding:14px 0 4px !important; border:0 !important; border-top:1px solid var(--sl-line) !important; border-radius:0 !important; background:none !important; box-shadow:none !important; }
+    & .evd-panel .evd-tool { width:34px !important; height:34px !important; border:1px solid var(--sl-line-2) !important; border-radius:50% !important; background:transparent !important; color:var(--sl-muted) !important; }
+    & .evd-panel .evd-tool:hover { color:var(--sl-text) !important; background:rgb(255 255 255/.05) !important; }
+    & .evd-panel .evd-boost input { height:32px !important; border-radius:10px !important; background:var(--sl-sunken) !important; border:1px solid var(--sl-line-2) !important; }
+    & .evd-grid :is(th, td) { border-color:var(--sl-line) !important; }
+    & .evd-grid thead th { color:var(--sl-faint) !important; font-size:11.5px !important; font-weight:500 !important; letter-spacing:0 !important; text-transform:none !important; }
+    & .evd-grid td.is-best strong { color:var(--sl-lime) !important; }
+  }
+}
+@media (min-width: 801px) and (max-width: 1500px) {
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    padding:26px 24px 48px !important;
+    & .evb-table tbody td { padding:12px 11px !important; }
+    & .evb-table thead th { padding:0 11px !important; }
+    & .evb-ev { width:100px !important; }
+    & .evb-pick { min-width:0 !important; }
+    & .evb-event { max-width:210px !important; }
+    & .evb-actions .evb-icon { width:30px !important; height:30px !important; }
+  }
+}
+
+/* Sports and leagues are names; everything else reads in lower case inside the sentence. */
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main .ev-filter-panel :is(label:has(#ev-reference-sport), label:has(#ev-reference-league), .ev-design-filter:has([data-filter="sport"]), .ev-design-filter:has([data-filter="league"])) .choice-trigger-copy > strong { text-transform:none !important; }
+}
+
+/* Keep each tool's own visibility. The older sheets hide the book bar and filter grid on some tools,
+   and the Positive EV filters everywhere else; the display values above must never bring them back. */
+html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main :is(.ev-header, .ev-feed, .ev-bookbar, .ev-control-grid, .ev-stake-panel, .ev-filter-panel, .ev-filter-heading, .ev-reference-filters, .ev-recommend, .choice-field, #ev-suite-controls, #ev-reset-filters)[hidden] { display:none !important; }
+html:root body.ev-page[data-site-page="ev"]:is([data-ev-screen="odds"], [data-ev-screen="sharp"], [data-ev-screen="fantasy"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main > :is(.ev-bookbar, .ev-control-grid) { display:none !important; }
+html:root body.ev-page[data-site-page="ev"]:is([data-ev-screen="odds"], [data-ev-screen="sharp"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main > .ev-header { display:none !important; }
+html:root body.ev-page[data-site-page="ev"]:not([data-ev-screen^="ev-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main .ev-filter-panel .ev-reference-filters { display:none !important; }
+html:root body.ev-page[data-site-page="ev"]:not([data-ev-screen^="ev-"]):not([data-ev-screen="fantasy"]):not([data-ev-screen="odds"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main .ev-filter-panel .ev-recommend { display:none !important; }
+/* The feed status stays on one line; the meta text gives way first. */
+html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main > .ev-feed { flex-wrap:nowrap !important; justify-self:end; max-width:100%; }
+html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main > .ev-feed .ev-feed-meta { flex:0 1 auto; min-width:0; }
+html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main > .ev-feed :is(.ev-feed-summary, .ev-feed-refresh, a) { flex:none; }
+@media (max-width: 800px) {
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main { padding:12px 14px 32px !important; }
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main > .ev-control-grid { display:none !important; }
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main > .ev-feed { flex-wrap:wrap !important; justify-self:stretch; row-gap:6px; }
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main > .ev-feed .ev-feed-meta { display:none !important; }
+}
+
+/* Filters & stake bottom sheet (phones). Min Odds, Min EV and Min Win Chance sit inside span.ev-reference-extra,
+   so the older ".ev-reference-filters > label" rules missed them and they drew a second box; the search field
+   overflowed a zero-height toolbar onto the first row of filters. */
+html:root body.ev-page:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) dialog.ev-mobile-filter-dialog .ev-reference-extra > label {
+  height:auto !important; min-width:0; min-height:56px !important; padding:0 !important; border:0 !important; background:transparent !important; box-shadow:none !important;
+}
+html:root body.ev-page:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) dialog.ev-mobile-filter-dialog .ev-reference-extra > label::before,
+html:root body.ev-page:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) dialog.ev-mobile-filter-dialog .ev-reference-extra > label::after { display:none !important; content:none !important; }
+html:root body.ev-page:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) dialog.ev-mobile-filter-dialog .ev-reference-extra > label > span { display:none !important; }
+html:root body.ev-page:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) dialog.ev-mobile-filter-dialog .ev-reference-extra > label > .td-choice { width:100% !important; }
+html:root body.ev-page:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) dialog.ev-mobile-filter-dialog .ev-toolbar { height:auto !important; overflow:visible !important; }
+
+/* Title subtitle sits under the title (an older sheet positions header pseudo-elements absolutely). */
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    & > .ev-header { height:auto !important; }
+    & > .ev-header::after { position:static !important; inset:auto !important; display:block !important; width:auto !important; height:auto !important; margin:0 !important; padding:0 !important; border:0 !important; background:none !important; opacity:1 !important; transform:none !important; }
+    /* Sort comes last in the sentence and drops its own "Sort" text. */
+    & .ev-filter-panel label.ev-recommend.choice-field { order:50 !important; font-size:0 !important; }
+    & .ev-filter-panel label.ev-recommend.choice-field::before { font-size:18px !important; }
+    & .ev-filter-panel label:has(#ev-reference-date) { --vo-empty:'any time'; }
+    & .ev-filter-panel .ev-design-filter:has([data-filter="date"]) { --vo-empty:'any time'; }
+  }
+}
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main > .ev-header::after { text-indent:0 !important; mask:none !important; -webkit-mask:none !important; clip-path:none !important; overflow:visible !important; }
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main > .ev-header { overflow:visible !important; padding-left:1px !important; }
+}
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main > .ev-control-grid > .ev-stake-panel { flex-wrap:nowrap !important; }
+}
+
+/* Phones: the calm title, and the sportsbook logos on their own line above Pregame/Live and Find. */
+@media (max-width: 800px) {
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    & > .ev-header { display:grid !important; gap:4px; min-height:0 !important; padding:4px 2px 2px !important; border:0 !important; background:none !important; box-shadow:none !important; height:auto !important; overflow:visible !important; }
+    & > .ev-header::before { display:none !important; content:none !important; }
+    & > .ev-header::after { content:var(--vo-ev-subtitle, ''); position:static !important; display:block !important; color:var(--sl-muted); font-size:14px; line-height:1.4; background:none !important; }
+    & .ev-header .ev-heading::before { display:none !important; content:none !important; }
+    & #ev-page-title { font-size:26px !important; font-weight:650 !important; letter-spacing:-.025em !important; }
+    & #ev-page-title .tool-accent { color:inherit !important; background:none !important; -webkit-text-fill-color:currentColor !important; }
+    & > .ev-feed { border:0 !important; background:none !important; box-shadow:none !important; padding:0 2px !important; }
+    & > .ev-bookbar { display:flex !important; flex-wrap:wrap !important; align-items:center !important; gap:10px !important; padding:14px !important; border:1px solid var(--sl-line) !important; border-radius:16px !important; background:var(--sl-panel) !important; box-shadow:none !important; }
+    & .ev-bookbar .ev-book-picker { flex:1 0 100% !important; width:100% !important; display:flex !important; align-items:center !important; gap:10px !important; }
+    & .ev-bookbar .ev-book-picker::before { content:'Books'; flex:none; color:var(--sl-muted); font-size:13px; }
+    & .ev-bookbar .ev-book-list { display:flex !important; gap:0 !important; padding-left:6px !important; }
+    & .ev-bookbar :is(.ev-selected-book, .ev-book-overflow) { width:30px !important; height:30px !important; min-width:30px !important; min-height:30px !important; margin:0 0 0 -6px !important; padding:0 !important; border:0 !important; border-radius:50% !important; background:var(--sl-panel-3) !important; box-shadow:0 0 0 2px var(--sl-panel) !important; font-size:9.5px !important; text-transform:uppercase; }
+    & .ev-bookbar .ev-selected-book img { width:30px !important; height:30px !important; border-radius:50% !important; }
+    & .ev-bookbar .ev-book-remove { display:none !important; }
+    & #ev-find { flex:1 1 auto; height:42px !important; border-radius:12px !important; background:var(--sl-lime) !important; box-shadow:none !important; }
+  }
+  html:root body.ev-page[data-site-page="ev"][data-ev-screen="ev-pre"] { --vo-ev-subtitle:'Bets priced above fair value right now'; }
+  html:root body.ev-page[data-site-page="ev"][data-ev-screen="ev-live"] { --vo-ev-subtitle:'Live bets priced above fair value'; }
+  html:root body.ev-page[data-site-page="ev"]:is([data-ev-screen="arb-pre"], [data-ev-screen="arb-live"]) { --vo-ev-subtitle:'Opposite sides at different books that lock in a profit'; }
+}
+
+/* Slim filter card: the sentence and settings at the sidebar's quiet scale. */
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    row-gap:12px !important;
+    &::before { border-radius:14px !important; box-shadow:none !important; }
+    & > .ev-control-grid > .ev-filter-panel { column-gap:6px !important; row-gap:2px !important; padding:11px 16px 10px !important; font-size:13.5px !important; line-height:1.5 !important; }
+    & .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter, .ev-recommend) { gap:5px !important; font-size:13.5px !important; line-height:1.6 !important; }
+    & .ev-filter-panel label.ev-recommend.choice-field::before, & .ev-filter-panel .ev-recommend .td-choice { font-size:13.5px !important; }
+    & .ev-filter-panel .td-choice-trigger { gap:3px !important; padding:0 1px !important; border-bottom-width:1px !important; border-bottom-style:dashed !important; border-bottom-color:rgb(163 240 107/.4) !important; font-size:13.5px !important; font-weight:600 !important; line-height:1.45 !important; }
+    & .ev-filter-panel .td-choice-trigger > svg { width:10px !important; height:10px !important; }
+    & .ev-filter-panel .ev-design-filter input { width:3.6em !important; padding:0 1px !important; border-bottom-width:1px !important; font-size:13.5px !important; }
+    & .ev-filter-panel #ev-reset-filters { height:24px !important; margin-left:6px !important; padding:0 10px !important; font-size:12px !important; }
+    & > .ev-control-grid > .ev-stake-panel { gap:14px !important; padding:8px 0 9px 16px !important; }
+    & .ev-stake-panel > :is(label, .ev-multiplier-field) { gap:7px !important; font-size:12.5px !important; }
+    & .ev-stake-panel .ev-input-wrap { height:26px !important; padding:0 8px !important; border-radius:8px !important; }
+    & .ev-stake-panel input { height:24px !important; width:52px !important; font-size:12.5px !important; }
+    & .ev-stake-panel #ev-kelly { width:36px !important; }
+    & .ev-stake-panel em { font-size:10.5px !important; }
+    & > .ev-bookbar { gap:10px !important; padding:8px 12px 9px 0 !important; }
+    & .ev-bookbar .ev-book-picker { width:230px !important; gap:8px !important; }
+    & .ev-bookbar .ev-book-picker::before { font-size:12.5px; }
+    & .ev-bookbar :is(.ev-selected-book, .ev-book-overflow, .ev-book-more) { width:22px !important; height:22px !important; min-width:22px !important; min-height:22px !important; max-height:22px !important; font-size:8px !important; }
+    & .ev-bookbar .ev-selected-book :is(.ev-book-symbol, img) { width:22px !important; height:22px !important; }
+    & #ev-timing-toggle { height:26px !important; padding:2px !important; }
+    & #ev-timing-toggle span { height:20px !important; line-height:20px !important; padding:0 10px !important; font-size:12px !important; }
+    & #ev-find { height:30px !important; padding:0 14px !important; border-radius:8px !important; font-size:12.5px !important; font-weight:600 !important; }
+  }
+}
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    & .ev-filter-panel label.ev-recommend.choice-field { font-size:0 !important; }
+    & .ev-bookbar :is(.ev-selected-book, .ev-book-overflow, .ev-book-more) { width:24px !important; height:24px !important; min-width:24px !important; min-height:24px !important; max-height:24px !important; margin-left:-5px !important; font-size:7.5px !important; letter-spacing:-.02em; }
+    & .ev-bookbar .ev-selected-book :is(.ev-book-symbol, img) { width:24px !important; height:24px !important; }
+    & .ev-bookbar .ev-book-more { margin-left:4px !important; }
+  }
+}
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    & .ev-stake-panel #ev-ev-bankroll { width:5.2ch !important; }
+    & .ev-stake-panel .ev-input-wrap em { flex:none !important; position:static !important; margin:0 !important; }
+  }
+}
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    & .ev-stake-panel #ev-ev-bankroll { width:46px !important; }
+    & .ev-stake-panel .ev-input-wrap { width:auto !important; }
+    & .ev-stake-panel .ev-input-wrap em { align-self:center !important; inset:auto !important; transform:none !important; line-height:1 !important; padding:0 !important; }
+  }
+}
+
+/* =====================================================================================================
+   Filter rail (desktop, 1181px and up). The filters, stake and books sit in a slim panel to the right of
+   the bets, drawn exactly like the sidebar: small uppercase section labels, one icon row per filter with
+   its value on the right. The extra [data-site-page] in the anchor lets these rules settle the sentence
+   styles above; display is never set on a container the per-tool guards hide.
+   ===================================================================================================== */
+html body[data-site-page="ev"] {
+  --vo-i-sport:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Cpath d='M4 12h16M12 4c2.5 2.4 3.6 5 3.6 8s-1.1 5.6-3.6 8c-2.5-2.4-3.6-5-3.6-8S9.5 6.4 12 4'/%3E%3C/svg%3E");
+  --vo-i-league:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 4h8v5a4 4 0 0 1-8 0V4ZM8 6H5v1.5A3 3 0 0 0 8 10.5M16 6h3v1.5a3 3 0 0 1-3 3M12 13v4M9 20h6'/%3E%3C/svg%3E");
+  --vo-i-market:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 20V10M12 20V4M18 20v-7'/%3E%3C/svg%3E");
+  --vo-i-date:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='5' width='16' height='15' rx='2.5'/%3E%3Cpath d='M4 10h16M9 3v4M15 3v4'/%3E%3C/svg%3E");
+  --vo-i-odds:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h10M18 7h2M4 17h4M12 17h8'/%3E%3Ccircle cx='16' cy='7' r='2'/%3E%3Ccircle cx='10' cy='17' r='2'/%3E%3C/svg%3E");
+  --vo-i-edge:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 17l6-6 4 4 6-7'/%3E%3Cpath d='M15 8h5v5'/%3E%3C/svg%3E");
+  --vo-i-chance:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4a8 8 0 1 0 8 8h-8V4Z'/%3E%3Cpath d='M15 3.5A8 8 0 0 1 20.5 9H15V3.5Z'/%3E%3C/svg%3E");
+  --vo-i-sort:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l-3 3M17 4l3 3'/%3E%3C/svg%3E");
+  --vo-i-wallet:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='6' width='17' height='13' rx='2.5'/%3E%3Cpath d='M16 12.5h4.5M3.5 9.5h17'/%3E%3C/svg%3E");
+  --vo-i-percent:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 18 18 6'/%3E%3Ccircle cx='7.5' cy='7.5' r='2'/%3E%3Ccircle cx='16.5' cy='16.5' r='2'/%3E%3C/svg%3E");
+  --vo-i-clock:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Cpath d='M12 8v4l3 2'/%3E%3C/svg%3E");
+}
+
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    grid-template-columns:minmax(0,1fr) 268px !important; grid-template-rows:auto auto auto auto auto 1fr; column-gap:22px !important; row-gap:0 !important;
+
+    &::before { display:none !important; content:none !important; }
+    & > .ev-header { grid-row:1; grid-column:1; margin-bottom:18px !important; }
+    & > .ev-feed { grid-row:1; grid-column:1 / -1; justify-self:end; margin-bottom:18px !important; }
+    & > #ev-suite-controls { grid-row:2; grid-column:1 / -1; margin-bottom:14px !important; }
+    & > .ev-shell { grid-row:3 / 7; grid-column:1; align-self:start; }
+
+    /* The rail: three stacked pieces that read as one panel. */
+    & > .ev-control-grid > .ev-filter-panel,
+    & > .ev-control-grid > .ev-stake-panel,
+    & > .ev-bookbar {
+      grid-column:2 !important; justify-self:stretch !important; align-self:start !important; width:auto !important; margin:0 !important;
+      background:var(--vo-studio-rail, #0f1113) !important; border:1px solid var(--sl-line) !important; box-shadow:none !important;
+    }
+    & > .ev-control-grid > .ev-filter-panel {
+      grid-row:3 !important; flex-direction:column !important; flex-wrap:nowrap !important; align-items:stretch !important; gap:1px !important;
+      padding:6px 8px 8px !important; border-bottom:0 !important; border-radius:14px 14px 0 0 !important; font-size:13.5px !important;
+    }
+    & > .ev-control-grid > .ev-stake-panel {
+      grid-row:4 !important; justify-self:stretch !important; flex-direction:column !important; flex-wrap:nowrap !important; align-items:stretch !important; gap:1px !important;
+      padding:0 8px 8px !important; border-top:0 !important; border-bottom:0 !important; border-radius:0 !important;
+    }
+    & > .ev-bookbar {
+      grid-row:5 !important; justify-self:stretch !important; flex-wrap:wrap !important; gap:10px !important; padding:0 18px 16px !important; border-top:0 !important; border-radius:0 0 14px 14px !important;
+    }
+
+    /* Section labels, the same as the sidebar's. */
+    & .ev-filter-panel .ev-filter-heading > strong,
+    & .ev-stake-panel::before,
+    & .ev-bookbar .ev-book-picker::before {
+      display:block !important; flex:1 0 100% !important; margin:12px 0 4px !important; padding:0 10px !important; color:var(--sl-faint) !important;
+      font-size:10.5px !important; font-weight:600 !important; letter-spacing:.14em !important; line-height:16px !important; text-transform:uppercase !important;
+    }
+    & .ev-filter-panel .ev-filter-heading > strong { order:1; margin-top:8px !important; }
+    & .ev-stake-panel::before { content:'Stake'; }
+    & .ev-bookbar .ev-book-picker::before { content:'Books'; margin:8px 0 2px -10px !important; }
+
+    /* One row per filter: icon, name, value. */
+    & .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter) {
+      display:grid !important; grid-template-columns:16px minmax(0,1fr) auto !important; align-items:center !important; column-gap:11px !important;
+      width:100% !important; min-height:34px !important; padding:0 6px 0 10px !important; border-radius:9px !important; font-size:13.5px !important; line-height:20px !important; cursor:pointer;
+    }
+    & .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter)::before {
+      content:'' !important; order:-2; width:16px; height:16px; background:var(--sl-faint);
+      -webkit-mask:var(--vo-icon, var(--vo-i-odds)) center/contain no-repeat; mask:var(--vo-icon, var(--vo-i-odds)) center/contain no-repeat;
+    }
+    & .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter)::after {
+      content:var(--vo-row, '') !important; display:block !important; order:-1; min-width:0; overflow:hidden; color:var(--sl-text-2); font-size:13.5px; font-weight:500; text-overflow:ellipsis; white-space:nowrap;
+    }
+    & .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter):hover { background:rgb(255 255 255/.035) !important; }
+    & .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter):hover::after { color:var(--sl-text); }
+    & .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter):hover::before { background:var(--sl-text-2); }
+
+    /* The value: quiet text and a small chevron, no underline. */
+    & .ev-filter-panel .td-choice { justify-self:end; }
+    & .ev-filter-panel .td-choice-trigger {
+      gap:5px !important; padding:0 !important; border:0 !important; color:var(--sl-muted) !important; font-size:12.5px !important; font-weight:500 !important; line-height:20px !important;
+    }
+    & .ev-filter-panel .td-choice-trigger:is(:hover, [aria-expanded="true"]) { color:var(--sl-text) !important; }
+    & .ev-filter-panel .td-choice-trigger .choice-trigger-copy > strong { text-transform:none !important; max-width:110px; overflow:hidden !important; text-overflow:ellipsis; white-space:nowrap; }
+    & .ev-filter-panel .td-choice-trigger[data-empty="true"] .choice-trigger-copy::after { content:var(--vo-empty-row, 'Any'); }
+    & .ev-filter-panel .td-choice-trigger > svg { width:11px !important; height:11px !important; transform:rotate(-90deg); }
+    & .ev-filter-panel .ev-design-filter input {
+      justify-self:end; width:64px !important; height:26px !important; padding:0 8px !important; border:1px solid var(--sl-line-2) !important; border-radius:8px !important; background:var(--sl-sunken) !important;
+      color:var(--sl-text) !important; font-size:12.5px !important; font-weight:600 !important; text-align:right;
+    }
+    & .ev-filter-panel #ev-reset-filters {
+      order:60; align-self:flex-start; height:26px !important; margin:6px 0 0 10px !important; padding:0 !important; border:0 !important; background:none !important;
+      color:var(--sl-faint) !important; font-size:12px !important; font-weight:500 !important;
+    }
+    & .ev-filter-panel #ev-reset-filters:hover { color:var(--sl-text) !important; }
+
+    /* Stake rows. */
+    & .ev-stake-panel > :is(label, .ev-multiplier-field) {
+      justify-content:space-between !important; gap:11px !important; width:100% !important; min-height:36px !important; padding:0 6px 0 10px !important; border-radius:9px !important;
+      color:var(--sl-text-2) !important; font-size:13.5px !important; font-weight:500 !important;
+    }
+    & .ev-stake-panel > :is(label, .ev-multiplier-field)::before {
+      content:''; flex:none; width:16px; height:16px; background:var(--sl-faint);
+      -webkit-mask:var(--vo-i-wallet) center/contain no-repeat; mask:var(--vo-i-wallet) center/contain no-repeat;
+    }
+    & .ev-stake-panel > .ev-multiplier-field::before { -webkit-mask-image:var(--vo-i-percent); mask-image:var(--vo-i-percent); }
+    & .ev-stake-panel > :is(label, .ev-multiplier-field) > :is(.ev-input-wrap) { margin-left:auto !important; }
+    & .ev-stake-panel .ev-multiplier-field > label { flex:1 1 auto; }
+    & .ev-stake-panel .ev-input-wrap { height:26px !important; padding:0 8px !important; border-radius:8px !important; }
+    & .ev-stake-panel input { height:24px !important; font-size:12.5px !important; text-align:right; }
+    & .ev-stake-panel #ev-ev-bankroll { width:46px !important; }
+    & .ev-stake-panel #ev-kelly { width:40px !important; }
+
+    /* Books, timing and the action. */
+    & .ev-bookbar .ev-book-picker { flex:1 0 100% !important; width:100% !important; flex-wrap:wrap !important; gap:0 !important; padding-left:10px; }
+    & .ev-bookbar .ev-book-list { padding-left:6px !important; }
+    & .ev-bookbar .ev-book-more { margin-left:6px !important; }
+    & #ev-timing-toggle { flex:1 0 100% !important; display:flex !important; height:30px !important; }
+    & #ev-timing-toggle span { flex:1 1 0; text-align:center; height:24px !important; line-height:24px !important; }
+    & #ev-find { flex:1 0 100% !important; width:100% !important; height:36px !important; justify-content:center !important; border-radius:10px !important; }
+  }
+  /* Sort is a row too, on Positive EV only (Arbitrage hides it). */
+  html:root body.ev-page[data-site-page="ev"][data-site-page][data-ev-screen^="ev-"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main .ev-filter-panel label.ev-recommend.choice-field {
+    display:grid !important; grid-template-columns:16px minmax(0,1fr) auto !important; align-items:center !important; column-gap:11px !important; order:50 !important;
+    width:100% !important; min-height:34px !important; margin-top:4px !important; padding:0 6px 0 10px !important; border-top:1px solid var(--sl-line) !important; border-radius:0 !important; font-size:0 !important; --vo-icon:var(--vo-i-sort); --vo-row:'Sort by';
+  }
+  html:root body.ev-page[data-site-page="ev"][data-site-page][data-ev-screen^="ev-"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main .ev-filter-panel label.ev-recommend.choice-field::before {
+    content:'' !important; order:-2; width:16px; height:16px; font-size:13.5px !important; background:var(--sl-faint);
+    -webkit-mask:var(--vo-i-sort) center/contain no-repeat; mask:var(--vo-i-sort) center/contain no-repeat;
+  }
+  html:root body.ev-page[data-site-page="ev"][data-site-page][data-ev-screen^="ev-"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main .ev-filter-panel label.ev-recommend.choice-field::after {
+    content:'Sort by' !important; display:block !important; order:-1; color:var(--sl-text-2); font-size:13.5px; font-weight:500; white-space:nowrap;
+  }
+  html:root body.ev-page[data-site-page="ev"][data-site-page][data-ev-screen^="ev-"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main .ev-filter-panel label.ev-recommend.choice-field .td-choice { justify-self:end; font-size:12.5px !important; }
+
+  /* Row names and icons. Positive EV: */
+  html:root body.ev-page[data-site-page="ev"] .ev-filter-panel {
+    & label:has(#ev-reference-sport) { --vo-row:'Sport'; --vo-icon:var(--vo-i-sport); --vo-empty-row:'All'; }
+    & label:has(#ev-reference-league) { --vo-row:'League'; --vo-icon:var(--vo-i-league); --vo-empty-row:'All'; }
+    & label:has(#ev-reference-market) { --vo-row:'Market'; --vo-icon:var(--vo-i-market); --vo-empty-row:'All'; }
+    & label:has(#ev-reference-date) { --vo-row:'Starts'; --vo-icon:var(--vo-i-date); --vo-empty-row:'Any time'; }
+    & label:has(#ev-reference-max-odds) { --vo-row:'Max odds'; --vo-icon:var(--vo-i-odds); }
+    & label:has([data-ev-threshold="evMinOdds"]) { --vo-row:'Min odds'; --vo-icon:var(--vo-i-odds); }
+    & label:has([data-ev-threshold="minEv"]) { --vo-row:'Min edge'; --vo-icon:var(--vo-i-edge); }
+    & label:has([data-ev-threshold="minProb"]) { --vo-row:'Win chance'; --vo-icon:var(--vo-i-chance); }
+    /* Arbitrage: */
+    & .ev-design-filter:has([data-filter="sport"]) { --vo-row:'Sport'; --vo-icon:var(--vo-i-sport); --vo-empty-row:'All'; }
+    & .ev-design-filter:has([data-filter="league"]) { --vo-row:'League'; --vo-icon:var(--vo-i-league); --vo-empty-row:'All'; }
+    & .ev-design-filter:has([data-filter="market"]) { --vo-row:'Market'; --vo-icon:var(--vo-i-market); --vo-empty-row:'All'; }
+    & .ev-design-filter:has([data-filter="edge"]) { --vo-row:'Min return'; --vo-icon:var(--vo-i-edge); }
+    & .ev-design-filter:has([data-filter="stake"]) { --vo-row:'First stake'; --vo-icon:var(--vo-i-wallet); }
+    & .ev-design-filter:has([data-filter="date"]) { --vo-row:'Starts'; --vo-icon:var(--vo-i-date); --vo-empty-row:'Any time'; }
+    & .ev-design-filter:has([data-filter="period"]) { --vo-row:'Period'; --vo-icon:var(--vo-i-clock); }
+  }
+}
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main .ev-filter-panel {
+    & :is(.ev-reference-filters label, .ev-design-filter, label.ev-recommend.choice-field)::before { position:static !important; inset:auto !important; grid-column:1 !important; grid-row:1 !important; transform:none !important; }
+    & :is(.ev-reference-filters label, .ev-design-filter, label.ev-recommend.choice-field)::after { position:static !important; inset:auto !important; grid-column:2 !important; grid-row:1 !important; transform:none !important; width:auto !important; height:auto !important; background:none !important; border:0 !important; }
+    & :is(.ev-reference-filters label, .ev-design-filter, label.ev-recommend.choice-field) > :is(.td-choice, input) { grid-column:3 !important; grid-row:1 !important; }
+  }
+}
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    & .ev-filter-panel .td-choice-trigger > svg { transform:none !important; rotate:none !important; }
+    & .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter, label.ev-recommend.choice-field) { height:34px !important; max-height:34px !important; }
+    & .ev-stake-panel .ev-input-wrap { flex:none !important; width:auto !important; max-width:120px !important; }
+    & .ev-stake-panel .ev-input-wrap input { flex:none !important; }
+
+    /* The bets share the width with the rail: tighter cells so every column, including actions, stays in view. */
+    & .evb-table tbody td { padding:12px 10px !important; }
+    & .evb-table thead th { padding:0 10px !important; }
+    & .evb-ev { width:96px !important; }
+    & .evb-ev strong { font-size:18px !important; }
+    & .evb-pick { min-width:0 !important; }
+    & .evb-pick > strong { font-size:14px !important; }
+    & .evb-event { max-width:190px !important; }
+    & .evb-event > strong { font-size:13px !important; }
+    & .evb-book-price > .evb-book-logo { margin-right:8px; }
+    & .evb-book-price .evb-price { font-size:15px !important; }
+    & :is(.evb-prob, .evb-stake) strong { font-size:13px !important; }
+    & .evb-actions > div { gap:2px !important; }
+    & .evb-actions .evb-icon { width:30px !important; height:30px !important; }
+  }
+}
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main .ev-filter-panel .ev-filter-heading > strong { margin-bottom:6px !important; }
+}
+/* Laptops: the feed's long status text gives way so the title keeps one line (the Up to date badge stays). */
+@media (min-width: 801px) and (max-width: 1440px) {
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main > .ev-feed .ev-feed-meta { display:none !important; }
+}
+
+/* =====================================================================================================
+   Filter rail, finished. Dropdowns, the sportsbook picker, stake fields and every row share one set of
+   measurements with the sidebar: 34px rows, 10px inner padding, 16px icons, 9px corners, quiet labels.
+   ===================================================================================================== */
+html body[data-site-page="ev"] {
+  --vo-i-reset:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 12a8 8 0 1 0 2.4-5.7'/%3E%3Cpath d='M4 4v4.5h4.5'/%3E%3C/svg%3E");
+  --vo-i-books:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='4' width='6.5' height='6.5' rx='1.8'/%3E%3Crect x='13.5' y='4' width='6.5' height='6.5' rx='1.8'/%3E%3Crect x='4' y='13.5' width='6.5' height='6.5' rx='1.8'/%3E%3Cpath d='M16.75 14v5.5M14 16.75h5.5'/%3E%3C/svg%3E");
+  --vo-i-chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 5 7 7-7 7'/%3E%3C/svg%3E");
+  --vo-i-search:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='m16 16 4 4'/%3E%3C/svg%3E");
+  --vo-i-check:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+}
+
+/* ------------------------------------------------------------------ dropdown menus (sentence card and rail) */
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main .ev-filter-panel {
+    & .td-choice-menu {
+      box-sizing:border-box !important; margin:0 !important; padding:6px !important; overflow:auto !important; overscroll-behavior:contain;
+      border:1px solid var(--sl-line-2) !important; border-radius:12px !important; background:var(--sl-panel-2) !important;
+      box-shadow:0 18px 48px -12px rgb(0 0 0/.75), 0 0 0 1px rgb(0 0 0/.25) !important; color:var(--sl-text-2) !important;
+      font-family:var(--sl-font) !important; animation:vo-menu-in .12s ease-out;
+    }
+    & .td-choice-menu .choice-heading {
+      display:block !important; margin:0 !important; padding:6px 10px 6px !important; border:0 !important; background:none !important;
+      color:var(--sl-faint) !important; font-size:10.5px !important; font-weight:600 !important; letter-spacing:.14em !important; line-height:16px !important; text-transform:uppercase !important;
+    }
+    & .td-choice-menu .choice-search {
+      display:flex !important; align-items:center !important; gap:8px !important; height:32px !important; margin:0 2px 6px !important; padding:0 10px !important;
+      border:1px solid var(--sl-line-2) !important; border-radius:8px !important; background:var(--sl-sunken) !important; color:var(--sl-faint) !important;
+    }
+    & .td-choice-menu .choice-search svg { width:14px !important; height:14px !important; flex:none; }
+    & .td-choice-menu .choice-search input { height:30px !important; min-height:0 !important; padding:0 !important; border:0 !important; background:none !important; box-shadow:none !important; color:var(--sl-text) !important; font-size:13px !important; }
+    & .td-choice-menu .choice-options { display:flex !important; flex-direction:column !important; gap:1px !important; padding:0 !important; }
+    & .td-choice-menu .td-choice-option {
+      display:flex !important; align-items:center !important; justify-content:space-between !important; gap:10px !important; width:100% !important;
+      min-height:34px !important; height:auto !important; margin:0 !important; padding:6px 10px !important; border:0 !important; border-radius:8px !important;
+      background:transparent !important; box-shadow:none !important; color:var(--sl-text-2) !important; font-size:13.5px !important; font-weight:500 !important; line-height:20px !important; text-align:left !important;
+    }
+    & .td-choice-menu .td-choice-option:is(:hover, :focus-visible) { background:rgb(255 255 255/.05) !important; color:var(--sl-text) !important; outline:none !important; }
+    & .td-choice-menu .td-choice-option[aria-selected="true"] { background:rgb(163 240 107/.08) !important; color:var(--sl-text) !important; font-weight:600 !important; }
+    & .td-choice-menu .td-choice-option > svg { flex:none; width:14px !important; height:14px !important; color:var(--sl-lime) !important; opacity:0; }
+    & .td-choice-menu .td-choice-option[aria-selected="true"] > svg { opacity:1; }
+    & .td-choice-menu .choice-option-copy { display:block !important; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:inherit !important; font:inherit !important; }
+    & .td-choice-menu .choice-option-copy small { display:block; color:var(--sl-faint); font-size:11.5px; font-weight:400; }
+    & .td-choice-menu .choice-empty { padding:10px !important; color:var(--sl-faint) !important; font-size:12.5px !important; }
+    /* The "no filter" option reads as what it does. */
+    & :is(#ev-reference-market-choices, #ev-reference-league-choices) .td-choice-option:first-child .choice-option-copy { font-size:0 !important; }
+    & #ev-reference-market-choices .td-choice-option:first-child .choice-option-copy::before { content:'All markets'; font-size:13.5px; }
+    & #ev-reference-league-choices .td-choice-option:first-child .choice-option-copy::before { content:'All leagues'; font-size:13.5px; }
+  }
+}
+@keyframes vo-menu-in { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+
+/* ------------------------------------------------------------------ the rail, finished */
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    /* One inner rhythm for every piece: 8px panel padding, 10px row padding. */
+    & > .ev-control-grid > .ev-filter-panel { padding:4px 8px 6px !important; }
+    & > .ev-control-grid > .ev-stake-panel { padding:0 8px 6px !important; }
+    & > .ev-bookbar { padding:0 8px 12px !important; gap:8px !important; }
+    & .ev-filter-panel .ev-filter-heading > strong,
+    & .ev-stake-panel::before,
+    & .ev-bookbar .ev-book-picker::before { margin:12px 0 4px !important; padding:0 10px !important; }
+
+    /* Menus open flush under their row. */
+    & .ev-filter-panel .td-choice { --choice-anchor:row; }
+    & .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter, label.ev-recommend.choice-field):has(.td-choice-trigger[aria-expanded="true"]) { background:rgb(255 255 255/.05) !important; }
+    & .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter, label.ev-recommend.choice-field):has(.td-choice-trigger[aria-expanded="true"])::after { color:var(--sl-text) !important; }
+    & .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter, label.ev-recommend.choice-field):focus-within { outline:none; }
+    & .ev-filter-panel .td-choice-trigger:focus-visible { outline:2px solid var(--sl-cyan) !important; outline-offset:3px !important; border-radius:6px !important; }
+
+    /* Values: a set filter reads bright, a default stays quiet. */
+    & .ev-filter-panel .td-choice-trigger { color:var(--sl-faint) !important; }
+    & .ev-filter-panel .td-choice-trigger[data-empty="false"] { color:var(--sl-text) !important; font-weight:600 !important; }
+    & .ev-filter-panel .td-choice-trigger > svg { color:var(--sl-faint) !important; }
+
+    /* Sort sits under a hairline; Clear all is a real row with its own icon. */
+    & .ev-filter-panel label.ev-recommend.choice-field { margin-top:6px !important; padding-top:2px !important; border-top-color:var(--sl-line) !important; }
+    & .ev-filter-panel #ev-reset-filters {
+      order:60; display:flex !important; align-items:center !important; gap:11px !important; align-self:stretch !important; width:100% !important;
+      height:32px !important; margin:2px 0 0 !important; padding:0 10px !important; border:0 !important; border-radius:9px !important; background:none !important;
+      color:var(--sl-faint) !important; font-size:13px !important; font-weight:500 !important; text-align:left !important;
+    }
+    & .ev-filter-panel #ev-reset-filters::before {
+      content:''; flex:none; width:16px; height:16px; background:currentColor; -webkit-mask:var(--vo-i-reset) center/contain no-repeat; mask:var(--vo-i-reset) center/contain no-repeat;
+    }
+    & .ev-filter-panel #ev-reset-filters:hover { background:rgb(255 255 255/.035) !important; color:var(--sl-text) !important; }
+
+    /* Stake: two matching fields, values right-aligned. */
+    & .ev-stake-panel > :is(label, .ev-multiplier-field) { min-height:36px !important; padding:0 4px 0 10px !important; }
+    & .ev-stake-panel .ev-input-wrap {
+      display:flex !important; align-items:center !important; justify-content:flex-end !important; gap:5px !important; flex:none !important;
+      width:104px !important; max-width:104px !important; height:28px !important; padding:0 9px !important;
+      border:1px solid var(--sl-line-2) !important; border-radius:8px !important; background:var(--sl-sunken) !important; transition:border-color .12s;
+    }
+    & .ev-stake-panel .ev-input-wrap:focus-within { border-color:rgb(163 240 107/.55) !important; }
+    & .ev-stake-panel .ev-input-wrap input { flex:1 1 auto !important; width:0 !important; min-width:0 !important; height:26px !important; text-align:right !important; font-size:13px !important; font-weight:600 !important; font-variant-numeric:tabular-nums; outline:none !important; }
+    & .ev-stake-panel .ev-input-wrap em { flex:none !important; color:var(--sl-faint) !important; font-size:10.5px !important; font-weight:500 !important; letter-spacing:.04em; }
+    & .ev-stake-panel .ev-input-wrap input::-webkit-inner-spin-button, & .ev-stake-panel .ev-input-wrap input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+    & .ev-stake-panel .ev-input-wrap input { -moz-appearance:textfield; appearance:textfield; }
+
+    /* Books: logo tiles that never crop, then a row that opens the full list. */
+    & .ev-bookbar .ev-book-picker { display:flex !important; flex-wrap:wrap !important; align-items:center !important; gap:0 !important; width:100% !important; padding:0 !important; }
+    & .ev-bookbar .ev-book-list { display:flex !important; flex-wrap:nowrap !important; align-items:center !important; gap:4px !important; min-width:0 !important; padding:2px 10px 6px !important; }
+    & .ev-bookbar :is(.ev-selected-book, .ev-book-overflow) {
+      width:26px !important; height:26px !important; min-width:26px !important; min-height:26px !important; max-height:26px !important; margin:0 !important; padding:0 !important;
+      border:1px solid var(--sl-line-2) !important; border-radius:8px !important; background:var(--sl-panel-3) !important; box-shadow:none !important;
+      color:var(--sl-text-2) !important; font-size:8.5px !important; font-weight:700 !important; letter-spacing:0 !important; line-height:1 !important; text-transform:uppercase; overflow:hidden; transform:none !important;
+    }
+    & .ev-bookbar .ev-selected-book .ev-book-symbol { display:grid !important; place-items:center !important; width:100% !important; height:100% !important; font-size:8.5px !important; }
+    & .ev-bookbar .ev-selected-book img { width:100% !important; height:100% !important; border-radius:7px !important; object-fit:cover; }
+    & .ev-bookbar .ev-selected-book:hover { border-color:var(--sl-line-3) !important; }
+    & .ev-bookbar .ev-book-overflow { width:auto !important; min-width:34px !important; padding:0 6px !important; background:transparent !important; color:var(--sl-muted) !important; font-size:10.5px !important; font-weight:600 !important; text-transform:none; }
+    & .ev-bookbar .ev-book-overflow:hover { color:var(--sl-text) !important; border-color:var(--sl-line-3) !important; }
+    & .ev-bookbar #ev-books-more {
+      flex:1 0 100% !important; display:grid !important; grid-template-columns:16px minmax(0,1fr) 12px !important; align-items:center !important; column-gap:11px !important;
+      width:100% !important; height:34px !important; min-height:0 !important; margin:0 !important; padding:0 10px !important;
+      border:0 !important; border-radius:9px !important; background:transparent !important; color:var(--sl-text-2) !important; font-size:0 !important; text-align:left !important;
+    }
+    & .ev-bookbar #ev-books-more > * { display:none !important; }
+    & .ev-bookbar #ev-books-more::before { content:''; grid-column:1; width:16px; height:16px; background:var(--sl-faint); -webkit-mask:var(--vo-i-books) center/contain no-repeat; mask:var(--vo-i-books) center/contain no-repeat; }
+    & .ev-bookbar #ev-books-more::after { content:'Choose sportsbooks'; grid-column:2; font-size:13.5px; font-weight:500; white-space:nowrap; }
+    & .ev-bookbar #ev-books-more:hover, & .ev-bookbar #ev-books-more[aria-expanded="true"] { background:rgb(255 255 255/.05) !important; color:var(--sl-text) !important; }
+    & .ev-bookbar #ev-books-more[aria-expanded="true"]::before { background:var(--sl-lime); }
+
+    /* Timing and action. */
+    & #ev-timing-toggle { flex:1 0 100% !important; display:flex !important; height:32px !important; margin:4px 0 0 !important; padding:3px !important; border:1px solid var(--sl-line-2) !important; border-radius:10px !important; background:var(--sl-sunken) !important; }
+    & #ev-timing-toggle span { flex:1 1 0 !important; height:24px !important; line-height:24px !important; padding:0 !important; border-radius:7px !important; text-align:center !important; font-size:12.5px !important; font-weight:600 !important; }
+    & #ev-find { height:38px !important; margin:0 !important; border-radius:10px !important; font-size:13.5px !important; font-weight:650 !important; }
+
+    /* The sportsbook picker: a panel beside the rail, with its own scroll. */
+    & .ev-bookbar { position:relative !important; }
+    & #ev-book-menu:not([hidden]) {
+      position:absolute !important; z-index:60 !important; inset:auto calc(100% + 12px) 0 auto !important; display:flex !important; flex-direction:column !important;
+      box-sizing:border-box !important; width:320px !important; max-width:none !important; height:min(560px, calc(100dvh - 40px)) !important; max-height:none !important; margin:0 !important; padding:6px !important; overflow:hidden !important;
+      border:1px solid var(--sl-line-2) !important; border-radius:14px !important; background:var(--sl-panel-2) !important;
+      box-shadow:0 24px 60px -14px rgb(0 0 0/.8), 0 0 0 1px rgb(0 0 0/.25) !important; color:var(--sl-text-2) !important; animation:vo-menu-in .12s ease-out;
+    }
+    & #ev-book-menu .ev-book-menu-heading { display:flex !important; align-items:center !important; justify-content:space-between !important; gap:10px; margin:0 !important; padding:8px 10px 6px !important; border:0 !important; background:none !important; }
+    & #ev-book-menu .ev-book-menu-heading strong { color:var(--sl-faint) !important; font-size:10.5px !important; font-weight:600 !important; letter-spacing:.14em !important; text-transform:uppercase !important; }
+    & #ev-book-menu .ev-book-menu-heading span { padding:1px 8px !important; border:0 !important; border-radius:999px !important; background:rgb(163 240 107/.1) !important; color:var(--sl-lime) !important; font-size:11.5px !important; font-weight:600 !important; white-space:nowrap; }
+    & #ev-book-menu .ev-book-search { display:block !important; margin:2px 2px 6px !important; padding:0 !important; border:0 !important; background:none !important; font-size:0 !important; color:transparent !important; position:relative; }
+    & #ev-book-menu .ev-book-search::before { content:''; position:absolute; left:10px; top:9px; width:14px; height:14px; background:var(--sl-faint); -webkit-mask:var(--vo-i-search) center/contain no-repeat; mask:var(--vo-i-search) center/contain no-repeat; pointer-events:none; }
+    & #ev-book-menu .ev-book-search input {
+      box-sizing:border-box !important; width:100% !important; height:32px !important; min-height:0 !important; margin:0 !important; padding:0 10px 0 32px !important;
+      border:1px solid var(--sl-line-2) !important; border-radius:8px !important; background:var(--sl-sunken) !important; box-shadow:none !important; outline:none !important;
+      color:var(--sl-text) !important; font-size:13px !important;
+    }
+    & #ev-book-menu .ev-book-search input:focus { border-color:rgb(163 240 107/.55) !important; }
+    & #ev-book-menu .ev-book-search input::placeholder { color:var(--sl-faint) !important; }
+    & #ev-book-menu .ev-book-menu-actions { order:5; display:flex !important; gap:6px !important; margin:6px 0 0 !important; padding:8px 4px 2px !important; border:0 !important; border-top:1px solid var(--sl-line) !important; background:none !important; }
+    & #ev-book-menu .ev-book-menu-actions button {
+      flex:1 1 0 !important; height:30px !important; min-height:0 !important; margin:0 !important; padding:0 10px !important; border:1px solid var(--sl-line-2) !important; border-radius:8px !important;
+      background:transparent !important; box-shadow:none !important; color:var(--sl-text-2) !important; font-size:12.5px !important; font-weight:600 !important;
+    }
+    & #ev-book-menu .ev-book-menu-actions button:hover { background:rgb(255 255 255/.05) !important; color:var(--sl-text) !important; }
+    & #ev-book-menu .ev-book-menu-options { flex:1 1 auto !important; min-height:0 !important; display:flex !important; flex-direction:column !important; gap:1px !important; margin:0 !important; padding:0 !important; overflow-y:auto !important; overscroll-behavior:contain; border:0 !important; background:none !important; }
+    & #ev-book-menu .ev-book-option {
+      display:grid !important; grid-template-columns:16px 22px minmax(0,1fr) !important; align-items:center !important; column-gap:10px !important;
+      width:100% !important; min-height:34px !important; height:34px !important; margin:0 !important; padding:0 10px !important; border:0 !important; border-radius:8px !important;
+      background:transparent !important; box-shadow:none !important; color:var(--sl-text-2) !important; font-size:13.5px !important; font-weight:500 !important; cursor:pointer;
+    }
+    & #ev-book-menu .ev-book-option:hover { background:rgb(255 255 255/.05) !important; color:var(--sl-text) !important; }
+    & #ev-book-menu .ev-book-option > span:last-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    & #ev-book-menu .ev-book-option input[type="checkbox"] {
+      -webkit-appearance:none !important; appearance:none !important; display:grid !important; place-items:center; width:16px !important; height:16px !important; min-height:0 !important; margin:0 !important; padding:0 !important;
+      border:1.5px solid var(--sl-line-3) !important; border-radius:5px !important; background:transparent !important; box-shadow:none !important; cursor:pointer;
+    }
+    & #ev-book-menu .ev-book-option input[type="checkbox"]::after { content:''; width:10px; height:10px; background:var(--sl-lime-ink, #0a200f); -webkit-mask:var(--vo-i-check) center/contain no-repeat; mask:var(--vo-i-check) center/contain no-repeat; opacity:0; }
+    & #ev-book-menu .ev-book-option input[type="checkbox"]:checked { border-color:var(--sl-lime) !important; background:var(--sl-lime) !important; }
+    & #ev-book-menu .ev-book-option input[type="checkbox"]:checked::after { opacity:1; }
+    & #ev-book-menu .ev-book-option input[type="checkbox"]:focus-visible { outline:2px solid var(--sl-cyan) !important; outline-offset:2px; }
+    & #ev-book-menu .ev-book-option-mark {
+      display:grid !important; place-items:center !important; width:22px !important; height:22px !important; margin:0 !important; padding:0 !important; overflow:hidden;
+      border:1px solid var(--sl-line-2) !important; border-radius:6px !important; background:var(--sl-panel-3) !important; color:var(--sl-text-2) !important; font-size:8.5px !important; font-weight:700 !important; text-transform:uppercase;
+    }
+    & #ev-book-menu .ev-book-option-mark img { width:100% !important; height:100% !important; object-fit:cover; border-radius:5px; }
+  }
+}
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    /* The logos take the full first line. The picker button stays 26px wide (the logo fitting in ev.js measures it)
+       and draws the full-width "Choose sportsbooks" row as an overlay inside itself, so the whole row is clickable. */
+    & .ev-bookbar .ev-book-picker { position:relative !important; }
+    & .ev-bookbar .ev-book-list { flex:1 0 100% !important; padding:2px 0 6px 10px !important; }
+    & .ev-bookbar #ev-books-more {
+      position:static !important; flex:none !important; display:block !important; width:26px !important; height:34px !important; padding:0 !important; background:none !important;
+    }
+    & .ev-bookbar #ev-books-more::before { content:'' !important; position:absolute !important; z-index:1; left:10px !important; bottom:9px !important; width:16px !important; height:16px !important; }
+    & .ev-bookbar #ev-books-more::after {
+      content:'Choose sportsbooks' !important; position:absolute !important; left:0 !important; right:0 !important; bottom:0 !important; height:34px !important;
+      display:flex !important; align-items:center !important; padding:0 30px 0 37px !important; border-radius:9px !important;
+      background:transparent; color:var(--sl-text-2); font-size:13.5px !important; font-weight:500 !important; white-space:nowrap;
+    }
+    & .ev-bookbar #ev-books-more:is(:hover, [aria-expanded="true"])::after { background:rgb(255 255 255/.05); color:var(--sl-text); }
+    & .ev-bookbar .ev-book-picker::after {
+      content:''; position:absolute; right:10px; bottom:11px; width:12px; height:12px; background:var(--sl-faint); pointer-events:none;
+      -webkit-mask:var(--vo-i-chevron) center/contain no-repeat; mask:var(--vo-i-chevron) center/contain no-repeat;
+    }
+    & #ev-book-menu .ev-book-option input[type="checkbox"]::after { width:12px !important; height:12px !important; }
+  }
+}
+html body[data-site-page="ev"] { --vo-i-check:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 12.5l5 5L19.5 7'/%3E%3C/svg%3E"); }
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    & #ev-book-menu .ev-book-option input[type="checkbox"]::after,
+    & #ev-book-menu .ev-book-option input[type="checkbox"]::before {
+      position:static !important; inset:auto !important; transform:none !important; rotate:none !important; border:0 !important; border-radius:0 !important; box-shadow:none !important; margin:0 !important;
+    }
+    & #ev-book-menu .ev-book-option input[type="checkbox"]::before { display:none !important; content:none !important; }
+    & #ev-book-menu .ev-book-option input[type="checkbox"]::after { content:'' !important; display:block !important; width:12px !important; height:12px !important; background:var(--sl-lime-ink, #0a200f) !important; }
+    & .ev-bookbar .ev-book-list { padding-bottom:10px !important; }
+  }
+}
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main #ev-book-menu .ev-book-option[hidden] { display:none !important; }
+}
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main #ev-book-menu:not([hidden]) { height:auto !important; max-height:min(560px, calc(100dvh - 40px)) !important; }
+}
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    /* Arbitrage hides Pregame/Live (its Period row decides); the rail must not bring it back. */
+    & #ev-timing-toggle[hidden] { display:none !important; }
+    & .ev-filter-panel .ev-filter-heading > strong { margin-bottom:6px !important; }
+  }
+}
+/* Arbitrage and Smart Money hide Clear all (ev.css); the rail row style must not bring it back. */
+html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="arb-"], [data-ev-screen="sharp"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main .ev-filter-panel #ev-reset-filters { display:none !important; }
+
+/* =====================================================================================================
+   The rail at every desktop and laptop width (the sentence card is retired).
+   1101-1440: a slimmer rail; each bet row puts the game under the bet so every column still fits.
+   801-1100: the same rail laid out full width above the bets, its rows in columns.
+   ===================================================================================================== */
+@media (min-width: 801px) and (max-width: 1440px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    grid-template-columns:minmax(0,1fr) 248px !important; column-gap:18px !important;
+  }
+  /* Positive EV rows: two lines, the game under the bet. Other tools keep their own tables. */
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main .evb-table:has(.evb-pick) {
+    display:block !important; min-width:0 !important; width:100% !important; margin:0 !important;
+    & > thead, & > tbody { display:block !important; }
+    & > tbody { display:flex !important; flex-direction:column !important; gap:6px !important; }
+    & > thead > tr, & > tbody > tr.evb-row {
+      display:grid !important; grid-template-columns:96px minmax(0,1fr) 150px 92px 80px 100px !important; align-items:center !important; column-gap:12px !important;
+      grid-template-areas:"ev pick book fair stake actions" "ev event book fair stake actions" !important;
+    }
+    & > thead > tr { padding:0 16px 4px !important; }
+    & > thead th { display:block !important; height:auto !important; padding:0 !important; }
+    & > thead th:nth-child(1) { grid-area:ev; } & > thead th:nth-child(2) { grid-area:pick; } & > thead th:nth-child(3) { display:none !important; }
+    & > thead th:nth-child(4) { grid-area:book; } & > thead th:nth-child(5) { grid-area:fair; } & > thead th:nth-child(6) { grid-area:stake; } & > thead th:nth-child(7) { grid-area:actions; }
+    & > tbody > tr.evb-row { padding:12px 16px !important; border:1px solid var(--sl-line) !important; border-radius:16px !important; background:var(--sl-panel) !important; row-gap:3px !important; }
+    & > tbody > tr.evb-row:hover { background:var(--sl-panel-2) !important; }
+    & > tbody > tr.evb-row.is-open { border-bottom-color:transparent !important; border-radius:16px 16px 0 0 !important; background:var(--sl-panel-2) !important; }
+    & > tbody > tr.evb-row > td { display:block !important; min-width:0 !important; max-width:none !important; width:auto !important; padding:0 !important; border:0 !important; border-radius:0 !important; background:none !important; box-shadow:none !important; }
+    & > tbody > tr.evb-row:hover > td, & > tbody > tr.evb-row.is-open > td { background:none !important; }
+    & > tbody > tr.evb-row.is-open > td:first-child { box-shadow:none !important; }
+    & .evb-ev { grid-area:ev; } & .evb-pick { grid-area:pick; align-self:end; } & .evb-event { grid-area:event; align-self:start; }
+    & .evb-book-price { grid-area:book; } & .evb-prob { grid-area:fair; } & .evb-stake { grid-area:stake; } & .evb-actions { grid-area:actions; justify-self:end; }
+    & .evb-event > strong { display:inline !important; font-size:12.5px !important; color:var(--sl-muted) !important; font-weight:500 !important; }
+    & .evb-event .evb-league { display:inline-flex !important; margin:0 0 0 6px !important; }
+    & .evb-event { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    & .evb-pick > strong { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    & > tbody > tr.evb-detail-row { display:block !important; margin-top:-6px; }
+    & > tbody > tr.evb-detail-row > td { display:block !important; border-radius:0 0 16px 16px !important; }
+  }
+}
+@media (min-width: 801px) and (max-width: 1100px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    grid-template-columns:minmax(0,1fr) !important; grid-template-rows:none !important;
+    & > .ev-header { grid-row:1 !important; grid-column:1 !important; margin-bottom:8px !important; }
+    & > .ev-feed { grid-row:2 !important; grid-column:1 !important; justify-self:start !important; margin-bottom:12px !important; }
+    & > #ev-suite-controls { grid-row:6 !important; grid-column:1 !important; margin:14px 0 12px !important; }
+    & > .ev-control-grid > .ev-filter-panel { grid-row:3 !important; grid-column:1 !important; }
+    & > .ev-control-grid > .ev-stake-panel { grid-row:4 !important; grid-column:1 !important; }
+    & > .ev-bookbar { grid-row:5 !important; grid-column:1 !important; }
+    & > .ev-shell { grid-row:7 !important; grid-column:1 !important; }
+    /* Rows flow into columns so the panel stays short. */
+    & > .ev-control-grid > .ev-filter-panel { display:grid !important; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)) !important; column-gap:12px !important; row-gap:1px !important; }
+    & .ev-filter-panel .ev-filter-heading > strong { grid-column:1 / -1; }
+    & .ev-filter-panel label.ev-recommend.choice-field { border-top:0 !important; margin-top:0 !important; }
+    & > .ev-control-grid > .ev-stake-panel { display:grid !important; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)) !important; column-gap:12px !important; }
+    & .ev-stake-panel::before { grid-column:1 / -1; }
+    & > .ev-bookbar { flex-wrap:wrap !important; }
+    & .ev-bookbar .ev-book-picker { flex:1 1 320px !important; width:auto !important; }
+    & #ev-timing-toggle { flex:1 1 200px !important; align-self:flex-end; }
+    & #ev-find { flex:1 1 200px !important; width:auto !important; align-self:flex-end; }
+    & #ev-book-menu:not([hidden]) { inset:auto auto calc(100% + 8px) 0 !important; }
+  }
+}
+@media (min-width: 1101px) and (max-width: 1440px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main {
+    & .ev-stake-panel .ev-input-wrap { width:84px !important; max-width:84px !important; }
+    & .ev-stake-panel > :is(label, .ev-multiplier-field) { gap:8px !important; font-size:13px !important; }
+  }
+}
+@media (min-width: 801px) and (max-width: 1440px) {
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main .evb-table:has(.evb-pick) {
+    & > thead > tr, & > tbody > tr.evb-row { grid-template-columns:108px minmax(0,1fr) 138px 88px 76px 96px !important; column-gap:10px !important; }
+    & .evb-ev { width:auto !important; overflow:hidden; }
+    & .evb-ev strong { font-size:18px !important; }
+    & .evb-ev .evb-ev-per { font-size:11px !important; white-space:nowrap; }
+    & .evb-pick > strong { font-size:13.5px !important; }
+    & .evb-actions > div { gap:0 !important; }
+    & .evb-actions .evb-icon { width:30px !important; height:30px !important; }
+  }
+}
+@media (min-width: 801px) and (max-width: 1100px) {
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main .evb-table:has(.evb-pick) {
+    & > thead > tr, & > tbody > tr.evb-row { grid-template-columns:104px minmax(0,1fr) 130px 84px 70px 92px !important; }
+  }
+}
+/* Arbitrage beside the slim rail: the market column gives way so both legs and their profit stay in view. */
+@media (min-width: 1101px) and (max-width: 1440px) {
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main .pair-table {
+    min-width:0 !important;
+    & td.arb-market { width:1px !important; max-width:190px !important; }
+    & td.arb-market * { max-width:190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    & td.arb-market :is(div, p, span):has(> img, > svg) { display:inline-flex; }
+    & tbody td { padding-left:8px !important; padding-right:8px !important; }
+  }
+}
+
+/* The whole filter row is the click target (trends-controls.js opens the row's menu on any click in the row). */
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter.choice-field, label.ev-recommend.choice-field) { cursor:pointer !important; user-select:none; }
+}
+
+/* =====================================================================================================
+   Every +EV page gets the same filter design as Positive EV: a right-hand panel of sidebar-style rows
+   (icon, name, value ›), a search field on top, and dropdowns that open under their row.
+   - Shared tool pages (Middles, Low holds, Promo, Parlay): search, sport and filters in the panel.
+   - Shared tool pages without filters (Optimizer, Slip, Prediction, Relay boards, Trends, Alerts):
+     a slim toolbar with sport, search and the page's action button.
+   - Odds Screen: filters and a vertical Markets list in the panel.
+   - DFS Props: filters and platforms in a panel above the pick slip.
+   - Smart Money: its filter tray becomes the panel.
+   The duplicate hero card and the in-page tool tabs (both repeat the page header and the sidebar) are hidden.
+   ===================================================================================================== */
+html body[data-site-page="ev"] {
+  --vo-i-clock2:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Cpath d='M12 8v4l3 2'/%3E%3C/svg%3E");
+  --vo-i-app:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='6' y='3' width='12' height='18' rx='3'/%3E%3Cpath d='M10.5 17.5h3'/%3E%3C/svg%3E");
+  --vo-i-slip:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3h12v18l-3-2-3 2-3-2-3 2V3Z'/%3E%3Cpath d='M9 8h6M9 12h6'/%3E%3C/svg%3E");
+  --vo-i-dollar:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v18M16.5 7.5c-.8-1.3-2.4-2-4.5-2-2.6 0-4.3 1.2-4.3 3.1 0 4.6 9 2.3 9 7 0 2-1.9 3.4-4.7 3.4-2.3 0-4-.8-4.8-2.2'/%3E%3C/svg%3E");
+}
+
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main #ev-view {
+    /* ---------------------------------------------------------------- shared: panel pieces */
+    & :is(.tool-workspace:has(> .tool-filter-bar) .tool-filters, .tool-filter-bar, .os-toolbar, .os-tabs-wrap, .dfs-controls, .dfs-platform-bar, .sharp-filter-tray) {
+      box-sizing:border-box !important; display:flex !important; flex-direction:column !important; flex-wrap:nowrap !important; align-items:stretch !important; justify-content:flex-start !important;
+      gap:1px !important; width:auto !important; min-width:0 !important; height:auto !important; min-height:0 !important; max-width:none !important; margin:0 !important;
+      padding:6px 8px 8px !important; border:1px solid var(--sl-line) !important; border-radius:0 !important;
+      background:var(--vo-studio-rail, #0f1113) !important; box-shadow:none !important; overflow:visible !important;
+    }
+    /* Section labels, as in the sidebar. */
+    & :is(.tool-filter-bar, .os-tabs-wrap, .dfs-controls, .dfs-platform-bar, .sharp-filter-tray)::before {
+      content:var(--vo-panel-label, 'Filters'); display:block; margin:8px 0 4px; padding:0 10px; color:var(--sl-faint);
+      font-size:10.5px; font-weight:600; letter-spacing:.14em; line-height:16px; text-transform:uppercase;
+    }
+    & .os-tabs-wrap { --vo-panel-label:'Markets'; }
+    & .dfs-platform-bar { --vo-panel-label:'Platforms'; }
+
+    /* ---------------------------------------------------------------- shared: one row per dropdown */
+    & :is(.tool-filter-bar .tool-filter, .tool-filters > label.choice-field, .os-filterbar .os-field.choice-field, .dfs-controls .dfs-filter, .sharp-filter-tray > label.choice-field) {
+      position:relative !important; display:block !important; flex:none !important; width:100% !important; height:auto !important; min-height:0 !important; max-width:none !important;
+      margin:0 !important; padding:0 !important; border:0 !important; border-radius:9px !important; background:none !important; box-shadow:none !important;
+      font-size:0 !important; line-height:0 !important; color:transparent !important; cursor:pointer;
+      & > span:not(.dfs-app-value) { display:none !important; }
+      & :is(.td-choice, .dfs-app-value) { display:block !important; position:static !important; width:100% !important; height:auto !important; min-height:0 !important; --choice-anchor:row; }
+      & .td-choice-trigger {
+        position:static !important; display:flex !important; align-items:center !important; justify-content:flex-start !important; gap:10px !important;
+        width:100% !important; height:34px !important; min-height:0 !important; margin:0 !important; padding:0 8px 0 37px !important;
+        border:0 !important; border-radius:9px !important; background:transparent !important; box-shadow:none !important;
+        color:var(--sl-text-2) !important; font:500 13.5px/20px var(--sl-font) !important; letter-spacing:0 !important; text-align:left !important; overflow:hidden !important;
+      }
+      & .td-choice-trigger::before, & .td-choice-trigger::after { display:none !important; content:none !important; }
+      & .td-choice-trigger:hover, & .td-choice-trigger[aria-expanded="true"] { background:rgb(255 255 255/.045) !important; color:var(--sl-text) !important; }
+      & .td-choice-trigger > svg:not(:last-child) { display:none !important; }
+      & .td-choice-trigger > svg:last-child { flex:none; width:12px !important; height:12px !important; margin:0 !important; color:var(--sl-faint) !important; transform:rotate(-90deg) !important; }
+      & .choice-trigger-copy { display:flex !important; flex:1 1 auto !important; flex-direction:row !important; align-items:center !important; justify-content:space-between !important; gap:10px !important; min-width:0 !important; width:auto !important; overflow:hidden !important; }
+      & .choice-trigger-label { display:block !important; flex:none; color:inherit !important; font:inherit !important; letter-spacing:0 !important; text-transform:none !important; white-space:nowrap; }
+      & .choice-trigger-copy > strong {
+        display:block !important; flex:0 1 auto; min-width:0; max-width:132px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+        color:var(--sl-faint) !important; font:500 12.5px/20px var(--sl-font) !important; text-transform:none !important; letter-spacing:0 !important;
+      }
+      & .td-choice-trigger[data-empty="false"] .choice-trigger-copy > strong { color:var(--sl-text) !important; font-weight:600 !important; }
+      &::before {
+        content:''; position:absolute; z-index:1; left:10px; top:9px; width:16px; height:16px; pointer-events:none; background:var(--sl-faint);
+        -webkit-mask:var(--vo-icon, var(--vo-i-odds)) center/contain no-repeat; mask:var(--vo-icon, var(--vo-i-odds)) center/contain no-repeat;
+      }
+      &:hover::before, &:has([aria-expanded="true"])::before { background:var(--sl-text-2); }
+    }
+    /* Row icons and friendlier names. */
+    & :has(> .td-choice select:is([aria-label="Tool sport"], [aria-label="DFS sport"], [aria-label="Sport"])), & :has(> .td-choice > select#sharp-sport) { --vo-icon:var(--vo-i-sport); }
+    & :has(> .td-choice select[aria-label="League"]) { --vo-icon:var(--vo-i-league); }
+    & :has(> .td-choice select:is([aria-label="Market"], [aria-label="DFS market"], [aria-label="PrizePicks line type"], #sharp-market)) { --vo-icon:var(--vo-i-market); }
+    & :has(> .td-choice select:is([aria-label="Starts"], [aria-label="Event"])) { --vo-icon:var(--vo-i-date); }
+    & :has(> .td-choice select[aria-label="Period"]) { --vo-icon:var(--vo-i-clock2); }
+    & :has(> .td-choice select:is([aria-label="Leg EV"], [aria-label="Min window"])) { --vo-icon:var(--vo-i-edge); }
+    & :has(> .td-choice select:is([aria-label="Promo book"], [aria-label="Sportsbook"])) { --vo-icon:var(--vo-i-books); }
+    & .dfs-app-filter { --vo-icon:var(--vo-i-app); }
+    & :has(> .td-choice select:is([aria-label="Tool sport"], [aria-label="DFS sport"])) .choice-trigger-label,
+    & :has(> .td-choice select:is([aria-label="DFS market"], [aria-label="PrizePicks line type"])) .choice-trigger-label,
+    & .dfs-app-filter .choice-trigger-label { font-size:0 !important; }
+    & :has(> .td-choice select:is([aria-label="Tool sport"], [aria-label="DFS sport"])) .choice-trigger-label::before { content:'Sport'; font-size:13.5px; }
+    & :has(> .td-choice select[aria-label="DFS market"]) .choice-trigger-label::before { content:'Market'; font-size:13.5px; }
+    & :has(> .td-choice select[aria-label="PrizePicks line type"]) .choice-trigger-label::before { content:'Line type'; font-size:13.5px; }
+    & .dfs-app-filter .choice-trigger-label::before { content:'App'; font-size:13.5px; }
+
+    /* ---------------------------------------------------------------- shared: search fields */
+    & :is(.tool-workspace:has(> .tool-filter-bar) .tool-filters .tool-search, .os-filterbar .os-search, .dfs-controls .dfs-search) {
+      order:-1; position:relative !important; display:flex !important; align-items:center !important; gap:8px !important; flex:none !important;
+      width:100% !important; height:34px !important; min-height:0 !important; margin:2px 0 6px !important; padding:0 10px !important;
+      border:1px solid var(--sl-line-2) !important; border-radius:9px !important; background:var(--sl-sunken) !important; box-shadow:none !important; transition:border-color .12s;
+      & > span { display:none !important; }
+      & > svg { flex:none; width:14px !important; height:14px !important; margin:0 !important; color:var(--sl-faint) !important; position:static !important; }
+      & input { flex:1 1 auto !important; width:0 !important; min-width:0 !important; height:32px !important; min-height:0 !important; margin:0 !important; padding:0 !important; border:0 !important; background:none !important; box-shadow:none !important; outline:none !important; color:var(--sl-text) !important; font:500 13px var(--sl-font) !important; }
+      & input::placeholder { color:var(--sl-faint) !important; }
+      &:focus-within { border-color:rgb(163 240 107/.5) !important; }
+    }
+
+    /* ---------------------------------------------------------------- shared tool pages */
+    & .tool-workspace { gap:16px !important; }
+    & .tool-workspace > .tool-hero { display:contents !important; }
+    & .tool-workspace > .tool-hero > .tool-hero-copy, & .tool-workspace .tool-related { display:none !important; }
+    & .tool-workspace .tool-heading-actions { display:flex !important; gap:8px !important; margin:0 !important; padding:0 !important; }
+    & .tool-workspace .tool-heading-actions :is(button, a) {
+      height:34px !important; min-height:0 !important; padding:0 14px !important; border:0 !important; border-radius:10px !important; box-shadow:none !important;
+      background:var(--sl-lime) !important; color:var(--sl-lime-ink, #0a200f) !important; font:650 13px var(--sl-font) !important;
+    }
+
+    /* With filters: content left, panel right. */
+    & .tool-workspace:has(> .tool-filter-bar) {
+      display:grid !important; grid-template-columns:minmax(0,1fr) 268px !important; grid-template-rows:auto auto 1fr !important; column-gap:22px !important; row-gap:0 !important; align-items:start !important;
+      & > .tool-context { display:contents !important; }
+      & .tool-filters { grid-column:2; grid-row:1; border-bottom:0 !important; border-radius:14px 14px 0 0 !important; padding-top:10px !important; padding-bottom:0 !important; }
+      & > .tool-filter-bar { grid-column:2; grid-row:2; border-top:0 !important; border-radius:0 0 14px 14px !important; }
+      & > .tool-content { grid-column:1; grid-row:1 / 4; min-width:0; }
+      & > .tool-heading-actions, & > .tool-hero .tool-heading-actions { grid-column:2; grid-row:3; margin-top:12px !important; }
+    }
+    /* Without filters: one slim toolbar row. */
+    & .tool-workspace:not(:has(> .tool-filter-bar)) {
+      display:grid !important; grid-template-columns:minmax(0,1fr) auto !important; column-gap:12px !important; row-gap:16px !important; align-items:center !important;
+      & > .tool-hero { display:contents !important; }
+      & .tool-heading-actions { grid-column:2; grid-row:1; }
+      & > .tool-context { grid-column:1; grid-row:1; display:flex !important; align-items:center !important; gap:8px !important; margin:0 !important; padding:0 !important; border:0 !important; background:none !important; }
+      & > .tool-context .tool-filters { display:flex !important; align-items:center !important; gap:8px !important; margin:0 !important; padding:0 !important; border:0 !important; background:none !important; }
+      & > .tool-content { grid-column:1 / -1; grid-row:2; min-width:0; }
+      & .tool-filters > label.choice-field { width:auto !important; min-width:170px !important; border:1px solid var(--sl-line-2) !important; background:var(--vo-studio-rail, #0f1113) !important; }
+      & .tool-filters .tool-search {
+        position:relative; display:flex !important; align-items:center !important; gap:8px !important; width:280px !important; height:36px !important; margin:0 !important; padding:0 10px !important;
+        border:1px solid var(--sl-line-2) !important; border-radius:9px !important; background:var(--sl-sunken) !important; box-shadow:none !important;
+        & > svg { width:14px !important; height:14px !important; color:var(--sl-faint) !important; position:static !important; }
+        & input { flex:1 1 auto; width:0 !important; min-width:0; height:34px !important; padding:0 !important; border:0 !important; background:none !important; box-shadow:none !important; outline:none !important; color:var(--sl-text) !important; font:500 13px var(--sl-font) !important; }
+        &:focus-within { border-color:rgb(163 240 107/.5) !important; }
+      }
+    }
+
+    /* ---------------------------------------------------------------- Odds Screen */
+    & .os-screen {
+      display:grid !important; grid-template-columns:minmax(0,1fr) 268px !important; grid-template-rows:auto auto 1fr !important; column-gap:22px !important; row-gap:0 !important; align-items:start !important;
+      & > .os-panel { display:contents !important; }
+      & .os-toolbar { grid-column:2; grid-row:1; border-bottom:0 !important; border-radius:14px 14px 0 0 !important; padding-top:10px !important; }
+      & .os-filterbar { display:flex !important; flex-direction:column !important; gap:1px !important; width:100% !important; padding:0 !important; margin:0 !important; border:0 !important; background:none !important; }
+      & .os-toolbar-actions { display:flex !important; gap:6px !important; margin:6px 0 0 !important; padding:8px 2px 0 !important; border-top:1px solid var(--sl-line) !important; }
+      & .os-toolbar-actions .os-round { width:34px !important; height:34px !important; border:1px solid var(--sl-line-2) !important; border-radius:9px !important; background:transparent !important; color:var(--sl-muted) !important; box-shadow:none !important; }
+      & .os-toolbar-actions .os-round:hover { color:var(--sl-text) !important; background:rgb(255 255 255/.05) !important; }
+      & .os-tabs-wrap { grid-column:2; grid-row:2; border-top:0 !important; border-radius:0 0 14px 14px !important; }
+      & .os-tabs-scroll { display:none !important; }
+      & .os-tabs { display:flex !important; flex-direction:column !important; gap:1px !important; max-height:min(420px, calc(100dvh - 420px)) !important; min-height:120px; overflow-x:hidden !important; overflow-y:auto !important; overscroll-behavior:contain; padding:0 !important; margin:0 !important; border:0 !important; background:none !important; mask-image:none !important; -webkit-mask-image:none !important; }
+      & .os-tab {
+        flex:none !important; display:block !important; width:100% !important; height:32px !important; min-height:0 !important; margin:0 !important; padding:0 10px !important;
+        border:0 !important; border-radius:8px !important; background:transparent !important; box-shadow:none !important; color:var(--sl-text-2) !important;
+        font:500 13px/32px var(--sl-font) !important; text-align:left !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; text-transform:none !important;
+      }
+      & .os-tab:hover { background:rgb(255 255 255/.04) !important; color:var(--sl-text) !important; }
+      & .os-tab:is([aria-pressed="true"], [aria-selected="true"], .is-active, .active) { background:rgb(163 240 107/.08) !important; color:var(--sl-text) !important; font-weight:600 !important; }
+      & .os-board-meta { grid-column:1; grid-row:1; margin:0 0 12px !important; padding:0 !important; border:0 !important; background:none !important; }
+      & > .os-grid-wrap { grid-column:1; grid-row:2 / 4; min-width:0; }
+      & > .os-footnote { grid-column:1; }
+    }
+
+    /* ---------------------------------------------------------------- DFS Props */
+    & .dfs-workspace {
+      display:grid !important; grid-template-columns:minmax(0,1fr) 300px !important; grid-template-rows:auto auto auto 1fr !important; column-gap:22px !important; row-gap:0 !important; align-items:start !important;
+      & > .dfs-controls { grid-column:2; grid-row:1; border-bottom:0 !important; border-radius:14px 14px 0 0 !important; }
+      & > .dfs-platform-bar { grid-column:2; grid-row:2; border-top:0 !important; border-radius:0 0 14px 14px !important; padding-bottom:12px !important; }
+      & > .dfs-results-toolbar { grid-column:1; grid-row:1; margin:0 0 12px !important; }
+      & > .dfs-layout { display:contents !important; }
+      & .dfs-prop-list { grid-column:1; grid-row:2 / 5; min-width:0; }
+      & .dfs-slip-panel { grid-column:2; grid-row:3; margin-top:14px !important; position:sticky; top:16px; }
+      & > .dfs-method-note { grid-column:1; }
+      & .dfs-platform-bar-label { display:none !important; }
+      & .dfs-platform-rail { display:flex !important; flex-wrap:wrap !important; gap:6px !important; padding:2px 10px 0 !important; margin:0 !important; overflow:visible !important; border:0 !important; background:none !important; }
+      & .dfs-platform-logo { width:34px !important; height:34px !important; min-width:0 !important; padding:0 !important; border:1px solid var(--sl-line-2) !important; border-radius:9px !important; background:var(--sl-panel-3) !important; box-shadow:none !important; }
+      & .dfs-platform-logo img { width:24px !important; height:24px !important; border-radius:6px !important; }
+      & .dfs-platform-logo:is([aria-pressed="false"], .is-off) { opacity:.4; }
+      & .dfs-platform-bar > :is(button, .dfs-platform-all):not(.dfs-platform-logo) { align-self:flex-start; margin:8px 0 0 10px !important; }
+      & .dfs-slip-type { order:1; display:block !important; width:100% !important; margin:0 !important; position:relative; }
+      & .dfs-slip-trigger {
+        position:relative; display:flex !important; align-items:center !important; gap:10px !important; width:100% !important; height:34px !important; min-height:0 !important; margin:0 !important; padding:0 8px 0 37px !important;
+        border:0 !important; border-radius:9px !important; background:transparent !important; box-shadow:none !important; color:var(--sl-text-2) !important; font:500 13.5px/20px var(--sl-font) !important; text-align:left !important;
+      }
+      & .dfs-slip-trigger::before { content:''; position:absolute; left:10px; top:9px; width:16px; height:16px; background:var(--sl-faint); -webkit-mask:var(--vo-i-slip) center/contain no-repeat; mask:var(--vo-i-slip) center/contain no-repeat; }
+      & .dfs-slip-trigger:hover, & .dfs-slip-trigger[aria-expanded="true"] { background:rgb(255 255 255/.045) !important; color:var(--sl-text) !important; }
+      & .dfs-slip-trigger > span { display:flex !important; flex:1 1 auto; align-items:center !important; justify-content:space-between !important; gap:10px; min-width:0; font:inherit !important; color:inherit !important; }
+      & .dfs-slip-trigger > span > strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--sl-text) !important; font:600 12.5px/20px var(--sl-font) !important; }
+      & .dfs-slip-trigger > svg { flex:none; width:12px !important; height:12px !important; color:var(--sl-faint) !important; transform:rotate(-90deg); }
+      & .dfs-controls > .dfs-filter { order:2; }
+    }
+
+    /* ---------------------------------------------------------------- Smart Money */
+    & .sharp-workspace {
+      display:grid !important; grid-template-columns:minmax(0,1fr) 268px !important; column-gap:22px !important; row-gap:12px !important; align-items:start !important;
+      & > * { grid-column:1; min-width:0; }
+      & > .sharp-page-bar { grid-column:1 / -1; }
+      & > .sharp-filter-tray, & > .sharp-filter-tray[hidden] { display:flex !important; grid-column:2; grid-row:2 / span 20; border-radius:14px !important; align-self:start; }
+      & .sharp-toolbar > button:not(:last-child) { display:none !important; }
+      & .sharp-filter-tray .sharp-min-field {
+        position:relative; display:flex !important; align-items:center !important; gap:6px !important; width:100% !important; height:36px !important; margin:0 !important; padding:0 6px 0 37px !important;
+        border:0 !important; border-radius:9px !important; background:none !important; color:var(--sl-text-2) !important; font:500 13.5px var(--sl-font) !important;
+      }
+      & .sharp-filter-tray .sharp-min-field::before { content:''; position:absolute; left:10px; top:10px; width:16px; height:16px; background:var(--sl-faint); -webkit-mask:var(--vo-i-dollar) center/contain no-repeat; mask:var(--vo-i-dollar) center/contain no-repeat; }
+      & .sharp-filter-tray .sharp-filter-label { flex:1 1 auto; color:inherit !important; font:inherit !important; text-transform:none !important; letter-spacing:0 !important; }
+      & .sharp-filter-tray .sharp-currency { color:var(--sl-faint) !important; font-size:12px !important; }
+      & .sharp-filter-tray .sharp-min-field input { width:72px !important; height:28px !important; padding:0 8px !important; border:1px solid var(--sl-line-2) !important; border-radius:8px !important; background:var(--sl-sunken) !important; color:var(--sl-text) !important; font:600 13px var(--sl-font) !important; text-align:right; box-shadow:none !important; }
+      & .sharp-filter-tray > button[data-sharp-clear] {
+        display:flex !important; align-items:center !important; gap:11px !important; width:100% !important; height:32px !important; margin:4px 0 0 !important; padding:0 10px !important;
+        border:0 !important; border-radius:9px !important; background:none !important; color:var(--sl-faint) !important; font:500 13px var(--sl-font) !important; box-shadow:none !important;
+      }
+      & .sharp-filter-tray > button[data-sharp-clear]::before { content:''; width:16px; height:16px; background:currentColor; -webkit-mask:var(--vo-i-reset) center/contain no-repeat; mask:var(--vo-i-reset) center/contain no-repeat; }
+      & .sharp-filter-tray > button[data-sharp-clear]:hover { background:rgb(255 255 255/.035) !important; color:var(--sl-text) !important; }
+    }
+  }
+  /* Odds Screen gets its title back (the old sheet hid the header there). */
+  html:root body.ev-page[data-site-page="ev"][data-site-page][data-ev-screen="odds"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main > .ev-header { display:grid !important; }
+}
+
+/* Subtitles under each page title. */
+@media (min-width: 0px) {
+  html:root body.ev-page[data-site-page="ev"] {
+    &[data-ev-screen="odds"] { --vo-ev-subtitle:'Every book\2019 s price for each market, side by side'; }
+    &[data-ev-screen="fantasy"] { --vo-ev-subtitle:'Pick\2019 em lines the sportsbooks say are mispriced'; }
+    &[data-ev-screen="middles"] { --vo-ev-subtitle:'Two lines, one winning window. Compare the upside and the cost outside it'; }
+    &[data-ev-screen="holds"] { --vo-ev-subtitle:'The tightest two-sided markets across your sportsbooks'; }
+    &[data-ev-screen="promo"] { --vo-ev-subtitle:'Turn a promotion into a clear stake plan and see the result on either side'; }
+    &[data-ev-screen="parlay"] { --vo-ev-subtitle:'Build a ticket one leg at a time, with fair probabilities beside every price'; }
+    &[data-ev-screen="optimizer"] { --vo-ev-subtitle:'Two-pick power entries ranked by fair probability and each app\2019 s payouts'; }
+    &[data-ev-screen="slip"] { --vo-ev-subtitle:'Choose your picks, set the payout rules and see the math behind your entry'; }
+    &[data-ev-screen="prediction"] { --vo-ev-subtitle:'Contract prices, market depth and your recorded positions'; }
+    &[data-ev-screen="relay-boards"] { --vo-ev-subtitle:'Relayed positive EV, arbitrage, liquidity and position boards side by side'; }
+    &[data-ev-screen="trends"] { --vo-ev-subtitle:'Recent form in your saved results, next to related player props'; }
+    &[data-ev-screen="fantasy-alerts"] { --vo-ev-subtitle:'Your player-prop watchlist, with matches as new lines arrive'; }
+    &[data-ev-screen="line-alerts"] { --vo-ev-subtitle:'Your price targets and the moves in the markets you follow'; }
+  }
+}
+
+/* Dropdown menus: one design on every page. */
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main :is(#ev-view, .ev-control-grid) .td-choice-menu {
+    box-sizing:border-box !important; margin:0 !important; padding:6px !important; overflow:auto !important; overscroll-behavior:contain;
+    border:1px solid var(--sl-line-2) !important; border-radius:12px !important; background:var(--sl-panel-2) !important;
+    box-shadow:0 18px 48px -12px rgb(0 0 0/.75), 0 0 0 1px rgb(0 0 0/.25) !important; color:var(--sl-text-2) !important; font-family:var(--sl-font) !important; animation:vo-menu-in .12s ease-out;
+    & .choice-heading { display:block !important; margin:0 !important; padding:6px 10px !important; border:0 !important; background:none !important; color:var(--sl-faint) !important; font-size:10.5px !important; font-weight:600 !important; letter-spacing:.14em !important; line-height:16px !important; text-transform:uppercase !important; }
+    & .choice-search { display:flex !important; align-items:center !important; gap:8px !important; height:32px !important; margin:0 2px 6px !important; padding:0 10px !important; border:1px solid var(--sl-line-2) !important; border-radius:8px !important; background:var(--sl-sunken) !important; color:var(--sl-faint) !important; }
+    & .choice-search svg { width:14px !important; height:14px !important; flex:none; }
+    & .choice-search input { height:30px !important; min-height:0 !important; padding:0 !important; border:0 !important; background:none !important; box-shadow:none !important; color:var(--sl-text) !important; font-size:13px !important; }
+    & .choice-options { display:flex !important; flex-direction:column !important; gap:1px !important; padding:0 !important; }
+    & .td-choice-option { display:flex !important; align-items:center !important; justify-content:space-between !important; gap:10px !important; width:100% !important; min-height:34px !important; height:auto !important; margin:0 !important; padding:6px 10px !important; border:0 !important; border-radius:8px !important; background:transparent !important; box-shadow:none !important; color:var(--sl-text-2) !important; font-size:13.5px !important; font-weight:500 !important; line-height:20px !important; text-align:left !important; }
+    & .td-choice-option:is(:hover, :focus-visible) { background:rgb(255 255 255/.05) !important; color:var(--sl-text) !important; outline:none !important; }
+    & .td-choice-option[aria-selected="true"] { background:rgb(163 240 107/.08) !important; color:var(--sl-text) !important; font-weight:600 !important; }
+    & .td-choice-option > svg { flex:none; width:14px !important; height:14px !important; color:var(--sl-lime) !important; opacity:0; }
+    & .td-choice-option[aria-selected="true"] > svg { opacity:1; }
+    & .choice-option-copy { display:block !important; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:inherit !important; font:inherit !important; }
+    & .choice-option-copy small { display:block; color:var(--sl-faint); font-size:11.5px; font-weight:400; }
+    & .choice-empty { padding:10px !important; color:var(--sl-faint) !important; font-size:12.5px !important; }
+  }
+}
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main #ev-view {
+    /* Friendlier names replace the long ones (the original stays for screen readers in aria-label). */
+    & :has(> .td-choice select:is([aria-label="Tool sport"], [aria-label="DFS sport"], [aria-label="DFS market"], [aria-label="PrizePicks line type"])) .choice-trigger-label,
+    & .dfs-app-filter .choice-trigger-label { font-size:0 !important; }
+    & :has(> .td-choice select:is([aria-label="Tool sport"], [aria-label="DFS sport"], [aria-label="DFS market"], [aria-label="PrizePicks line type"])) .choice-trigger-label::before,
+    & .dfs-app-filter .choice-trigger-label::before { font:500 13.5px/20px var(--sl-font); }
+    /* The chevron already points right. */
+    & :is(.tool-filter-bar .tool-filter, .tool-filters > label.choice-field, .os-filterbar .os-field.choice-field, .dfs-controls .dfs-filter, .sharp-filter-tray > label.choice-field) .td-choice-trigger > svg:last-child,
+    & .dfs-slip-trigger > svg { transform:none !important; rotate:none !important; }
+    /* The panel spans the first rows so the content beside it starts at the top. */
+    & .os-screen { grid-template-rows:auto auto auto 1fr !important; }
+    & .os-screen .os-toolbar { grid-row:1 / 3 !important; }
+    & .os-screen .os-tabs-wrap { grid-row:3 !important; }
+    & .os-screen .os-board-meta { grid-row:1 !important; }
+    & .os-screen > .os-grid-wrap { grid-row:2 / 5 !important; }
+    & .os-screen > .os-footnote { grid-row:5 !important; }
+    & .dfs-workspace { grid-template-rows:auto auto auto auto 1fr !important; }
+    & .dfs-workspace > .dfs-controls { grid-row:1 / 3 !important; }
+    & .dfs-workspace > .dfs-platform-bar { grid-row:3 !important; }
+    & .dfs-workspace .dfs-slip-panel { grid-row:4 !important; }
+    & .dfs-workspace > .dfs-results-toolbar { grid-row:1 !important; }
+    & .dfs-workspace .dfs-prop-list { grid-row:2 / 6 !important; }
+    & .dfs-workspace > .dfs-method-note { grid-row:6 !important; }
+  }
+  /* Subtitles stay on one line. */
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main > .ev-header::after { white-space:nowrap !important; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+}
+html:root body.ev-page[data-site-page="ev"] {
+  &[data-ev-screen="odds"] { --vo-ev-subtitle:'Every book\2019 s price, side by side'; }
+  &[data-ev-screen="middles"] { --vo-ev-subtitle:'Two lines, one winning window'; }
+  &[data-ev-screen="holds"] { --vo-ev-subtitle:'The tightest two-sided markets'; }
+  &[data-ev-screen="promo"] { --vo-ev-subtitle:'Turn a promotion into a stake plan'; }
+  &[data-ev-screen="parlay"] { --vo-ev-subtitle:'Build a ticket with fair odds on every leg'; }
+  &[data-ev-screen="optimizer"] { --vo-ev-subtitle:'Two-pick entries ranked by projected EV'; }
+  &[data-ev-screen="slip"] { --vo-ev-subtitle:'Your picks, the payout rules and the math'; }
+  &[data-ev-screen="prediction"] { --vo-ev-subtitle:'Contract prices, depth and your positions'; }
+  &[data-ev-screen="relay-boards"] { --vo-ev-subtitle:'Relayed boards side by side'; }
+  &[data-ev-screen="trends"] { --vo-ev-subtitle:'Recent form next to related player props'; }
+  &[data-ev-screen="fantasy-alerts"] { --vo-ev-subtitle:'Your player-prop watchlist'; }
+  &[data-ev-screen="line-alerts"] { --vo-ev-subtitle:'Your price targets and line moves'; }
+  &[data-ev-screen="fantasy"] { --vo-ev-subtitle:'Pick\2019 em lines the sportsbooks say are mispriced'; }
+}
+/* Two-sided tables (Middles, Low holds) fit beside the panel. */
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen="middles"], [data-ev-screen="holds"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main #ev-view .pair-table {
+    min-width:0 !important; width:100% !important;
+    & :is(th, td) { padding-left:9px !important; padding-right:9px !important; }
+    & td.evb-ev { width:auto !important; min-width:0 !important; }
+    & td.evb-event { max-width:200px !important; min-width:0 !important; }
+    & td.evb-event :is(strong, span, small, div, p) { max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    & td.pair-leg { min-width:0 !important; }
+    & td.pair-window { min-width:0 !important; }
+    & td.evb-actions > div { gap:4px !important; flex-wrap:nowrap !important; }
+    & td.evb-actions :is(button, a):not(.evb-icon) { padding:0 10px !important; white-space:nowrap; }
+  }
+}
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main #ev-view .dfs-slip-trigger > svg { transform:rotate(-90deg) !important; }
+}
+
+/* ---------------------------------------------------------------- polish pass */
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main {
+    /* Live pages: no tinted card behind the title. */
+    & > .ev-header { background:none !important; background-image:none !important; box-shadow:none !important; border:0 !important; }
+    & > .ev-header::before { display:none !important; background:none !important; }
+    /* Title and its badge stay on one line; the feed's long status text gives way first. */
+    & .ev-header .ev-heading { flex-wrap:nowrap !important; white-space:nowrap !important; }
+    & .ev-header .ev-data-badge { flex:none !important; white-space:nowrap !important; }
+    & > .ev-feed { position:relative; z-index:1; }
+    & > .ev-feed .ev-feed-meta { max-width:clamp(0px, calc(100vw - 1240px), 360px) !important; }
+    & > .ev-feed .ev-feed-meta:empty { display:none !important; }
+  }
+  /* The rail's Filters label sits clear of the first row on every tool. */
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main .ev-filter-panel .ev-filter-heading > strong { order:0 !important; margin:8px 0 6px !important; }
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter) { order:10 !important; }
+  /* Smart Money: the page title sits where every other page has it. */
+  html:root body.ev-page[data-site-page="ev"][data-site-page][data-ev-screen="sharp"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main {
+    & > .ev-header { display:grid !important; }
+    & #ev-view .sharp-page-title { display:none !important; }
+    & #ev-view .sharp-page-bar { justify-content:flex-end !important; }
+  }
+}
+html:root body.ev-page[data-site-page="ev"][data-ev-screen="sharp"] { --vo-ev-subtitle:'Where exchange liquidity disagrees with the sportsbooks'; }
+@media (min-width: 801px) and (max-width: 1799px) {
+  /* The "Up to date" badge already says the feed is fresh; the long status text only shows on wide screens. */
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main > .ev-feed .ev-feed-meta { display:none !important; }
+}
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main > .ev-header { position:relative; z-index:2; }
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main .ev-filter-panel .ev-filter-heading > strong { margin:10px 0 8px !important; }
+}
+
+/* ---------------------------------------------------------------- narrower windows on the other tools */
+/* Header: the feed status gets its own line under the title. */
+@media (min-width: 801px) and (max-width: 1100px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main {
+    & > .ev-header { grid-row:1 !important; grid-column:1 / -1 !important; }
+    & > .ev-feed { grid-row:2 !important; grid-column:1 / -1 !important; justify-self:start !important; margin:0 0 12px !important; }
+  }
+}
+/* Tool pages with filters: the panel moves above the content below 1500px; rows flow into columns. */
+@media (min-width: 801px) and (max-width: 1500px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main #ev-view .tool-workspace:has(> .tool-filter-bar) {
+    grid-template-columns:minmax(0,1fr) !important; grid-template-rows:none !important; row-gap:0 !important;
+    & .tool-filters { grid-column:1 !important; grid-row:1 !important; display:grid !important; grid-template-columns:minmax(0,1fr) 230px !important; column-gap:12px !important; align-items:center !important; padding:10px 8px 0 !important; }
+    & .tool-filters .tool-search { order:0 !important; margin:0 !important; }
+    & > .tool-filter-bar { grid-column:1 !important; grid-row:2 !important; display:grid !important; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)) !important; column-gap:12px !important; row-gap:1px !important; }
+    & > .tool-filter-bar::before { grid-column:1 / -1; }
+    & > .tool-content { grid-column:1 !important; grid-row:3 !important; margin-top:18px !important; }
+  }
+}
+/* Odds Screen, DFS Props and Smart Money: the same below 1100px. */
+@media (min-width: 801px) and (max-width: 1100px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main #ev-view {
+    & :is(.os-screen, .dfs-workspace, .sharp-workspace) { grid-template-columns:minmax(0,1fr) !important; grid-template-rows:none !important; }
+    & .os-screen .os-toolbar { grid-column:1 !important; grid-row:1 !important; }
+    & .os-screen .os-filterbar { display:grid !important; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)) !important; column-gap:12px !important; }
+    & .os-screen .os-filterbar .os-search { grid-column:1 / -1; }
+    & .os-screen .os-tabs-wrap { grid-column:1 !important; grid-row:2 !important; }
+    & .os-screen .os-tabs { display:grid !important; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)) !important; max-height:150px !important; min-height:0 !important; }
+    & .os-screen .os-board-meta { grid-column:1 !important; grid-row:3 !important; margin:18px 0 12px !important; }
+    & .os-screen > .os-grid-wrap { grid-column:1 !important; grid-row:4 !important; }
+    & .os-screen > .os-footnote { grid-column:1 !important; grid-row:5 !important; }
+    & .dfs-workspace > .dfs-controls { grid-column:1 !important; grid-row:1 !important; display:grid !important; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)) !important; column-gap:12px !important; }
+    & .dfs-workspace > .dfs-controls :is(.dfs-search, .dfs-slip-type)::before { grid-column:auto; }
+    & .dfs-workspace > .dfs-controls::before, & .dfs-workspace > .dfs-controls .dfs-search { grid-column:1 / -1; }
+    & .dfs-workspace > .dfs-platform-bar { grid-column:1 !important; grid-row:2 !important; }
+    & .dfs-workspace > .dfs-results-toolbar { grid-column:1 !important; grid-row:3 !important; margin:18px 0 12px !important; }
+    & .dfs-workspace .dfs-prop-list { grid-column:1 !important; grid-row:4 !important; }
+    & .dfs-workspace .dfs-slip-panel { grid-column:1 !important; grid-row:5 !important; position:static !important; }
+    & .dfs-workspace > .dfs-method-note { grid-column:1 !important; grid-row:6 !important; }
+    & .sharp-workspace > .sharp-filter-tray, & .sharp-workspace > .sharp-filter-tray[hidden] { grid-column:1 !important; grid-row:2 !important; display:grid !important; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)) !important; column-gap:12px !important; }
+    & .sharp-workspace > .sharp-filter-tray::before { grid-column:1 / -1; }
+  }
+}
+@media (min-width: 801px) and (max-width: 1500px) {
+  /* Middles: the window range is already shown under each amount; the actions keep their full label. */
+  html:root body.ev-page[data-site-page="ev"][data-site-page][data-ev-screen="middles"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main #ev-view .pair-table :is(th, td).pair-window,
+  html:root body.ev-page[data-site-page="ev"][data-site-page][data-ev-screen="middles"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main #ev-view .pair-table thead th:nth-child(6) { display:none !important; }
+}
+@media (min-width: 801px) and (max-width: 1100px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main #ev-view .dfs-workspace > .dfs-controls .dfs-slip-type { grid-column:1 / -1; }
+  html:root body.ev-page[data-site-page="ev"][data-site-page][data-ev-screen="middles"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main #ev-view .pair-table td.evb-event { max-width:150px !important; }
+  html:root body.ev-page[data-site-page="ev"][data-site-page][data-ev-screen="middles"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e) #main#main #ev-view .pair-table td.evb-event * { max-width:150px !important; }
+}
+/* Scrolling tables contain their own absolutely positioned labels, so nothing widens the page. */
+html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d) #main#main #ev-view :is(.evb-table-wrap, .os-grid-wrap) { position:relative !important; }
+
+/* =====================================================================================================
+   Modern, roomier +EV (v3). Same structure; more air. Larger type, 40px rows, softer elevated cards,
+   a 300px filter panel, generous table padding. Everything here only changes size, spacing and surface.
+   ===================================================================================================== */
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f) #main#main {
+    padding:34px 40px 64px !important;
+    & > .ev-header { gap:8px !important; margin-bottom:22px !important; }
+    & #ev-page-title { font-size:32px !important; font-weight:680 !important; letter-spacing:-.03em !important; }
+    & > .ev-header::after { font-size:15px !important; color:var(--sl-muted) !important; }
+    & .ev-data-badge { height:26px !important; padding:0 11px !important; font-size:12px !important; background:rgb(255 255 255/.03) !important; }
+    & > .ev-feed { gap:12px !important; }
+    & > .ev-feed :is(button, select, a) { height:34px !important; padding:0 14px !important; border-radius:11px !important; }
+    & > #ev-suite-controls { margin-bottom:22px !important; }
+    & #ev-suite-controls :is(nav > button, summary, .evx-toolbar-end > button) { height:34px !important; padding:0 14px !important; font-size:13.5px !important; border-radius:11px !important; }
+    & #ev-suite-controls .evx-view-toggle { height:38px !important; padding:3px !important; border-radius:12px !important; }
+    & #ev-suite-controls .evx-view-toggle button { height:30px !important; padding:0 14px !important; font-size:13px !important; border-radius:9px !important; }
+
+    /* ---------------------------------------------------------------- the filter panel */
+    & :is(.ev-control-grid > .ev-filter-panel, .ev-control-grid > .ev-stake-panel, > .ev-bookbar),
+    & #ev-view :is(.tool-workspace:has(> .tool-filter-bar) .tool-filters, .tool-filter-bar, .os-toolbar, .os-tabs-wrap, .dfs-controls, .dfs-platform-bar, .sharp-filter-tray) {
+      background:var(--sl-panel) !important; border-color:var(--sl-line) !important;
+    }
+    & .ev-control-grid > .ev-filter-panel { padding:8px 10px 10px !important; border-radius:18px 18px 0 0 !important; }
+    & .ev-control-grid > .ev-stake-panel { padding:0 10px 10px !important; }
+    & > .ev-bookbar { padding:0 10px 16px !important; border-radius:0 0 18px 18px !important; gap:10px !important; }
+    & #ev-view :is(.tool-filters, .os-toolbar, .dfs-controls):is(*) { border-top-left-radius:18px !important; border-top-right-radius:18px !important; }
+    & #ev-view :is(.tool-filter-bar, .os-tabs-wrap, .dfs-platform-bar) { border-bottom-left-radius:18px !important; border-bottom-right-radius:18px !important; padding:8px 10px 12px !important; }
+    & #ev-view .sharp-filter-tray { border-radius:18px !important; padding:8px 10px 12px !important; }
+
+    /* Section labels. */
+    & .ev-filter-panel .ev-filter-heading > strong, & .ev-stake-panel::before, & .ev-bookbar .ev-book-picker::before,
+    & #ev-view :is(.tool-filter-bar, .os-tabs-wrap, .dfs-controls, .dfs-platform-bar, .sharp-filter-tray)::before {
+      margin:14px 0 8px !important; padding:0 12px !important; font-size:11px !important; letter-spacing:.12em !important;
+    }
+
+    /* Rows: 40px, 14px type, 18px icons. */
+    & .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter, label.ev-recommend.choice-field) {
+      min-height:40px !important; height:40px !important; max-height:40px !important; padding:0 8px 0 12px !important; column-gap:12px !important; grid-template-columns:18px minmax(0,1fr) auto !important; border-radius:11px !important;
+    }
+    & .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter, label.ev-recommend.choice-field)::before { width:18px !important; height:18px !important; }
+    & .ev-filter-panel :is(.ev-reference-filters label, .ev-design-filter, label.ev-recommend.choice-field)::after { font-size:14px !important; }
+    & .ev-filter-panel .td-choice-trigger { font-size:13.5px !important; gap:6px !important; }
+    & .ev-filter-panel .td-choice-trigger > svg { width:12px !important; height:12px !important; }
+    & .ev-filter-panel label.ev-recommend.choice-field { margin-top:8px !important; padding-top:0 !important; }
+    & .ev-filter-panel #ev-reset-filters { height:38px !important; padding:0 12px !important; font-size:13.5px !important; border-radius:11px !important; gap:12px !important; }
+    & .ev-filter-panel #ev-reset-filters::before { width:18px !important; height:18px !important; }
+    & .ev-stake-panel > :is(label, .ev-multiplier-field) { min-height:44px !important; padding:0 4px 0 12px !important; font-size:14px !important; border-radius:11px !important; gap:12px !important; }
+    & .ev-stake-panel > :is(label, .ev-multiplier-field)::before { width:18px !important; height:18px !important; }
+    & .ev-stake-panel .ev-input-wrap { height:34px !important; border-radius:10px !important; padding:0 11px !important; background:var(--sl-sunken) !important; }
+    & .ev-stake-panel .ev-input-wrap input { height:32px !important; font-size:14px !important; }
+    & .ev-bookbar .ev-book-list { padding:4px 0 10px 12px !important; gap:6px !important; }
+    & .ev-bookbar :is(.ev-selected-book, .ev-book-overflow) { width:30px !important; height:30px !important; min-width:30px !important; min-height:30px !important; max-height:30px !important; border-radius:9px !important; }
+    & .ev-bookbar .ev-selected-book :is(.ev-book-symbol, img) { width:100% !important; height:100% !important; }
+    & .ev-bookbar #ev-books-more { height:40px !important; }
+    & .ev-bookbar #ev-books-more::after { height:40px !important; padding:0 30px 0 42px !important; font-size:14px !important; border-radius:11px !important; }
+    & .ev-bookbar #ev-books-more::before { left:12px !important; bottom:11px !important; width:18px !important; height:18px !important; }
+    & .ev-bookbar .ev-book-picker::after { bottom:14px !important; right:12px !important; }
+    & #ev-timing-toggle { height:40px !important; padding:4px !important; border-radius:12px !important; margin-top:6px !important; }
+    & #ev-timing-toggle span { height:30px !important; line-height:30px !important; border-radius:9px !important; font-size:13.5px !important; }
+    & #ev-find { height:46px !important; border-radius:13px !important; font-size:15px !important; font-weight:650 !important; box-shadow:0 10px 30px -14px rgb(163 240 107/.55) !important; }
+
+    /* Other tools' panel rows. */
+    & #ev-view :is(.tool-filter-bar .tool-filter, .tool-filters > label.choice-field, .os-filterbar .os-field.choice-field, .dfs-controls .dfs-filter, .sharp-filter-tray > label.choice-field) {
+      border-radius:11px !important;
+      & .td-choice-trigger { height:40px !important; padding:0 10px 0 42px !important; font-size:14px !important; border-radius:11px !important; }
+      & .choice-trigger-copy > strong { font-size:13.5px !important; }
+      &::before { left:12px !important; top:11px !important; width:18px !important; height:18px !important; }
+    }
+    & #ev-view .dfs-slip-trigger { height:40px !important; padding:0 10px 0 42px !important; font-size:14px !important; border-radius:11px !important; }
+    & #ev-view .dfs-slip-trigger::before { left:12px !important; top:11px !important; width:18px !important; height:18px !important; }
+    & #ev-view :is(.tool-workspace:has(> .tool-filter-bar) .tool-filters .tool-search, .os-filterbar .os-search, .dfs-controls .dfs-search, .tool-workspace:not(:has(> .tool-filter-bar)) .tool-filters .tool-search) {
+      height:42px !important; border-radius:12px !important; padding:0 12px !important;
+      & input { height:40px !important; font-size:14px !important; }
+    }
+    & #ev-view .os-tab { height:36px !important; line-height:36px !important; font-size:14px !important; padding:0 12px !important; border-radius:10px !important; }
+    & #ev-view .tool-workspace:not(:has(> .tool-filter-bar)) .tool-filters > label.choice-field { border-radius:12px !important; }
+    & #ev-view .tool-workspace .tool-heading-actions :is(button, a) { height:42px !important; padding:0 18px !important; border-radius:12px !important; font-size:14px !important; }
+    & #ev-view .sharp-filter-tray .sharp-min-field { height:42px !important; font-size:14px !important; padding-left:42px !important; }
+    & #ev-view .sharp-filter-tray .sharp-min-field::before { left:12px !important; top:12px !important; width:18px !important; height:18px !important; }
+
+    /* ---------------------------------------------------------------- dropdowns */
+    & :is(#ev-view, .ev-control-grid) .td-choice-menu { padding:8px !important; border-radius:16px !important; background:var(--sl-panel-2) !important; border-color:var(--sl-line-2) !important; box-shadow:0 30px 70px -20px rgb(0 0 0/.85), 0 0 0 1px rgb(0 0 0/.3) !important; }
+    & :is(#ev-view, .ev-control-grid) .td-choice-menu .td-choice-option { min-height:40px !important; padding:8px 12px !important; font-size:14px !important; border-radius:10px !important; }
+    & :is(#ev-view, .ev-control-grid) .td-choice-menu .choice-heading { padding:8px 12px !important; font-size:11px !important; }
+    & #ev-book-menu:not([hidden]) { width:340px !important; padding:8px !important; border-radius:18px !important; background:var(--sl-panel-2) !important; }
+    & #ev-book-menu .ev-book-option { height:40px !important; min-height:40px !important; padding:0 12px !important; border-radius:10px !important; font-size:14px !important; grid-template-columns:18px 26px minmax(0,1fr) !important; column-gap:12px !important; }
+    & #ev-book-menu .ev-book-option input[type="checkbox"] { width:18px !important; height:18px !important; border-radius:6px !important; }
+    & #ev-book-menu .ev-book-option-mark { width:26px !important; height:26px !important; border-radius:8px !important; }
+    & #ev-book-menu .ev-book-search input { height:40px !important; border-radius:11px !important; font-size:14px !important; }
+    & #ev-book-menu .ev-book-search::before { top:13px !important; }
+    & #ev-book-menu .ev-book-menu-actions button { height:38px !important; border-radius:11px !important; font-size:13.5px !important; }
+
+    /* ---------------------------------------------------------------- bets */
+    & .evb-summary { font-size:14px !important; }
+    & .evb-summary dl > div { height:32px !important; padding:0 14px !important; font-size:13px !important; background:var(--sl-panel) !important; }
+    & .evb-table { border-spacing:0 10px !important; margin-top:-10px !important; }
+    & .evb-table thead th { height:34px !important; font-size:12.5px !important; padding:0 20px !important; }
+    & .evb-table tbody td { padding:20px 20px !important; background:var(--sl-panel) !important; border-color:var(--sl-line) !important; }
+    & .evb-table tbody .evb-row > td:first-child { border-radius:18px 0 0 18px !important; }
+    & .evb-table tbody .evb-row > td:last-child { border-radius:0 18px 18px 0 !important; }
+    & .evb-row:hover > td { background:var(--sl-panel-2) !important; }
+    & .evb-ev strong { font-size:22px !important; }
+    & .evb-ev :is(small, .evb-ev-per) { font-size:12.5px !important; margin-top:4px !important; }
+    & .evb-pick-market { font-size:13px !important; margin-bottom:4px !important; }
+    & .evb-pick > strong { font-size:16px !important; }
+    & .evb-event > strong { font-size:14px !important; }
+    & .evb-event .evb-league { font-size:12.5px !important; margin-top:5px !important; }
+    & .evb-book-price .evb-price { font-size:17px !important; }
+    & .evb-book-price small { font-size:12.5px !important; }
+    & :is(.evb-book-price, .evb-bet) .evb-book-logo :is(img, .evb-book-initials) { width:36px !important; height:36px !important; border-radius:11px !important; }
+    & :is(.evb-prob, .evb-stake) strong { font-size:15px !important; }
+    & :is(.evb-prob, .evb-stake) small { font-size:12.5px !important; margin-top:4px !important; }
+    & .evb-actions > div { gap:6px !important; }
+    & .evb-actions .evb-icon { width:38px !important; height:38px !important; background:rgb(255 255 255/.03) !important; }
+    & .evb-detail-row > td { border-radius:0 0 18px 18px !important; padding:0 20px 20px !important; }
+    & .evd-panel { padding:18px 0 6px !important; }
+    & .evd-panel .evd-tool { width:40px !important; height:40px !important; }
+
+    /* Cards and panels inside the tools. */
+    & #ev-view :is(.tool-panel, .dfs-slip-panel, .tool-card, .evc-card, .os-grid-wrap, .sharp-list-empty) { border-radius:18px !important; }
+    & #ev-view :is(.evb-results-bar, .dfs-results-toolbar, .os-board-meta) { margin-bottom:16px !important; }
+  }
+
+  /* Panel width and the gap beside it. */
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f) #main#main { grid-template-columns:minmax(0,1fr) 300px !important; column-gap:28px !important; }
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f) #main#main #ev-view {
+    & .tool-workspace:has(> .tool-filter-bar), & .os-screen, & .sharp-workspace { grid-template-columns:minmax(0,1fr) 300px !important; column-gap:28px !important; }
+    & .dfs-workspace { grid-template-columns:minmax(0,1fr) 320px !important; column-gap:28px !important; }
+  }
+}
+/* Laptops: a slightly narrower panel and two-line bet rows with room to breathe. */
+@media (min-width: 1101px) and (max-width: 1440px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f) #main#main { grid-template-columns:minmax(0,1fr) 272px !important; column-gap:22px !important; padding:30px 28px 56px !important; }
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f) #main#main .evb-table:has(.evb-pick) {
+    & > thead > tr, & > tbody > tr.evb-row { grid-template-columns:110px minmax(0,1fr) 150px 92px 80px 92px !important; column-gap:14px !important; }
+    & > tbody { gap:10px !important; }
+    & > tbody > tr.evb-row { padding:16px 18px !important; border-radius:18px !important; background:var(--sl-panel) !important; row-gap:4px !important; }
+    & > tbody > tr.evb-row > td { padding:0 !important; background:none !important; }
+    & .evb-actions .evb-icon { width:30px !important; height:30px !important; }
+    & .evb-ev strong { font-size:20px !important; }
+    & .evb-pick > strong { font-size:15px !important; }
+  }
+}
+@media (min-width: 801px) and (max-width: 1500px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f) #main#main #ev-view .tool-workspace:has(> .tool-filter-bar) { grid-template-columns:minmax(0,1fr) !important; }
+}
+@media (min-width: 801px) and (max-width: 1100px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f) #main#main {
+    grid-template-columns:minmax(0,1fr) !important; padding:26px 24px 48px !important;
+    & #ev-view :is(.os-screen, .dfs-workspace, .sharp-workspace) { grid-template-columns:minmax(0,1fr) !important; }
+  }
+}
+
+/* Two-line bet cards up to 1900px: the bet on top, the game underneath, every column in view. */
+@media (min-width: 801px) and (max-width: 1899px) {
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f):not(#evo-g) #main#main .evb-table:has(.evb-pick) {
+    display:block !important; min-width:0 !important; width:100% !important; margin:0 !important; border-spacing:0 !important;
+    & > thead, & > tbody { display:block !important; }
+    & > tbody { display:flex !important; flex-direction:column !important; gap:12px !important; }
+    & > thead > tr, & > tbody > tr.evb-row {
+      display:grid !important; grid-template-columns:128px minmax(0,1fr) 178px 118px 104px 132px !important; align-items:center !important; column-gap:18px !important;
+      grid-template-areas:"ev pick book fair stake actions" "ev event book fair stake actions" !important;
+    }
+    & > thead > tr { padding:0 22px 6px !important; }
+    & > thead th { display:block !important; height:auto !important; padding:0 !important; background:none !important; }
+    & > thead th:nth-child(1) { grid-area:ev; } & > thead th:nth-child(2) { grid-area:pick; } & > thead th:nth-child(3) { display:none !important; }
+    & > thead th:nth-child(4) { grid-area:book; } & > thead th:nth-child(5) { grid-area:fair; } & > thead th:nth-child(6) { grid-area:stake; } & > thead th:nth-child(7) { grid-area:actions; }
+    & > tbody > tr.evb-row { padding:20px 22px !important; row-gap:6px !important; border:1px solid var(--sl-line) !important; border-radius:18px !important; background:var(--sl-panel) !important; transition:background-color .12s, border-color .12s; }
+    & > tbody > tr.evb-row:hover { background:var(--sl-panel-2) !important; border-color:var(--sl-line-2) !important; }
+    & > tbody > tr.evb-row.is-open { border-bottom-color:transparent !important; border-radius:18px 18px 0 0 !important; background:var(--sl-panel-2) !important; }
+    & > tbody > tr.evb-row > td { display:block !important; min-width:0 !important; max-width:none !important; width:auto !important; padding:0 !important; border:0 !important; border-radius:0 !important; background:none !important; box-shadow:none !important; }
+    & > tbody > tr.evb-row:hover > td, & > tbody > tr.evb-row.is-open > td { background:none !important; }
+    & .evb-ev { grid-area:ev; } & .evb-pick { grid-area:pick; align-self:end; } & .evb-event { grid-area:event; align-self:start; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    & .evb-book-price { grid-area:book; } & .evb-prob { grid-area:fair; } & .evb-stake { grid-area:stake; } & .evb-actions { grid-area:actions; justify-self:end; }
+    & .evb-pick > strong { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:16px !important; }
+    & .evb-pick-market { margin-bottom:2px !important; }
+    & .evb-event > strong { display:inline !important; font-size:13.5px !important; color:var(--sl-muted) !important; font-weight:500 !important; }
+    & .evb-event .evb-league { display:inline-flex !important; margin:0 0 0 8px !important; }
+    & .evb-actions > div { gap:6px !important; flex-wrap:nowrap !important; }
+    & .evb-actions .evb-icon { width:36px !important; height:36px !important; }
+    & > tbody > tr.evb-detail-row { display:block !important; margin-top:-12px; }
+    & > tbody > tr.evb-detail-row > td { display:block !important; border:1px solid var(--sl-line) !important; border-top:0 !important; border-radius:0 0 18px 18px !important; background:var(--sl-panel-2) !important; }
+  }
+  /* Middles: the window range already shows under each amount. */
+  html:root body.ev-page[data-site-page="ev"][data-site-page][data-ev-screen="middles"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f) #main#main #ev-view .pair-table :is(td.pair-window, thead th:nth-child(6)) { display:none !important; }
+}
+@media (min-width: 801px) and (max-width: 1440px) {
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f):not(#evo-g) #main#main .evb-table:has(.evb-pick) {
+    & > thead > tr, & > tbody > tr.evb-row { grid-template-columns:112px minmax(0,1fr) 150px 96px 84px 124px !important; column-gap:14px !important; }
+    & > tbody > tr.evb-row { padding:18px 18px !important; }
+    & > thead > tr { padding:0 18px 6px !important; }
+    & .evb-actions .evb-icon { width:34px !important; height:34px !important; }
+    & .evb-actions > div { gap:4px !important; }
+  }
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f):not(#evo-g) #main#main .ev-stake-panel .ev-input-wrap { width:108px !important; max-width:108px !important; }
+}
+@media (min-width: 801px) and (max-width: 1899px) {
+  /* Bet cards: narrower number columns so the bet itself gets the room. */
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f):not(#evo-g):not(#evo-h) #main#main .evb-table:has(.evb-pick) {
+    & > thead > tr, & > tbody > tr.evb-row { grid-template-columns:112px minmax(0,1fr) 150px 100px 88px 126px !important; column-gap:16px !important; }
+  }
+  /* Middles and Low holds: the calculator is an icon button (its name stays in the label and tooltip). */
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen="middles"], [data-ev-screen="holds"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f):not(#evo-g) #main#main #ev-view .pair-table {
+    & td.evb-actions .evb-link { width:38px !important; height:38px !important; min-width:0 !important; padding:0 !important; justify-content:center !important; border-radius:50% !important; }
+    & td.evb-actions .evb-link > span { display:none !important; }
+    & td.evb-event { max-width:180px !important; }
+    & td.evb-event * { max-width:180px !important; }
+    & td.evb-ev { width:120px !important; }
+  }
+}
+@media (min-width: 801px) and (max-width: 1440px) {
+  /* Laptops: the stake sits under fair value, so the bet column keeps its width. */
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f):not(#evo-g):not(#evo-h) #main#main .evb-table:has(.evb-pick) {
+    & > thead > tr, & > tbody > tr.evb-row { grid-template-columns:104px minmax(0,1fr) 140px 104px 118px !important; column-gap:14px !important;
+      grid-template-areas:"ev pick book fair actions" "ev event book stake actions" !important; }
+    & > thead th:nth-child(6) { display:none !important; }
+    & .evb-prob { align-self:end; } & .evb-stake { align-self:start; }
+    & .evb-stake strong { display:inline !important; font-size:13.5px !important; }
+    & .evb-stake small { display:inline !important; margin-left:6px !important; }
+    & .evb-prob small { display:none !important; }
+  }
+}
+@media (min-width: 801px) and (max-width: 1440px) {
+  html:root body.ev-page[data-site-page="ev"]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f):not(#evo-g):not(#evo-h):not(#evo-i) #main#main .evb-table:has(.evb-pick) {
+    & > thead > tr, & > tbody > tr.evb-row { grid-template-columns:120px minmax(0,1fr) 136px 100px 112px !important; column-gap:12px !important; }
+    & .evb-ev .evb-ev-per { font-size:11.5px !important; }
+    & .evb-actions .evb-icon { width:32px !important; height:32px !important; }
+  }
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f):not(#evo-g):not(#evo-h) #main#main .ev-stake-panel {
+    & > :is(label, .ev-multiplier-field) { font-size:13.5px !important; gap:10px !important; padding-right:0 !important; }
+    & .ev-input-wrap { width:92px !important; max-width:92px !important; }
+  }
+}
+@media (min-width: 801px) and (max-width: 1899px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen="middles"], [data-ev-screen="holds"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f):not(#evo-g):not(#evo-h) #main#main #ev-view .pair-table {
+    & td.evb-event, & td.evb-event * { max-width:150px !important; }
+    & td.evb-ev { width:108px !important; }
+    & :is(th, td) { padding-left:8px !important; padding-right:8px !important; }
+  }
+}
+
+/* =====================================================================================================
+   Header clean-up: one title row with a quiet status line, one tool row, one summary line.
+   Removed (duplicates): the data-kind badge (the status line says it), "Quote feed", All tools (the
+   sidebar lists every tool), Install app, and the Books/Bankroll chips (the filter panel shows both).
+   ===================================================================================================== */
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f):not(#evo-g) #main#main {
+    & .ev-header .ev-data-badge { display:none !important; }
+    & > .ev-header { margin-bottom:26px !important; }
+
+    /* Status line: a dot, the state, the refresh interval and a text link. */
+    & > .ev-feed { gap:6px !important; align-self:start !important; padding-top:10px !important; }
+    & > .ev-feed .ev-feed-row { display:contents !important; }
+    & > .ev-feed .ev-feed-summary { gap:8px !important; }
+    & > .ev-feed .ev-feed-summary > strong { display:none !important; }
+    & > .ev-feed [data-feed-status] {
+      display:inline-flex !important; align-items:center !important; gap:8px !important; height:auto !important; padding:0 !important; border:0 !important; background:none !important;
+      color:var(--sl-text-2) !important; font-size:13px !important; font-weight:500 !important;
+    }
+    & > .ev-feed [data-feed-status]::before { content:''; width:7px; height:7px; border-radius:50%; background:var(--sl-lime); box-shadow:0 0 0 4px rgb(163 240 107/.12); }
+    & > .ev-feed [data-feed-status][data-tone="warning"]::before { background:var(--sl-amber); box-shadow:0 0 0 4px rgb(226 191 116/.14); }
+    & > .ev-feed [data-feed-status][data-tone="error"]::before { background:var(--sl-red); box-shadow:0 0 0 4px rgb(236 138 128/.14); }
+    & > .ev-feed .ev-feed-refresh { position:relative; display:inline-flex !important; align-items:center !important; height:auto !important; margin:0 !important; padding:0 0 0 14px !important; border:0 !important; background:none !important; font-size:0 !important; color:transparent !important; }
+    & > .ev-feed .ev-feed-refresh::before { content:'·'; position:absolute; left:3px; color:var(--sl-faint); font-size:13px; }
+    & > .ev-feed .ev-feed-refresh .td-choice-trigger {
+      height:28px !important; padding:0 8px !important; gap:6px !important; border:0 !important; border-radius:8px !important; background:none !important; box-shadow:none !important;
+      color:var(--sl-muted) !important; font-size:13px !important; font-weight:500 !important;
+    }
+    & > .ev-feed .ev-feed-refresh .td-choice-trigger:hover { background:rgb(255 255 255/.04) !important; color:var(--sl-text) !important; }
+    & > .ev-feed .ev-feed-refresh .choice-trigger-label { display:none !important; }
+    & > .ev-feed .ev-feed-refresh .choice-trigger-copy > strong { color:inherit !important; font:inherit !important; }
+    & > .ev-feed .ev-feed-row > a {
+      position:relative; height:28px !important; padding:0 8px 0 18px !important; border:0 !important; border-radius:8px !important; background:none !important; box-shadow:none !important;
+      color:var(--sl-muted) !important; font-size:13px !important; font-weight:500 !important; display:inline-flex !important; align-items:center !important;
+    }
+    & > .ev-feed .ev-feed-row > a::before { content:'·'; position:absolute; left:6px; color:var(--sl-faint); }
+    & > .ev-feed .ev-feed-row > a::after { display:none !important; }
+    & > .ev-feed .ev-feed-row > a:hover { color:var(--sl-text) !important; background:rgb(255 255 255/.04) !important; }
+    & > .ev-feed .ev-feed-meta { display:none !important; }
+
+    /* Tool row. */
+    & > #ev-suite-controls { margin-bottom:26px !important; }
+    & #ev-suite-controls .evx-tools-menu, & #ev-suite-controls [data-suite-action="install"] { display:none !important; }
+    & #ev-suite-controls nav { gap:2px !important; }
+    & #ev-suite-controls :is(nav > button, .evx-toolbar-end > button) { border:0 !important; background:none !important; color:var(--sl-muted) !important; }
+    & #ev-suite-controls :is(nav > button, .evx-toolbar-end > button):hover { color:var(--sl-text) !important; background:rgb(255 255 255/.04) !important; }
+    & #ev-suite-controls .evx-toolbar-end { gap:10px !important; }
+    & #ev-suite-controls .evx-view-toggle { border-color:var(--sl-line) !important; background:rgb(255 255 255/.02) !important; }
+  }
+  /* Summary line: the count and the top edge only. */
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:is([data-ev-screen^="ev-"], [data-ev-screen^="arb-"]):not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f):not(#evo-g) #main#main #ev-view .evb-summary dl > div:nth-child(n+2) { display:none !important; }
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f):not(#evo-g) #main#main #ev-view .evb-summary { margin-bottom:6px !important; }
+}
+/* +EV dashboard: no sport switcher. */
+html:root body.site-layout:not(#vo-x) #main [data-hd-product="ev"] #hd-sports { display:none !important; }
+@media (min-width: 801px) {
+  html:root body.ev-page[data-site-page="ev"][data-site-page]:not(#evo-a):not(#evo-b):not(#evo-c):not(#evo-d):not(#evo-e):not(#evo-f):not(#evo-g) #main#main > .ev-feed .ev-feed-summary::before { display:none !important; content:none !important; }
+}

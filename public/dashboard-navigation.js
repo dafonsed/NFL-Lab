@@ -11,36 +11,8 @@ export function initDashboardNavigation(doc=document) {
   const toggle=doc.querySelector('[data-sidebar-toggle]'),closeButton=sidebar.querySelector('[data-sidebar-close]');
   const backdrop=doc.querySelector('.dashboard-sidebar-backdrop');
   const mobile=win.matchMedia('(max-width: 800px)');
-  const more=sidebar.querySelector('.dashboard-more-tools');
-  const moreTrigger=more?.querySelector('summary'),groups=more?.querySelector('#dashboard-tool-groups');
   const inertBefore=new Map();
-  let opened=false,returnFocus=null,toolsOpen=false,lastContext='',drawerHistory=false;
-  if(groups)groups.popover='manual';
-  const positionTools=()=>{
-    if(!groups||!moreTrigger)return;
-    if(mobile.matches){groups.style.left='12px';groups.style.right='12px';groups.style.top='76px';}
-    else {
-      groups.style.left=sidebar.getBoundingClientRect().right+12+'px';groups.style.right='auto';
-      const height=groups.getBoundingClientRect().height,anchor=moreTrigger.getBoundingClientRect();
-      groups.style.top=Math.max(16,Math.min(anchor.top-40,win.innerHeight-height-16))+'px';
-    }
-    groups.style.bottom='auto';
-  };
-  const closeTools=(restoreFocus=false)=>{
-    if(!more)return;
-    const wasOpen=toolsOpen||more.open;
-    more.open=false;moreTrigger?.setAttribute('aria-expanded','false');
-    if(toolsOpen)groups?.hidePopover?.();
-    toolsOpen=false;
-    if(wasOpen&&restoreFocus&&moreTrigger?.isConnected)moreTrigger.focus({preventScroll:true});
-  };
-  const openTools=(focusFirst=false)=>{
-    if(!more||!groups||sidebar.inert)return;
-    more.open=true;moreTrigger?.setAttribute('aria-expanded','true');
-    if(!toolsOpen){groups.showPopover?.();toolsOpen=true;}
-    positionTools();
-    if(focusFirst)groups.querySelector('a[href]')?.focus({preventScroll:true});
-  };
+  let opened=false,returnFocus=null,drawerHistory=false;
   const focusable=()=>[...sidebar.querySelectorAll('a[href],button:not([disabled]),summary,input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(node=>!node.closest('[hidden],[inert]')&&node.getClientRects().length);
   const lockOutside=()=>{
     for(const node of body.children) {
@@ -61,7 +33,6 @@ export function initDashboardNavigation(doc=document) {
   };
   const close=(restoreFocus=true,consumeHistory=true)=>{
     const wasOpen=opened;
-    closeTools();
     opened=false;unlockOutside();reflect();
     if(wasOpen&&restoreFocus&&returnFocus?.isConnected)returnFocus.focus({preventScroll:true});
     returnFocus=null;
@@ -84,28 +55,40 @@ export function initDashboardNavigation(doc=document) {
     for(const link of sidebar.querySelectorAll('[data-dashboard-section]'))link.href=destinations[link.dataset.dashboardSection];
     for(const link of sidebar.querySelectorAll('.site-product-menu [data-product]'))link.href=productDashboardUrl(link.dataset.product,sport);
     const key=path==='/ev'?(url.hash.slice(1)||'ev-pre'):'';
-    let moreSelected=false;
     for(const link of sidebar.querySelectorAll('[data-ev-nav],[data-more-tool]')) {
       const tool=link.dataset.moreTool||new URL(link.href,url).hash.slice(1);
-      link.href=evToolUrl(tool,sport);
-      const selected=Boolean(key)&&tool===key;
-      if(selected)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
-      if(link.hasAttribute('data-more-tool')&&selected)moreSelected=true;
+      link.href=evToolUrl(tool);
+      if(Boolean(key)&&tool===key)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
     }
-    if(more){more.classList.toggle('has-current-tool',moreSelected);moreTrigger?.classList.toggle('has-current-tool',moreSelected);}
-    // EV tools live behind one path: a sport pill switches the sport but stays on the active tool,
-    // and follows in-place sport changes. Pills may have been moved into the page heading.
-    if(key){
-      const codes=Object.keys(SPORTS);
-      doc.querySelectorAll('.site-sports a').forEach((link,index)=>{
-        const code=link.dataset.sport||codes[index];
-        if(!code)return;
-        link.href=evToolUrl(key,code);
-        if(code===sport)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
-      });
-    }
-    lastContext=url.pathname+url.search+url.hash;
   };
+  // Desktop collapse: icon-only rail, remembered in this browser. Collapsed items keep their names as tooltips.
+  const collapseButton=sidebar.querySelector('[data-sidebar-collapse]');
+  let titled=[];
+  const applyCollapse=collapsed=>{
+    body.classList.toggle('vo-sidebar-collapsed',collapsed);
+    collapseButton?.setAttribute('aria-pressed',String(collapsed));
+    collapseButton?.setAttribute('aria-label',collapsed?'Expand navigation':'Collapse navigation');
+    for(const item of titled)item.removeAttribute('title');
+    titled=[];
+    if(!collapsed)return;
+    for(const item of sidebar.querySelectorAll('a[href],summary,.site-settings-toggle,.site-dev-toggle,.dashboard-search')){
+      const label=item.getAttribute('aria-label')||item.querySelector('span')?.textContent?.trim();
+      if(label&&!item.hasAttribute('title')){item.setAttribute('title',label);titled.push(item);}
+    }
+  };
+  // Footer controls show only their icons, so each keeps its name as a tooltip.
+  for(const item of sidebar.querySelectorAll('.dashboard-sidebar-footer :is(summary,.site-settings-toggle,.site-dev-toggle)')){
+    const label=item.getAttribute('aria-label')||item.querySelector('span')?.textContent?.trim();
+    if(label&&!item.hasAttribute('title'))item.setAttribute('title',label);
+  }
+  let storedCollapse=false;
+  try{storedCollapse=win.localStorage?.getItem('vo-sidebar-collapsed')==='1';}catch{}
+  if(storedCollapse&&!mobile.matches)applyCollapse(true);
+  collapseButton?.addEventListener('click',()=>{
+    const next=!body.classList.contains('vo-sidebar-collapsed');
+    applyCollapse(next);
+    try{win.localStorage?.setItem('vo-sidebar-collapsed',next?'1':'0');}catch{}
+  });
   toggle?.addEventListener('click',()=>opened?close():open());
   closeButton?.addEventListener('click',()=>close());
   backdrop?.addEventListener('click',()=>close());
@@ -115,7 +98,6 @@ export function initDashboardNavigation(doc=document) {
     else if(event.target.closest('[data-display-settings]'))close(true,false);
   });
   doc.addEventListener('keydown',event=>{
-    if(event.key==='Escape'&&toolsOpen){event.preventDefault();event.stopPropagation?.();closeTools(true);return;}
     if(!opened)return;
     if(event.key==='Escape'){event.preventDefault();close();return;}
     if(event.key!=='Tab')return;
@@ -125,11 +107,6 @@ export function initDashboardNavigation(doc=document) {
     else if(!event.shiftKey&&(doc.activeElement===last||!sidebar.contains(doc.activeElement))){event.preventDefault();first.focus();}
   });
   doc.addEventListener('focusin',event=>{if(opened&&!sidebar.contains(event.target))(focusable()[0]||sidebar).focus({preventScroll:true});});
-  moreTrigger?.addEventListener('click',event=>{event.preventDefault();toolsOpen?closeTools(true):openTools();});
-  moreTrigger?.addEventListener('keydown',event=>{if(event.key==='ArrowDown'){event.preventDefault();openTools(true);}});
-  more?.addEventListener('toggle',()=>more.open?openTools():closeTools());
-  groups?.addEventListener('click',event=>{if(event.target.closest('[data-more-close]'))closeTools(true);});
-  doc.addEventListener('pointerdown',event=>{if(toolsOpen&&!more.contains(event.target))closeTools();});
   mobile.addEventListener('change',()=>{
     const hadSidebarFocus=sidebar.contains(doc.activeElement);
     close(false);
@@ -137,17 +114,12 @@ export function initDashboardNavigation(doc=document) {
   });
   win.addEventListener('hashchange',()=>{close();sync();});
   win.addEventListener('popstate',()=>{close(true,false);sync();});
-  win.addEventListener('resize',()=>closeTools(true));
-  doc.addEventListener('ev-tool-change',()=>{
-    const url=new URL(win.location.href);
-    if(url.pathname+url.search+url.hash!==lastContext)closeTools();
-    sync();
-  });
+  doc.addEventListener('ev-tool-change',sync);
   doc.addEventListener('change',event=>{if(event.target.matches('#sport-filter'))sync();});
   new win.MutationObserver(()=>{if(opened)lockOutside();}).observe(body,{childList:true});
-  const controller={open,close,sync,openTools,closeTools};
+  const controller={open,close,sync};
   initialized.set(sidebar,controller);
-  closeTools();reflect();sync();
+  reflect();sync();
   return controller;
 }
 

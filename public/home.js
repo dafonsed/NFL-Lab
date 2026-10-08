@@ -21,7 +21,8 @@ const $ = s => document.querySelector(s), params = new URLSearchParams(location.
 const put = (selector, html) => { const node = $(selector); if (node) node.innerHTML = html; };
 const product = document.getElementById('home-dashboard')?.dataset.hdProduct || '';
 const PRODUCT_NAMES = {models:'Models', trends:'Trends', ev:'+EV'};
-const sport = Object.hasOwn(SPORTS, params.get('sport')) ? params.get('sport') : product === 'ev' ? 'all' : 'mlb', label = sport === 'all' ? 'All sports' : SPORTS[sport];
+// +EV covers every sport at one address; the other dashboards are per sport.
+const sport = product === 'ev' ? 'all' : Object.hasOwn(SPORTS, params.get('sport')) ? params.get('sport') : 'mlb', label = sport === 'all' ? 'All sports' : SPORTS[sport];
 const defaults = {nfl:'rec_yds', mlb:'hits', nba:'points', wnba:'points', nhl:'shots', soccer:'shots'}, market = defaults[sport];
 const zone = sport === 'mlb' ? 'America/New_York' : 'America/Phoenix';
 const today = new Intl.DateTimeFormat('en-CA', {timeZone:zone, year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date());
@@ -189,15 +190,9 @@ function hero() {
   $('#hd-greeting').textContent = g.text;
   $('#home-context').textContent = product ? `${label} · ${PRODUCT_NAMES[product]}` : label + ' workspace';
   const sports = document.querySelector('.site-sports');
-  if (sports && $('#hd-sports')) $('#hd-sports').append(sports);
-  // The +EV dashboard can compare every league at once.
-  if (product === 'ev' && sports) {
-    const all = document.createElement('a');
-    all.href = '/ev/dashboard?sport=all'; all.dataset.sport = 'all';
-    all.innerHTML = `<span class="hd-all-mark" aria-hidden="true">${icon('ev')}</span><span>All sports</span>`;
-    if (sport === 'all') { all.setAttribute('aria-current', 'page'); sports.querySelectorAll('[aria-current]').forEach(link => link.removeAttribute('aria-current')); }
-    sports.prepend(all);
-  }
+  // +EV has no sport switcher: its dashboard always covers every sport.
+  if (product === 'ev') $('#hd-sports')?.remove();
+  else if (sports && $('#hd-sports')) $('#hd-sports').append(sports);
   if ($('#hd-ev-open')) $('#hd-ev-open').href = evToolUrl('ev-pre', sport);
   const live = $('#home-live');
   // NHL and soccer have no live model; the games panel opens the schedule-backed projections.

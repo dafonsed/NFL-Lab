@@ -22,7 +22,7 @@ export const MORE_TOOLS = Object.freeze(MORE_TOOL_GROUPS.flatMap(group => group.
 export const SECONDARY_TOOLS = Object.freeze(MORE_TOOLS.filter(tool => !['ev-live','arb-live'].includes(tool.key)));
 // Major leagues plus the other sports the quote feed carries (see lib/odds/normalize.mjs).
 const EV_SPORT_CODES = new Set(['nfl','mlb','nba','wnba','nhl','soccer','tennis','mma','boxing','snooker','darts','golf','cricket','rugby','ncaaf','ncaab','other']);
-export function evToolUrl(key, sport = 'all') {
-  const code = EV_SPORT_CODES.has(String(sport ?? '').toLowerCase()) ? String(sport).toLowerCase() : 'all';
-  return key === 'tracker' ? '/ev/tracker' + (code === 'all' ? '' : '?sport='+code) : `/ev?sport=${code}#${key}`;
+// +EV has one address per tool; sport is a filter inside the tool, never part of the URL.
+export function evToolUrl(key) {
+  return key === 'tracker' ? '/ev/tracker' : `/ev#${key}`;
 }

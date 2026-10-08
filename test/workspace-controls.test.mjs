@@ -26,7 +26,7 @@ test('product navigation keeps the page sport and supports keyboard selection an
   toggleHandlers.get('keydown')(event(toggle,'ArrowDown'));
   assert.equal(menu.hidden,false);
   assert.equal(document.activeElement,links[0]);
-  assert.deepEqual(links.map(link=>link.href),['/trends?sport=nfl','/models?sport=nfl','/ev/dashboard?sport=nfl']);
+  assert.deepEqual(links.map(link=>link.href),['/trends?sport=nfl','/models?sport=nfl','/ev/dashboard']);
   handlers.get('keydown')(event(links[0],'ArrowUp'));
   assert.equal(document.activeElement,links[2],'up wraps to the last product');
   handlers.get('keydown')(event(links[2],'Home'));

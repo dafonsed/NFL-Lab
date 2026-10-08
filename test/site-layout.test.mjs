@@ -35,8 +35,8 @@ test('sport tool capabilities prevent cross-sport pages and unsupported destinat
     for (const section of ['research','ev','trends','live','simulation','performance','paper','home','bets']) {
       const $ = load(siteHeader(new URL(sportDestination(sport,section), 'http://localhost')));
       if(['ev','bets'].includes(section)) {
-        assert.equal($(`.dashboard-group-home[data-dashboard-section=ev][href="/ev/dashboard?sport=${sport}"]`).length,1);
-        assert.equal($('.ev-primary-nav a[href="/ev?sport='+sport+'#odds"]').length,1);
+        assert.equal($(`.dashboard-group-home[data-dashboard-section=ev][href="/ev/dashboard"]`).length,1);
+        assert.equal($('.ev-primary-nav a[href="/ev#odds"]').length,1);
       } else {
         assert.equal($('.site-sports [aria-current]').text(), sport === 'soccer' ? 'Soccer' : sport.toUpperCase());
         assert.equal($('.dashboard-group-home').attr('href'), (section === 'trends' ? '/trends' : '/models') + '?sport=' + sport);
@@ -46,7 +46,7 @@ test('sport tool capabilities prevent cross-sport pages and unsupported destinat
     }
   }
   assert.equal(sportDestination('mlb','paper'), '/paper?sport=mlb');
-  assert.equal(sportDestination('mlb','ev'), '/ev?sport=mlb');
+  assert.equal(sportDestination('mlb','ev'), '/ev', '+EV has one address; sport is a filter inside it');
   assert.equal(sportDestination('nba','performance'), '/nba');
   assert.equal(sportDestination('nhl','simulation'), '/nhl');
   assert.equal(sportDestination('invalid','research'), '/research');
@@ -60,7 +60,7 @@ test('the shared Trends sidebar keeps its watchlist and product switcher sport-a
     assert.equal($('.site-navigation [aria-current]').text(),'Player trends');
     assert.equal($('.mobile-navigation').length,0,'mobile opens the same sidebar instead of duplicating links');
     assert.equal($('.site-product-menu [data-product=models]').attr('href'),'/models?sport='+sport);
-    assert.equal($('.site-product-menu [data-product=ev]').attr('href'),'/ev/dashboard?sport='+sport);
+    assert.equal($('.site-product-menu [data-product=ev]').attr('href'),'/ev/dashboard');
   }
 });
 
@@ -84,7 +84,7 @@ test('EV workbench keeps sport context and loads its own page assets', async () 
   const template = await fs.readFile(new URL('../public/ev.html', import.meta.url), 'utf8');
   const $ = load(renderSitePage(template,url));
   assert.equal($('.ev-site-brand').text().trim(),'VisualOdds');
-  assert.equal($('.ev-primary-nav a[href="/ev?sport=wnba#fantasy"]').text(),'DFS Props');
+  assert.equal($('.ev-primary-nav a[href="/ev#fantasy"]').text(),'DFS Props');
   assert.equal($('script[src^="/ev.js?"]').length,1);
   assert.equal($('link[rel="stylesheet"][href^="/ev.css?"]').length,1);
   assert.equal($('link[rel="stylesheet"][href="/ev-more-tools.css?v=3"]').length,1);
@@ -92,8 +92,8 @@ test('EV workbench keeps sport context and loads its own page assets', async () 
   const palette=styles.findIndex(href=>href.startsWith('/workspace-palette.css'));
   const cards=styles.findIndex(href=>href.startsWith('/ev-bet-cards.css'));
   assert.ok(cards>styles.indexOf('/ev-more-tools.css?v=1')&&palette>cards,'shared cards precede the palette, after tool styles');
-  assert.ok(styles.every((href,index)=>index<=palette||href.startsWith('/mobile-workspace.css')||href.startsWith('/ev-mobile.css')||href.startsWith('/sportslab-2026.css')||/^\/(trends-board|models-board|hub-pages|home-dashboard|player-detail|live-sim|tracker-2026|ev-suite-2026|boards-polish)\.css/.test(href)),'only the shared and EV responsive sheets may follow the palette');
-  assert.ok(styles.slice(styles.findIndex(href=>href.startsWith('/sportslab-2026.css'))+1).every(href=>/^\/(trends-board|models-board|hub-pages|home-dashboard|player-detail|live-sim|tracker-2026|ev-suite-2026|boards-polish)\.css/.test(href)),'only the 2026 area sheets follow the 2026 design system');
+  assert.ok(styles.every((href,index)=>index<=palette||href.startsWith('/mobile-workspace.css')||href.startsWith('/ev-mobile.css')||href.startsWith('/sportslab-2026.css')||/^\/(trends-board|models-board|hub-pages|home-dashboard|player-detail|live-sim|tracker-2026|ev-suite-2026|boards-polish|studio)\.css/.test(href)),'only the shared and EV responsive sheets may follow the palette');
+  assert.ok(styles.slice(styles.findIndex(href=>href.startsWith('/sportslab-2026.css'))+1).every(href=>/^\/(trends-board|models-board|hub-pages|home-dashboard|player-detail|live-sim|tracker-2026|ev-suite-2026|boards-polish|studio)\.css/.test(href)),'only the 2026 area sheets follow the 2026 design system');
   assert.equal($('script[type=module][src^="/dashboard-navigation.js"]').length,1);
 });
 
@@ -168,7 +168,7 @@ test('every page renders the same working navigation and Live link before any Ja
     assert.deepEqual($('.site-navigation a').map((_, a) => $(a).text().trim()).get(), labels, route);
     assert.ok($('.site-navigation a').toArray().every(a => $(a).attr('aria-label')), 'Icon rail links retain accessible labels');
     assert.deepEqual($('.site-sports a').map((_, a) => $(a).text()).get(), ['NFL', 'MLB', 'NBA', 'WNBA', 'NHL', 'Soccer'], route);
-    assert.equal($('.site-product-menu [data-product=ev]').attr('href'), '/ev/dashboard?sport='+(sport||'all'));
+    assert.equal($('.site-product-menu [data-product=ev]').attr('href'), '/ev/dashboard');
     assert.equal($('body.site-layout').length, 1); assert.equal($('main#main').length, 1);
     assert.equal($('.page-heading h1,.tracker-page-heading h1').length, 1);
     for (const asset of ['/dashboard-unified.css?v=4','/research-filters.css?v=1','/research-details.css?v=2']) assert.equal($(`link[rel="stylesheet"][href="${asset}"]`).length, 1, asset);
@@ -203,7 +203,7 @@ test('navigation context cannot inject untrusted query parameters and the live d
 });
 
 test('all dashboard route families render one sidebar and keep tool navigation out of the mobile bar', async () => {
-  const pages=[...routes,['/research?sport=nba','home'],['/nfl?view=trends','trends'],['/mlb?view=trends&saved=1','trends'],['/nfl/simulation','simulation'],['/ev?sport=nba#odds','ev'],['/ev?sport=all#fantasy','ev'],['/ev/tracker?sport=wnba','bets'],['/bets?sport=mlb','bets'],['/trends?sport=nhl',null],['/models?sport=soccer',null],['/ev/dashboard?sport=nfl',null]];
+  const pages=[...routes,['/research?sport=nba','home'],['/nfl?view=trends','trends'],['/mlb?view=trends&saved=1','trends'],['/nfl/simulation','simulation'],['/ev#odds','ev'],['/ev#fantasy','ev'],['/ev/tracker','bets'],['/bets?sport=mlb','bets'],['/trends?sport=nhl',null],['/models?sport=soccer',null],['/ev/dashboard',null]];
   for(const [route,name] of pages) {
     const url=new URL(route,'http://localhost');
     const template=name?await fs.readFile(new URL(`../public/${name}.html`,import.meta.url),'utf8'):renderProductDashboard(url);
@@ -214,24 +214,21 @@ test('all dashboard route families render one sidebar and keep tool navigation o
     assert.equal($('.dashboard-primary-link').length,1,route);
     assert.equal($('.site-group-toggle').length,1,route);
     assert.equal($('.dashboard-sidebar-group[data-group]').length,1,`${route}: one workspace group at a time`);
-    for(const nav of $('.site-navigation,.ev-primary-nav,.dashboard-more-tools').toArray()) assert.equal($(nav).closest('#dashboard-sidebar').length,1,route);
+    for(const nav of $('.site-navigation,.ev-primary-nav,.dashboard-tool-nav').toArray()) assert.equal($(nav).closest('#dashboard-sidebar').length,1,route);
     assert.equal($('.site-header-main,.site-header-bar,.mobile-navigation').length,0,`${route}: old top/bottom navigation is removed`);
     assert.equal($('.dashboard-mobile-bar .site-navigation,.dashboard-mobile-bar .ev-primary-nav,.dashboard-mobile-bar .dashboard-primary-nav').length,0,route);
     assert.equal($('.dashboard-mobile-bar [data-sidebar-toggle][aria-controls="dashboard-sidebar"][aria-expanded="false"]').length,1,route);
     assert.equal($('#dashboard-sidebar [data-sidebar-close]').length,1,route);
     assert.equal($('.dashboard-sidebar-backdrop[hidden]').length,1,route);
-    assert.equal($('.dashboard-more-tools[open]').length,0,`${route}: tools are collapsed until requested`);
-    const moreTools=$('#dashboard-sidebar').attr('data-site-group')==='ev'?1:0;
-    assert.equal($('.dashboard-more-tools > summary[aria-controls="dashboard-tool-groups"][aria-expanded="false"]').length,moreTools,route);
-    assert.equal($('.dashboard-more-tools #dashboard-tool-groups[role="region"][aria-labelledby="dashboard-tools-title"]').length,moreTools,route);
-    assert.equal($('#dashboard-tools-title').text(),moreTools?'More tools':'',route);
-    assert.equal($('#dashboard-tool-groups [data-more-close][aria-label="Close more tools"]').length,moreTools,route);
+    // EV tools are listed in the sidebar itself, one section per group; there is no More tools popup.
+    assert.equal($('.dashboard-more-tools,#dashboard-tool-groups,[data-more-close]').length,0,`${route}: no More tools popup`);
+    assert.equal($('.dashboard-tool-section').length>0,$('#dashboard-sidebar').attr('data-site-group')==='ev',route);
     assert.equal($('#ev-menu-actions').length,siteContext(url).section==='ev'?1:0,`${route}: only actual EV tools need the workspace-action menu`);
     const ids=$('[id]').map((_,el)=>$(el).attr('id')).get();
     assert.equal(new Set(ids).size,ids.length,`${route}: duplicate IDs`);
     const styles=$('link[rel=stylesheet]').map((_,el)=>$(el).attr('href')).get();
     const palette=styles.findIndex(href=>href.startsWith('/workspace-palette.css'));
-    assert.ok(palette>=0&&styles.every((href,index)=>index<=palette||href.startsWith('/mobile-workspace.css')||href.startsWith('/ev-mobile.css')||href.startsWith('/sportslab-2026.css')||/^\/(trends-board|models-board|hub-pages|home-dashboard|player-detail|live-sim|tracker-2026|ev-suite-2026|boards-polish)\.css/.test(href)),`${route}: palette follows tool styles; only the shared and EV responsive sheets may follow it`);
+    assert.ok(palette>=0&&styles.every((href,index)=>index<=palette||href.startsWith('/mobile-workspace.css')||href.startsWith('/ev-mobile.css')||href.startsWith('/sportslab-2026.css')||/^\/(trends-board|models-board|hub-pages|home-dashboard|player-detail|live-sim|tracker-2026|ev-suite-2026|boards-polish|studio)\.css/.test(href)),`${route}: palette follows tool styles; only the shared and EV responsive sheets may follow it`);
     if(['ev','bets','ev-home'].includes(siteContext(url).section)) {
       const cards=styles.findIndex(href=>href.startsWith('/ev-bet-cards.css'));
       assert.ok(cards>styles.findIndex(href=>href.startsWith('/ev.css?'))&&cards<palette,`${route}: shared cards follow EV styles and precede palette`);
@@ -241,23 +238,25 @@ test('all dashboard route families render one sidebar and keep tool navigation o
 });
 
 test('sidebar product destinations and secondary tools retain every supported sport', () => {
-  for(const sport of ['nfl','mlb','nba','wnba','nhl','soccer']) for(const route of [`/research?sport=${sport}`,`/models?sport=${sport}`,`/trends?sport=${sport}`,`/${sport}?view=trends&saved=1`,`/ev?sport=${sport}#promo`,`/ev/tracker?sport=${sport}`]) {
+  for(const sport of ['nfl','mlb','nba','wnba','nhl','soccer']) for(const route of [`/research?sport=${sport}`,`/models?sport=${sport}`,`/trends?sport=${sport}`,`/${sport}?view=trends&saved=1`,`/ev#promo`,`/ev/tracker`]) {
     const $=load(siteHeader(new URL(route,'http://localhost')));
     const hrefs=$('.dashboard-primary-link').map((_,el)=>$(el).attr('href')).get();
-    assert.deepEqual(hrefs,[`/ev/tracker?sport=${sport}`],route);
-    assert.deepEqual($('.site-product-menu [data-product]').map((_,el)=>$(el).attr('href')).get(),[`/trends?sport=${sport}`,`/models?sport=${sport}`,`/ev/dashboard?sport=${sport}`],route);
+    assert.deepEqual(hrefs,[`/ev/tracker`],route);
+    // +EV pages carry no sport, so links out of them use each workspace's default sport.
+    const pageSport=route.startsWith('/ev')?'mlb':sport;
+    assert.deepEqual($('.site-product-menu [data-product]').map((_,el)=>$(el).attr('href')).get(),[`/trends?sport=${pageSport}`,`/models?sport=${pageSport}`,`/ev/dashboard`],route);
     const group=$('#dashboard-sidebar').attr('data-site-group');
-    assert.equal($('.dashboard-group-home').attr('href'),{trends:`/trends?sport=${sport}`,models:`/models?sport=${sport}`,ev:`/ev/dashboard?sport=${sport}`}[group],route);
+    assert.equal($('.dashboard-group-home').attr('href'),{trends:`/trends?sport=${pageSport}`,models:`/models?sport=${pageSport}`,ev:`/ev/dashboard`}[group],route);
     for(const el of $('.dashboard-primary-link').toArray()) {
       assert.ok($(el).text().trim(),`${route}: visible navigation label`);
       assert.equal($(el).find('svg').length,1,`${route}: navigation icon`);
     }
     // More tools are +EV tools, listed only in the +EV group.
-    assert.equal($('.dashboard-more-tools').length,group==='ev'?1:0,route);
+    assert.equal($('.dashboard-tool-section').length>0,group==='ev',route);
     if(group==='ev') for(const tool of MORE_TOOLS) {
-      const link=$(`.dashboard-more-tools [data-more-tool="${tool.key}"]`);
+      const link=$(`.dashboard-tool-nav [data-more-tool="${tool.key}"]`);
       assert.equal(link.length,1,`${route}: ${tool.key}`);
-      assert.equal(link.attr('href'),`/ev?sport=${sport}#${tool.key}`);
+      assert.equal(link.attr('href'),`/ev#${tool.key}`);
       assert.ok(link.text().includes(tool.label),tool.key);
     }
     for(const link of $('.site-navigation a').toArray()) {
@@ -268,7 +267,7 @@ test('sidebar product destinations and secondary tools retain every supported sp
 });
 
 test('sidebar selection distinguishes products, saved Trends, and exact EV tool hashes', () => {
-  const selected=[['/research?sport=nba','home',null],['/models?sport=mlb','models',null],['/trends?sport=nhl','trends',null],['/nfl','models','research'],['/nfl/live','models','live'],['/wnba/simulation','models','simulation'],['/nba?view=trends','trends','trends'],['/nba?view=trends&saved=1','trends','watchlist'],['/ev/dashboard?sport=soccer','ev',null],['/ev/tracker?sport=nfl','bets',null]];
+  const selected=[['/research?sport=nba','home',null],['/models?sport=mlb','models',null],['/trends?sport=nhl','trends',null],['/nfl','models','research'],['/nfl/live','models','live'],['/wnba/simulation','models','simulation'],['/nba?view=trends','trends','trends'],['/nba?view=trends&saved=1','trends','watchlist'],['/ev/dashboard','ev',null],['/ev/tracker','bets',null]];
   for(const [route,product,tool] of selected) {
     const $=load(siteHeader(new URL(route,'http://localhost')));
     const group={home:'models',bets:'ev'}[product]||product;
@@ -276,25 +275,22 @@ test('sidebar selection distinguishes products, saved Trends, and exact EV tool 
     assert.equal($('.site-product-menu [data-selected]').attr('data-product'),group,route);
     assert.equal($('.dashboard-primary-nav [aria-current=page]').attr('data-dashboard-section')||null,product==='bets'?'bets':null,route);
     assert.equal($('.site-navigation [aria-current=page]').attr('data-nav-section')||null,tool,route);
-    assert.equal($('.ev-primary-nav [aria-current],.dashboard-more-tools [aria-current]').length,0,route);
+    assert.equal($('.ev-primary-nav [aria-current],.dashboard-tool-nav [aria-current]').length,0,route);
   }
   const keys=['odds','ev-pre','fantasy','arb-pre','sharp',...MORE_TOOLS.map(tool=>tool.key)];
   for(const key of keys) {
-    const $=load(siteHeader(new URL(`http://localhost/ev?sport=wnba#${key}`)));
-    const active=$('.ev-primary-nav [aria-current=page],.dashboard-more-tools [aria-current=page]');
+    const $=load(siteHeader(new URL(`http://localhost/ev#${key}`)));
+    const active=$('.ev-primary-nav [aria-current=page],.dashboard-tool-nav [aria-current=page]');
     assert.equal(active.length,1,key);
     assert.equal(new URL(active.attr('href'),'http://localhost').hash,'#'+key);
     assert.equal($('#dashboard-sidebar').attr('data-site-group'),'ev');
-    assert.equal($('.dashboard-more-tools').is('[open]'),false,`${key}: active tools do not automatically expand the flyout`);
-    assert.equal($('.dashboard-more-tools > summary').attr('aria-expanded'),'false',key);
-    assert.equal($('.dashboard-more-tools').hasClass('has-current-tool'),MORE_TOOLS.some(tool=>tool.key===key),key);
   }
   const defaults=load(siteHeader(new URL('http://localhost/ev?sport=nfl')));
-  assert.equal(defaults('.ev-primary-nav [aria-current=page]').attr('href'),'/ev?sport=nfl#ev-pre');
+  assert.equal(defaults('.ev-primary-nav [aria-current=page]').attr('href'),'/ev#ev-pre');
 });
 
 test('workspace selector lists Trends, Models, +EV and the sidebar shows only the chosen group', () => {
-  const nav = (features, route = '/models?sport=nfl', group = null) => { const $ = load(siteHeader(new URL(route, 'http://localhost'), { features, group })); return { group: $('#dashboard-sidebar').attr('data-site-group') || null, shared: $('.dashboard-primary-link').map((_, el) => $(el).attr('data-dashboard-section')).get(), products: $('.site-product-menu [data-product]').map((_, el) => $(el).attr('data-product')).get(), more: $('.dashboard-more-tools').length, context: $('.dashboard-sidebar-group[data-group] :is(.site-navigation,.ev-primary-nav) a').length }; };
+  const nav = (features, route = '/models?sport=nfl', group = null) => { const $ = load(siteHeader(new URL(route, 'http://localhost'), { features, group })); return { group: $('#dashboard-sidebar').attr('data-site-group') || null, shared: $('.dashboard-primary-link').map((_, el) => $(el).attr('data-dashboard-section')).get(), products: $('.site-product-menu [data-product]').map((_, el) => $(el).attr('data-product')).get(), more: $('.dashboard-tool-section').length ? 1 : 0, context: $('.dashboard-sidebar-group[data-group] :is(.site-navigation,.ev-primary-nav) a').length }; };
   assert.deepEqual(nav(null), { group: 'models', shared: ['bets'], products: ['trends', 'models', 'ev'], more: 0, context: 5 });
   assert.deepEqual(nav(null, '/ev?sport=nfl'), { group: 'ev', shared: ['bets'], products: ['trends', 'models', 'ev'], more: 1, context: 5 });
   assert.equal(nav(null, '/trends?sport=nfl').group, 'trends');

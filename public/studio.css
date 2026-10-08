@@ -1,0 +1,274 @@
+/* VisualOdds Studio. The site's own personality: a calm graphite canvas, roomy readable type, soft
+   rounded surfaces, and lime saved for what matters (an edge, the current page, the main action).
+   Loaded last on every workspace page (lib/site-layout.mjs); it retunes the shared --sl-* tokens that
+   sportslab-2026.css maps into every component, then shapes the sidebar. */
+
+/* ---------------------------------------------------------------- tokens */
+html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:is(*, .ev-page, .bets-app):not(#vo-studio) {
+  --sl-bg:#111315; --sl-rail:#0e1012; --sl-sunken:#0d0f11;
+  --sl-panel:#16191b; --sl-panel-2:#1b1e21; --sl-panel-3:#22262a; --sl-hover:#23272b;
+  --sl-line:#23272a; --sl-line-2:#2d3235; --sl-line-3:#3b4145;
+  --sl-text:#eceeec; --sl-text-2:#c4c9c6; --sl-muted:#8c938f; --sl-faint:#767d79;
+  --sl-cyan:#93b9e6; --sl-cyan-2:#7ea8da; --sl-cyan-wash:rgb(147 185 230/.1); --sl-cyan-line:rgb(147 185 230/.3);
+  --sl-red:#ec8a80; --sl-red-wash:rgb(236 138 128/.1); --sl-amber:#e2bf74; --sl-amber-wash:rgb(226 191 116/.1);
+  --sl-radius:16px; --sl-radius-sm:12px; --sl-radius-xs:8px;
+  --sl-shadow:0 1px 0 rgb(255 255 255/.025) inset, 0 10px 30px -20px rgb(0 0 0/.7);
+  --control-rgb:13 15 17; --panel-rgb:22 25 27; --panel2-rgb:27 30 33; --line-rgb:35 39 42; --border-strong-rgb:45 50 53;
+  --muted-rgb:140 147 143; --secondary-rgb:196 201 198; --text-rgb:236 238 236;
+  --ui-tone-10:14 16 18; --ui-tone-16:17 19 21; --ui-tone-22:22 25 27; --ui-tone-30:27 30 33; --ui-tone-42:35 39 42; --ui-tone-62:45 50 53;
+  --ui-tone-94:90 97 94; --ui-tone-138:140 147 143; --ui-tone-176:170 176 173; --ui-tone-218:196 201 198; --ui-tone-242:236 238 236;
+  --vo-studio-rail:#0f1113;
+  background:var(--sl-bg) !important;
+}
+/* No neon blooms: the canvas stays flat and quiet. */
+html:root body.site-layout.has-dashboard-sidebar:not(#vo-studio)::before { background:none !important; }
+
+/* ---------------------------------------------------------------- sidebar */
+html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:not(#vo-studio) {
+  & #dashboard-sidebar {
+    background:var(--vo-studio-rail) !important; border-right:1px solid var(--sl-line) !important; box-shadow:none !important;
+  }
+  & #dashboard-sidebar .dashboard-sidebar-top { min-height:0 !important; padding:18px 14px 6px !important; }
+  & #dashboard-sidebar .site-product-switcher { gap:8px !important; }
+  & #dashboard-sidebar :is(.site-brand, .ev-site-brand) { padding:0 4px !important; }
+  /* The workspace switcher reads as a quiet line, not a boxed card. */
+  & #dashboard-sidebar .site-product-toggle {
+    width:100% !important; height:auto !important; min-height:0 !important; padding:7px 8px !important; gap:10px !important;
+    border:1px solid transparent !important; border-radius:10px !important; background:transparent !important; box-shadow:none !important;
+  }
+  & #dashboard-sidebar .site-product-toggle:hover { background:rgb(255 255 255/.035) !important; }
+  & #dashboard-sidebar .site-product-toggle .site-product-icon {
+    width:28px !important; height:28px !important; border:0 !important; border-radius:8px !important; background:rgb(163 240 107/.1) !important; color:var(--sl-lime) !important; box-shadow:none !important;
+  }
+  & #dashboard-sidebar .site-product-toggle .site-product-copy small { color:var(--sl-faint) !important; font-size:10px !important; letter-spacing:.12em !important; }
+  & #dashboard-sidebar .site-product-toggle .site-product-copy strong { color:var(--sl-text) !important; font-size:13.5px !important; }
+
+  & #dashboard-sidebar .dashboard-search-row { gap:6px !important; padding:4px 14px 6px !important; }
+  & #dashboard-sidebar :is(.dashboard-search, .vo-bell-button) {
+    height:34px !important; min-height:0 !important; border:1px solid var(--sl-line) !important; border-radius:10px !important; background:transparent !important; color:var(--sl-muted) !important; box-shadow:none !important;
+  }
+  & #dashboard-sidebar .dashboard-search kbd { border:0 !important; background:rgb(255 255 255/.05) !important; color:var(--sl-faint) !important; font-size:10.5px !important; }
+
+  /* Collapse control (added by dashboard-navigation.js). */
+  & #dashboard-sidebar .vo-collapse {
+    display:flex; align-items:center; justify-content:flex-end; gap:6px; width:calc(100% - 28px); margin:2px 14px 4px; padding:4px 6px; border:0; border-radius:8px;
+    background:none; color:var(--sl-faint); font:500 12px/18px var(--sl-font); cursor:pointer;
+  }
+  & #dashboard-sidebar .vo-collapse:hover { color:var(--sl-text-2); background:rgb(255 255 255/.03); }
+  & #dashboard-sidebar .vo-collapse svg { width:14px; height:14px; transition:transform .18s ease; }
+
+  & #dashboard-sidebar .dashboard-sidebar-scroll { padding:0 10px 16px !important; }
+  & #dashboard-sidebar .dashboard-sidebar-group { margin:0 !important; padding:0 !important; border:0 !important; }
+  & #dashboard-sidebar .dashboard-nav-label {
+    margin:16px 0 4px !important; padding:0 10px !important; color:var(--sl-faint) !important;
+    font-size:10.5px !important; font-weight:600 !important; letter-spacing:.14em !important; text-transform:uppercase !important;
+  }
+  & #dashboard-sidebar :is(.dashboard-primary-nav, .site-navigation, .ev-primary-nav) { gap:1px !important; }
+  & #dashboard-sidebar :is(.dashboard-primary-nav, .site-navigation, .ev-primary-nav, .dashboard-sidebar-group) > a,
+  & #dashboard-sidebar :is(.dashboard-more-tools, .dashboard-workspace-actions, .ev-state-picker) > summary,
+  & #dashboard-sidebar .dashboard-sidebar-footer :is(.site-settings-toggle, .site-dev-toggle) {
+    position:relative; display:flex !important; align-items:center !important; gap:11px !important;
+    min-height:34px !important; height:auto !important; padding:7px 10px !important; margin:0 !important;
+    border:0 !important; border-radius:9px !important; background:transparent !important; box-shadow:none !important;
+    color:var(--sl-text-2) !important; font-size:13.5px !important; font-weight:500 !important; line-height:20px !important;
+  }
+  & #dashboard-sidebar :is(.dashboard-primary-nav, .site-navigation, .ev-primary-nav, .dashboard-sidebar-group) > a :is(svg, .ui-icon),
+  & #dashboard-sidebar :is(.dashboard-more-tools, .dashboard-workspace-actions, .ev-state-picker) > summary > svg:first-child,
+  & #dashboard-sidebar .dashboard-sidebar-footer :is(.site-settings-toggle, .site-dev-toggle) > svg {
+    flex:none; width:16px !important; height:16px !important; color:var(--sl-faint) !important;
+  }
+  & #dashboard-sidebar :is(.dashboard-primary-nav, .site-navigation, .ev-primary-nav, .dashboard-sidebar-group) > a:hover,
+  & #dashboard-sidebar :is(.dashboard-more-tools, .dashboard-workspace-actions, .ev-state-picker) > summary:hover,
+  & #dashboard-sidebar .dashboard-sidebar-footer :is(.site-settings-toggle, .site-dev-toggle):hover {
+    background:rgb(255 255 255/.035) !important; color:var(--sl-text) !important;
+  }
+  /* The current page: a soft lime wash and a short lime marker on the left. */
+  & #dashboard-sidebar :is(a[aria-current="page"], .has-current-tool > summary) {
+    background:rgb(163 240 107/.075) !important; color:var(--sl-text) !important; font-weight:600 !important;
+  }
+  & #dashboard-sidebar :is(a[aria-current="page"], .has-current-tool > summary)::before {
+    content:''; position:absolute; left:-10px; top:9px; bottom:9px; width:3px; border-radius:0 3px 3px 0; background:var(--sl-lime);
+  }
+  & #dashboard-sidebar a[aria-current="page"] :is(svg, .ui-icon) { color:var(--sl-lime) !important; }
+  & #dashboard-sidebar .dashboard-shared-group { margin-top:4px !important; }
+  & #dashboard-sidebar .dashboard-sidebar-footer { gap:1px !important; padding:10px 10px 14px !important; border-top:1px solid var(--sl-line) !important; background:transparent !important; }
+  & #dashboard-sidebar .dashboard-sidebar-footer .ev-state-picker > summary { border:0 !important; }
+  & #dashboard-sidebar .site-dev-toggle b { padding:1px 7px !important; border-radius:999px !important; background:rgb(255 255 255/.06) !important; color:var(--sl-faint) !important; }
+}
+
+/* ---------------------------------------------------------------- collapsed sidebar (desktop) */
+@media (min-width: 801px) {
+  html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar.vo-sidebar-collapsed:not(#vo-studio) {
+    --dashboard-sidebar-width:68px !important;
+    & #dashboard-sidebar { overflow:visible !important; }
+    & #dashboard-sidebar .dashboard-sidebar-top { padding:16px 10px 6px !important; }
+    & #dashboard-sidebar :is(.site-brand, .ev-site-brand) > strong,
+    & #dashboard-sidebar .site-product-toggle > :is(.site-product-copy, svg:last-child),
+    & #dashboard-sidebar .dashboard-search :is(span, kbd),
+    & #dashboard-sidebar .vo-bell,
+    & #dashboard-sidebar .dashboard-nav-label,
+    & #dashboard-sidebar :is(.dashboard-primary-nav, .site-navigation, .ev-primary-nav, .dashboard-sidebar-group) > a > span,
+    & #dashboard-sidebar :is(.dashboard-more-tools, .dashboard-workspace-actions, .ev-state-picker) > summary > :not(svg:first-child),
+    & #dashboard-sidebar .dashboard-sidebar-footer :is(.site-settings-toggle, .site-dev-toggle) > :not(svg),
+    & #dashboard-sidebar .vo-collapse span { display:none !important; }
+    & #dashboard-sidebar :is(.site-brand, .ev-site-brand) { justify-content:center !important; padding:0 !important; }
+    & #dashboard-sidebar .site-product-toggle { justify-content:center !important; padding:6px !important; }
+    & #dashboard-sidebar .dashboard-search-row { padding:4px 10px 6px !important; }
+    & #dashboard-sidebar .dashboard-search { justify-content:center !important; width:100% !important; padding:0 !important; }
+    & #dashboard-sidebar .vo-collapse { justify-content:center; width:calc(100% - 20px); margin:2px 10px 4px; }
+    & #dashboard-sidebar .vo-collapse svg { transform:rotate(180deg); }
+    & #dashboard-sidebar .dashboard-sidebar-scroll { padding:6px 10px 16px !important; }
+    & #dashboard-sidebar .dashboard-sidebar-group + * { margin-top:10px !important; }
+    & #dashboard-sidebar :is(.dashboard-primary-nav, .site-navigation, .ev-primary-nav, .dashboard-sidebar-group) > a,
+    & #dashboard-sidebar :is(.dashboard-more-tools, .dashboard-workspace-actions, .ev-state-picker) > summary,
+    & #dashboard-sidebar .dashboard-sidebar-footer :is(.site-settings-toggle, .site-dev-toggle) {
+      justify-content:center !important; width:48px !important; min-height:40px !important; padding:0 !important; margin-inline:auto !important;
+    }
+    & #dashboard-sidebar :is(a[aria-current="page"], .has-current-tool > summary)::before { left:-10px; }
+    & #dashboard-sidebar .dashboard-sidebar-footer { padding:10px !important; }
+  }
+}
+
+/* Sidebar controls that older button styles box in. */
+html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:not(#vo-studio) #dashboard-sidebar .vo-collapse { background:none !important; border:0 !important; box-shadow:none !important; min-height:0 !important; height:auto !important; }
+html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:not(#vo-studio) #dashboard-sidebar .vo-collapse:hover { background:rgb(255 255 255/.03) !important; }
+html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:not(#vo-studio) #dashboard-sidebar .dashboard-search kbd { white-space:nowrap !important; padding:1px 6px !important; }
+@media (max-width: 800px) {
+  html:root body.site-layout.has-dashboard-sidebar:not(#vo-studio) #dashboard-sidebar .vo-collapse { display:none !important; }
+}
+
+/* ---------------------------------------------------------------- calm surfaces on every workspace page */
+/* Page heroes: a flat panel with a hairline, no lime/cyan blooms or gradient top rules. */
+html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:not(#vo-studio) :is(.hd-hero, .bt-hero, .hub-hero, .tool-hero) {
+  background:var(--sl-panel) !important; background-image:none !important; border:1px solid var(--sl-line) !important; box-shadow:var(--sl-shadow) !important;
+}
+html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:not(#vo-studio) :is(.hd-hero, .bt-hero, .hub-hero, .tool-hero)::before,
+html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:not(#vo-studio) :is(.hd-hero, .bt-hero, .hub-hero, .tool-hero)::after { background:none !important; box-shadow:none !important; }
+html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:not(#vo-studio) :is(.hub-hero-glow, .hd-orb-a, .hd-orb-b, .hd-hero-art::before) { display:none !important; }
+/* Gradient headline words become a single soft lime. */
+html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:not(#vo-studio) :is(.hd-hero, .bt-hero, .hub-hero, .tool-hero) :is(h1, h2) :is(em, span, b, .accent, .tool-accent) {
+  background:none !important; -webkit-text-fill-color:currentColor !important; color:var(--sl-lime) !important;
+}
+/* Calm studio type: headlines a touch lighter and less tight. */
+html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:not(#vo-studio) :is(.hd-hero, .bt-hero, .hub-hero, .tool-hero) h1 { font-weight:650 !important; letter-spacing:-.03em !important; }
+
+/* Collapsed rail: the workspace switcher shows only its icon. */
+@media (min-width: 801px) {
+  html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar.vo-sidebar-collapsed:not(#vo-studio) #dashboard-sidebar .site-product-toggle :is(.site-product-copy, .site-product-copy *, svg:not(.site-product-icon svg)) { display:none !important; }
+  html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar.vo-sidebar-collapsed:not(#vo-studio) #dashboard-sidebar .site-product-toggle { width:44px !important; margin-inline:auto !important; border:0 !important; background:none !important; }
+  html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar.vo-sidebar-collapsed:not(#vo-studio) #dashboard-sidebar .site-product-toggle .site-product-icon svg { display:block !important; }
+}
+
+/* ---------------------------------------------------------------- every tool listed in the sidebar, one section per group */
+html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:not(#vo-studio) {
+  & #dashboard-sidebar .dashboard-tool-section { margin:0 !important; padding:0 !important; border:0 !important; background:none !important; }
+  & #dashboard-sidebar .dashboard-tool-nav { display:flex !important; flex-direction:column !important; gap:1px !important; margin:0 !important; padding:0 !important; }
+  & #dashboard-sidebar .dashboard-tool-nav > a {
+    position:relative; display:flex !important; align-items:center !important; gap:11px !important; width:100% !important; min-height:34px !important; height:auto !important; margin:0 !important; padding:7px 10px !important;
+    border:0 !important; border-radius:9px !important; background:transparent !important; box-shadow:none !important; color:var(--sl-text-2) !important; font-size:13.5px !important; font-weight:500 !important; line-height:20px !important; text-decoration:none !important;
+  }
+  & #dashboard-sidebar .dashboard-tool-nav > a > span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  & #dashboard-sidebar .dashboard-tool-nav > a:hover { background:rgb(255 255 255/.035) !important; color:var(--sl-text) !important; }
+  & #dashboard-sidebar .dashboard-tool-nav > a > :is(svg, .ui-icon) { flex:none; width:16px !important; height:16px !important; color:var(--sl-faint) !important; }
+  & #dashboard-sidebar .dashboard-tool-nav > a[aria-current="page"] { background:rgb(163 240 107/.075) !important; color:var(--sl-text) !important; font-weight:600 !important; }
+  & #dashboard-sidebar .dashboard-tool-nav > a[aria-current="page"] > :is(svg, .ui-icon) { color:var(--sl-lime) !important; }
+}
+@media (min-width: 801px) {
+  html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar.vo-sidebar-collapsed:not(#vo-studio) {
+    & #dashboard-sidebar .dashboard-tool-nav > a > span { display:none !important; }
+    & #dashboard-sidebar .dashboard-tool-nav > a { justify-content:center !important; width:48px !important; min-height:40px !important; padding:0 !important; margin-inline:auto !important; }
+    & #dashboard-sidebar .dashboard-tool-section { margin-top:10px !important; padding-top:10px !important; border-top:1px solid var(--sl-line) !important; }
+  }
+}
+
+/* ---------------------------------------------------------------- footer as one row of icons, so the tool list gets the height */
+html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:not(#vo-studio) {
+  & #dashboard-sidebar .dashboard-sidebar-footer {
+    display:flex !important; flex-direction:row !important; flex-wrap:nowrap !important; align-items:center !important; justify-content:space-between !important;
+    gap:2px !important; margin-top:0 !important; padding:8px 12px 10px !important;
+  }
+  & #dashboard-sidebar .dashboard-sidebar-footer .dashboard-sidebar-actions { display:contents !important; }
+  & #dashboard-sidebar .dashboard-sidebar-footer > details { flex:none !important; width:auto !important; margin:0 !important; padding:0 !important; border:0 !important; background:none !important; }
+  & #dashboard-sidebar .dashboard-sidebar-footer :is(details > summary, .site-settings-toggle, .site-dev-toggle) {
+    justify-content:center !important; width:38px !important; height:36px !important; min-height:36px !important; padding:0 !important; gap:0 !important; border-radius:10px !important;
+  }
+  & #dashboard-sidebar .dashboard-sidebar-footer details > summary > :not(svg:first-child),
+  & #dashboard-sidebar .dashboard-sidebar-footer :is(.site-settings-toggle, .site-dev-toggle) > :not(svg) { display:none !important; }
+  & #dashboard-sidebar .dashboard-sidebar-footer :is(details > summary, .site-settings-toggle, .site-dev-toggle) > svg:first-child { width:17px !important; height:17px !important; margin:0 !important; }
+  & #dashboard-sidebar .dashboard-sidebar-footer details[open] > summary { background:rgb(255 255 255/.06) !important; color:var(--sl-text) !important; }
+  & #dashboard-sidebar .dashboard-sidebar-footer .site-dev-toggle[aria-pressed="true"]::after {
+    content:''; position:absolute; top:8px; right:8px; width:6px; height:6px; border-radius:50%; background:var(--sl-lime); box-shadow:0 0 0 2px var(--vo-studio-rail);
+  }
+  /* Workspace tools opens beside the sidebar instead of pushing the footer up. */
+  & #dashboard-sidebar .dashboard-workspace-actions[open] > :not(summary) {
+    position:fixed !important; z-index:95; left:calc(var(--dashboard-sidebar-width) + 8px) !important; bottom:14px !important; top:auto !important; width:280px !important; max-height:calc(100dvh - 28px); overflow:auto;
+    margin:0 !important; padding:10px !important; border:1px solid var(--sl-line-2) !important; border-radius:14px !important; background:var(--sl-panel-2) !important; box-shadow:var(--sl-pop, 0 24px 60px -12px rgb(0 0 0/.75)) !important;
+  }
+  /* Slightly tighter rows so more tools fit before scrolling. */
+  & #dashboard-sidebar :is(.dashboard-primary-nav, .site-navigation, .ev-primary-nav, .dashboard-sidebar-group, .dashboard-tool-nav) > a { min-height:32px !important; padding:6px 10px !important; }
+  & #dashboard-sidebar .dashboard-nav-label { margin:14px 0 3px !important; }
+}
+@media (min-width: 801px) {
+  html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar.vo-sidebar-collapsed:not(#vo-studio) #dashboard-sidebar .dashboard-sidebar-footer {
+    flex-direction:column !important; align-items:center !important; gap:4px !important; padding:8px 0 10px !important;
+  }
+}
+@media (max-width: 800px) {
+  html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:not(#vo-studio) #dashboard-sidebar .dashboard-workspace-actions[open] > :not(summary) { left:12px !important; right:12px !important; width:auto !important; bottom:70px !important; }
+}
+html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:not(#vo-studio) {
+  & #dashboard-sidebar .dashboard-sidebar-footer > details,
+  & #dashboard-sidebar .dashboard-sidebar-footer :is(.site-settings-toggle, .site-dev-toggle) { flex:none !important; width:38px !important; min-width:38px !important; max-width:38px !important; }
+  & #dashboard-sidebar .dashboard-sidebar-footer > details > summary { width:38px !important; min-width:0 !important; max-width:38px !important; border:0 !important; background:transparent; }
+  /* Account gets a person glyph so it is not mistaken for Workspace tools. */
+  & #dashboard-sidebar .dashboard-sidebar-footer a.site-settings-toggle[href="/account"] > svg { display:none !important; }
+  & #dashboard-sidebar .dashboard-sidebar-footer a.site-settings-toggle[href="/account"]::before {
+    content:''; width:17px; height:17px; background:currentColor; color:var(--sl-faint);
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='12' cy='8' r='3.6'/%3E%3Cpath d='M4.8 20c.9-3.6 3.7-5.6 7.2-5.6s6.3 2 7.2 5.6'/%3E%3C/svg%3E") center/contain no-repeat;
+            mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='12' cy='8' r='3.6'/%3E%3Cpath d='M4.8 20c.9-3.6 3.7-5.6 7.2-5.6s6.3 2 7.2 5.6'/%3E%3C/svg%3E") center/contain no-repeat;
+  }
+  & #dashboard-sidebar .dashboard-sidebar-footer a.site-settings-toggle[href="/account"]:hover::before { background:var(--sl-text); }
+  & #dashboard-sidebar .dashboard-workspace-actions [hidden] { display:none !important; }
+}
+html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:not(#vo-studio):not(#vo-studio-b):not(#vo-studio-c):not(#vo-studio-d):not(#vo-studio-e) #dashboard-sidebar#dashboard-sidebar #ev-menu-actions [hidden] { display:none !important; }
+
+/* =====================================================================================================
+   Modern dark, roomier (v2). A deeper base with surfaces that rise in clear steps, hairline borders that
+   read as light rather than lines, and more breathing room in the sidebar.
+   ===================================================================================================== */
+html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:is(*, .ev-page, .bets-app):not(#vo-studio):not(#vo-modern) {
+  --sl-bg:#0a0b0d; --sl-rail:#0c0d10; --sl-sunken:#08090b;
+  --sl-panel:#121418; --sl-panel-2:#171a1f; --sl-panel-3:#1e2228; --sl-hover:#1c2026;
+  --sl-line:rgb(255 255 255/.06); --sl-line-2:rgb(255 255 255/.095); --sl-line-3:rgb(255 255 255/.15);
+  --sl-text:#f2f4f5; --sl-text-2:#c6cbd0; --sl-muted:#8d949b; --sl-faint:#6c737a;
+  --sl-radius:18px; --sl-radius-sm:12px; --sl-radius-xs:9px;
+  --sl-shadow:0 1px 0 rgb(255 255 255/.03) inset, 0 20px 40px -28px rgb(0 0 0/.9);
+  --vo-studio-rail:#0f1114;
+  --panel-rgb:18 20 24; --panel2-rgb:23 26 31; --control-rgb:8 9 11;
+  background:var(--sl-bg) !important;
+}
+/* A faint glow at the top of the canvas gives depth without colour noise. */
+html:root body.site-layout.has-dashboard-sidebar:not(#vo-studio):not(#vo-modern)::before {
+  background:radial-gradient(1200px 520px at 60% -280px, rgb(255 255 255/.035), transparent 70%) !important;
+}
+html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:not(#vo-studio):not(#vo-modern) {
+  & #dashboard-sidebar { background:var(--sl-rail) !important; border-right:1px solid var(--sl-line) !important; }
+  & #dashboard-sidebar .dashboard-sidebar-top { padding:22px 16px 10px !important; }
+  & #dashboard-sidebar .dashboard-search-row { padding:6px 16px 8px !important; gap:8px !important; }
+  & #dashboard-sidebar :is(.dashboard-search, .vo-bell-button) { height:38px !important; border-radius:11px !important; background:rgb(255 255 255/.025) !important; }
+  & #dashboard-sidebar .dashboard-sidebar-scroll { padding:0 12px 20px !important; }
+  & #dashboard-sidebar .dashboard-nav-label { margin:22px 0 6px !important; padding:0 12px !important; font-size:11px !important; letter-spacing:.12em !important; }
+  & #dashboard-sidebar :is(.dashboard-primary-nav, .site-navigation, .ev-primary-nav, .dashboard-sidebar-group, .dashboard-tool-nav) > a {
+    min-height:38px !important; padding:8px 12px !important; gap:12px !important; border-radius:11px !important; font-size:14px !important;
+  }
+  & #dashboard-sidebar :is(.dashboard-primary-nav, .site-navigation, .ev-primary-nav, .dashboard-sidebar-group, .dashboard-tool-nav) { gap:2px !important; }
+  & #dashboard-sidebar :is(.dashboard-primary-nav, .site-navigation, .ev-primary-nav, .dashboard-sidebar-group, .dashboard-tool-nav) > a :is(svg, .ui-icon) { width:17px !important; height:17px !important; }
+  & #dashboard-sidebar :is(a[aria-current="page"], .has-current-tool > summary) { background:linear-gradient(90deg, rgb(163 240 107/.11), rgb(163 240 107/.03)) !important; }
+  & #dashboard-sidebar :is(a[aria-current="page"], .has-current-tool > summary)::before { left:-12px !important; top:10px !important; bottom:10px !important; }
+  & #dashboard-sidebar .dashboard-sidebar-footer { padding:10px 14px 14px !important; }
+  & #dashboard-sidebar .dashboard-sidebar-footer :is(details > summary, .site-settings-toggle, .site-dev-toggle) { width:40px !important; height:40px !important; border-radius:11px !important; }
+}
+@media (min-width: 801px) {
+  html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar:not(#vo-studio):not(#vo-modern) { --dashboard-sidebar-width:248px; }
+  html:root body.site-layout.ui-theme.reference-design.has-dashboard-sidebar.vo-sidebar-collapsed:not(#vo-studio):not(#vo-modern) { --dashboard-sidebar-width:72px !important; }
+}
