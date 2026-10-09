@@ -329,6 +329,21 @@ function ensureContracts() {
     .finally(() => { contractsLoading = false; if (active === 'prediction') render(); });
 }
 async function ensureRelayBoards() { /* OddsJam mode: relay boards handled by snapshot functions */ }
+async function ensureDfsFeed() {
+  if (!DFS_TOOLS.has(active)) return;
+  if (dfsLoading || Date.now() < dfsRetryAt || (dfsLoaded && Date.now() - dfsSyncedAt < 60_000)) return;
+  dfsLoading = true;
+  try {
+    const data = await getRelayDfsData({});
+    setFeedDfs(data.picks);
+    dfsLoaded = true; dfsSyncedAt = Date.now(); dfsError = ''; dfsWarning = ''; dfsFailures = 0; dfsRetryAt = 0;
+    if (DFS_TOOLS.has(active)) render();
+  } catch (error) {
+    dfsFailures++; dfsError = error?.message || 'DFS feed unavailable';
+    dfsRetryAt = Date.now() + Math.min(60_000, 5_000 * dfsFailures);
+    if (!dfsLoaded) dfsWarning = dfsError;
+  } finally { dfsLoading = false; }
+}
 function oddsjamSportOf(sport) {
   const map = { nfl: 'NFL', nba: 'NBA', mlb: 'MLB', nhl: 'NHL', cfb: 'CFB', cbb: 'CBB' };
   return map[String(sport || '').toLowerCase()] || String(sport || '').toUpperCase() || 'NFL';
@@ -618,7 +633,7 @@ function render() {
   const titles = { odds:'Odds Screen', 'ev-pre':'Positive EV', 'ev-live':'Live Positive EV', fantasy:'DFS Props', 'arb-pre':'Arbitrage', 'arb-live':'Live Arbitrage', sharp:'Smart Money', tracker:'Bet Tracker' };
   const pageTitle = titles[active] || toolMeta[active][2];
   $('#ev-page-title').innerHTML = accentTitle(pageTitle);
-  $('#ev-top-title').textContent = pageTitle;
+  const topTitle = document.querySelector('#ev-top-title'); if (topTitle) topTitle.textContent = pageTitle;
   document.title = pageTitle + ' · VisualOdds';
   document.body.dataset.evScreen = active;
   document.querySelectorAll('[data-ev-nav]').forEach(link => {
