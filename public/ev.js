@@ -3,7 +3,7 @@ import { wagerCard } from './ev-bet-card.js';
 import { renderEvBoard, renderEvBoardDetail, renderBetPanel, boostedOffer, boardIcon, bookLogo, startLabel, selectionText, marketLabel } from './ev-board.js?v=7';
 // Feed quotes that only carry a raw market key ("football_player_touchdowns") get a readable name for display.
 const readableMarkets = quotes => { for (const q of quotes || []) if (q && !q.displayMarket && typeof q.market === 'string' && q.market.includes('_') && !/s/.test(q.market)) q.displayMarket = marketLabel(q.market); return quotes; };
-import { createEvSuite, EV_SUITE_TOOLS } from './ev-suite.js?v=local-suite-7';
+import { createEvSuite, EV_SUITE_TOOLS } from './ev-suite.js?v=local-suite-8';
 import { readSuiteState, writeSuiteState } from './ev-suite-storage.js?v=2';
 import { installMobileWorkspace, quoteRevision, preserveReadingOrder } from './ev-mobile.js';
 import { accountStorage as localStorage, accountReady, getAccountPreferences, accountSyncState } from './account-sync.js';
@@ -30,7 +30,7 @@ import { comparisonAnnotations } from './bet-comparison.js?v=4';
 import { inlineBetCard as betComparisonCard, bindInlineComparison as bindComparison } from './bet-inline.js?v=card-click-4';
 import { openArbCalculator } from './arb-calculator.js?v=2';
 import { openLineHistory, buildLineSeries } from './line-history.js?v=1';
-import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource, breakEven, payoutFactor, payoutKnown, legBreakEven } from './dfs-workspace.js?v=28';
+import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource, breakEven, payoutFactor, payoutKnown, legBreakEven } from './dfs-workspace.js?v=29';
 import { createOddsScreen } from './odds-screen.js?v=11';
 
 import {readSportsbookState, saveSportsbookState, sportsbookAvailable, availableSportsbookQuotes, STATE_CHANGE_EVENT} from './sportsbook-availability.js';
@@ -753,7 +753,7 @@ function renderEv(live) {
   const more = rows.length > evVisibleCount ? `<button type="button" class="ev-parlay-more" data-ev-more>Show ${Math.min(40,rows.length-evVisibleCount)} more selections · ${Math.min(evVisibleCount,rows.length)} of ${rows.length} shown</button>` : '';
   const pricing = state.analytics.meta?.pricing || {};
   const capNote = pricing.evCap != null && pricing.evCapSingleBook != null ? `above ${(pricing.evCap * 100).toFixed(0)}% EV (${(pricing.evCapSingleBook * 100).toFixed(0)}% when only one book sets the fair price)` : 'outside the EV limits';
-  return `<div class="ev-stack ev-positive-screen evb-board"><div class="wager-results-bar evb-results-bar">${summary}</div>${rows.length ? renderEvBoard(evBoardContext(shown, live)) + more : empty(emptyTitle,emptyBody)}<p class="ev-caption ev-method-note">Fair probability and EV come from the odds service, priced with your saved reference-book, weighting and no-vig settings${pricing.devigMethod ? ` (${esc(pricing.devigMethod)} devig, ${esc(pricing.devigVersion || 'version not reported')})` : ''}; by default Pinnacle counts three times as much as other books. Recommended stakes scale its Kelly fraction by your bankroll and Kelly multiplier. Open a row to compare every book. ${live ? 'Live prices expire 90 seconds after they are seen.' : ''}${hiddenAsErrors ? ` ${hiddenAsErrors} ${hiddenAsErrors === 1 ? 'price' : 'prices'} ${capNote} ${hiddenAsErrors === 1 ? 'is' : 'are'} hidden as likely feed errors; set a maximum EV in Pricing &amp; filters to change this.` : ''} Confirm price, limits and freshness independently.</p></div>`;
+  return `<div class="ev-stack ev-positive-screen evb-board"><div class="wager-results-bar evb-results-bar">${summary}</div>${rows.length ? renderEvBoard(evBoardContext(shown, live)) + more : empty(emptyTitle,emptyBody)}<p class="ev-caption ev-method-note">Fair probability and EV come from the odds service, priced with your saved reference-book, weighting and no-vig settings${pricing.devigMethod ? ` (${esc(pricing.devigMethod)} devig, ${esc(pricing.devigVersion || 'version not reported')})` : ''}; by default Pinnacle counts twice as much as FanDuel, BetOnline and the exchanges and four times as much as DraftKings, BetMGM and Caesars, and other books don't set it. Recommended stakes scale its Kelly fraction by your bankroll and Kelly multiplier. Open a row to compare every book. ${live ? 'Live prices expire 90 seconds after they are seen.' : ''}${hiddenAsErrors ? ` ${hiddenAsErrors} ${hiddenAsErrors === 1 ? 'price' : 'prices'} ${capNote} ${hiddenAsErrors === 1 ? 'is' : 'are'} hidden as likely feed errors; set a maximum EV in Pricing &amp; filters to change this.` : ''} Confirm price, limits and freshness independently.</p></div>`;
 }
 
 // A stake no larger than the book's limit or the exchange's available amount, when the feed sends one.
@@ -1538,7 +1538,7 @@ function renderSlip() {
       picks.sort((a,b)=>String(a.side).toLowerCase()==='over'?-1:String(b.side).toLowerCase()==='over'?1:0);
       const x=picks.find(p=>fantasyIds.includes(p.id))||picks[0], label=`${x.player} ${x.side} ${String(x.line??'—')}`;
       return {id:'slip-'+picks[0].id,attrs:`data-open-dfs="${esc(x.id)}"`,selected:picks.some(p=>fantasyIds.includes(p.id)),
-        slip:{player:x.player,team:x.team||'',sport:x.sport||'',market:[x.market||'',['goblin','demon'].includes(x.oddsType)?x.oddsType[0].toUpperCase()+x.oddsType.slice(1):'',x.period==='part'?'Part game':''].filter(Boolean).join(' · '),line:String(x.line??'—'),event:x.event||'',time:startLabel(x),
+        slip:{player:x.player,team:x.team||'',sport:x.sport||'',market:[x.market||'',['goblin','demon','adjusted'].includes(x.oddsType)?x.oddsType[0].toUpperCase()+x.oddsType.slice(1):'',x.period==='part'?'Part game':''].filter(Boolean).join(' · '),line:String(x.line??'—'),event:x.event||'',time:startLabel(x),
           sides:picks.map(p=>{const inSlip=fantasyIds.includes(p.id),name=`${p.player} ${p.side} ${String(p.line??'—')}`;
             return {side:p.side,value:percent(p.probability),rate:Number(p.probability),attrs:`data-fantasy="${esc(p.id)}" aria-pressed="${inSlip}" aria-label="${inSlip?'Remove':'Add'} ${esc(name)}"`};})},
         bet:{book:x.app,title:label},

@@ -4,7 +4,7 @@
 import {hitDistribution,expectedPayout,breakEven as tableBreakEven,decimal,DEVIG_METHODS} from './betting-math.js';
 import {isCurrent} from './odds-contract.js';
 import {getDfsLinePrices,serverNow} from './odds-client.js';
-import {withStandardPaytables} from './dfs-workspace.js?v=28';
+import {withStandardPaytables} from './dfs-workspace.js?v=29';
 import {canonicalPlatform} from './platform-catalog.js';
 
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -37,7 +37,7 @@ const isPush=p=>num(p.pushProbability)>0||Number.isInteger(num(p.line))&&p.pushR
 const correlated=picks=>new Set(picks.map(eventIdentity)).size!==picks.length||picks.some(p=>p.correlated===true)||new Set(picks.map(p=>p.correlationGroup).filter(Boolean)).size!==picks.filter(p=>p.correlationGroup).length;
 // A goblin or demon line's payout multiplier scales the whole slip's payout (a Power entry pays only when
 // every pick hits). Without one the payout is unknown (NaN): such a pick is never priced with the standard table.
-const lineFactor=p=>['goblin','demon'].includes(p.oddsType)?(num(p.payoutMultiplier)>0?num(p.payoutMultiplier):NaN):1;
+const lineFactor=p=>['goblin','demon','adjusted'].includes(p.oddsType)?(num(p.payoutMultiplier)>0?num(p.payoutMultiplier):NaN):1;
 const slipFactor=ps=>ps.reduce((a,p)=>a*lineFactor(p),1);
 // 1st-half / 1st-quarter lines the feed sends under the full-game stat name: no sportsbook price matches them.
 const partGame=p=>p.period==='part';

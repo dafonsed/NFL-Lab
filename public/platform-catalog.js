@@ -1,7 +1,8 @@
 // Site support: names, categories and local brand assets. This catalog does not
 // imply API coverage, posted lines, payout rules or jurisdiction eligibility.
+// An app without a local logo (asset null) shows its initials where a logo would go.
 const platform = (name, label, category, asset, aliases = []) => Object.freeze({
-  name, label, category, asset: `/assets/brands/${asset}.png`, aliases: Object.freeze(aliases)
+  name, label, category, asset: asset ? `/assets/brands/${asset}.png` : '', aliases: Object.freeze(aliases)
 });
 export const PLATFORM_CATEGORIES = Object.freeze({sportsbook:'Sportsbooks', fantasy:'DFS and pick’em apps', prediction:'Prediction markets'});
 export const SITE_PLATFORMS = Object.freeze([
@@ -28,6 +29,8 @@ export const SITE_PLATFORMS = Object.freeze([
   platform('OwnersBox','OwnersBox','fantasy','ownersbox'),
   platform('Boom Fantasy','Boom Fantasy','fantasy','boom'),
   platform('Vivid Picks','Vivid Picks','fantasy','vivid'),
+  platform('WannaParlay','WannaParlay','fantasy','wannaparlay'),
+  platform('HotStreak','HotStreak','fantasy',null,['Hot Streak']),
   platform('Novig','Novig','prediction','novig'),
   platform('ProphetX','ProphetX','prediction','prophetx'),
   platform('Sporttrade','Sporttrade','prediction','sporttrade'),
@@ -81,7 +84,7 @@ const BOOK_ASSETS = Object.freeze({
 const bookAsset = value => { const file = BOOK_ASSETS[key(value)]; return file ? `/assets/brands/${file.includes('.') ? file : file + '.png'}` : ''; };
 export const platformAsset = value => findPlatform(value)?.asset || bookAsset(value);
 export const SPORTSBOOK_PLATFORMS = Object.freeze(SITE_PLATFORMS.filter(item => item.category === 'sportsbook').map(item => item.name));
-export const FANTASY_PLATFORMS = Object.freeze(['PrizePicks','Underdog Fantasy','DraftKings Pick6','Sleeper Picks','ParlayPlay','Dabble','Chalkboard','Betr Picks','OwnersBox','Boom Fantasy','Vivid Picks','DraftKings Fantasy','FanDuel Fantasy']);
+export const FANTASY_PLATFORMS = Object.freeze(['PrizePicks','Underdog Fantasy','DraftKings Pick6','Sleeper Picks','ParlayPlay','Dabble','Chalkboard','Betr Picks','OwnersBox','Boom Fantasy','Vivid Picks','WannaParlay','HotStreak','DraftKings Fantasy','FanDuel Fantasy']);
 export const PREDICTION_PLATFORMS = Object.freeze(SITE_PLATFORMS.filter(item => item.category === 'prediction').map(item => item.name));
 export const EXCHANGE_PLATFORMS = Object.freeze(['Novig','ProphetX','Sporttrade','Kalshi','BettorEdge']);
 export const isFantasyPlatform = value => findPlatform(value)?.category === 'fantasy';

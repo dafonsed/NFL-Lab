@@ -7,7 +7,7 @@ export function sportsbookBadge(quote) {
   const platform=findPlatform(quote.bookKey)||findPlatform(quote.bookmaker);
   const name=platform?.name||quote.bookmaker||quote.bookKey||'Sportsbook';
   const status=quote.stale?'Saved quote':quote.basis==='published_archive'?'Archived quote':quote.basis==='in_play'?'In play':'Sportsbook';
-  return `<span class="quote-book-badge">${platform?`<span class="quote-book-mark"><img src="${esc(platform.asset)}" alt="" width="24" height="24"></span>`:''}<span class="quote-book-copy"><strong>${esc(name)}</strong><small>${status}</small></span></span>`;
+  return `<span class="quote-book-badge">${platform?.asset?`<span class="quote-book-mark"><img src="${esc(platform.asset)}" alt="" width="24" height="24"></span>`:''}<span class="quote-book-copy"><strong>${esc(name)}</strong><small>${status}</small></span></span>`;
 }
 
 const imageHosts=new Set(['a.espncdn.com','img.mlbstatic.com','static.www.nfl.com']);

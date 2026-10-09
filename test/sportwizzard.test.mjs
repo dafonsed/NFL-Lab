@@ -4,7 +4,8 @@ import { sportWizzardConfig, toFeedRecords, sportWizzardSnapshot, mergeSnapshots
 import { normalizeFeed, dfsPicks } from '../lib/odds/normalize.mjs';
 import { withKalshiDepth } from '../lib/odds/kalshi.mjs';
 
-const event = { id: 'e1', homeTeamName: 'Detroit Red Wings', awayTeamName: 'Seattle Kraken', startTime: '2026-10-09T23:00Z', league: 'nhl', status: 'scheduled' };
+// Two days out, so the fixture game never counts as started.
+const event = { id: 'e1', homeTeamName: 'Detroit Red Wings', awayTeamName: 'Seattle Kraken', startTime: new Date(Date.now() + 2 * 86_400_000).toISOString().replace(/:\d{2}\.\d+Z$/, 'Z'), league: 'nhl', status: 'scheduled' };
 const updated = new Date(Date.now() - 60_000).toISOString().replace(/\.\d+Z$/, 'Z');
 const row = extra => ({ id: `e1:draftkings:${extra.market}:${extra.side}:${extra.line ?? ''}:${extra.playerName ?? ''}`, sportsbook: 'draftkings', league: 'nhl', eventId: 'e1', period: 'FULL', priceAmerican: -110, suspended: false, updated, ...extra });
 
@@ -71,7 +72,7 @@ test('a book’s main total far from the other books’ (a quarter total tagged 
   assert.equal(records.length, 8);
 });
 
-test('pick’em lines become DFS picks: standard lines, and per-pick apps’ lines with their payout', () => {
+test('pick’em lines become DFS picks: standard lines, Dabble’s adjusted lines, and per-pick apps’ lines with their payout', () => {
   const pick = (book, side, multiplier, line = 3.5) => row({ id: `${book}:${side}:${line}:${multiplier}`, sportsbook: book, market: 'PLAYER_TOTAL', marketSubtype: 'PLAYER_TOTAL_SHOTS',
     side, line, playerName: 'Alex DeBrincat', priceAmerican: undefined, dfsMultiplier: multiplier });
   const rows = [
@@ -82,10 +83,13 @@ test('pick’em lines become DFS picks: standard lines, and per-pick apps’ lin
   ];
   const { records } = toFeedRecords(rows, new Map([['e1', event]]));
   const picks = records.filter(r => r.odds == null);
-  assert.deepEqual(picks.map(r => [r.book, r.side, r.line, r.payoutMultiplier]), [['PrizePicks', 'over', 3.5, undefined], ['PrizePicks', 'under', 3.5, undefined], ['Dabble', 'over', 3.5, undefined],
-    ['Sleeper Picks', 'over', 3.5, 1.78], ['Chalkboard', 'under', 3.5, 1.76], ['Sleeper Picks', 'over', 5.5, 3.5]], 'per-pick apps keep every line with its own payout');
+  assert.deepEqual(picks.map(r => [r.book, r.side, r.line, r.payoutMultiplier, r.oddsType]), [['PrizePicks', 'over', 3.5, undefined, undefined], ['PrizePicks', 'under', 3.5, undefined, undefined], ['Dabble', 'over', 3.5, undefined, undefined],
+    ['Sleeper Picks', 'over', 3.5, 1.78, undefined], ['Chalkboard', 'under', 3.5, 1.76, undefined],
+    ['Dabble', 'over', 4.5, 2.5, 'adjusted'], ['Dabble', 'under', 2.5, 0.6, 'adjusted'], ['Sleeper Picks', 'over', 5.5, 3.5, undefined]],
+    'per-pick apps keep every line with its own payout; Dabble’s adjustments scale its table');
   const feed = normalizeFeed(records, { syncedAt: new Date().toISOString(), price: false });
-  assert.equal(feed.picks.length, 6);
+  assert.equal(feed.picks.length, 8);
+  assert.deepEqual(feed.picks.filter(pick => pick.oddsType === 'adjusted').map(pick => pick.payoutMultiplier), [2.5, 0.6]);
   assert.equal(feed.picks.find(pick => pick.line === 5.5).payoutMultiplier, 3.5);
   assert.equal(feed.quotes.length, 2, 'the sportsbook prop stays a quote');
 });
@@ -181,4 +185,63 @@ test('merging keeps the main feed primary and adds only books it lacks', () => {
   assert.equal(mergeSnapshots(primary, extra), merged, 'the same object while inputs are unchanged');
   assert.equal(mergeSnapshots(null, extra), extra);
   assert.equal(mergeSnapshots(primary, null), primary);
+});
+
+test('one result market per book: a copy nearest the other books stands, and NHL moneylines beside three-ways survive', () => {
+  const result = (book, market, side, price, n = 0) => row({ id: `e1:${book}:${market}:${side}:${n}`, sportsbook: book, market, marketSubtype: market === 'MONEYLINE' ? 'MONEYLINE' : 'MONEYLINE_3WAY', side, priceAmerican: price });
+  const books = ['draftkings', 'fanduel', 'betrivers-kambi'];
+  const rows = [
+    ...books.flatMap(book => [result(book, 'MONEYLINE', 'HOME', -145), result(book, 'MONEYLINE', 'AWAY', 120), result(book, 'MONEYLINE_3_WAY', 'HOME', 130), result(book, 'MONEYLINE_3_WAY', 'DRAW', 330), result(book, 'MONEYLINE_3_WAY', 'AWAY', 150)]),
+    // BetMGM files a handicap three-way under the same market: the copy at the others' price stands.
+    result('betmgm', 'MONEYLINE_3_WAY', 'HOME', 135, 1), result('betmgm', 'MONEYLINE_3_WAY', 'HOME', -400, 2),
+    result('betmgm', 'MONEYLINE_3_WAY', 'DRAW', 320), result('betmgm', 'MONEYLINE_3_WAY', 'AWAY', 155),
+  ];
+  const { records } = toFeedRecords(rows, new Map([['e1', event]]));
+  assert.deepEqual(records.filter(r => r.book === 'betmgm' && r.side === 'home').map(r => r.odds), [135]);
+  const feed = normalizeFeed(records, { syncedAt: new Date().toISOString(), price: false });
+  assert.equal(feed.quotes.filter(q => q.type === 'moneyline').length, 6, 'an NHL moneyline is its own market beside a regulation three-way');
+  assert.equal(feed.quotes.filter(q => q.type === 'three-way').length, 12);
+  assert.equal(feed.skipped.inconsistent, 0);
+});
+
+test('a soccer two-way moneyline (an unlabelled draw-no-bet) is left out', () => {
+  const soccer = { ...event, homeTeamName: 'Puebla', awayTeamName: 'Leon' };
+  const rows = ['HOME', 'AWAY'].map(side => row({ id: `e1:fliff:${side}`, sportsbook: 'fliff', league: 'liga-mx', market: 'MONEYLINE', marketSubtype: 'MONEYLINE', side, priceAmerican: 105 }));
+  assert.equal(toFeedRecords(rows, new Map([['e1', soccer]])).records.length, 0);
+});
+
+test('a book SportWizzard rescrapes slowly keeps its latest pass; a price that pass missed is stale', () => {
+  const at = minutes => new Date(Date.now() - minutes * 60_000).toISOString().replace(/\.\d+Z$/, 'Z');
+  const prop = (book, player, minutes) => ['OVER', 'UNDER'].map(side => row({ id: `e1:${book}:${player}:${side}`, sportsbook: book, market: 'PLAYER_TOTAL', marketSubtype: 'PLAYER_TOTAL_SHOTS', side, line: 2.5, playerName: player, updated: at(minutes) }));
+  const rows = [...prop('caesars', 'Alex DeBrincat', 18), ...prop('caesars', 'Dylan Larkin', 20), ...prop('fanduel', 'Alex DeBrincat', 1), ...prop('fanduel', 'Dylan Larkin', 25), ...prop('prophetx', 'Alex DeBrincat', 90)];
+  const { records } = toFeedRecords(rows, new Map([['e1', event]]));
+  assert.ok(records.filter(r => r.book === 'caesars').every(r => r.feedLagSeconds >= 17 * 60 && r.feedLagSeconds <= 19 * 60), 'Caesars trails by its newest price’s age');
+  assert.ok(records.filter(r => r.book !== 'caesars').every(r => r.feedLagSeconds === undefined), 'a current book, and one hours behind, get no allowance');
+  const feed = normalizeFeed(records, { syncedAt: new Date().toISOString(), price: false });
+  assert.deepEqual(feed.quotes.map(q => `${q.book} ${q.player}`).sort(), ['Caesars Alex DeBrincat', 'Caesars Alex DeBrincat', 'Caesars Dylan Larkin', 'Caesars Dylan Larkin', 'FanDuel Alex DeBrincat', 'FanDuel Alex DeBrincat'].sort(),
+    'FanDuel’s 25-minute-old line missed its last passes; ProphetX is 90 minutes behind');
+});
+
+test('the engine counts a slow-cycle book’s price age from its latest pass too', async () => {
+  const { quoteAvailable } = await import('../lib/odds/engine.mjs');
+  const quote = { id: 'q', sport: 'NHL', eventId: 'e1', event: 'Seattle Kraken @ Detroit Red Wings', marketId: 'm', market: 'Shots', type: 'prop', player: 'Alex DeBrincat', side: 'over', line: 2.5,
+    book: 'Caesars', odds: -110, live: false, startTime: event.startTime, ts: new Date(Date.now() - 20 * 60_000).toISOString() };
+  assert.equal(quoteAvailable(quote, {}), false, '20 minutes old is past the 15-minute default');
+  assert.equal(quoteAvailable({ ...quote, feedLagSeconds: 18 * 60 }, {}), true, 'but only 2 minutes behind its book’s latest pass');
+  assert.equal(quoteAvailable({ ...quote, feedLagSeconds: 18 * 60 }, { pregameMaxAgeSeconds: 60 }), false, 'a stricter setting still applies on top of the lag');
+});
+
+test('every pick’em app SportWizzard carries comes through: per-pick WannaParlay, HotStreak and Boom, Underdog’s adjustments, Betr’s standard lines', () => {
+  const pick = (book, side, multiplier, line = 1.5) => row({ id: `${book}:${side}:${line}:${multiplier}`, sportsbook: book, market: 'PLAYER_TOTAL', marketSubtype: 'PLAYER_TOTAL_SHOTS',
+    side, line, playerName: 'Alex DeBrincat', priceAmerican: undefined, dfsMultiplier: multiplier });
+  const rows = [pick('wannaparlay', 'OVER', 1.33), pick('wannaparlay', 'OVER', 1, 0.5), pick('hotstreak', 'OVER', 1.9), pick('hotstreak', 'UNDER', 0.92), pick('boom', 'OVER', 1.7),
+    pick('underdog', 'OVER', 1), pick('underdog', 'UNDER', 0.85), pick('betr', 'OVER', 1),
+    // Season-long lines name no game: skipped with the other season markets.
+    { ...pick('underdog', 'OVER', 1, 86.5), id: 'season', period: 'REG_SEASON', marketScope: 'SEASON' }];
+  const { records } = toFeedRecords(rows, new Map([['e1', event]]));
+  assert.deepEqual(records.map(r => [r.book, r.side, r.payoutMultiplier, r.oddsType]), [['WannaParlay', 'over', 1.33, undefined], ['HotStreak', 'over', 1.9, undefined], ['Boom Fantasy', 'over', 1.7, undefined],
+    ['Underdog Fantasy', 'over', undefined, undefined], ['Underdog Fantasy', 'under', 0.85, 'adjusted'], ['Betr Picks', 'over', undefined, undefined]],
+    'a per-pick line paying 1× or less can’t beat its own line');
+  const feed = normalizeFeed(records, { syncedAt: new Date().toISOString(), price: false });
+  assert.equal(feed.picks.length, 6, 'every app is a DFS app, so its lines are picks, not sportsbook quotes');
 });
