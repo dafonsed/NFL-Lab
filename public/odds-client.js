@@ -159,28 +159,23 @@ export async function getPredictionContracts({ platform } = {}) {
   return body.contracts;
 }
 
-/** Inventory of the read-only SmartStake boards relayed through the website API. */
-export async function getSmartstakeInventory() {
-  return request('/api/ev/smartstake/datasets');
+const oddsjamCache = new Map();
+const ODDSJAM_TTL = 3_000;
+async function oddsjamRequest(path, params = {}) {
+  const key = JSON.stringify([path, params]), cached = oddsjamCache.get(key);
+  if (cached && Date.now() - cached.at < ODDSJAM_TTL) return cached.promise;
+  const promise = request(`/api/oddsjam/${path}`, params, { timeout: 30_000 });
+  oddsjamCache.set(key, { at: Date.now(), promise });
+  try { return await promise; } catch (error) { oddsjamCache.delete(key); throw error; }
 }
-
-const smartstakeCache = new Map();
-/**
- * One read-only SmartStake board, already structured as records by the relay.
- * @param {string} dataset
- * @param {{ limit?: number, sport?: string }} [options]
- * @returns {Promise<unknown>}
- */
-export async function getSmartstakeDataset(dataset, { limit, sport } = {}) {
-  const key = JSON.stringify([dataset, limit || null, sport || null]), cached = smartstakeCache.get(key);
-  if (cached && Date.now() - cached.at < 60_000) return cached.promise;
-  const promise = request(`/api/ev/site/smartstake/datasets/${encodeURIComponent(dataset)}`, { limit, sport });
-  smartstakeCache.set(key, { at: Date.now(), promise });
-  try { return await promise; } catch (error) { smartstakeCache.delete(key); throw error; }
-}
+export async function getOddsjamEv(opts = {}) { return oddsjamRequest('ev', opts); }
+export async function getOddsjamArbitrage(opts = {}) { return oddsjamRequest('arbitrage', opts); }
+export async function getOddsjamSharpMoney(opts = {}) { return oddsjamRequest('sharp-money', opts); }
+export async function getOddsjamOdds(opts = {}) { return oddsjamRequest('odds', opts); }
+export async function getOddsjamDfs(opts = {}) { return oddsjamRequest('dfs', opts); }
 /** The quote source's collection status (per book), for the coverage view. @returns {Promise<unknown>} */
 export async function getSourceStatus() {
-  return request('/api/ev/status', {}, { timeout: 15_000 });
+  return oddsjamRequest('status');
 }
 /** A member's alert rule against API data (see odds-alerts.js); no request. @type {typeof alertMatches} */
 export const getAlerts = (rule, data, options) => alertMatches(rule, data, options);

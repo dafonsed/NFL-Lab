@@ -41,6 +41,8 @@ import { SimulationPropsStore, createSimulationPropStores } from './lib/simulati
 import { renderBettingPage } from './lib/betting-pages.mjs';
 import { renderOddsApiPage } from './lib/odds-api-page.mjs';
 import { handleBettingToolsApi } from './lib/oddsjam/routes.mjs';
+import { ojBridgeFetch } from './lib/oddsjam/bridge.mjs';
+import { computePositiveEV, computeArbitrage, computeSharpMoney } from './lib/oddsjam/tools.mjs';
 import { handleEvApi } from './lib/ev-api-proxy.mjs';
 import { handleOddsApi } from './lib/odds/http.mjs';
 import { OddsError } from './public/odds-contract.js';
@@ -120,7 +122,8 @@ export const server = http.createServer(async (req, res) => {
   let url = null;
   try {
     const host = req.headers.host || '';
-    if (!process.env.VERCEL && !/^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(host)) return json(res, { error: 'This workspace only accepts local connections.' }, 403);
+    const publicHost = process.env.HOST === '0.0.0.0';
+    if (!process.env.VERCEL && !publicHost && !/^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(host)) return json(res, { error: 'This workspace only accepts local connections.' }, 403);
     url = new URL(req.url, 'http://localhost');
     res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://static.www.nfl.com https://a.espncdn.com https://img.mlbstatic.com data:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
     if (process.env.VERCEL) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
@@ -156,6 +159,7 @@ export const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       return res.end(html);
     }
+    // OddsJam direct — /ev frontend calls /api/oddsjam/* directly, no SmartStake
     if (url.pathname.startsWith('/api/ev/')) return await handleEvApi(req, res, url, { loadControls });
     if (oddsApi) return await handleOddsApi(req, res, url, { loadControls, defer: task => { try { waitUntil(task); } catch {} return task; } });
     if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, { error: 'Method not allowed.' }, 405);
@@ -380,6 +384,12 @@ export const server = http.createServer(async (req, res) => {
       const oldSport = String(url.searchParams.get('sport') || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12);
       res.writeHead(301, { Location: pagePath, 'Cache-Control': 'no-store', ...(oldSport ? { 'Set-Cookie': `sl-ev-sport=${oldSport}; Path=/; Max-Age=120; SameSite=Lax` } : {}) }); return res.end();
     }
+    // Standalone tool aliases live inside /ev as hash views; keep old links working.
+    const evToolAliases = { '/arbitrage': '/ev#arb-pre', '/dfs': '/ev#fantasy', '/fantasy': '/ev#fantasy', '/sharp-money': '/ev#sharp', '/sharp': '/ev#sharp', '/odds-screen': '/ev#odds', '/odds': '/ev#odds', '/positive-ev': '/ev#ev-pre' };
+    if (evToolAliases[pagePath]) {
+      res.writeHead(301, { Location: evToolAliases[pagePath], 'Cache-Control': 'no-store' });
+      return res.end();
+    }
     if (pagePath === '/research') {
       // The combined Dashboard became one dashboard per workspace; open the viewer's current one.
       const { sport } = siteContext(url), player = url.searchParams.get('researchPlayer');
@@ -400,6 +410,6 @@ export const server = http.createServer(async (req, res) => {
 const port = Number(process.env.PORT || 3100);
 // Vercel owns the listener and invocation lifetime. Dataset refreshes there run
 // on demand through SourceStore's TTL; a background interval cannot be relied on.
-if (!process.env.VERCEL) server.listen(port, '127.0.0.1', () => { console.log(`VisualOdds is ready at http://127.0.0.1:${port}`); if (process.env.AUTO_SYNC !== '0') { sync(); setInterval(sync, REFRESH_MS).unref(); } });
+if (!process.env.VERCEL) server.listen(port, process.env.HOST || '127.0.0.1', () => { console.log(`VisualOdds is ready at http://${process.env.HOST || '127.0.0.1'}:${port}`); if (process.env.AUTO_SYNC !== '0') { sync(); setInterval(sync, REFRESH_MS).unref(); } });
 server.on('error', e => { console.error(e.code === 'EADDRINUSE' ? `Port ${port} is already in use. Open http://127.0.0.1:${port}, or set PORT to another port.` : e.message); process.exitCode = 1; });
 export default server;
