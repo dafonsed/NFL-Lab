@@ -159,6 +159,9 @@ test('DFS lines are sport-scoped, priced on the server with payout tables; missi
   assert.equal(one.body.picks.length, 1);
   assert.ok(Number.isFinite(one.body.picks[0].probability), 'a low cap keeps a priced candidate, not an unpriced row');
   assert.equal(one.body.meta.truncated, true);
+  const apps = new Set(result.body.picks.filter(pick => Number.isFinite(pick.probability)).map(pick => pick.app));
+  const capped = await call(`/api/odds/dfs?sport=NFL&limit=${apps.size}`, { fetcher });
+  assert.deepEqual(new Set(capped.body.picks.map(pick => pick.app)), apps, 'a cap shares its lines across the apps instead of filling with one');
   const runner = result.body.picks.filter(pick => pick.player === 'Fixture Runner 1' && pick.side === 'Over' && Number.isFinite(pick.probability));
   assert.ok(runner.length >= 2 && runner.every(pick => pick.probability > .5 && pick.probability < .55), JSON.stringify(runner.map(pick => [pick.app, pick.probability])));
   assert.ok(runner.every(pick => pick.fairOdds < 0 && pick.probabilityMethod === 'multiplicative'));

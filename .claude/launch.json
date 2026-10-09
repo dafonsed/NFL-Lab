@@ -9,7 +9,8 @@
         "scripts/design-preview.mjs"
       ],
       "env": {
-        "PORT": "3101"
+        "PORT": "3101",
+        "SPORTWIZZARD_ENABLED": "1"
       },
       "port": 3101
     },
@@ -21,7 +22,8 @@
         "scripts/design-preview.mjs"
       ],
       "env": {
-        "PORT": "3103"
+        "PORT": "3103",
+        "SPORTWIZZARD_ENABLED": "1"
       },
       "port": 3103
     },
