@@ -371,7 +371,7 @@ async function getRelayEvSnapshot({ sport, books, limit = 2000, live = false }) 
     const id = 'oj-ev:' + stableRelayKey([row.gameId, row.book, row.market, row.betName, row.betPoints].join('|'));
     const impliedProb = americanToImpliedProb(Number(row.price));
     const quote = oddsjamQuoteBase({
-      id, sport: oddsjamSportOf(sport), event: row.matchup || '', market: row.market || 'moneyline',
+      id, sport: (row.sport || '').toUpperCase() || oddsjamSportOf(sport), event: row.matchup || '', market: row.market || 'moneyline',
       book: row.book, side: row.betName || '', odds: Number(row.price), line: row.betPoints,
       player: row.betName || '', startTime: null, impliedProb,
     });
@@ -397,10 +397,10 @@ async function getRelayArbSnapshot({ sport, books, limit = 500 }) {
     const pairId = stableRelayKey([row.gameId, row.market, row.sideA?.book, row.sideB?.book].join('|'));
     const aId = 'oj-arb-a:' + pairId, bId = 'oj-arb-b:' + pairId;
     if (row.sideA) {
-      quotes.push(oddsjamQuoteBase({ id: aId, sport: oddsjamSportOf(sport), event: row.matchup || '', market: row.market || 'moneyline', book: row.sideA.book, side: row.sideA.name || 'Side A', odds: Number(row.sideA.price), line: null, player: row.sideA.name || '', startTime: null, impliedProb: americanToImpliedProb(Number(row.sideA.price)) }));
+      quotes.push(oddsjamQuoteBase({ id: aId, sport: (row.sport || oddsjamSportOf(sport)).toUpperCase(), event: row.matchup || '', market: row.market || 'moneyline', book: row.sideA.book, side: row.sideA.name || 'Side A', odds: Number(row.sideA.price), line: null, player: row.sideA.name || '', startTime: null, impliedProb: americanToImpliedProb(Number(row.sideA.price)) }));
     }
     if (row.sideB) {
-      quotes.push(oddsjamQuoteBase({ id: bId, sport: oddsjamSportOf(sport), event: row.matchup || '', market: row.market || 'moneyline', book: row.sideB.book, side: row.sideB.name || 'Side B', odds: Number(row.sideB.price), line: null, player: row.sideB.name || '', startTime: null, impliedProb: americanToImpliedProb(Number(row.sideB.price)) }));
+      quotes.push(oddsjamQuoteBase({ id: bId, sport: (row.sport || oddsjamSportOf(sport)).toUpperCase(), event: row.matchup || '', market: row.market || 'moneyline', book: row.sideB.book, side: row.sideB.name || 'Side B', odds: Number(row.sideB.price), line: null, player: row.sideB.name || '', startTime: null, impliedProb: americanToImpliedProb(Number(row.sideB.price)) }));
     }
     arbitrage.push({
       quoteIds: [aId, bId], profit: Number(row.profitPct) / 100,
@@ -418,7 +418,7 @@ async function getRelaySharpSnapshot({ sport, books, limit = 1000 }) {
   const quotes = [], sharp = [];
   for (const row of rows) {
     const id = 'oj-sharp:' + stableRelayKey([row.gameId, row.sharpBook, row.betName, row.market].join('|'));
-    quotes.push(oddsjamQuoteBase({ id, sport: oddsjamSportOf(sport), event: row.matchup || '', market: row.market || 'moneyline', book: row.sharpBook, side: row.betName || '', odds: Number(row.currentPrice) || 0, line: row.line, player: row.betName || '', startTime: null, impliedProb: Number.isFinite(Number(row.currentPrice)) ? americanToImpliedProb(Number(row.currentPrice)) : null }));
+    quotes.push(oddsjamQuoteBase({ id, sport: (row.sport || oddsjamSportOf(sport)).toUpperCase(), event: row.matchup || '', market: row.market || 'moneyline', book: row.sharpBook, side: row.betName || '', odds: Number(row.currentPrice) || 0, line: row.line, player: row.betName || '', startTime: null, impliedProb: Number.isFinite(Number(row.currentPrice)) ? americanToImpliedProb(Number(row.currentPrice)) : null }));
     sharp.push({
       quoteId: id, sharpBook: row.sharpBook || 'Pinnacle',
       previousOdds: Number(row.previousPrice) || 0, currentOdds: Number(row.currentPrice) || 0,
@@ -439,7 +439,7 @@ async function getRelayMarketPairsSnapshot({ sport, books, limit = 2000 }) {
       for (const [bookName, odd] of Object.entries(row.books || {})) {
         if (!Number.isFinite(Number(odd.price))) continue;
         const id = 'oj-odds:' + stableRelayKey([game.id, row.label, bookName, odd.points].join('|'));
-        quotes.push(oddsjamQuoteBase({ id, sport: oddsjamSportOf(sport), event: game.name || '', market: body.market || 'moneyline', book: bookName, side: row.label || '', odds: Number(odd.price), line: odd.points, player: row.label || '', startTime: null, impliedProb: americanToImpliedProb(Number(odd.price)) }));
+        quotes.push(oddsjamQuoteBase({ id, sport: (game.sport || oddsjamSportOf(sport)).toUpperCase(), event: game.name || '', market: body.market || 'moneyline', book: bookName, side: row.label || '', odds: Number(odd.price), line: odd.points, player: row.label || '', startTime: null, impliedProb: americanToImpliedProb(Number(odd.price)) }));
         if (quotes.length >= limit) break;
       }
       if (quotes.length >= limit) break;
