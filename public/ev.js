@@ -329,6 +329,23 @@ function ensureContracts() {
     .finally(() => { contractsLoading = false; if (active === 'prediction') render(); });
 }
 async function ensureRelayBoards() { /* OddsJam mode: relay boards handled by snapshot functions */ }
+function oddsjamSportOf(sport) {
+  const map = { nfl: 'NFL', nba: 'NBA', mlb: 'MLB', nhl: 'NHL', cfb: 'CFB', cbb: 'CBB' };
+  return map[String(sport || '').toLowerCase()] || String(sport || '').toUpperCase() || 'NFL';
+}
+function oddsjamQuoteBase(opts) {
+  return { id: opts.id, source: 'local-api', sport: opts.sport, league: oddsjamSportOf(opts.sport), event: opts.event, displayEvent: opts.event, market: opts.market, displayMarket: opts.market, book: opts.book, side: opts.side, selection: opts.side, odds: opts.odds, line: opts.line ?? null, player: opts.player || opts.side, startTime: opts.startTime || null, impliedProb: opts.impliedProb ?? null, impliedProbability: opts.impliedProb ?? null, live: false, ts: new Date().toISOString() };
+}
+function oddsjamSnapshotMeta(sport, quotes, totalRows, source, view) {
+  return { snapshotAt: new Date().toISOString(), staleAfter: null, stale: false, warmingUp: false, partial: false, warnings: [], counts: { quotes: quotes.length, total: totalRows || quotes.length, skipped: {} }, source: source, view: view, sport: oddsjamSportOf(sport) };
+}
+
+function stableRelayKey(text) {
+  let hash = 5381;
+  const s = String(text || '');
+  for (let i = 0; i < s.length; i++) hash = ((hash << 5) + hash + s.charCodeAt(i)) >>> 0;
+  return hash.toString(36) + '-' + s.length.toString(36);
+}
 async function getRelayEvSnapshot({ sport, books, limit = 2000, live = false }) {
   const sports = sport ? [sport.toLowerCase()] : ['nfl', 'nba', 'mlb', 'nhl'];
   const body = await getOddsjamEv({ sports, market: 'moneyline', minEv: 0.5, devig: 'power' });
