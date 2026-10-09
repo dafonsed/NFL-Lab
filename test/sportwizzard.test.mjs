@@ -9,7 +9,8 @@ const updated = new Date(Date.now() - 60_000).toISOString().replace(/\.\d+Z$/, '
 const row = extra => ({ id: `e1:draftkings:${extra.market}:${extra.side}:${extra.line ?? ''}:${extra.playerName ?? ''}`, sportsbook: 'draftkings', league: 'nhl', eventId: 'e1', period: 'FULL', priceAmerican: -110, suspended: false, updated, ...extra });
 
 test('the source is off unless a key or SPORTWIZZARD_ENABLED=1 turns it on, and only over https', () => {
-  assert.equal(sportWizzardConfig({}), null);
+  assert.equal(sportWizzardConfig({}).base.href, 'https://api.sportwizzard.com/', 'on by default: the API needs no key');
+  assert.equal(sportWizzardConfig({ SPORTWIZZARD_ENABLED: '0' }), null);
   assert.equal(sportWizzardConfig({ SPORTWIZZARD_API_KEY: 'sw_live_x' }).apiKey, 'sw_live_x');
   assert.equal(sportWizzardConfig({ SPORTWIZZARD_ENABLED: '1' }).base.href, 'https://api.sportwizzard.com/');
   assert.equal(sportWizzardConfig({ SPORTWIZZARD_API_KEY: 'k', SPORTWIZZARD_ENABLED: '0' }), null);
