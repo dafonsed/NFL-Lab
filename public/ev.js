@@ -403,8 +403,8 @@ async function getRelayArbSnapshot({ sport, books, limit = 500 }) {
       quotes.push(oddsjamQuoteBase({ id: bId, sport: (row.sport || oddsjamSportOf(sport)).toUpperCase(), event: row.matchup || '', market: row.market || 'moneyline', book: row.sideB.book, side: row.sideB.name || 'Side B', odds: Number(row.sideB.price), line: null, player: row.sideB.name || '', startTime: null, impliedProb: americanToImpliedProb(Number(row.sideB.price)) }));
     }
     arbitrage.push({
-      quoteIds: [aId, bId], profit: Number(row.profitPct) / 100,
-      stakeFractions: [Number(row.sideA?.stakePct) / 100 || 0.5, Number(row.sideB?.stakePct) / 100 || 0.5],
+      legs: [{ quoteId: aId, stakeFraction: Number(row.sideA?.stakePct) / 100 || 0.5 }, { quoteId: bId, stakeFraction: Number(row.sideB?.stakePct) / 100 || 0.5 }],
+      margin: Number(row.profitPct) / 100, live: false, limitsKnown: false, capacity: null,
     });
     if (quotes.length >= limit * 2) break;
   }
