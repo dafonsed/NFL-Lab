@@ -13,7 +13,7 @@ import * as views from '../public/ev-secondary-views.js';
 import {wagerCard} from '../public/ev-bet-card.js';
 import {canonicalPlatform, isContestPlatform, PREDICTION_PLATFORMS} from '../public/platform-catalog.js';
 import {TOOL_FILTER_DEFAULTS, oddsWithin} from '../public/ev-filters.js';
-import {withStandardPaytables, paytableSource, breakEven, standardPayout, payoutFactor, payoutKnown} from '../public/dfs-workspace.js';
+import {withStandardPaytables, paytableSource, breakEven, standardPayout, payoutFactor, payoutKnown, legBreakEven} from '../public/dfs-workspace.js';
 import {selectionText, startLabel} from '../public/ev-board.js';
 import {suiteSettings} from '../public/odds-contract.js';
 
@@ -32,7 +32,7 @@ function render(name,extra={}) {
     table:(head,rows)=>`<table><thead><tr>${head.map(text=>`<th>${views.toolEsc(text)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`,
     button:(label,attrs='')=>`<button type="button" ${attrs}>${label}</button>`,action:()=>'',
     toolFilters:{...TOOL_FILTER_DEFAULTS},oddsWithin,filteredEmpty:fallback=>fallback,sportsbookSelected:()=>true,sport:'',ARB_SANITY_LIMIT:.15,feedContracts:[],optimizerVisibleCount:40,startLabel,slipNotice:'',
-    breakEven,standardPayout,payoutFactor,payoutKnown,selectionText,suite:{settings:()=>({devigMethod:'multiplicative'}),quoteVisible:()=>true},...extra});
+    breakEven,standardPayout,payoutFactor,payoutKnown,legBreakEven,selectionText,suite:{settings:()=>({devigMethod:'multiplicative'}),quoteVisible:()=>true},...extra});
   // Parlay computes fair odds from every quote for the sport (quoteSource), not only the listed ones.
   context.quoteSource ??= () => context.state?.quotes ?? context.quotes?.() ?? [];
   // Standard payouts layer under saved tables (public/dfs-workspace.js).

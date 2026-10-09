@@ -36,7 +36,7 @@ test('custom-odds EV never masquerades as a pick’em edge', t => {
   assert.equal($('.dfs-prop').length,2);
   assert.equal($('.dfs-prop').first().find('.dfs-player').text(),'Anthony Volpe','the genuine 55.26% pick’em edge ranks first');
   assert.equal($('.dfs-prop').last().find('.dfs-player').text(),'Colson Montgomery','custom-odds rows rank by pick’em edge, not their wager EV');
-  const edges=$('.dfs-vs-be').map((_,element)=>$(element).text()).get();
+  const edges=$('.dfs-probability').map((_,element)=>$(element).attr('title')).get().filter(title=>/vs break-even/.test(title));
   assert.equal(edges.length,1,'the app without payout rules gets no invented break-even');
   assert.match(edges[0],/\+0\.23%/);
   assert.doesNotMatch(html,/\+19\.44%/);
@@ -103,7 +103,7 @@ test('preview and platform options contain DFS providers with lines instead of s
   assert.doesNotMatch(html,/FanDuel(?! Fantasy)|BetMGM|Pinnacle|Sportsbooks|Brandin Podziemski/);
   assert.match(html,/Tyrese Maxey/);
   assert.doesNotMatch(html,/alt="VisualOdds"/);
-  assert.match(html,/No book price|Fair odds/);
+  assert.match(html,/Fair Value|No book price/);
   assert.match(html,/DFS platforms/);
 });
 
@@ -179,7 +179,7 @@ test('main DFS odds use the best current recorded sportsbook quote for the exact
   assert.equal(sportsbookOffer(prop,[]),null);
 });
 
-test('DFS rows show the book logo and offered odds, while fair value stays in the expanded comparison', t => {
+test('DFS rows show the site’s fair value and true probability; book prices are in the expanded comparison', t => {
   const originalDocument = globalThis.document, originalCSS = globalThis.CSS;
   globalThis.document = {querySelector:()=>null};
   globalThis.CSS = {escape:value=>value};
@@ -195,17 +195,17 @@ test('DFS rows show the book logo and offered odds, while fair value stays in th
   const view = createDfsWorkspace({getState:()=>state,redraw:()=>{}});
   const html = view.render();
   const $ = load(html);
-  assert.match(html,/src="\/assets\/brands\/fanduel.png" alt="FanDuel"/);
-  assert.equal($('.dfs-prop.evb-row .dfs-offer strong').text(),'249.5 · -115');
-  assert.equal($('.dfs-prop.evb-row .dfs-offer small').text(),'FanDuel · best of 2 books','the best Over among every book with this exact line');
+  assert.equal($('.dfs-prop.evb-row .dfs-offer .dfs-fv-odds').text(),'-150');
+  assert.equal($('.dfs-prop.evb-row .dfs-offer small').text(),'Fair Value');
   assert.equal($('.dfs-prop.evb-row .dfs-prob').text(),'60.00%');
+  assert.equal($('.dfs-prop.evb-row .dfs-probability small').text(),'True Prob');
   assert.equal($('.dfs-prop .dfs-market-title').text(),'Player Passing Yards');
   assert.equal($('.dfs-prop .dfs-pick-cell').attr('title'),'DFS line at PrizePicks');
   assert.equal($('.dfs-prop .dfs-player').text(),'Josh Allen');
   assert.equal($('.dfs-prop .dfs-pick-line').text(),'Over 249.5');
   assert.equal($('.dfs-prop button button').length,0);
   assert.equal($('.dfs-prop button input').length,0);
-  assert.doesNotMatch(html,/Fair value|alt="VisualOdds"|Fair -150/);
+  assert.doesNotMatch(html,/alt="VisualOdds"|Fair -150/);
   const button = {dataset:{dfsExpand:prop.id},hasAttribute:()=>false};
   view.click({target:{closest:()=>button}});
   const panel = load(view.render());
@@ -220,9 +220,9 @@ test('DFS rows show the book logo and offered odds, while fair value stays in th
   assert.equal(panel('.evd-add[data-add="dfs"]').length,1);
   state.quotes = [];
   view.click({target:{closest:()=>button}});
-  assert.equal(load(view.render())('.dfs-offer strong').text(),'249.5 · —');
-  assert.equal(load(view.render())('.dfs-offer small').text(),'Fair odds (no book line)');
-  assert.doesNotMatch(view.render(),/Fair value|alt="VisualOdds"/);
+  assert.equal(load(view.render())('.dfs-offer .dfs-fv-odds').text(),'-150','with no book line the fair value still shows');
+  assert.equal(load(view.render())('.dfs-offer small').text(),'Fair Value');
+  assert.doesNotMatch(view.render(),/alt="VisualOdds"/);
   assert.equal(view.click({target:{closest:()=>({dataset:{dfsPick:prop.id},hasAttribute:()=>false})}}),true);
   const selected = load(view.render());
   assert.equal(selected('.dfs-prop [data-dfs-pick]').attr('aria-pressed'),'true');
@@ -295,9 +295,10 @@ test('goblin and demon lines show fair probability but no edge, and never produc
   const view=createDfsWorkspace({getState:()=>state,redraw:()=>{}});
   let $=load(view.render());
   const cell=id=>$(`[data-dfs-row="${id}"] .dfs-probability`);
-  assert.match(cell('s').text(),/vs BE/);
-  assert.match(cell('g').text(),/62\.00%.*Payout varies/s,'fair probability still shows');
-  assert.doesNotMatch(cell('g').text(),/vs BE/);
+  assert.match(cell('s').attr('title'),/vs break-even/);
+  assert.match(cell('g').text(),/62\.00%/,'fair probability still shows');
+  assert.match(cell('g').attr('title'),/goblin payout not in the feed/);
+  assert.doesNotMatch(cell('g').attr('title'),/vs break-even/);
   assert.equal($('[data-dfs-row="d"] .dfs-odds-type').text(),'Demon');
   view.change({target:{id:'dfs-line-type',dataset:{},value:'goblin'}});
   $=load(view.render());
@@ -344,7 +345,7 @@ test('the comparison panel uses the row\'s own app break-even when every app is 
   const $=load(view.render());
   // Underdog 3-pick 6.5x: break-even 53.58%, edge +0.92 (not PrizePicks' 55.03%).
   assert.match($('.dfs-panel-facts').text(),/Break-even 53\.58% \(Underdog Fantasy 3 Pick\) · Edge \+0\.92%/);
-  assert.match($('[data-dfs-row="ud"] .dfs-vs-be').text(),/\+0\.92%/);
+  assert.match($('[data-dfs-row="ud"] .dfs-probability').attr('title'),/\+0\.92% vs break-even 53\.58%/);
 });
 
 test('goblin and demon payout multipliers from the feed set the leg break-even and scale the slip payout', t => {
@@ -356,8 +357,8 @@ test('goblin and demon payout multipliers from the feed set the leg break-even a
   const view=createDfsWorkspace({getState:()=>state,redraw:()=>{}});
   let $=load(view.render());
   // 3-pick 6x: standard break-even 55.03%; goblin 55.032 / 0.7 = 78.617% (edge +1.38); demon 55.03 / 1.55 = 35.50% (edge +4.50).
-  assert.match($('[data-dfs-row="g"] .dfs-vs-be').text(),/\+1\.38%/);
-  assert.match($('[data-dfs-row="d"] .dfs-vs-be').text(),/\+4\.50%/);
+  assert.match($('[data-dfs-row="g"] .dfs-probability').attr('title'),/\+1\.38%/);
+  assert.match($('[data-dfs-row="d"] .dfs-probability').attr('title'),/\+4\.50%/);
   assert.equal($('[data-dfs-row="g"] .dfs-odds-type').text(),'Goblin ×0.7');
   for(const id of ['s','g','d'])view.click({target:{closest:()=>({dataset:{dfsPick:id},hasAttribute:()=>false})}});
   $=load(view.render());
@@ -368,7 +369,7 @@ test('goblin and demon payout multipliers from the feed set the leg break-even a
   // A goblin without a multiplier still gets no edge or EV.
   state.dfs=state.dfs.map(item=>item.id==='g'?{...item,payoutMultiplier:undefined}:item);
   $=load(view.render());
-  assert.match($('[data-dfs-row="g"] .dfs-vs-be').text(),/Payout varies/);
+  assert.match($('[data-dfs-row="g"] .dfs-probability').attr('title'),/goblin payout not in the feed/);
 });
 
 test('the comparison lists every sportsbook with the exact prop, including one-sided books and other game names', t => {
@@ -386,7 +387,8 @@ test('the comparison lists every sportsbook with the exact prop, including one-s
   const heads=$('.evd-grid thead th[title]').map((_,th)=>th.attribs.title).get();
   assert.deepEqual(heads.filter(name=>['FanDuel','DraftKings','Fanatics'].includes(name)).sort(),['DraftKings','FanDuel','Fanatics']);
   assert.match($('.evd-note').text(),/fair probability devigs FanDuel \(both sides priced\)/);
-  assert.equal($('.dfs-prop .dfs-offer small').text(),'FanDuel','only FanDuel prices the Under');
+  assert.equal($('.dfs-prop .dfs-offer small').text(),'Fair Value');
+  assert.deepEqual($('.dfs-prop .dfs-fv-books img').map((_,img)=>img.attribs.alt).get(),['FanDuel'],'the fair value comes from FanDuel, the one book pricing both sides');
   assert.ok(!heads.includes('FanDuel Fantasy') && !heads.includes('DraftKings Fantasy'),'contest apps are not comparison columns');
   assert.equal($('[data-dfs-compare-platform="FanDuel Fantasy"]').length,0,'the rail lists pick\'em apps only');
 });
@@ -526,7 +528,7 @@ test('rows name team and combo markets, season-long boards and the best book pri
   assert.equal(title('combo'),'Anytime TDs (Combo)');
   assert.equal(title('player'),'Player Receiving Yards');
   assert.equal($('[data-dfs-row="szn"] .dfs-event-name').text(),'NBA season-long');
-  assert.deepEqual($('.dfs-thead th').map((_,th)=>$(th).text()).get(),['Market and event','Selection','Best book price','Fair probability','Actions']);
+  assert.deepEqual($('.dfs-thead th').map((_,th)=>$(th).text()).get(),['Market and event','Selection','Fair value','True prob','Actions']);
   assert.doesNotMatch($.html(),/Sharp price/);
 });
 
@@ -535,11 +537,37 @@ test('sportsbooks the member can\'t use leave the row price and comparison, whil
   const state={dfs:[pick],quotes:[],paytables:{PrizePicks:{3:[0,0,0,6]}}};
   const {view,press,html}=board(t,state);
   view.render();
-  assert.equal(html()('.dfs-offer small').text(),'FanDuel · best of 2 books','every book without an availability check');
+  assert.equal(html()('.dfs-offer .dfs-fv-odds').text(),'-120','the fair value');
   state.bookAvailable=book=>book!=='FanDuel';
   press({dfsExpand:'p'});
   const $=html();
-  assert.equal($('.dfs-offer small').text(),'DraftKings');
+  assert.deepEqual($('.dfs-fv-books img').map((_,img)=>img.attribs.alt).get(),['FanDuel'],'the fair value still names the book it comes from');
   assert.deepEqual($('.evd-grid thead th[title]').map((_,th)=>th.attribs.title).get().filter(name=>['FanDuel','DraftKings'].includes(name)),['DraftKings']);
   assert.match($('.evd-note').text(),/fair probability devigs FanDuel \(both sides priced; FanDuel hidden by your sportsbook settings\)/);
+});
+
+test('per-pick apps: each leg breaks even at 1 ÷ its multiplier and an entry pays the product; an exchange source shows FV · Smart Money', t => {
+  const originalDocument=globalThis.document, originalCSS=globalThis.CSS;
+  globalThis.document={querySelector:()=>null};globalThis.CSS={escape:value=>value};
+  t.after(()=>{if(originalDocument===undefined)delete globalThis.document;else globalThis.document=originalDocument;if(originalCSS===undefined)delete globalThis.CSS;else globalThis.CSS=originalCSS;});
+  const base={sport:'NFL',event:'CIN @ MIA',market:'FG Made',line:1.5,side:'Over',source:'local-api',app:'Sleeper Picks'};
+  const state={dfs:[
+    {...base,id:'a',player:'Kicker A',payoutMultiplier:1.52,probability:.7,fairOdds:-233,probabilityBooks:['DraftKings']},
+    {...base,id:'b',player:'Kicker B',payoutMultiplier:2.12,probability:.5,fairOdds:100,probabilityBooks:['DraftKings']},
+    {...base,id:'c',player:'Kicker C',payoutMultiplier:1.8,probability:.6,fairOdds:-150,probabilityBooks:['ProphetX'],probabilitySources:[{book:'ProphetX',over:-150,under:130,exchange:true,liquidity:792}]},
+    {...base,id:'x',app:'Chalkboard',player:'Kicker X',probability:.6,fairOdds:-150},
+  ],quotes:[],paytables:{'Sleeper Picks':{3:[0,0,0,5.64]}}};
+  const view=createDfsWorkspace({getState:()=>state,redraw:()=>{}});
+  let $=load(view.render());
+  const title=id=>$(`[data-dfs-row="${id}"] .dfs-probability`).attr('title');
+  assert.match(title('a'),/\+4\.21% vs break-even 65\.79%/,'70% against 1 ÷ 1.52');
+  assert.match(title('b'),/\+2\.83% vs break-even 47\.17%/,'50% against 1 ÷ 2.12');
+  assert.match(title('x'),/per-pick payout not in the feed/,'no multiplier, no invented break-even');
+  assert.equal($('[data-dfs-row="a"] .dfs-odds-type').text(),'×1.52');
+  assert.equal($('[data-dfs-row="c"] .dfs-offer small').text(),'FV · Smart Money');
+  assert.equal($('[data-dfs-row="c"] .dfs-fv-cash strong').text(),'$792');
+  assert.equal($('[data-dfs-row="a"] .dfs-offer small').text(),'Fair Value');
+  for(const id of ['a','b','c'])view.click({target:{closest:()=>({dataset:{dfsPick:id},hasAttribute:()=>false})}});
+  $=load(view.render());
+  assert.match($('.dfs-slip-total').text(),/5\.8×/,'1.52 × 2.12 × 1.8, not the feed’s 5.64× table');
 });

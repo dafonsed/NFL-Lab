@@ -268,3 +268,28 @@ body.ev-page[data-ev-screen="fantasy"] .dfs-workspace :is(.dfs-prop-list,.dfs-sl
 .dfs-offer .dfs-unweighted-note{font-style:italic;opacity:.55;font-size:9px}
 
 .dfs-fair-fallback{font-style:italic;font-size:9px;opacity:.6;text-transform:uppercase;letter-spacing:.06em}
+
+/* Fair value and true probability (Oct 2026): the site's no-vig price with its source books' marks,
+   "FV · Smart Money" when an exchange source reports its depth, and the probability in a pill. */
+#ev-view .dfs-table .dfs-offer small,#ev-view .dfs-table .dfs-probability small{display:block;margin-top:5px;color:var(--evb-muted);font-size:12.5px;font-weight:500;letter-spacing:.01em}
+#ev-view .dfs-fv{display:inline-flex;align-items:center;gap:8px;min-height:26px}
+#ev-view .dfs-fv-books{display:inline-flex;align-items:center}
+#ev-view .dfs-fv .dfs-brand,#ev-view .dfs-fv .dfs-brand-fallback{width:24px;height:24px;border-radius:6px;flex:none}
+#ev-view .dfs-fv-books.is-stack .dfs-brand+.dfs-brand,#ev-view .dfs-fv-books.is-stack .dfs-brand-fallback+.dfs-brand,#ev-view .dfs-fv-books.is-stack .dfs-brand+.dfs-brand-fallback{margin-left:-8px;box-shadow:0 0 0 2px var(--evb-surface,#15171a)}
+#ev-view .dfs-fv-more{margin-left:4px;color:var(--evb-muted);font-size:11.5px;font-weight:600}
+#ev-view .dfs-fv-odds{color:var(--evb-text);font-size:18px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+#ev-view .dfs-fv-odds.is-empty{color:var(--evb-muted)}
+#ev-view .dfs-fv-dot{color:var(--evb-muted);font-weight:700}
+#ev-view .dfs-fv-cash{display:inline-flex;align-items:center;gap:5px;color:var(--evb-lime)}
+#ev-view .dfs-fv-cash svg{width:19px;height:19px}
+#ev-view .dfs-fv-cash strong{color:var(--evb-text);font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+#ev-view .dfs-table .dfs-probability{text-align:center}
+#ev-view .dfs-probability .dfs-prob{display:inline-flex;align-items:center;justify-content:center;min-width:96px;padding:6px 14px;border:1.5px solid #ffffff24;border-radius:999px;background:#ffffff0a;color:var(--evb-text);font-size:19px;font-weight:650;letter-spacing:-.01em;line-height:1.2;font-variant-numeric:tabular-nums}
+#ev-view .dfs-probability[data-heat="high"] .dfs-prob{border-color:color-mix(in srgb,var(--evb-lime) 62%,transparent);background:color-mix(in srgb,var(--evb-lime) 14%,transparent);color:var(--evb-lime)}
+#ev-view .dfs-probability[data-heat="near"] .dfs-prob{border-color:#e8b14a8c;background:#e8b14a1f;color:#f0c46a}
+#ev-view .dfs-probability[data-heat="low"] .dfs-prob{color:var(--evb-muted)}
+@media (max-width:760px){
+  #ev-view .dfs-table .dfs-probability{text-align:right}
+  #ev-view .dfs-probability .dfs-prob{min-width:0;padding:4px 11px;font-size:16px}
+  #ev-view .dfs-fv-odds,#ev-view .dfs-fv-cash strong{font-size:15px}
+}

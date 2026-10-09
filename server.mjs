@@ -40,9 +40,6 @@ import { SimulationStore } from './lib/simulation-source.mjs';
 import { SimulationPropsStore, createSimulationPropStores } from './lib/simulation-props.mjs';
 import { renderBettingPage } from './lib/betting-pages.mjs';
 import { renderOddsApiPage } from './lib/odds-api-page.mjs';
-import { handleBettingToolsApi } from './lib/oddsjam/routes.mjs';
-import { ojBridgeFetch } from './lib/oddsjam/bridge.mjs';
-import { computePositiveEV, computeArbitrage, computeSharpMoney } from './lib/oddsjam/tools.mjs';
 import { handleEvApi } from './lib/ev-api-proxy.mjs';
 import { handleOddsApi } from './lib/odds/http.mjs';
 import { OddsError } from './public/odds-contract.js';
@@ -153,13 +150,6 @@ export const server = http.createServer(async (req, res) => {
     // Distribution controls fail closed: a database error is a 503, never an unfiltered snapshot. Only a
     // server with no account services configured (so no controls can exist) serves without them.
     const loadControls = accounts ? () => readMarketControlsWithFallback(accounts.system.db) : accountsConfigured() ? async () => { throw new Error('Account services are unavailable.'); } : null;
-        if (url.pathname.startsWith('/api/oddsjam/')) return await handleBettingToolsApi(req, res, url);
-    if (url.pathname === '/betting-tools' || url.pathname === '/betting-tools/') {
-      const html = await fs.readFile(path.join(publicDir, 'betting-tools.html'), 'utf8');
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
-      return res.end(html);
-    }
-    // OddsJam direct — /ev frontend calls /api/oddsjam/* directly, no SmartStake
     if (url.pathname.startsWith('/api/ev/')) return await handleEvApi(req, res, url, { loadControls });
     if (oddsApi) return await handleOddsApi(req, res, url, { loadControls, defer: task => { try { waitUntil(task); } catch {} return task; } });
     if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, { error: 'Method not allowed.' }, 405);
@@ -328,7 +318,7 @@ export const server = http.createServer(async (req, res) => {
     for (const file of ['ev-suite.js', 'ev-suite.css', 'ev-suite-storage.js', 'ev-operations.js', 'ev-operations.css', 'ev-market-views.js', 'ev-market-views.css', 'ev-ledger.js', 'ev-ledger.css', 'ev-fantasy-lab.js', 'ev-fantasy-lab.css', 'ev.webmanifest', 'ev-sw.js', 'ev-app-icon.svg']) names['/' + file] = file;
     for (const file of ['platform-catalog.js', 'ev-tool-catalog.js', 'ev-more-menu.js', 'ev-secondary-views.js', 'ev-more-tools.css', 'ev-filters.js', 'ev-quote-cache.js']) names['/' + file] = file;
     // The odds client and the shared calculators (lib/odds prices the feed; the browser displays it).
-    for (const file of ['odds-client.js', 'odds-contract.js', 'odds-alerts.js', 'odds-format.js', 'betting-math.js', 'market-identity.js', 'sport-names.js', 'relay-dfs.js', 'dfs-feed-merge.js']) names['/' + file] = file;
+    for (const file of ['odds-client.js', 'odds-contract.js', 'odds-alerts.js', 'odds-format.js', 'betting-math.js', 'market-identity.js', 'sport-names.js']) names['/' + file] = file;
     for (const file of ['ev-open.css', 'studio.css', 'research-filters.css', 'research-details.css', 'tool-dropdowns.css', 'arb-calculator.js', 'arb-calculator.css', 'bet-comparison.js', 'bet-comparison.css', 'bet-dashboard-v2.js', 'bet-dashboard-v3.js', 'bet-history.js', 'bet-inline.js', 'bet-inline.css',   'bet-tracker-reference.css', 'ev-arb-reference.css', 'ev-book-picker.css', 'ev-filter-polish.css',  'sites-redesign.css', 'smart-money.css']) names['/' + file] = file;
     if (/^\/ev-icons\/(date|leagues|markets|odds|sports)\.svg$/.test(pagePath)) names[pagePath] = pagePath.slice(1);
     if (['/product-switcher.js','/product-switcher.css'].includes(pagePath)) names[pagePath] = pagePath.slice(1);

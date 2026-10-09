@@ -459,7 +459,7 @@ export interface DfsPick {
   fairOdds: number | null;
   probabilityMethod: DevigMethod;
   probabilityBooks: string[];
-  probabilitySources?: { book: string; over?: number; under?: number }[];
+  probabilitySources?: { book: string; over?: number; under?: number; exchange?: boolean; liquidity?: number }[];
   /** The listed books' average price on each side (mean implied probability as American odds). */
   bookAverage?: { over: number | null; under: number | null };
   bookLines?: { book: string; over?: number; under?: number; exchange?: true }[];
