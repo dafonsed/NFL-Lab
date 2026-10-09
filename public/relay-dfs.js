@@ -19,7 +19,7 @@ export async function getRelayDfsData({ sport, devigMethod = 'power' } = {}) {
     const side = String(row.side || 'over').toLowerCase();
     const fairProb = Number(row.fairProb);
     const dfsPrice = Number(row.dfsPrice);
-    const probability = Number.isFinite(fairProb) && fairProb > 0 && fairProb < 1 ? fairProb : null;
+    const probability = fairProb != null && Number.isFinite(fairProb) && fairProb > 0 && fairProb < 1 ? fairProb : null;
     const dfsOdds = Number.isFinite(dfsPrice) ? dfsPrice : null;
     const calculatedEv = probability != null && dfsOdds != null ? probability * decimal(dfsOdds) - 1 : null;
     return {
@@ -38,7 +38,7 @@ export async function getRelayDfsData({ sport, devigMethod = 'power' } = {}) {
       bookLines: (row.bookLines && row.bookLines.length ? row.bookLines.map(bl => ({ book: bl.book, over: side === 'over' ? bl.price : null, under: side === 'under' ? bl.price : null, line: bl.line })) : row.bestBook ? [{ book: row.bestBook, over: side === 'over' ? row.bestBookPrice : null, under: side === 'under' ? row.bestBookPrice : null }] : []),
       eventId: `oj:${row.gameId || ''}`,
       period: 'full', live: false, exchange: false,
-      team: '', recommendation: row.recommendation || '', edgePct: Number(row.edgePct) || 0,
+      team: '', recommendation: row.recommendation || '', edgePct: row.edgePct != null ? Number(row.edgePct) : null,
     };
   }).filter(pick => pick.player && pick.market && pick.line > 0);
   return { picks, generatedAt: new Date().toISOString() };
