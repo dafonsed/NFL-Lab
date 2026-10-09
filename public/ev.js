@@ -169,7 +169,7 @@ const SPORT_KEY = 'sportslab-ev-sport';
 const readSavedSport = () => { try { return localStorage.getItem(SPORT_KEY); } catch { return null; } };
 const handedSport = /(?:^|;\s*)sl-ev-sport=([a-z]+)/.exec(document.cookie)?.[1];
 if (handedSport) document.cookie = 'sl-ev-sport=; Path=/; Max-Age=0; SameSite=Lax';
-const initialSport = (new URLSearchParams(location.search).get('sport') ?? handedSport ?? readSavedSport() ?? 'NFL').toUpperCase();
+const initialSport = (new URLSearchParams(location.search).get('sport') ?? handedSport ?? readSavedSport() ?? 'ALL').toUpperCase();
 let sport = initialSport === 'ALL' || initialSport === '' ? '' : knownSport(initialSport) || 'NFL';
 const rememberSport = () => { try { localStorage.setItem(SPORT_KEY, sport || 'all'); } catch {} };
 const toolAddress = () => location.pathname + '#' + active;
@@ -349,10 +349,10 @@ function oddsjamSportOf(sport) {
   return map[String(sport || '').toLowerCase()] || String(sport || '').toUpperCase() || 'NFL';
 }
 function oddsjamQuoteBase(opts) {
-  return { id: opts.id, source: 'local-api', sport: opts.sport, league: oddsjamSportOf(opts.sport), event: opts.event, displayEvent: opts.event, market: opts.market, displayMarket: opts.market, book: opts.book, side: opts.side, selection: opts.side, odds: opts.odds, line: opts.line ?? null, player: opts.player || opts.side, startTime: opts.startTime || null, impliedProb: opts.impliedProb ?? null, impliedProbability: opts.impliedProb ?? null, live: false, ts: new Date().toISOString() };
+  return { id: opts.id, source: 'local-api', sport: opts.sport, league: oddsjamSportOf(opts.sport), event: opts.event, displayEvent: opts.event, market: opts.market, displayMarket: opts.market, book: opts.book, side: opts.side, selection: opts.side, odds: opts.odds, line: opts.line ?? null, player: opts.player || opts.side, startTime: opts.startTime || null, impliedProb: opts.impliedProb ?? null, impliedProbability: opts.impliedProb ?? null, live: false, ts: new Date().toISOString(), expiresAt: new Date(Date.now() + 60_000).toISOString() };
 }
 function oddsjamSnapshotMeta(sport, quotes, totalRows, source, view) {
-  return { snapshotAt: new Date().toISOString(), staleAfter: null, stale: false, warmingUp: false, partial: false, warnings: [], counts: { quotes: quotes.length, total: totalRows || quotes.length, skipped: {} }, source: source, view: view, sport: oddsjamSportOf(sport) };
+  return { snapshotAt: new Date().toISOString(), staleAfter: new Date(Date.now() + 60_000).toISOString(), stale: false, warmingUp: false, partial: false, warnings: [], counts: { quotes: quotes.length, total: totalRows || quotes.length, skipped: {} }, source: source, view: view, sport: oddsjamSportOf(sport) };
 }
 
 function stableRelayKey(text) {
@@ -825,7 +825,7 @@ function renderEv(live) {
   const pool = state.quotes.filter(q => (!sport || q.sport === sport) && (!evLeague || (q.league || q.sport) === evLeague));
   const settings = suite.settings();
   const all = pool.filter(q => Boolean(q.live) === live && current(q) && suite.quoteVisible(q) && (live || startsWithin(q, evDateRange))).map(evRowOf).filter(Boolean);
-  const { evMinOdds, minEv, minProb } = toolFilters;
+  const { evMinOdds, minEv, minProb } = toolFilters; 
   // The member's saved EV range (Pricing & filters) and this board's filters choose rows; the EV itself is the server's.
   const evRange = row => (settings.minEvPercent == null || settings.minEvPercent === '' || row.ev * 100 >= Number(settings.minEvPercent)) && (settings.maxEvPercent == null || settings.maxEvPercent === '' || row.ev * 100 <= Number(settings.maxEvPercent));
   const matching = all.filter(row => { const {quote:q,ev,fair} = row; return ev > 0 && evRange(row) && oddsWithin(q.odds, evMinOdds, evMaxOdds === 'all' ? '' : evMaxOdds)
@@ -1993,7 +1993,7 @@ $('#ev-detail').addEventListener('click', event => {
 $('#ev-sport').addEventListener('change', event => {
   const sportChanged = sport !== event.target.value;
   sport = event.target.value;
-  if (sportChanged) { dfsSyncedAt = 0; dfsLoaded = false; }
+  if (sportChanged) { dfsSyncedAt = 0; dfsLoaded = false; sectionRequestedAt = 0; if (feedControls) void feedControls.refresh(); }
   rememberSport();
   render();
 });

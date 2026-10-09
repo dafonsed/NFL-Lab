@@ -35,7 +35,7 @@ export async function getRelayDfsData({ sport, devigMethod = 'power' } = {}) {
       fairOdds: probability != null && probability > 0 && probability < 1 ? probabilityToAmerican(probability) : null,
       probabilityBooks: [row.bestBook].filter(Boolean), probabilityMethod: devigMethod,
       probabilitySource: 'oddsjam-devig', type: 'prop', alt: false, url: '',
-      bookLines: row.bestBook ? [{ book: row.bestBook, [side]: row.bestBookPrice }] : [],
+      bookLines: (row.bookLines && row.bookLines.length ? row.bookLines.map(bl => ({ book: bl.book, over: side === 'over' ? bl.price : null, under: side === 'under' ? bl.price : null, line: bl.line })) : row.bestBook ? [{ book: row.bestBook, over: side === 'over' ? row.bestBookPrice : null, under: side === 'under' ? row.bestBookPrice : null }] : []),
       eventId: `oj:${row.gameId || ''}`,
       period: 'full', live: false, exchange: false,
       team: '', recommendation: row.recommendation || '', edgePct: Number(row.edgePct) || 0,
