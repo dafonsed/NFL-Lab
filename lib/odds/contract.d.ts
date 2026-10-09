@@ -219,6 +219,8 @@ export interface Odds extends Market, Selection {
   alt?: boolean;
   suspended?: boolean;
   startTime: string;
+  /** Seconds the source trails on this book (it rescrapes the book slowly); a pregame price may be this much older. */
+  feedLagSeconds?: number;
   /** ISO time the price was observed. */
   ts: string;
   source: string;

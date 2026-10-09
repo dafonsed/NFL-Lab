@@ -10,7 +10,7 @@ import { dfsPreview } from './fixtures/dfs-props.mjs';
 import { validateBet, readBets, writeBets } from '../public/bet-utils.js';
 
 test('every requested site has an entry option, comparison logo, receipt identity and local asset', async () => {
-  assert.equal(SITE_PLATFORMS.length,29);
+  assert.equal(SITE_PLATFORMS.length,31);
   assert.equal(SPORTSBOOK_PLATFORMS.length,11);
   assert.equal(PREDICTION_PLATFORMS.length,6);
   const choices = platformOptions();
@@ -18,8 +18,9 @@ test('every requested site has an entry option, comparison logo, receipt identit
     assert.ok(choices.includes(`value="${item.name}"`),item.name);
     assert.ok(inlineBookMark(item.label).includes(item.asset),item.label);
     assert.equal(parseBetSlip(`${item.label}\nStake: $10`).fields.book,item.name);
-    await access(new URL(`../public${item.asset}`,import.meta.url));
+    if (item.asset) await access(new URL(`../public${item.asset}`,import.meta.url));
   }
+  assert.deepEqual(SITE_PLATFORMS.filter(item => !item.asset).map(item => item.name),['HotStreak'],'only HotStreak has no local logo yet');
   for (const deferred of ['betPARX','Circa Sports','SuperBook Sports','Betly']) assert.equal(findPlatform(deferred),null);
 });
 
