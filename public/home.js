@@ -11,7 +11,7 @@ import {icon} from './ui-icons.js';
 import {sportTools, betTrackerUrl, SPORTS} from './navigation.js';
 import {evToolUrl} from './ev-tool-catalog.js';
 import {getEV, serverNow} from './odds-client.js';
-import {suiteSettings, isCurrent} from './odds-contract.js';
+import {workspaceSettings, isCurrent} from './odds-contract.js';
 import {implied} from './betting-math.js';
 import {isDemoRecord} from './ev-workspace-clean.js?v=1';
 import {platformAsset, platformLabel} from './platform-catalog.js';
@@ -34,7 +34,7 @@ const tools = new Set(sport === 'all' ? [] : sportTools(sport).map(t => t.key));
 async function memberEvSettings() {
   let saved = {};
   try { const {readSuiteState} = await import('./ev-suite-storage.js?v=2'); const settings = readSuiteState()?.settings; if (settings && typeof settings === 'object') saved = settings; } catch { /* Unreadable saved settings fall back to the defaults. */ }
-  return suiteSettings(saved);
+  return workspaceSettings(saved);
 }
 // Books available in the member's state, as the Positive EV page offers them (every book still prices).
 async function memberBooks() {

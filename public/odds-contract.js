@@ -97,6 +97,21 @@ export function suiteSettings(saved) {
   return { ...SUITE_SETTING_DEFAULTS, bookRules: [], ...own };
 }
 
+/**
+ * The settings every tool uses: the defaults, plus the arbitrage page's own arbs/middles choice. The
+ * Pricing & filters page is gone, and what was saved there (devig method, minimum books, vig limit,
+ * reference-book rules, EV/odds ranges, scope) no longer applies: a saved rule left DFS lines unpriced
+ * ("One-sided market") with no page left to change it (10 Oct 2026).
+ * @param {unknown} saved
+ * @returns {Loose}
+ */
+export function workspaceSettings(saved) {
+  const mode = fieldsOf(saved).arbMode, settings = suiteSettings(typeof mode === 'string' && mode ? { arbMode: mode } : {});
+  // No workspace odds format: the member's account preference (and the odds screen's own choice) decides.
+  delete settings.oddsFormat;
+  return settings;
+}
+
 /** The settings the pricing engine reads; the rest of the workspace settings are display filters. @type {readonly PricingKey[]} */
 export const PRICING_KEYS = Object.freeze(['devigMethod', 'minSharpBooks', 'maxVigPercent', 'bookRules', 'liquidityWeighting', 'allowProjection', 'liveMaxAgeSeconds', 'pregameMaxAgeSeconds', 'minLiquidity', 'maxEvPercent', 'maxArbPercent']);
 /** @param {unknown} value */

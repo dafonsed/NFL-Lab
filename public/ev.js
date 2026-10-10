@@ -2,8 +2,8 @@ import { browserAlertsControl, deliverAlerts, toggleBrowserAlerts } from './aler
 import { wagerCard } from './ev-bet-card.js';
 import { renderEvBoard, renderEvBoardDetail, renderBetPanel, boostedOffer, boardIcon, bookLogo, startLabel, selectionText, marketLabel } from './ev-board.js?v=7';
 // Feed quotes that only carry a raw market key ("football_player_touchdowns") get a readable name for display.
-const readableMarkets = quotes => { for (const q of quotes || []) if (q && !q.displayMarket && typeof q.market === 'string' && q.market.includes('_') && !/s/.test(q.market)) q.displayMarket = marketLabel(q.market); return quotes; };
-import { createEvSuite, EV_SUITE_TOOLS } from './ev-suite.js?v=local-suite-8';
+const readableMarkets = quotes => { for (const q of quotes || []) if (q && !q.displayMarket && typeof q.market === 'string' && q.market.includes('_') && !/\s/.test(q.market)) q.displayMarket = marketLabel(q.market); return quotes; };
+import { createEvSuite, EV_SUITE_TOOLS } from './ev-suite.js?v=local-suite-9';
 import { readSuiteState, writeSuiteState } from './ev-suite-storage.js?v=2';
 import { installMobileWorkspace, quoteRevision, preserveReadingOrder } from './ev-mobile.js';
 import { accountStorage as localStorage, accountReady, getAccountPreferences, accountSyncState } from './account-sync.js';
@@ -30,7 +30,7 @@ import { comparisonAnnotations } from './bet-comparison.js?v=4';
 import { inlineBetCard as betComparisonCard, bindInlineComparison as bindComparison } from './bet-inline.js?v=card-click-4';
 import { openArbCalculator } from './arb-calculator.js?v=2';
 import { openLineHistory, buildLineSeries } from './line-history.js?v=1';
-import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource, breakEven, payoutFactor, payoutKnown, legBreakEven } from './dfs-workspace.js?v=29';
+import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource, breakEven, payoutFactor, payoutKnown, legBreakEven } from './dfs-workspace.js?v=30';
 import { createOddsScreen } from './odds-screen.js?v=13';
 
 import {readSportsbookState, saveSportsbookState, sportsbookAvailable, availableSportsbookQuotes, STATE_CHANGE_EVENT} from './sportsbook-availability.js';
@@ -138,7 +138,7 @@ const oddsQuotes = () => state.quotes;
 let active = toolMeta[location.hash.slice(1)] ? location.hash.slice(1) : 'ev-pre';
 let search = '';
 let bookmaker = '', marketType = '', showAllBooks = false, selectedSportsbooks = null, bookMenuOpen = false, bankroll = 5000, kelly = .25, flatMultiplier = 1, evSort = 'ev', detailQuoteId = '';
-let evLeague = '', evDateRange = 'all', evMaxOdds = '200';
+let evLeague = '', evDateRange = 'all', evMaxOdds = 'all';
 // Filters for Middles, Low holds, Parlay and Promo plus the extra Positive EV thresholds.
 let toolFilters = readToolFilters(window.localStorage);
 let bookSearch = '';
@@ -170,8 +170,8 @@ const SPORT_KEY = 'sportslab-ev-sport';
 const readSavedSport = () => { try { return localStorage.getItem(SPORT_KEY); } catch { return null; } };
 const handedSport = /(?:^|;\s*)sl-ev-sport=([a-z]+)/.exec(document.cookie)?.[1];
 if (handedSport) document.cookie = 'sl-ev-sport=; Path=/; Max-Age=0; SameSite=Lax';
-const initialSport = (new URLSearchParams(location.search).get('sport') ?? handedSport ?? readSavedSport() ?? 'NFL').toUpperCase();
-let sport = initialSport === 'ALL' || initialSport === '' ? '' : knownSport(initialSport) || 'NFL';
+const initialSport = (new URLSearchParams(location.search).get('sport') ?? handedSport ?? readSavedSport() ?? 'ALL').toUpperCase();
+let sport = initialSport === 'ALL' || initialSport === '' ? '' : knownSport(initialSport) || '';
 const rememberSport = () => { try { localStorage.setItem(SPORT_KEY, sport || 'all'); } catch {} };
 const toolAddress = () => location.pathname + '#' + active;
 if (location.search) history.replaceState(history.state, '', location.pathname + location.hash);
@@ -336,7 +336,7 @@ function ensureDfsFeed() {
   dfsLoading = true;
   let changed = false;
   // Every line (the server's largest page, lib/odds/providers.mjs MAX_DFS_PICKS); its default 500 is shared by every app.
-  void getDfs({ settings: suite.settings(), limit: 60_000 }).then(result => {
+  void getDfs({ settings: suite.settings(), limit: 150_000 }).then(result => {
     if (dfsError) changed = true;
     dfsSyncedAt = Date.now(); dfsFailures = 0; dfsRetryAt = 0; dfsError = '';
     // A partial answer (payout tables or the props feed missing) says so beside the data label.
@@ -632,7 +632,7 @@ function render() {
   if (feedPanel) (secondary ? $('.ev-shell') : $('.ev-header')).after(feedPanel);
   let content = suiteView ? suite.render(active) : views[active]();
   if(EV_SUITE_TOOLS.some(tool=>tool[1]===active)){
-    const heroActions={ledger:button('Performance','data-suite-action="navigate" data-id="performance"')+button('Add a bet','data-evl-action="add" data-evl-id="" data-evl-hero class="tool-hero-primary"'),performance:button('Bet ledger','data-suite-action="navigate" data-id="ledger" class="tool-hero-primary"'),alerts:button('Pricing & filters','data-suite-action="navigate" data-id="settings"'),settings:button('Alert center','data-suite-action="navigate" data-id="alerts"')};
+    const heroActions={ledger:button('Performance','data-suite-action="navigate" data-id="performance"')+button('Add a bet','data-evl-action="add" data-evl-id="" data-evl-hero class="tool-hero-primary"'),performance:button('Bet ledger','data-suite-action="navigate" data-id="ledger" class="tool-hero-primary"'),settings:button('Alert center','data-suite-action="navigate" data-id="alerts"')};
     content=`<div class="tool-workspace es-2026" data-tool-workspace="${esc(active)}">${toolHero({title:pageTitle,description:esc(toolMeta[active][3]),group:toolMeta[active][0],symbol:SUITE_ICONS[active],actions:heroActions[active]||'',stats:suite.heroStats?.(active)||[]})}<div class="tool-content">${content}</div></div>`;
   }
   $('#ev-view').innerHTML = secondaryShell(active, content, {actions:viewActions[active] || '',sport,sports:feedSports(),search,dataLabel,filters:toolFilterBar(active, toolFilters, state.quotes.filter(q => !sport || q.sport === sport))});
@@ -733,7 +733,7 @@ function renderEv(live) {
   const settings = suite.settings();
   const all = pool.filter(q => Boolean(q.live) === live && current(q) && suite.quoteVisible(q) && (live || startsWithin(q, evDateRange))).map(evRowOf).filter(Boolean);
   const { evMinOdds, minEv, minProb } = toolFilters;
-  // The member's saved EV range (Pricing & filters) and this board's filters choose rows; the EV itself is the server's.
+  // This board's filters choose rows; the EV itself is the server's.
   const evRange = row => (settings.minEvPercent == null || settings.minEvPercent === '' || row.ev * 100 >= Number(settings.minEvPercent)) && (settings.maxEvPercent == null || settings.maxEvPercent === '' || row.ev * 100 <= Number(settings.maxEvPercent));
   const matching = all.filter(row => { const {quote:q,ev,fair} = row; return ev > 0 && evRange(row) && oddsWithin(q.odds, evMinOdds, evMaxOdds === 'all' ? '' : evMaxOdds)
     && (!minEv || ev * 100 >= Number(minEv)) && (!minProb || fair * 100 >= Number(minProb))
@@ -763,7 +763,7 @@ function renderEv(live) {
   const more = rows.length > evVisibleCount ? `<button type="button" class="ev-parlay-more" data-ev-more>Show ${Math.min(40,rows.length-evVisibleCount)} more selections · ${Math.min(evVisibleCount,rows.length)} of ${rows.length} shown</button>` : '';
   const pricing = state.analytics.meta?.pricing || {};
   const capNote = pricing.evCap != null && pricing.evCapSingleBook != null ? `above ${(pricing.evCap * 100).toFixed(0)}% EV (${(pricing.evCapSingleBook * 100).toFixed(0)}% when only one book sets the fair price)` : 'outside the EV limits';
-  return `<div class="ev-stack ev-positive-screen evb-board"><div class="wager-results-bar evb-results-bar">${summary}</div>${rows.length ? renderEvBoard(evBoardContext(shown, live)) + more : empty(emptyTitle,emptyBody)}<p class="ev-caption ev-method-note">Fair probability and EV come from the odds service, priced with your saved reference-book, weighting and no-vig settings${pricing.devigMethod ? ` (${esc(pricing.devigMethod)} devig, ${esc(pricing.devigVersion || 'version not reported')})` : ''}; by default Pinnacle counts twice as much as FanDuel, BetOnline and the exchanges and four times as much as DraftKings, BetMGM and Caesars, and other books don't set it. Recommended stakes scale its Kelly fraction by your bankroll and Kelly multiplier. Open a row to compare every book. ${live ? 'Live prices expire 90 seconds after they are seen.' : ''}${hiddenAsErrors ? ` ${hiddenAsErrors} ${hiddenAsErrors === 1 ? 'price' : 'prices'} ${capNote} ${hiddenAsErrors === 1 ? 'is' : 'are'} hidden as likely feed errors; set a maximum EV in Pricing &amp; filters to change this.` : ''} Confirm price, limits and freshness independently.</p></div>`;
+  return `<div class="ev-stack ev-positive-screen evb-board"><div class="wager-results-bar evb-results-bar">${summary}</div>${rows.length ? renderEvBoard(evBoardContext(shown, live)) + more : empty(emptyTitle,emptyBody)}<p class="ev-caption ev-method-note">Fair probability and EV come from the odds service, priced from the sharp and major books' no-vig prices${pricing.devigMethod ? ` (${esc(pricing.devigMethod)} devig, ${esc(pricing.devigVersion || 'version not reported')})` : ''}; by default Pinnacle counts twice as much as FanDuel, BetOnline and the exchanges and four times as much as DraftKings, BetMGM and Caesars, and other books don't set it. Recommended stakes scale its Kelly fraction by your bankroll and Kelly multiplier. Open a row to compare every book. ${live ? 'Live prices expire 90 seconds after they are seen.' : ''}${hiddenAsErrors ? ` ${hiddenAsErrors} ${hiddenAsErrors === 1 ? 'price' : 'prices'} ${capNote} ${hiddenAsErrors === 1 ? 'is' : 'are'} hidden as likely feed errors.` : ''} Confirm price, limits and freshness independently.</p></div>`;
 }
 
 // A stake no larger than the book's limit or the exchange's available amount, when the feed sends one.
@@ -834,7 +834,7 @@ function comparisonForQuote(quote) {
     book:quote.book,rawLine:quote.line,side:quote.side,rawOdds:Number(quote.odds),offerOdds:oddsLabel(quote.odds),rawFair:fair,rawStake:recommended,recommended:money(recommended),ev:pricing?.ev!=null?(pricing.ev*100).toFixed(2)+'%':'—',vig:Number.isFinite(vig)?vig.toFixed(1)+'%':null,
     probability:Number.isFinite(fair) ? percent(fair) : null,probabilityLabel:'Est. probability',
     context:`${quote.source === 'local-api' ? 'Feed' : 'Saved'} prices · ${books.length} ${books.length === 1 ? 'book' : 'books'} · ${quote.ageUnknown ? 'This book does not report when its price was seen' : `Observed ${age(quote.ts)}`}${current(quote) ? '' : ' · no longer current'}`,
-    note:`${FAIR_SOURCE[valueState(pricing?.fairProbability, { meta: state.analytics.meta, quote, now: serverNow() })]} Priced with your saved reference-book, weighting, and ${esc(method)} no-vig settings${pricing?.devigVersion ? ` (${esc(pricing.devigVersion)})` : ''}. Detailed analysis shows each reference and any estimated threshold.`,
+    note:`${FAIR_SOURCE[valueState(pricing?.fairProbability, { meta: state.analytics.meta, quote, now: serverNow() })]} Priced from the sharp and major books' ${esc(method)} no-vig prices${pricing?.devigVersion ? ` (${esc(pricing.devigVersion)})` : ''}. Detailed analysis shows each reference and any estimated threshold.`,
     columns,rows,historyBySide,history:priceHistory,canSwap:!!opposite,swapId:peers.find(item=>item.side===opposite)?.id,
     // Feed prices can't be edited; they are replaced on every refresh.
     canEdit:canEdit && quote.source !== 'local-api',canTrack:canEdit};
@@ -1222,7 +1222,7 @@ function renderArb(live) {
     opportunities.sort((left,right) => Number(pinned(right.legs)) - Number(pinned(left.legs)));
   }
   const count = opportunities.length, cap = state.analytics.meta?.pricing?.arbCap;
-  return `<div class="ev-stack ev-arb-screen evb-board pair-board arb-board">${count ? renderArbBoard(opportunities, pairContext({live, firstStake, budget})) : `<div class="ev-empty ev-arb-empty"><strong>${live && !state.quotes.some(q => q.live) ? 'No live games in the feed right now' : 'No arbitrage matches'}</strong><p>${live && !state.quotes.some(q => q.live) ? 'Live arbitrage appears here when the quote feed sends in-play prices. Pregame arbitrage is under the Pregame tab.' : state.quotes.length ? 'No opposing prices match the selected books, pricing settings, and stake limits. Adjust a filter or wait for the next refresh.' : 'Arbitrage matches appear here once the quote API returns both sides of a market at different sportsbooks.'}</p><div class="ev-arb-empty-actions">${state.quotes.length ? button('Clear filters', 'data-arb-clear') : ''}</div></div>`}<p class="ev-caption ev-method-note">Returns, stake shares and capacity come from the odds service (supplied limits and commissions included); stakes here scale them to your first stake and are rounded. Missing capacity is labeled; calculated outcomes do not confirm availability at a sportsbook. Open a row to compare every book.${cap != null && settings.maxArbPercent == null ? ` Returns above ${(cap * 100).toFixed(0)}% are hidden as likely data errors; set a max return in Pricing &amp; filters to change this.` : ''}</p></div>`;
+  return `<div class="ev-stack ev-arb-screen evb-board pair-board arb-board">${count ? renderArbBoard(opportunities, pairContext({live, firstStake, budget})) : `<div class="ev-empty ev-arb-empty"><strong>${live && !state.quotes.some(q => q.live) ? 'No live games in the feed right now' : 'No arbitrage matches'}</strong><p>${live && !state.quotes.some(q => q.live) ? 'Live arbitrage appears here when the quote feed sends in-play prices. Pregame arbitrage is under the Pregame tab.' : state.quotes.length ? 'No opposing prices match the selected books, pricing settings, and stake limits. Adjust a filter or wait for the next refresh.' : 'Arbitrage matches appear here once the quote API returns both sides of a market at different sportsbooks.'}</p><div class="ev-arb-empty-actions">${state.quotes.length ? button('Clear filters', 'data-arb-clear') : ''}</div></div>`}<p class="ev-caption ev-method-note">Returns, stake shares and capacity come from the odds service (supplied limits and commissions included); stakes here scale them to your first stake and are rounded. Missing capacity is labeled; calculated outcomes do not confirm availability at a sportsbook. Open a row to compare every book.${cap != null && settings.maxArbPercent == null ? ` Returns above ${(cap * 100).toFixed(0)}% are hidden as likely data errors.` : ''}</p></div>`;
 }
 
 // When a tool's filters hide every result, say so instead of implying the feed has no prices.
@@ -1792,7 +1792,7 @@ $('#ev-timing-toggle').addEventListener('click', () => {
 document.querySelector('[data-ev-focus-search]')?.addEventListener('click', () => { if (active === 'odds') { $('#os-search')?.focus(); return; } if (active === 'fantasy') { $('#dfs-search')?.focus(); return; } document.body.classList.toggle('ev-search-open'); $('#ev-search').focus(); });
 $('#ev-search').addEventListener('keydown', event => { if (event.key === 'Escape') { document.body.classList.remove('ev-search-open'); document.querySelector('[data-ev-focus-search]')?.focus(); } });
 $('#ev-odds-tabs').addEventListener('click', event => { const tab = event.target.closest('[data-odds-tab]'); if (tab) { marketType = tab.dataset.oddsTab; render(); } });
-$('#ev-reset-filters').addEventListener('click', () => { bookmaker = ''; selectedSportsbooks = null; bookMenuOpen = false; marketType = ''; search = ''; evLeague = ''; evDateRange = 'all'; evMaxOdds = '200'; toolFilters = { ...toolFilters, evMinOdds:'', minEv:'', minProb:'' }; saveToolFilters(toolFilters, window.localStorage); evSort = 'ev'; designSort = 'recommended'; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; if (sport !== '') { sport = ''; rememberSport(); } render(); });
+$('#ev-reset-filters').addEventListener('click', () => { bookmaker = ''; selectedSportsbooks = null; bookMenuOpen = false; marketType = ''; search = ''; evLeague = ''; evDateRange = 'all'; evMaxOdds = 'all'; toolFilters = { ...toolFilters, evMinOdds:'', minEv:'', minProb:'' }; saveToolFilters(toolFilters, window.localStorage); evSort = 'ev'; designSort = 'recommended'; designFilters = { league:'', date:'all', period:'all', side:'', minEdge:'0', maxOdds:'all' }; if (sport !== '') { sport = ''; rememberSport(); } render(); });
 $('#ev-market-type').addEventListener('change', event => { marketType = event.target.value; render(); });
 $('#ev-reference-market').addEventListener('change', event => { marketType = event.target.value; render(); });
 $('#ev-reference-league').addEventListener('change', event => { evLeague = event.target.value; render(); });

@@ -102,3 +102,11 @@ test('errors carry a code, an HTTP status and whether a retry can help', () => {
   assert.equal(errorFromBody({ error: 'Too many requests' }, 429).code, 'RATE_LIMITED', 'the older text body still maps');
   assert.equal(errorFromBody(null, 500).code, 'UNAVAILABLE');
 });
+
+test('saved Pricing & filters settings no longer apply; only the arbitrage page’s mode is kept', async () => {
+  const { workspaceSettings, SUITE_SETTING_DEFAULTS } = await import('../public/odds-contract.js');
+  const saved = { minSharpBooks: 4, maxVigPercent: 2, devigMethod: 'worst-case', bookRules: [{ book: 'Pinnacle', weight: 1, required: true }], minEvPercent: 5, league: 'NFL', arbMode: 'middles' };
+  const { oddsFormat, ...defaults } = SUITE_SETTING_DEFAULTS;
+  assert.deepEqual(workspaceSettings({ ...saved, oddsFormat: 'decimal' }), { ...defaults, bookRules: [], arbMode: 'middles' }, 'the account odds format decides, not a saved workspace one');
+  assert.deepEqual(workspaceSettings(null), { ...defaults, bookRules: [] });
+});
