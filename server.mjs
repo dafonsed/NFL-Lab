@@ -42,6 +42,7 @@ import { renderBettingPage } from './lib/betting-pages.mjs';
 import { renderOddsApiPage } from './lib/odds-api-page.mjs';
 import { handleEvApi } from './lib/ev-api-proxy.mjs';
 import { handleOddsApi } from './lib/odds/http.mjs';
+import { sendStaticAsset } from './lib/static-assets.mjs';
 import { OddsError } from './public/odds-contract.js';
 import { accountRuntime } from './lib/accounts/runtime.mjs';
 import { PLAN_CATALOG } from './lib/accounts/entitlements.mjs';
@@ -391,8 +392,10 @@ export const server = http.createServer(async (req, res) => {
     const context = siteContext(url);
     const name = context.section === 'landing' ? 'landing.html' : context.section === 'home' ? 'home.html' : context.section === 'trends' ? 'trends.html' : context.section === 'parlay' ? 'parlay.html' : /^\/(nba|wnba|mlb)\/live$/.test(pagePath) ? 'live-sports.html' : pagePath === '/live' ? 'live-hub.html' : pagePath === '/site-layout.css' ? 'site-layout.css' : pagePath === '/live-sports.js' ? 'live-sports.js' : names[pagePath];
     if (!name) return errorResponse(req, res, url, 'Not found.', 404);
-    const bytes = await fs.readFile(path.join(publicDir, name));
     const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.gz': 'application/gzip', '.webmanifest': 'application/manifest+json' };
+    // Code, styles, images and fonts: cached, validated and compressed once (lib/static-assets.mjs).
+    if (!name.endsWith('.html')) return await sendStaticAsset(req, res, path.join(publicDir, name), types[path.extname(name)] || 'text/plain', { versioned: url.searchParams.has('v') });
+    const bytes = await fs.readFile(path.join(publicDir, name));
     const body = name === 'docs.html' ? withSiteChrome(bytes.toString('utf8'), { current: 'api' }).replace('</head>', siteChromeAssets() + '</head>') : name === 'login.html' && previewLoginButton(req, url) ? bytes.toString('utf8').replace('<p class="account-switch">', previewLoginButton(req, url) + '<p class="account-switch">') : ['login.html', 'register.html', ...Object.values(accountPages)].includes(name) ? bytes : name === 'trends.html' ? trendsPreload(renderSitePage(bytes.toString('utf8'), url, { features: req.sportslabFeatures || null, group: preferredGroup }), url) : name.endsWith('.html') ? renderSitePage(bytes.toString('utf8'), url, { features: req.sportslabFeatures || null, group: preferredGroup }) : bytes;
     await sendPublicResponse(req, res, body, { headers: { 'Content-Type': (types[path.extname(name)] || 'text/plain') + '; charset=utf-8', 'Cache-Control': 'no-cache' } });
   } catch (e) { console.error('[request] Request failed.'); const status = e.status || 500; errorResponse(req, res, url, 'This request could not be completed. Please try again.', status); }

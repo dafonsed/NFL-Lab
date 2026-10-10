@@ -149,6 +149,7 @@ test('replies carry the snapshot time and age; dropped records are counted, not 
 });
 
 test('a refilling upstream (under 60% of the last full snapshot) is held back for up to ten minutes', async t => {
+  const settle = () => new Promise(resolve => setTimeout(resolve, 30));
   t.mock.timers.enable({ apis: ['Date'], now: 5_000_000 });
   t.mock.method(console, 'error', () => {});
   const full = Array.from({ length: 100 }, (_, index) => feedQuote(`q${index}`, 'FanDuel'));
@@ -156,6 +157,8 @@ test('a refilling upstream (under 60% of the last full snapshot) is held back fo
   const fetcher = async () => new Response(JSON.stringify({ quotes: full.slice(0, size) }));
   assert.equal((await call('/api/ev/quotes', { fetcher, loadControls: async () => [] })).body.count, 100);
   size = 20; t.mock.timers.tick(61_000);
+  assert.equal((await call('/api/ev/quotes', { fetcher, loadControls: async () => [] })).body.count, 100, 'the last snapshot answers while the refresh runs');
+  await settle();
   const held = await call('/api/ev/quotes', { fetcher, loadControls: async () => [] });
   assert.equal(held.body.count, 100, 'the last full snapshot is served');
   assert.equal(held.body.stale, true);
@@ -163,6 +166,8 @@ test('a refilling upstream (under 60% of the last full snapshot) is held back fo
   assert.equal(held.body.snapshotAt, new Date(5_000_000).toISOString());
   assert.equal(held.headers['X-Snapshot-Age'], '61');
   size = 70; t.mock.timers.tick(61_000);
+  await call('/api/ev/quotes', { fetcher, loadControls: async () => [] });
+  await settle();
   const refilled = await call('/api/ev/quotes', { fetcher, loadControls: async () => [] });
   assert.equal(refilled.body.count, 70, '70% of the last full snapshot is served as it is');
   assert.equal(refilled.body.stale, false);
@@ -170,17 +175,23 @@ test('a refilling upstream (under 60% of the last full snapshot) is held back fo
   assert.equal((await call('/api/ev/quotes', { fetcher, loadControls: async () => [] })).body.count, 10, 'after ten minutes a smaller inventory is accepted');
 });
 
-test('a failed refresh serves the last snapshot marked stale, then fails with the upstream Retry-After', async t => {
+test('past a minute the last snapshot answers at once; after a failed refresh it is marked stale, and past ten minutes the upstream Retry-After is returned', async t => {
   t.mock.timers.enable({ apis: ['Date'], now: 9_000_000 });
   t.mock.method(console, 'error', () => {});
   let calls = 0;
   const flaky = async () => ++calls === 1 ? new Response(JSON.stringify([feedQuote('a', 'FanDuel')])) : new Response('busy', { status: 503, headers: { 'retry-after': '15' } });
   assert.equal((await call('/api/ev/quotes', { fetcher: flaky, loadControls: async () => [] })).body.stale, false);
   t.mock.timers.tick(61_000);
+  const quick = await call('/api/ev/quotes', { fetcher: flaky, loadControls: async () => [] });
+  assert.equal(quick.status, 200);
+  assert.equal(quick.body.stale, false, 'a minute-old snapshot is still current');
+  await new Promise(resolve => setTimeout(resolve, 30));
   const fallback = await call('/api/ev/quotes', { fetcher: flaky, loadControls: async () => [] });
   assert.equal(fallback.status, 200);
-  assert.equal(fallback.body.stale, true);
+  assert.equal(fallback.body.stale, true, 'the refresh failed');
   t.mock.timers.tick(240_000);
+  assert.equal((await call('/api/ev/quotes', { fetcher: flaky, loadControls: async () => [] })).status, 200, 'five minutes old is still held');
+  t.mock.timers.tick(360_000);
   const down = await call('/api/ev/quotes', { fetcher: flaky, loadControls: async () => [] });
   assert.equal(down.status, 503);
   assert.equal(down.body.code, 'QUOTE_SOURCE_UNAVAILABLE');

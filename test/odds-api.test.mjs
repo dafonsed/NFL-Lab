@@ -116,13 +116,16 @@ test('an upstream outage is a retryable 503 with no upstream detail; a held-over
   const down = await call('/api/odds/snapshot', { fetcher: fixtureFetcher(fixtureRecords(), { fail: () => true }) });
   assert.equal(down.status, 503);
   assert.deepEqual(down.body, { error: { code: 'UNAVAILABLE', message: 'The odds source is unavailable right now. Prices refresh automatically when it recovers.', retryable: true } });
-  // A refresh that fails within a minute of a good snapshot serves that snapshot, marked stale.
+  // A refresh that fails within ten minutes of a good snapshot serves that snapshot, marked stale.
   t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
   let failing = false;
   const fetcher = fixtureFetcher(fixtureRecords(), { fail: () => failing }), provider = createTransitionProvider();
   assert.equal(decodeSnapshot((await call('/api/odds/snapshot', { fetcher, provider })).body).snapshot.meta.stale, false);
   failing = true;
   t.mock.timers.tick(61_000);
+  await call('/api/odds/snapshot', { fetcher, provider });
+  await new Promise(resolve => setTimeout(resolve, 400));
+  t.mock.timers.tick(5_000);
   const held = decodeSnapshot((await call('/api/odds/snapshot', { fetcher, provider })).body).snapshot;
   assert.equal(held.meta.stale, true);
   assert.ok(held.quotes.length > 0);
@@ -234,4 +237,22 @@ test('ODDS_PROVIDER=odds-api passes the odds API’s answers through, validated 
   const unset = await call('/api/odds/snapshot', { env: { ODDS_PROVIDER: 'odds-api' }, fetcher, provider: null });
   assert.equal(unset.status, 503);
   assert.equal(unset.body.error.code, 'NOT_CONFIGURED');
+});
+
+test('the default snapshot carries full-game markets; markets=all adds part-game lines, game props and yes/no player bets', async () => {
+  const records = fixtureRecords(), moneyline = side => records.find(record => record.type === 'moneyline' && record.side === side && record.book === 'Pinnacle'), home = moneyline('home');
+  const extra = [
+    { ...home, id: 'part-home', period: '1h' }, { ...moneyline('away'), id: 'part-away', period: '1h' },
+    { ...home, id: 'btts-yes', type: 'game-prop', market: 'Both Teams To Score', side: 'yes', selection_name: 'Yes', odds: -150 },
+    { ...home, id: 'first-td', type: 'prop', market: 'First TD Scorer', player: 'Fixture Runner 1', side: 'yes', selection_name: 'Yes', odds: 600 },
+  ];
+  const fetcher = fixtureFetcher([...records, ...extra]), provider = createTransitionProvider();
+  const scoped = async markets => decodeSnapshot((await call(`/api/odds/snapshot?include=pricing${markets ? `&markets=${markets}` : ''}`, { fetcher, provider })).body).snapshot;
+  const main = await scoped(''), all = await scoped('all');
+  const extras = quotes => quotes.filter(quote => quote.period !== 'full' || quote.type === 'game-prop' || quote.line === '' && quote.type === 'prop');
+  assert.equal(extras(main.quotes).length, 0);
+  assert.deepEqual(extras(all.quotes).map(quote => quote.displayMarket).sort(), ['1st Half Moneyline', '1st Half Moneyline', 'Both Teams To Score', 'First TD Scorer']);
+  assert.equal(all.quotes.length, main.quotes.length + 4);
+  assert.ok(main.pricing.every(row => main.quotes.some(quote => quote.id === row.quoteId)), 'pricing rows only name quotes the answer carries');
+  assert.equal((await call('/api/odds/snapshot?markets=every', { fetcher, provider })).status, 400);
 });

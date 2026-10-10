@@ -4,6 +4,7 @@ import { decimal, decimalToAmerican } from './betting-math.js';
 import { isCurrent } from './odds-contract.js';
 import { boardIcon, bookLogo, marketLabel as readableMarket } from './ev-board.js?v=7';
 import { leagueMark, teamLogo } from './sports-identity.js';
+import { periodName } from './sport-names.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const svg = body => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
@@ -40,17 +41,21 @@ const propStat = q => {
   return stat;
 };
 const marketGroup = q => propStat(q) ? q.marketId : marketName(q).toLowerCase();
-const marketTab = q => propStat(q) ? `prop:${propStat(q)}` : marketName(q);
+// A game prop's tab is the bet without its team ("Team Total", not one tab per team).
+const gamePropName = q => q.team && String(marketName(q)).includes(q.team) ? String(marketName(q)).replace(q.team, '').replace(/\s+/g, ' ').trim() : marketName(q);
+const marketTab = q => propStat(q) ? `prop:${propStat(q)}` : q.type === 'game-prop' ? gamePropName(q) : marketName(q);
 const trendIcon = svg('<path d="m3 16 5.5-5.5 4 4L21 6"/><path d="M15 6h6v6"/>');
 const lockIcon = svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>');
 const MAIN_TYPES = new Set(['moneyline','three-way','spread','total']);
-const typeRank = q => ({moneyline:0,'three-way':0,spread:1,total:2,prop:3,alternate:4})[q.type] ?? 5;
-const isMain = q => MAIN_TYPES.has(q.type) && !q.player && !q.alt;
+const typeRank = q => ({moneyline:0,'three-way':0,spread:1,total:2,'game-prop':3,prop:4,alternate:5})[q.type] ?? 6;
+const partGame = q => Boolean(q.period) && String(q.period).toLowerCase() !== 'full';
+const isMain = q => MAIN_TYPES.has(q.type) && !q.player && !q.alt && !partGame(q);
 const isProp = q => !isMain(q) && q.type !== 'alternate' && (q.type === 'prop' || Boolean(q.player));
 // Market tabs: grouped views first, then each market by name. Group values share the market filter.
 const ALL_MARKETS = 'group:all';
 const isAlternate = q => q.type === 'alternate' || Boolean(q.alt);
-const MARKET_GROUPS = [['group:main','Main markets',isMain],['group:props','Player props',isProp],['group:alt','Alternate lines',isAlternate]];
+const isGameProp = q => q.type === 'game-prop';
+const MARKET_GROUPS = [['group:main','Main markets',isMain],['group:props','Player props',isProp],['group:game','Game props',isGameProp],['group:periods','Halves & periods',partGame],['group:alt','Alternate lines',isAlternate]];
 const matchesMarket = (q, value) => {
   if (!value || value === ALL_MARKETS) return true;
   const group = MARKET_GROUPS.find(([key]) => key === value);
@@ -121,7 +126,9 @@ export function buildOddsBoard(records, books, now = Date.now(), analytics = nul
 // getSettings returns the member's +EV settings (suite.settings()) for the workspace odds format. getQuotes
 // are the prices to show (the member's state applied); getAnalytics the latest /api/odds index (fair and
 // average prices, priced from every book); now() the server's clock.
-export function createOddsScreen({ getQuotes, getAnalytics = () => null, now: clock = Date.now, brandMark, onSport, redraw, storage, defaultFormat = 'american', getSettings = () => ({}), getSportsbookState = () => '', onAllSportsbooks = () => {} }) {
+// getMoreMarkets/onMoreMarkets: whether the page loads part-game lines, game props and yes/no player bets
+// (a larger download), and the switch for it.
+export function createOddsScreen({ getQuotes, getAnalytics = () => null, now: clock = Date.now, brandMark, onSport, redraw, storage, defaultFormat = 'american', getSettings = () => ({}), getSportsbookState = () => '', onAllSportsbooks = () => {}, getMoreMarkets = () => true, onMoreMarkets = () => {} }) {
   // marketFilter: null = default tab (Main markets when present), '' = All markets, else a group or market name.
   // chosenFormat is a format picked on this screen; otherwise prices follow the member's workspace odds format.
   let eventFilter = '', marketFilter = null, query = '', chosenFormat = null, expanded = false;
@@ -175,7 +182,7 @@ export function createOddsScreen({ getQuotes, getAnalytics = () => null, now: cl
     if (next) {next.scrollLeft = left;next.scrollTop = top;}
   };
   function render({ sport = '' } = {}) {
-    const all = getQuotes().filter(q => !q.depthOnly);
+    const all = getQuotes().filter(q => !q.depthOnly), moreMarkets = getMoreMarkets();
     const sports = [...new Set(['NFL','MLB','NBA','WNBA','NHL','Soccer',...all.map(q => q.sport).filter(Boolean)])];
     const leagueQuotes = all.filter(q => !sport || !q.sport || q.sport === sport);
     // Refresh compares only the displayed league, so other sports never force a redraw.
@@ -202,6 +209,8 @@ export function createOddsScreen({ getQuotes, getAnalytics = () => null, now: cl
       ...(scoped.some(isProp) ? [['group:props','Player props'],...names(isProp)] : []),
       // Alternate lines share market names with main lines, so check every quote, not one per name.
       ...(leagueQuotes.some(q => (!eventFilter || (q.eventId || q.event) === eventFilter) && isAlternate(q)) ? [['group:alt','Alternate lines']] : []),
+      ...(scoped.some(isGameProp) ? [['group:game','Game props']] : []),
+      ...(leagueQuotes.some(q => (!eventFilter || (q.eventId || q.event) === eventFilter) && partGame(q)) ? [['group:periods','Halves & periods']] : []),
       ...names(q => !isMain(q) && !isProp(q) && !isAlternate(q))];
     const presentBooks = [...new Set(leagueQuotes.map(q => q.book).filter(Boolean))];
     bookOrder = [...bookOrder,...presentBooks.filter(book => !bookOrder.includes(book))];
@@ -240,7 +249,9 @@ export function createOddsScreen({ getQuotes, getAnalytics = () => null, now: cl
       let rowIndex = 0;
       const markets = [...event.markets].sort((a,b) => typeRank(a.first) - typeRank(b.first) || (Number(normalizedLine(a.first)) || 0) - (Number(normalizedLine(b.first)) || 0)).map(market => {
         const q = market.first;
-        const marketLabel = [readableMarket(marketName(q)),q.period && q.period !== 'full' ? q.displayPeriod || q.period : ''].filter(Boolean).join(' · ');
+        // The feed names a part-game market by its part ("1st Half Moneyline"); other sources only set the period.
+        const part = partGame(q) ? q.displayPeriod || periodName(q.period) : '';
+        const marketLabel = [readableMarket(marketName(q)),part && !String(marketName(q)).startsWith(part) ? part : ''].filter(Boolean).join(' · ');
         const currentQuotes = market.sides.flatMap(row => row.prices.filter(quote => currentPrice(quote, renderNow)));
         const sides = market.sides.map(row => {
           const current = currentQuotes.filter(quote => quote.side === row.side).sort((a,b) => decimal(b.odds) - decimal(a.odds));
@@ -252,7 +263,8 @@ export function createOddsScreen({ getQuotes, getAnalytics = () => null, now: cl
           return {...row, current, reference, fair, key:JSON.stringify([market.key,row.side]),
             worstDecimal:worst != null && worst < row.bestDecimal ? worst : null,
             name:reference?.selection || row.side,
-            selection:[q.player,reference?.selection || row.side,reference ? lineLabel({...reference,side:row.side}) : ''].filter(Boolean).join(' ')};
+            // A game prop's handicap or draw names its own line ("Detroit Lions +3.5"); the market's line is the home team's.
+            selection:[q.player,reference?.selection || row.side,reference && (q.type !== 'game-prop' || /^(over|under)$/.test(row.side)) ? lineLabel({...reference,side:row.side}) : ''].filter(Boolean).join(' ')};
         });
         return sides.map((row,sideIndex) => {
           // A row whose only current prices are excluded from best (unverified or outlying) still opens its comparison.
@@ -285,10 +297,10 @@ export function createOddsScreen({ getQuotes, getAnalytics = () => null, now: cl
           <label class="os-field os-search">${searchIcon}<span>Player</span><input id="os-search" type="search" aria-label="Search players, teams, leagues or markets" placeholder="Player, team or market" value="${esc(query)}" autocomplete="off"></label>
         </div>
         <div class="os-toolbar-actions"><div class="os-settings"><button type="button" class="os-round" data-os-action="settings" aria-expanded="${settingsOpen}" aria-controls="os-settings-panel" aria-label="Odds screen settings">${settingsIcon}</button>
-          <div id="os-settings-panel" class="os-settings-panel" ${settingsOpen ? '' : 'hidden'}><div class="os-settings-heading"><strong>Display settings</strong><button type="button" data-os-action="settings" aria-label="Close odds settings">Close</button></div>${select('format','Odds format',[['american','American'],['decimal','Decimal'],['fractional','Fractional']],renderFormat)}<button type="button" class="os-all-books" data-os-action="all-books">All sportsbooks<span>${allBooksSelected ? 'Selected' : 'Show all'}</span></button>${stateFilter ? `<p class="os-book-scope">Filtered to ${esc(stateFilter)}. Choose all sportsbooks to compare across states.</p>` : ''}<fieldset><legend>Sportsbook columns</legend>${availableBooks.length ? availableBooks.map((book,index) => `<div class="os-book-option"><label><input type="checkbox" data-os-book="${esc(book)}" ${hiddenBooks.has(book) ? '' : 'checked'}>${brandMark(book)}<span>${esc(book)}</span></label><button type="button" data-os-order="${esc(book)}" data-os-direction="-1" aria-label="Move ${esc(book)} earlier" ${index === 0 ? 'disabled' : ''}>↑</button><button type="button" data-os-order="${esc(book)}" data-os-direction="1" aria-label="Move ${esc(book)} later" ${index === availableBooks.length - 1 ? 'disabled' : ''}>↓</button></div>`).join('') : '<p>Sportsbooks appear here once the quote API syncs.</p>'}</fieldset></div>
+          <div id="os-settings-panel" class="os-settings-panel" ${settingsOpen ? '' : 'hidden'}><div class="os-settings-heading"><strong>Display settings</strong><button type="button" data-os-action="settings" aria-label="Close odds settings">Close</button></div>${select('format','Odds format',[['american','American'],['decimal','Decimal'],['fractional','Fractional']],renderFormat)}<button type="button" class="os-all-books" data-os-action="all-books">All sportsbooks<span>${allBooksSelected ? 'Selected' : 'Show all'}</span></button><button type="button" class="os-all-books" data-os-action="more-markets" aria-pressed="${moreMarkets}">More markets<span>${moreMarkets ? 'On' : 'Off'}</span></button><p class="os-book-scope">Halves, quarters and periods, game props (team totals, both teams to score) and scorer bets. A larger download.</p>${stateFilter ? `<p class="os-book-scope">Filtered to ${esc(stateFilter)}. Choose all sportsbooks to compare across states.</p>` : ''}<fieldset><legend>Sportsbook columns</legend>${availableBooks.length ? availableBooks.map((book,index) => `<div class="os-book-option"><label><input type="checkbox" data-os-book="${esc(book)}" ${hiddenBooks.has(book) ? '' : 'checked'}>${brandMark(book)}<span>${esc(book)}</span></label><button type="button" data-os-order="${esc(book)}" data-os-direction="-1" aria-label="Move ${esc(book)} earlier" ${index === 0 ? 'disabled' : ''}>↑</button><button type="button" data-os-order="${esc(book)}" data-os-direction="1" aria-label="Move ${esc(book)} later" ${index === availableBooks.length - 1 ? 'disabled' : ''}>↓</button></div>`).join('') : '<p>Sportsbooks appear here once the quote API syncs.</p>'}</fieldset></div>
         </div><button type="button" class="os-round" data-os-action="expand" aria-pressed="${expanded}" aria-label="${expanded ? 'Exit expanded view' : 'Expand odds screen'}">${expandIcon}</button></div>
       </div>
-      ${tabs.length > 2 ? `<div class="os-tabs-wrap"><button type="button" class="os-tabs-scroll" data-os-scroll="-1" aria-label="Scroll market groups left" tabindex="-1" disabled>${chevron}</button><div class="os-tabs" role="toolbar" aria-label="Market groups">${tabs.map(([value,label]) => `<button type="button" class="os-tab" data-os-tab="${esc(value)}" aria-pressed="${value === market}">${esc(label)}</button>`).join('')}</div><button type="button" class="os-tabs-scroll" data-os-scroll="1" aria-label="Scroll market groups right" tabindex="-1">${chevron}</button></div>` : ''}
+      ${tabs.length > 2 ? `<div class="os-tabs-wrap"><button type="button" class="os-tabs-scroll" data-os-scroll="-1" aria-label="Scroll market groups left" tabindex="-1" disabled>${chevron}</button><div class="os-tabs" role="toolbar" aria-label="Market groups">${tabs.map(([value,label]) => `<button type="button" class="os-tab" data-os-tab="${esc(value)}" aria-pressed="${value === market}">${esc(label)}</button>`).join('')}${moreMarkets ? '' : '<button type="button" class="os-tab os-tab-more" data-os-action="more-markets" title="Load halves, quarters and periods, game props and scorer bets">+ More markets</button>'}</div><button type="button" class="os-tabs-scroll" data-os-scroll="1" aria-label="Scroll market groups right" tabindex="-1">${chevron}</button></div>` : ''}
       <div class="os-board-meta"><p><span class="os-status-dot"></span><strong>${fromFeed ? 'Feed prices' : 'Entered prices'}</strong><span class="os-meta-separator">·</span>${allGroups.length} ${allGroups.length === 1 ? 'event' : 'events'}<span class="os-meta-separator">·</span>${count} ${count === 1 ? 'market' : 'markets'}<span class="os-meta-separator">·</span>${books.length} ${books.length === 1 ? 'book' : 'books'}${newest ? `<span class="os-meta-separator">·</span><span>Updated <span data-os-age="${esc(newest.id)}">${observedAge(newest.ts)}</span></span>` : ''}</p><div class="os-board-actions">${groups.length ? `<button type="button" data-os-action="rows" class="os-rows" aria-label="${lastGroups.every(key => collapsed.has(key)) ? 'Expand all events' : 'Collapse all events'}">${lastGroups.every(key => collapsed.has(key)) ? 'Expand all' : 'Collapse all'} ${chevron}</button>` : ''}<button type="button" data-os-action="reset" class="os-reset">Reset filters</button></div></div>
       </div>
       ${groups.length ? `<div class="os-grid-wrap" tabindex="0" role="region" aria-label="Odds grid. Scroll horizontally to see every sportsbook."><table class="os-grid" style="--os-books:${books.length}" aria-label="Sportsbook prices by game"><thead><tr><th scope="col" class="os-c-time">Time</th><th scope="col" class="os-selection">Team / selection</th><th scope="col" class="os-best-cell">Best odds</th><th scope="col" class="os-average" title="Average of current prices at the same line">Avg odds</th>${books.map(book => `<th scope="col" class="os-book-head" title="${esc(book)}"><span class="os-book-logo">${bookLogo(book,26)}</span><span class="os-sr">${esc(book)}</span></th>`).join('')}</tr></thead>${rows}</table></div>${allGroups.length > groups.length ? `<button type="button" class="os-more" data-os-action="more">Show ${Math.min(EVENT_PAGE, allGroups.length - groups.length)} more games · ${allGroups.length - groups.length} not shown</button>` : ''}` : `<div class="os-empty"><div>${layers}</div><h2>${all.length ? 'No matching prices' : 'Waiting for prices'}</h2><p>${all.length ? 'Try a different market, league or player, or show more sportsbook columns in settings.' : 'The odds board fills in once the quote API syncs.'}</p>${all.length ? '<button type="button" data-os-action="reset">Clear filters</button>' : ''}</div>`}
@@ -326,6 +338,8 @@ export function createOddsScreen({ getQuotes, getAnalytics = () => null, now: cl
     const action = target.dataset.osAction;
     if (action === 'settings') settingsOpen = !settingsOpen;
     if (action === 'all-books') {hiddenBooks.clear();onAllSportsbooks();}
+    // The page reloads prices with or without the extra markets and redraws.
+    if (action === 'more-markets') { onMoreMarkets(!getMoreMarkets()); return true; }
     if (action === 'expand') expanded = !expanded;
     if (action === 'more') { eventLimit += EVENT_PAGE; redrawKeeping(); return true; }
     if (action === 'rows') {const close = !lastGroups.every(key => collapsed.has(key));lastGroups.forEach(key => close ? collapsed.add(key) : collapsed.delete(key));}

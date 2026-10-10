@@ -81,12 +81,13 @@ const booksOf = books => Array.isArray(books) && books.length ? [...new Set(book
 
 /**
  * Prices and the analytics sections a page needs (getOdds for every market).
- * @param {{ settings?: Settings, include?: (SnapshotSection | 'events')[], sport?: string, books?: string[] }} [options] `books`: the
- *   sportsbooks the member can bet (holds and hedge pairs choose best prices among them)
+ * @param {{ settings?: Settings, include?: (SnapshotSection | 'events')[], sport?: string, books?: string[], markets?: 'main' | 'all' }} [options] `books`: the
+ *   sportsbooks the member can bet (holds and hedge pairs choose best prices among them); `markets` 'all' adds part-game
+ *   lines, game props and yes/no player bets to the full-game markets
  * @returns {Promise<Decoded>}
  */
-export async function getSnapshot({ settings, include = ['pricing', 'markets'], sport, books } = {}) {
-  return request('/api/odds/snapshot', { include: include.join(','), sport, books: booksOf(books), prefs: prefsOf(settings) }, { timeout: 60_000, transform: decodeSnapshot });
+export async function getSnapshot({ settings, include = ['pricing', 'markets'], sport, books, markets } = {}) {
+  return request('/api/odds/snapshot', { include: include.join(','), sport, books: booksOf(books), markets: markets === 'all' ? 'all' : undefined, prefs: prefsOf(settings) }, { timeout: 60_000, transform: decodeSnapshot });
 }
 /** A section view: the section's records and only the quotes they name. @param {string} route */
 const section = route => /** @param {SectionOptions} [options] @returns {Promise<OddsSnapshot>} */ async ({ settings, sport, live, minEv, limit, books } = {}) => (await request(`/api/odds/${route}`, { sport, live, minEv, limit, books: booksOf(books), prefs: prefsOf(settings) }, { transform: decodeSnapshot })).snapshot;

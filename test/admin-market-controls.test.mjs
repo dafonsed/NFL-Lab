@@ -219,7 +219,7 @@ test('an upstream request that fails without an answer is tried once more', asyn
   assert.equal(waits, 1);
 });
 
-test('one failed provider refresh serves the last complete snapshot for up to a minute', async t => {
+test('a failed provider refresh serves the last complete snapshot for up to ten minutes', async t => {
   t.mock.timers.enable({ apis: ['Date'], now: 1_000_000 });
   t.mock.method(console, 'error', () => {});
   let calls = 0;
@@ -229,7 +229,10 @@ test('one failed provider refresh serves the last complete snapshot for up to a 
   const retried = await proxy('/api/ev/quotes', { fetcher: flaky, loadControls: async () => [] });
   assert.equal(retried.status, 200, 'the previous snapshot covers a momentary upstream error');
   assert.equal(retried.body.count, quotes.length);
-  assert.equal(calls, 3, 'the failed refresh was tried once more first');
+  await new Promise(resolve => setTimeout(resolve, 400));
+  assert.equal(calls, 3, 'the failed refresh was tried once more');
   t.mock.timers.tick(240_000);
+  assert.equal((await proxy('/api/ev/quotes', { fetcher: flaky, loadControls: async () => [] })).status, 200, 'five minutes old is still held');
+  t.mock.timers.tick(360_000);
   assert.equal((await proxy('/api/ev/quotes', { fetcher: flaky, loadControls: async () => [] })).status, 503, 'a snapshot past the hold-over window is not served');
 });

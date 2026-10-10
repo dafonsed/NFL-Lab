@@ -3,6 +3,7 @@
   "functions": {
     "server.mjs": {
       "maxDuration": 300,
+      "memory": 3009,
       "includeFiles": "{public,lib/artifacts,lib/odds,docs}/**"
     }
   },

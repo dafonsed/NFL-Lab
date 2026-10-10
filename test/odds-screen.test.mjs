@@ -269,3 +269,24 @@ test('account odds default controls prices until the user saves an explicit disp
   const legacy = load(screenOf({ ...options, storage: { getItem: () => '{"format":"decimal"}' } }).render());
   assert.equal(legacy('.os-best-cell strong').text(), '+110');
 });
+
+test('game props and part-game lines get their own groups; More markets asks for them when they are off', () => {
+  const at = new Date(now).toISOString(), base = {sport:'NHL',event:'SEA @ DET',eventId:'g1',book:'DraftKings',ts:at};
+  const quotes = [
+    {...base,id:'ml',type:'moneyline',market:'moneyline',displayMarket:'Moneyline',side:'home',odds:-120},
+    {...base,id:'p1',type:'moneyline',market:'moneyline',displayMarket:'1st Period Moneyline',period:'1p',side:'home',odds:105},
+    {...base,id:'tt',type:'game-prop',market:'Detroit Red Wings Team Total',displayMarket:'Detroit Red Wings Team Total',team:'Detroit Red Wings',side:'over',line:3.5,odds:106},
+  ];
+  let more = false, asked = null;
+  const screen = screenOf({getQuotes:()=>quotes,brandMark:()=>'',redraw:()=>{},onSport:()=>{},getMoreMarkets:()=>more,onMoreMarkets:value=>{asked = value;}});
+  const $ = load(screen.render({sport:'NHL'}));
+  const tabs = $('[data-os-tab]').map((_,node) => $(node).text()).get();
+  assert.ok(tabs.includes('Game props') && tabs.includes('Halves & periods') && tabs.includes('Team Total'), tabs.join(' | '));
+  assert.ok(!tabs.includes('Detroit Red Wings Team Total'), 'one tab per bet, not per team');
+  assert.ok(!tabs.includes('1st Period Moneyline') || tabs.includes('Main markets'));
+  assert.equal($('.os-tab-more').length, 1);
+  screen.click(hit({osAction:'more-markets'}));
+  assert.equal(asked, true);
+  more = true;
+  assert.equal(load(screen.render({sport:'NHL'}))('.os-tab-more').length, 0);
+});
