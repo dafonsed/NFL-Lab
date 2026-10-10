@@ -10,7 +10,8 @@
       ],
       "env": {
         "PORT": "3101",
-        "SPORTWIZZARD_ENABLED": "1"
+        "SPORTWIZZARD_ENABLED": "1",
+        "VPS_ODDS_URL": "http://209.145.53.103:3456"
       },
       "port": 3101
     },
@@ -37,6 +38,20 @@
         "PORT": "3104"
       },
       "port": 3104
+    },
+    {
+      "name": "sportslab-capped",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--env-file-if-exists=.env.local",
+        "scripts/design-preview.mjs"
+      ],
+      "env": {
+        "PORT": "3105",
+        "SPORTWIZZARD_ENABLED": "1",
+        "ODDS_ENGINE_HEAP_MB": "1229"
+      },
+      "port": 3105
     }
   ]
 }
