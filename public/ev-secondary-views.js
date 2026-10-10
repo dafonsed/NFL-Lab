@@ -1,6 +1,6 @@
 import {SECONDARY_TOOLS, MORE_TOOL_GROUPS} from './ev-tool-catalog.js';
 import {icon} from './ui-icons.js';
-import {boardIcon, bookLogo, startLabel} from './ev-board.js?v=7';
+import {boardIcon, bookLogo, startLabel} from './ev-board.js?v=8-source';
 import {leagueMark} from './sports-identity.js';
 export const toolEsc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const purposes = {

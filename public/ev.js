@@ -1,9 +1,9 @@
 import { browserAlertsControl, deliverAlerts, toggleBrowserAlerts } from './alert-delivery.js?v=1';
 import { wagerCard } from './ev-bet-card.js';
-import { renderEvBoard, renderEvBoardDetail, renderBetPanel, boostedOffer, boardIcon, bookLogo, startLabel, selectionText, marketLabel } from './ev-board.js?v=7';
+import { renderEvBoard, renderEvBoardDetail, renderBetPanel, boostedOffer, boardIcon, bookLogo, startLabel, selectionText, marketLabel } from './ev-board.js?v=8-source';
 // Feed quotes that only carry a raw market key ("football_player_touchdowns") get a readable name for display.
 const readableMarkets = quotes => { for (const q of quotes || []) if (q && !q.displayMarket && typeof q.market === 'string' && q.market.includes('_') && !/\s/.test(q.market)) q.displayMarket = marketLabel(q.market); return quotes; };
-import { createEvSuite, EV_SUITE_TOOLS } from './ev-suite.js?v=local-suite-9';
+import { createEvSuite, EV_SUITE_TOOLS } from './ev-suite.js?v=local-suite-10-source';
 import { readSuiteState, writeSuiteState } from './ev-suite-storage.js?v=2';
 import { installMobileWorkspace, quoteRevision, preserveReadingOrder } from './ev-mobile.js';
 import { accountStorage as localStorage, accountReady, getAccountPreferences, accountSyncState } from './account-sync.js';
@@ -26,12 +26,12 @@ import { betTrackerUrl, legacyBetTrackerUrl } from './navigation.js?v=tracker-1'
 import { decimal, constrainedArb, promoConversion, parlay, fantasySlip, pearson } from './betting-math.js';
 import { money, percent, signed } from './odds-format.js';
 import { teamMark, leagueMark } from './sports-identity.js';
-import { comparisonAnnotations } from './bet-comparison.js?v=4';
+import { comparisonAnnotations } from './bet-comparison.js?v=7-source';
 import { inlineBetCard as betComparisonCard, bindInlineComparison as bindComparison } from './bet-inline.js?v=card-click-4';
 import { openArbCalculator } from './arb-calculator.js?v=2';
 import { openLineHistory, buildLineSeries } from './line-history.js?v=1';
-import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource, breakEven, payoutFactor, payoutKnown, legBreakEven } from './dfs-workspace.js?v=30';
-import { createOddsScreen } from './odds-screen.js?v=13';
+import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource, breakEven, payoutFactor, payoutKnown, legBreakEven } from './dfs-workspace.js?v=31-source';
+import { createOddsScreen } from './odds-screen.js?v=14-source';
 
 import {readSportsbookState, saveSportsbookState, sportsbookAvailable, availableSportsbookQuotes, STATE_CHANGE_EVENT} from './sportsbook-availability.js';
 
@@ -248,7 +248,7 @@ const quoteSource = () => state.quotes;
 const quotes = () => quoteSource().filter(q => visible(q, ['event', 'market', 'book', 'side', 'sport', 'player']) && quotePassesDesign(q) && quotePassesTool(q) && suite.quoteVisible(q));
 const dfs = () => state.dfs.filter(q => visible(q, ['player', 'market', 'app', 'side']) && (active !== 'fantasy' || ((!designFilters.league || (q.league || q.sport) === designFilters.league) && inDateRange(q.ts) && (!designFilters.side || q.side === designFilters.side))));
 const fmtLine = line => line === '' || line == null ? '—' : esc(line);
-const oddsCell = q => `<button type="button" data-detail="${esc(q.id)}" aria-label="Compare ${esc(q.side)} at ${esc(q.book)}"><strong>${oddsLabel(q.odds)}</strong><small>${esc(q.book)}</small></button>`;
+const oddsCell = q => `<button type="button" data-detail="${esc(q.id)}" aria-label="Compare ${esc(q.side)} at ${esc(q.book)}"><strong>${oddsLabel(q.odds)}</strong><small>${esc(q.book)}${q.source?`<span class="source-tag" data-source="${esc(q.source)}" title="Feed source">${esc(q.source)}</span>`:''}</small></button>`;
 const button = (label, attributes = '') => `<button type="button" ${attributes}>${label}</button>`;
 const empty = (title, body) => `<div class="ev-empty"><strong>${esc(title)}</strong>${esc(body)}</div>`;
 const table = (headings, rows) => rows.length ? `<div class="ev-table-wrap"><table class="ev-table"><thead><tr>${headings.map(h => `<th scope="col">${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>` : '';
@@ -811,7 +811,7 @@ function comparisonForQuote(quote) {
       ? `${Number(same.line) - Number(quote.line) > 0 ? '+' : ''}${Number(same.line) - Number(quote.line)}` : '';
     // This book's own fair probability: its complete market devigged with the member's method (server).
     const noVig = same && current(same) ? same.bookFairProbability : null;
-    return {name:book,probability:noVig != null ? percent(noVig) : null,mark:brandMark(book),exchange:peers.some(item=>item.book===book&&item.exchange),line:same?.line !== '' && same?.line != null ? fmtLine(same.line) : '—',difference,odds:same ? `${oddsLabel(same.odds)}${other ? ' / ' + oddsLabel(other.odds) : ''}` : '—'};
+    return {name:book,probability:noVig != null ? percent(noVig) : null,mark:brandMark(book),exchange:peers.some(item=>item.book===book&&item.exchange),line:same?.line !== '' && same?.line != null ? fmtLine(same.line) : '—',difference,odds:same ? `${oddsLabel(same.odds)}${other ? ' / ' + oddsLabel(other.odds) : ''}` : '—',source:same?.source || other?.source || ''};
   });
   const selection = `${quote.side}${quote.line !== '' && quote.line != null ? ' ' + fmtLine(quote.line) : ''}`;
   const canEdit = state.quotes.some(item => item.id === quote.id);
@@ -1043,7 +1043,7 @@ function arbEvent(q) {
   const codes = ['nfl', 'mlb', 'nba', 'wnba', 'nhl', 'soccer'].includes(sport) && /^([A-Z]{2,4})\s+(@|vs\.?)\s+([A-Z]{2,4})$/.exec(event);
   return `<span class="arb-teams">${codes ? `${teamMark({sport, team:codes[1]})}<span>${esc(event)}</span>${teamMark({sport, team:codes[3]})}` : `<span>${esc(event)}</span>`}</span>`;
 }
-const arbLeg = (ctx, q, i, plan, side) => `<div class="arb-leg arb-leg-${side}"><span class="evb-book-logo">${bookLogo(q.book, 30)}</span><span class="arb-leg-copy"><button type="button" class="arb-leg-link" data-suite-action="link" data-id="${esc(q.id)}" aria-label="Open ${esc(q.book)} bet link for ${esc(selectionText(q))}"><span>${esc(selectionText(q))}</span>${boardIcon('link', 13)}</button><small>${esc(q.book)}</small></span>
+const arbLeg = (ctx, q, i, plan, side) => `<div class="arb-leg arb-leg-${side}"><span class="evb-book-logo">${bookLogo(q.book, 30)}</span><span class="arb-leg-copy"><button type="button" class="arb-leg-link" data-suite-action="link" data-id="${esc(q.id)}" aria-label="Open ${esc(q.book)} bet link for ${esc(selectionText(q))}"><span>${esc(selectionText(q))}</span>${boardIcon('link', 13)}</button><small>${esc(q.book)}${q.source?`<span class="source-tag" data-source="${esc(q.source)}" title="Feed source">${esc(q.source)}</span>`:''}</small></span>
   <span class="arb-stat arb-odds"><strong>${esc(ctx.oddsLabel(q.odds))}</strong><small>Odds${arbLiquidity(q) ? `<span class="arb-liq"><span aria-hidden="true"> · </span>Liq ${arbLiquidity(q)}</span>` : ''}</small></span><span class="arb-stat arb-stake"><strong>${money(plan.stakes[i])}</strong><small>Rec Bet</small></span><span class="arb-stat arb-profit"><strong class="${plan.profits[i] >= 0 ? 'is-positive' : 'is-negative'}">${money(plan.profits[i])}</strong><small>Profit</small></span></div>`;
 // Both selections at every book for the expanded panel; the chosen prices are lime.
 function arbPrices(ctx, rows, chosen) {
@@ -1403,8 +1403,8 @@ function renderSharp() {
       <span class="sm-item-liquidity"><strong>${cash(x.liquidity)}</strong><small>${q.limit ? `${cash(q.limit)} limit` : 'Opp. liquidity'}</small></span>
       <span class="sm-item-market"><strong>${esc(titleCase(marketName(q)))}${q.live ? '<small class="sm-live">Live</small>' : ''}</strong><span>${esc(eventName(q))}</span><small>${esc(meta(q))}</small></span>
       <span class="sm-item-sides">
-        <span class="sm-side is-bet"><span class="sm-logo" title="${esc(offer.book)}">${bookLogo(offer.book, 22)}</span><span class="sm-side-name">${esc(selectionText(offer))}</span><span class="sm-side-price">${pill(offer.odds)}${x.opposite ? `<small>Compared ${esc(oddsLabel(x.opposite.odds))}</small>` : ''}</span></span>
-        <span class="sm-side"><span class="sm-logo" title="${esc(q.book)}">${bookLogo(q.book, 22)}</span><span class="sm-side-name">${esc(selectionText(q))}</span><span class="sm-side-price">${pill(q.odds, ' is-exchange')}<small class="sm-chip">${shortCash(q.liquidity)}</small></span></span>
+        <span class="sm-side is-bet"><span class="sm-logo" title="${esc(offer.book)}${offer.source?` · ${offer.source}`:''}">${bookLogo(offer.book, 22)}</span><span class="sm-side-name">${esc(selectionText(offer))}${offer.source?`<span class="source-tag" data-source="${esc(offer.source)}" title="Feed source">${esc(offer.source)}</span>`:''}</span><span class="sm-side-price">${pill(offer.odds)}${x.opposite ? `<small>Compared ${esc(oddsLabel(x.opposite.odds))}</small>` : ''}</span></span>
+        <span class="sm-side"><span class="sm-logo" title="${esc(q.book)}${q.source?` · ${q.source}`:''}">${bookLogo(q.book, 22)}</span><span class="sm-side-name">${esc(selectionText(q))}${q.source?`<span class="source-tag" data-source="${esc(q.source)}" title="Feed source">${esc(q.source)}</span>`:''}</span><span class="sm-side-price">${pill(q.odds, ' is-exchange')}<small class="sm-chip">${shortCash(q.liquidity)}</small></span></span>
       </span>
     </button>`;
   };
