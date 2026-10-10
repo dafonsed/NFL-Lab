@@ -256,3 +256,14 @@ test('the default snapshot carries full-game markets; markets=all adds part-game
   assert.ok(main.pricing.every(row => main.quotes.some(quote => quote.id === row.quoteId)), 'pricing rows only name quotes the answer carries');
   assert.equal((await call('/api/odds/snapshot?markets=every', { fetcher, provider })).status, 400);
 });
+
+test('a time-to-live cache keeps at most its entry limit, dropping the least recently loaded', async () => {
+  const cache = createTimeToLiveCache(60_000, 0, 0, 2);
+  let loads = 0;
+  const load = value => () => { loads += 1; return value; };
+  await cache('a', load('a')); await cache('b', load('b')); await cache('c', load('c'));
+  assert.equal(await cache('c', load('c2')), 'c');
+  assert.equal(await cache('b', load('b2')), 'b');
+  assert.equal(await cache('a', load('a2')), 'a2', 'the oldest key was dropped');
+  assert.equal(loads, 4);
+});

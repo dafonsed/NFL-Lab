@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sportWizzardConfig, toFeedRecords, sportWizzardSnapshot, mergeSnapshots } from '../lib/odds/sportwizzard.mjs';
 import { normalizeFeed, dfsPicks } from '../lib/odds/normalize.mjs';
-import { marketIdentity, sideNames } from '../public/market-identity.js';
+import { marketIdentity, sideNames, stableHash } from '../public/market-identity.js';
 import { withKalshiDepth } from '../lib/odds/kalshi.mjs';
 
 // Two days out, so the fixture game never counts as started.
@@ -144,13 +144,13 @@ test('a milestone that names its threshold is an Over line; one the book also po
     yards('m', 'PLAYER_MILESTONE', 'PLAYER_RUSH_REC_YARDS', { side: 'YES', selection: 'Alex DeBrincat 90+', priceAmerican: 105 }),
     yards('p', 'PLAYER_TOTAL', 'PLAYER_TOTAL_RUSH_+_REC_YARDS', { side: 'OVER', line: 89.5, priceAmerican: 100 }),
   ], new Map([['e1', event]])).records;
-  assert.deepEqual(second.map(r => [r.id, r.line]).sort(), [['sw:half', 62.5], ['sw:p', 89.5]]);
+  assert.deepEqual(second.map(r => [r.id, r.line]).sort(), [[`sw:${stableHash('half')}`, 62.5], [`sw:${stableHash('p')}`, 89.5]].sort());
   // Hard Rock writes the line ("Over 1.5"); a row naming only the player can't say which rung it is.
   const third = toFeedRecords([
     row({ id: 'hr', sportsbook: 'hardrock', market: 'PLAYER_MILESTONE', marketSubtype: 'PLAYER_TDS', side: 'YES', selection: 'Over 1.5', playerName: 'Alex DeBrincat', priceAmerican: 225 }),
     row({ id: 'mgm', sportsbook: 'betmgm', market: 'PLAYER_MILESTONE', marketSubtype: 'PLAYER_TDS', side: 'YES', selection: 'Alex DeBrincat', playerName: 'Alex DeBrincat', priceAmerican: 200 }),
   ], new Map([['e1', event]])).records;
-  assert.deepEqual(third.map(r => [r.id, r.market, r.side, r.line]), [['sw:hr', 'Anytime TDs', 'over', 1.5]]);
+  assert.deepEqual(third.map(r => [r.id, r.market, r.side, r.line]), [[`sw:${stableHash('hr')}`, 'Anytime TDs', 'over', 1.5]]);
 });
 
 test('futures, unnamed periods, unreadable milestones, pick’em rows, suspended, finished and hours-old prices are left out', () => {
@@ -227,7 +227,7 @@ test('a league whose request fails keeps its lines from the previous board for t
   assert.notEqual(carried, first, 'the refresh succeeded');
   assert.equal(carried.quotes.length, 2, 'the failed request’s lines are still on the board');
   assert.ok(logged.some(line => /nhl: request failed; keeping its lines from 31 s ago/.test(line)));
-  assert.equal(carried.quotes[0], first.quotes[0], 'the previous board’s records, not copies');
+  assert.equal(carried.leagues.get('nhl'), first.leagues.get('nhl'), 'the previous board’s lines, not a copy');
   t.mock.timers.tick(11 * 60_000);
   await assert.rejects(sportWizzardSnapshot(config, fetcher), /Every SportWizzard league request failed/, 'lines past ten minutes old are not kept');
 });
@@ -256,6 +256,29 @@ test('a league whose game props didn’t come keeps its last full set instead of
   const next = await sportWizzardSnapshot(config, fetcher);
   assert.notEqual(next, first);
   assert.deepEqual(next.quotes.map(quote => quote.id), first.quotes.map(quote => quote.id));
+});
+
+test('a board past three minutes is marked stale with one copy, so the merge and normalize caches keep hitting', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  t.mock.method(console, 'error', () => {});
+  let up = true;
+  const fetcher = async url => {
+    if (!up) return { ok: false, status: 503, headers: new Map(), body: null };
+    const body = url.pathname.endsWith('/leagues') ? { success: true, data: ['nhl'] }
+      : url.pathname.endsWith('/events') ? { success: true, data: [event], nextCursor: null }
+      : url.searchParams.get('market')?.startsWith('MONEYLINE') ? { success: true, data: [row({ market: 'TOTAL', marketSubtype: 'TOTAL_GOALS', side: 'OVER', line: 6 }), row({ market: 'TOTAL', marketSubtype: 'TOTAL_GOALS', side: 'UNDER', line: 6 })], nextCursor: null }
+      : { success: true, data: [], nextCursor: null };
+    return { ok: true, status: 200, json: async () => body };
+  };
+  const config = { base: new URL('https://api.sportwizzard.com'), apiKey: 'sw_live_test' };
+  const first = await sportWizzardSnapshot(config, fetcher);
+  up = false;
+  t.mock.timers.tick(4 * 60_000);
+  const stale = await sportWizzardSnapshot(config, fetcher);
+  assert.equal(stale.stale, true);
+  assert.equal(stale.quotes, first.quotes);
+  assert.equal(await sportWizzardSnapshot(config, fetcher), stale, 'the same stale copy every time');
+  await new Promise(resolve => setTimeout(resolve, 1_300));
 });
 
 test('a timed-out page is asked once more before its request fails', async () => {

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { repairSelection, matchParticipant, normalizeFeed, normalizeDfsRecords, underdogFiftyFifty, markPriceFamilies, knownSport, sportName } from '../lib/odds/normalize.mjs';
+import { repairSelection, matchParticipant, normalizeFeed, normalizeDfsRecords, underdogFiftyFifty, shareStrings, markPriceFamilies, knownSport, sportName } from '../lib/odds/normalize.mjs';
 import { consensusPrice } from '../lib/odds/engine.mjs';
 
 // Shapes copied from the live quote feed's mislabeled records (30 Sep 2026).
@@ -860,4 +860,13 @@ test('a pick sent without its game, start or sport takes them from the sportsboo
   const [over] = pricer.price('multiplicative', { now: Date.now() }).filter(p => p.side === 'Over');
   assert.ok(Math.abs(over.probability - 0.5) < 1e-9);
   assert.deepEqual([over.sport, over.event, over.startTime], ['NFL', 'Indianapolis Colts @ Washington Commanders', start]);
+});
+
+test('repeated text fields point at one shared copy; other fields and values are left as they are', () => {
+  const name = n => ['Seattle', 'Kraken'].slice(0, n).join(' ');
+  const items = [{ event: name(2), odds: -110, id: 'a' }, { event: name(2), odds: 120, id: 'b' }, { event: '', id: 'c' }];
+  assert.equal(shareStrings(items, ['event']), items);
+  assert.deepEqual(items.map(item => item.event), ['Seattle Kraken', 'Seattle Kraken', '']);
+  assert.deepEqual(items.map(item => [item.id, item.odds]), [['a', -110], ['b', 120], ['c', undefined]]);
+  assert.ok(!('event' in shareStrings([{ id: 'd' }], ['event'])[0]), 'a missing field stays missing');
 });
