@@ -125,7 +125,7 @@ export interface SnapshotMeta {
   counts: {
     records?: number;
     quotes?: number;
-    /** Feed records the normalizer left out, by reason (invalid, mislabeled, duplicate, stale, started, inconsistent). */
+    /** Feed records the normalizer left out, by reason (invalid, mislabeled, duplicate, stale, started, inconsistent, alone). */
     skipped?: Record<string, number>;
     dropped?: number;
   };

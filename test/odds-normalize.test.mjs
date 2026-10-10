@@ -52,7 +52,7 @@ test('the feed pipeline skips and counts bad records instead of failing the snap
   // Ids are stable per selection; the API's own id is kept as feedId.
   assert.deepEqual(quotes.map(q => [q.feedId, q.side, q.line, q.selection]), [['local-api:a', 'away', 3, 'Dallas Cowboys'], ['local-api:b', 'home', -3, 'Houston Texans']]);
   assert.match(quotes[0].id, /^local-api:[a-z0-9]+$/);
-  assert.deepEqual(skipped, { invalid: 1, mislabeled: 1, duplicate: 1, stale: 0, started: 0, inconsistent: 0 });
+  assert.deepEqual(skipped, { invalid: 1, mislabeled: 1, duplicate: 1, stale: 0, started: 0, inconsistent: 0, alone: 0 });
   assert.equal(quotes[0].displayMarket, 'Spread');
 });
 
@@ -869,4 +869,19 @@ test('repeated text fields point at one shared copy; other fields and values are
   assert.deepEqual(items.map(item => item.event), ['Seattle Kraken', 'Seattle Kraken', '']);
   assert.deepEqual(items.map(item => [item.id, item.odds]), [['a', -110], ['b', 120], ['c', undefined]]);
   assert.ok(!('event' in shareStrings([{ id: 'd' }], ['event'])[0]), 'a missing field stays missing');
+});
+
+test('beside SportWizzard, the main feed’s lines for a game no other book lists are left out', () => {
+  const total = (id, book, event, extra = {}) => [
+    record(`${id}-o`, { book, event, market: 'total', type: 'total', side: 'over', line: 44.5, selection: 'Over 44.5', ...extra }),
+    record(`${id}-u`, { book, event, market: 'total', type: 'total', side: 'under', line: 44.5, selection: 'Under 44.5', ...extra }),
+  ];
+  const board = [...total('sw:dk', 'DraftKings', 'Cowboys @ Texans'), ...total('sw:fa', 'Fanatics', 'Jets @ Bills')];
+  const main = [...total('pin-shared', 'Pinnacle', 'Cowboys @ Texans'), ...total('pin-alone', 'Pinnacle', 'Bears @ Lions')];
+  const { quotes, skipped } = normalizeFeed([...board, ...main], { syncedAt: synced });
+  const games = book => [...new Set(quotes.filter(quote => quote.book === book).map(quote => quote.event))].sort();
+  assert.deepEqual(games('Pinnacle'), ['Cowboys @ Texans'], 'Pinnacle’s game nobody else prices is left out');
+  assert.deepEqual(games('Fanatics'), ['Jets @ Bills'], 'SportWizzard’s own lines are all kept');
+  assert.equal(skipped.alone, 2);
+  assert.equal(normalizeFeed(main, { syncedAt: synced }).quotes.length, 4, 'the main feed on its own keeps every game');
 });

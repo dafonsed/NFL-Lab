@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { RecordTable, RecordView, tableSnapshot, restamp } from '../lib/odds/record-table.mjs';
+import { RecordTable, RecordView, TableBuilder, tableSnapshot, restamp } from '../lib/odds/record-table.mjs';
 
 const records = () => [
   { id: 'a', book: 'FanDuel', odds: -110, line: 4.5, live: false, links: { bet: 'x' } },
@@ -38,4 +38,21 @@ test('a table snapshot reads its quotes on demand, and restamp copies it without
   assert.equal(stale.stale, true);
   assert.equal(stale.quotes, snapshot.quotes);
   assert.deepEqual(restamp({ quotes: [1], stale: false }, { stale: true }), { quotes: [1], stale: true }, 'plain snapshots are copied as before');
+});
+
+test('a table built one record at a time (from a stream) gives back the same records', () => {
+  const builder = new TableBuilder(1);
+  for (const record of records()) builder.add(record);
+  const table = builder.build();
+  assert.equal(table.length, 3);
+  assert.deepEqual(table.rows(), records());
+  assert.ok(table.columns.every(column => column.length === 3), 'columns are trimmed to the records read');
+  assert.deepEqual(new TableBuilder().build().rows(), []);
+});
+
+test('one field of every row can be read without building the rows', () => {
+  const table = new RecordTable(records()), book = table.field('book'), team = table.field('team');
+  assert.deepEqual([0, 1, 2].map(book), ['FanDuel', 'FanDuel', 'Pinnacle']);
+  assert.deepEqual([0, 1, 2].map(team), [undefined, undefined, undefined]);
+  assert.deepEqual([0, 1].map(table.field('missing')), [undefined, undefined]);
 });

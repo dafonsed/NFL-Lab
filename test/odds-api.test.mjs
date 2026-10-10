@@ -254,6 +254,10 @@ test('the default snapshot carries full-game markets; markets=all adds part-game
   assert.deepEqual(extras(all.quotes).map(quote => quote.displayMarket).sort(), ['1st Half Moneyline', '1st Half Moneyline', 'Both Teams To Score', 'First TD Scorer']);
   assert.equal(all.quotes.length, main.quotes.length + 4);
   assert.ok(main.pricing.every(row => main.quotes.some(quote => quote.id === row.quoteId)), 'pricing rows only name quotes the answer carries');
+  // More markets is priced one sport at a time as its answer is written; another answer gets the same rows.
+  const again = decodeSnapshot((await call('/api/odds/snapshot?include=pricing,markets&markets=all', { fetcher, provider })).body).snapshot;
+  assert.deepEqual(again.pricing.map(row => row.quoteId).sort(), all.pricing.map(row => row.quoteId).sort());
+  assert.ok(again.markets.length > 0);
   assert.equal((await call('/api/odds/snapshot?markets=every', { fetcher, provider })).status, 400);
 });
 
@@ -266,4 +270,14 @@ test('a time-to-live cache keeps at most its entry limit, dropping the least rec
   assert.equal(await cache('b', load('b2')), 'b');
   assert.equal(await cache('a', load('a2')), 'a2', 'the oldest key was dropped');
   assert.equal(loads, 4);
+});
+
+test('the engine thread’s heap is 60% of the function’s memory, between 512 MB and 4 GB, unless set', async () => {
+  const { engineHeapMb } = await import('../lib/odds/providers.mjs');
+  const mb = n => n * 1_048_576;
+  assert.equal(engineHeapMb({}, mb(2048), 0), 1229);
+  assert.equal(engineHeapMb({}, mb(65536), mb(2048)), 1229, 'a container limit wins over the machine');
+  assert.equal(engineHeapMb({}, mb(512), 0), 512);
+  assert.equal(engineHeapMb({}, mb(65536), 0), 4096);
+  assert.equal(engineHeapMb({ ODDS_ENGINE_HEAP_MB: '1500' }, mb(2048), 0), 1500);
 });
