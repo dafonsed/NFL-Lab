@@ -371,6 +371,17 @@ export function createDfsWorkspace({getState,redraw,onSave,onConfigure,onDeleteS
     }
     // No two-sided market: the best one-sided book price, when there is one.
     if (offer) return `<span class="dfs-fv">${brand(offer.book)}<strong class="dfs-fv-odds">${esc(oddsLabel(offer.odds))}</strong></span><small>${esc(offer.book)}${rowOffers.length > 1 ? ` · best of ${rowOffers.length}` : ''} · one side only</small>`;
+    // No book posts the pick's exact line: show the nearest ladder rung the server collected
+    // (lib/odds/normalize.mjs nearbyFor), so soccer goalkeeper picks and other exotic DFS lines
+    // still show which books ARE pricing the player — just at a different threshold.
+    if (Array.isArray(item.referenceLines) && item.referenceLines.length) {
+      const sideKey = String(item.side).toLowerCase();
+      const matches = item.referenceLines.filter(line => bookShown(line.book) && Number.isFinite(decimal(line[sideKey])));
+      if (matches.length) {
+        const best = matches[0];
+        return `<span class="dfs-fv">${brand(best.book)}<strong class="dfs-fv-odds">${esc(oddsLabel(best[sideKey]))}</strong></span><small>${esc(best.book)} · ${esc(item.side)} ${esc(best.line)} (DFS line ${esc(item.line)})${matches.length > 1 ? ` · ${matches.length - 1} more` : ''}</small>`;
+      }
+    }
     return `<span class="dfs-fv"><strong class="dfs-fv-odds is-empty">—</strong></span><small>${partGame(item) ? 'Not compared' : 'No book price'}</small>`;
   }
   // One prop per row: market and event, selection, fair value, true probability, then round actions.
