@@ -11,9 +11,10 @@ test('the engine thread prices the feed, applies the controls it is sent, and ke
   const body = JSON.stringify({ quotes: fixtureRecords({ games: 80, propsPerGame: 4 }), complete: true }), keys = [];
   const upstream = http.createServer((req, res) => { keys.push(req.headers['x-api-key']); res.writeHead(req.url.startsWith('/quotes') ? 200 : 404, { 'Content-Type': 'application/json' }); res.end(req.url.startsWith('/quotes') ? body : '{}'); });
   await new Promise(resolve => upstream.listen(0, '127.0.0.1', resolve));
-  const saved = { url: process.env.EV_TOOL_API_URL, key: process.env.EV_TOOL_API_KEY };
-  process.env.EV_TOOL_API_URL = `http://127.0.0.1:${upstream.address().port}`; process.env.EV_TOOL_API_KEY = 'thread-key';
-  t.after(() => { upstream.close(); for (const [name, value] of [['EV_TOOL_API_URL', saved.url], ['EV_TOOL_API_KEY', saved.key]]) { if (value === undefined) delete process.env[name]; else process.env[name] = value; } });
+  // SportWizzard is on by default; the thread reads only the stand-in here (no network in tests).
+  const saved = { url: process.env.EV_TOOL_API_URL, key: process.env.EV_TOOL_API_KEY, sportWizzard: process.env.SPORTWIZZARD_ENABLED };
+  process.env.EV_TOOL_API_URL = `http://127.0.0.1:${upstream.address().port}`; process.env.EV_TOOL_API_KEY = 'thread-key'; process.env.SPORTWIZZARD_ENABLED = '0';
+  t.after(() => { upstream.close(); for (const [name, value] of [['EV_TOOL_API_URL', saved.url], ['EV_TOOL_API_KEY', saved.key], ['SPORTWIZZARD_ENABLED', saved.sportWizzard]]) { if (value === undefined) delete process.env[name]; else process.env[name] = value; } });
   const { selectProvider } = await import('../lib/odds/providers.mjs');
   const provider = selectProvider({});
   // The longest the main thread went without running a timer. Pricing on this thread stalls it for about

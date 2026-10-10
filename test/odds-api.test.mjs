@@ -116,13 +116,16 @@ test('an upstream outage is a retryable 503 with no upstream detail; a held-over
   const down = await call('/api/odds/snapshot', { fetcher: fixtureFetcher(fixtureRecords(), { fail: () => true }) });
   assert.equal(down.status, 503);
   assert.deepEqual(down.body, { error: { code: 'UNAVAILABLE', message: 'The odds source is unavailable right now. Prices refresh automatically when it recovers.', retryable: true } });
-  // A refresh that fails within a minute of a good snapshot serves that snapshot, marked stale.
+  // A refresh that fails within ten minutes of a good snapshot serves that snapshot, marked stale.
   t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
   let failing = false;
   const fetcher = fixtureFetcher(fixtureRecords(), { fail: () => failing }), provider = createTransitionProvider();
   assert.equal(decodeSnapshot((await call('/api/odds/snapshot', { fetcher, provider })).body).snapshot.meta.stale, false);
   failing = true;
   t.mock.timers.tick(61_000);
+  await call('/api/odds/snapshot', { fetcher, provider });
+  await new Promise(resolve => setTimeout(resolve, 400));
+  t.mock.timers.tick(5_000);
   const held = decodeSnapshot((await call('/api/odds/snapshot', { fetcher, provider })).body).snapshot;
   assert.equal(held.meta.stale, true);
   assert.ok(held.quotes.length > 0);
@@ -234,4 +237,47 @@ test('ODDS_PROVIDER=odds-api passes the odds API’s answers through, validated 
   const unset = await call('/api/odds/snapshot', { env: { ODDS_PROVIDER: 'odds-api' }, fetcher, provider: null });
   assert.equal(unset.status, 503);
   assert.equal(unset.body.error.code, 'NOT_CONFIGURED');
+});
+
+test('the default snapshot carries full-game markets; markets=all adds part-game lines, game props and yes/no player bets', async () => {
+  const records = fixtureRecords(), moneyline = side => records.find(record => record.type === 'moneyline' && record.side === side && record.book === 'Pinnacle'), home = moneyline('home');
+  const extra = [
+    { ...home, id: 'part-home', period: '1h' }, { ...moneyline('away'), id: 'part-away', period: '1h' },
+    { ...home, id: 'btts-yes', type: 'game-prop', market: 'Both Teams To Score', side: 'yes', selection_name: 'Yes', odds: -150 },
+    { ...home, id: 'first-td', type: 'prop', market: 'First TD Scorer', player: 'Fixture Runner 1', side: 'yes', selection_name: 'Yes', odds: 600 },
+  ];
+  const fetcher = fixtureFetcher([...records, ...extra]), provider = createTransitionProvider();
+  const scoped = async markets => decodeSnapshot((await call(`/api/odds/snapshot?include=pricing${markets ? `&markets=${markets}` : ''}`, { fetcher, provider })).body).snapshot;
+  const main = await scoped(''), all = await scoped('all');
+  const extras = quotes => quotes.filter(quote => quote.period !== 'full' || quote.type === 'game-prop' || quote.line === '' && quote.type === 'prop');
+  assert.equal(extras(main.quotes).length, 0);
+  assert.deepEqual(extras(all.quotes).map(quote => quote.displayMarket).sort(), ['1st Half Moneyline', '1st Half Moneyline', 'Both Teams To Score', 'First TD Scorer']);
+  assert.equal(all.quotes.length, main.quotes.length + 4);
+  assert.ok(main.pricing.every(row => main.quotes.some(quote => quote.id === row.quoteId)), 'pricing rows only name quotes the answer carries');
+  // More markets is priced one sport at a time as its answer is written; another answer gets the same rows.
+  const again = decodeSnapshot((await call('/api/odds/snapshot?include=pricing,markets&markets=all', { fetcher, provider })).body).snapshot;
+  assert.deepEqual(again.pricing.map(row => row.quoteId).sort(), all.pricing.map(row => row.quoteId).sort());
+  assert.ok(again.markets.length > 0);
+  assert.equal((await call('/api/odds/snapshot?markets=every', { fetcher, provider })).status, 400);
+});
+
+test('a time-to-live cache keeps at most its entry limit, dropping the least recently loaded', async () => {
+  const cache = createTimeToLiveCache(60_000, 0, 0, 2);
+  let loads = 0;
+  const load = value => () => { loads += 1; return value; };
+  await cache('a', load('a')); await cache('b', load('b')); await cache('c', load('c'));
+  assert.equal(await cache('c', load('c2')), 'c');
+  assert.equal(await cache('b', load('b2')), 'b');
+  assert.equal(await cache('a', load('a2')), 'a2', 'the oldest key was dropped');
+  assert.equal(loads, 4);
+});
+
+test('the engine thread’s heap is 60% of the function’s memory, between 512 MB and 4 GB, unless set', async () => {
+  const { engineHeapMb } = await import('../lib/odds/providers.mjs');
+  const mb = n => n * 1_048_576;
+  assert.equal(engineHeapMb({}, mb(2048), 0), 1229);
+  assert.equal(engineHeapMb({}, mb(65536), mb(2048)), 1229, 'a container limit wins over the machine');
+  assert.equal(engineHeapMb({}, mb(512), 0), 512);
+  assert.equal(engineHeapMb({}, mb(65536), 0), 4096);
+  assert.equal(engineHeapMb({ ODDS_ENGINE_HEAP_MB: '1500' }, mb(2048), 0), 1500);
 });

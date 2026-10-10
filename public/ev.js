@@ -31,7 +31,7 @@ import { inlineBetCard as betComparisonCard, bindInlineComparison as bindCompari
 import { openArbCalculator } from './arb-calculator.js?v=2';
 import { openLineHistory, buildLineSeries } from './line-history.js?v=1';
 import { createDfsWorkspace, DFS_PLATFORMS, isDfsPlatform, withStandardPaytables, paytableSource, breakEven, payoutFactor, payoutKnown, legBreakEven } from './dfs-workspace.js?v=29';
-import { createOddsScreen } from './odds-screen.js?v=11';
+import { createOddsScreen } from './odds-screen.js?v=13';
 
 import {readSportsbookState, saveSportsbookState, sportsbookAvailable, availableSportsbookQuotes, STATE_CHANGE_EVENT} from './sportsbook-availability.js';
 
@@ -122,6 +122,16 @@ void readQuoteCache().then(cache => {
 });
 try { state.suite = readSuiteState() || state.suite; } catch { /* A save will surface unavailable account storage. */ }
 let feedControls = null;
+// Part-game lines, game props and yes/no player bets come with the snapshot only when the member turns on
+// "More markets" (lib/odds/providers.mjs MARKET_SCOPES): they double the download. A device preference.
+const MORE_MARKETS_KEY = 'sportslab-more-markets-v1';
+let moreMarkets = (() => { try { return localStorage.getItem(MORE_MARKETS_KEY) === '1'; } catch { return false; } })();
+function setMoreMarkets(value) {
+  moreMarkets = Boolean(value);
+  try { localStorage.setItem(MORE_MARKETS_KEY, moreMarkets ? '1' : '0'); } catch { /* the choice lasts this visit */ }
+  render();
+  void feedControls?.refresh();
+}
 let preserveLiveOrder = false;
 const hasApiSnapshot = () => Boolean(state.apiSyncedAt) || state.quotes.some(q => q.source === 'local-api');
 const oddsQuotes = () => state.quotes;
@@ -205,7 +215,7 @@ let editing = null;
 // Published standard payouts fill in until the member saves their own table for an app and size.
 const paytables = () => withStandardPaytables(state.paytables, apiPaytables);
 const dfsWorkspace = createDfsWorkspace({onDeleteSlip:id=>{state.slips=state.slips.filter(slip=>slip.id!==id);commit();},getState:()=>({...state,quotes:eligibleQuotes(state.quotes),bookAvailable,paytables:paytables(),devigMethod:suite.settings().devigMethod,payoutSource:(app,size)=>paytableSource(state.paytables,app,size,apiPaytables),dfsLoading:dfsLoading&&!dfsLoaded}),redraw:()=>redrawDfsBoard(),onSave:slip=>{state.slips.push(slip);commit();},onConfigure:picks=>{fantasyIds=picks.map(item=>item.id);fantasyApp=picks[0].app;setTool('slip');}});
-const oddsScreen = createOddsScreen({storage:localStorage,defaultFormat:getAccountPreferences().oddsFormat,getSettings:()=>suite.settings(),getQuotes:()=>eligibleQuotes(oddsQuotes()),getAnalytics:()=>state.analytics,now:serverNow,getSportsbookState:()=>sportsbookState,onAllSportsbooks:()=>{const saved=saveSportsbookState('');document.dispatchEvent(new CustomEvent(STATE_CHANGE_EVENT,{detail:{state:'',saved}}));},brandMark,redraw:()=>render(),onSport:value=>{sport=value;rememberSport();}});
+const oddsScreen = createOddsScreen({storage:localStorage,defaultFormat:getAccountPreferences().oddsFormat,getSettings:()=>suite.settings(),getQuotes:()=>eligibleQuotes(oddsQuotes()),getAnalytics:()=>state.analytics,now:serverNow,getSportsbookState:()=>sportsbookState,getMoreMarkets:()=>moreMarkets,onMoreMarkets:setMoreMarkets,onAllSportsbooks:()=>{const saved=saveSportsbookState('');document.dispatchEvent(new CustomEvent(STATE_CHANGE_EVENT,{detail:{state:'',saved}}));},brandMark,redraw:()=>render(),onSport:value=>{sport=value;rememberSport();}});
 const suite = createEvSuite({
   getState:()=>state, save:persist, redraw:render, navigate:key=>setTool(key==='tracker'&&!accountSyncState().userId?'ledger':key), getTool:()=>active,
   nativeViews:['ev-pre','ev-live','arb-pre','arb-live','middles','odds','sharp','parlay'],
@@ -325,8 +335,8 @@ function ensureDfsFeed() {
   if (dfsLoading || Date.now() < dfsRetryAt || (dfsLoaded && (Date.now() - dfsSyncedAt < 60_000 || document.hidden))) return;
   dfsLoading = true;
   let changed = false;
-  // The server's largest page (about 210 KB compressed); its default 500 is shared by every app.
-  void getDfs({ settings: suite.settings(), limit: 5000 }).then(result => {
+  // Every line (the server's largest page, lib/odds/providers.mjs MAX_DFS_PICKS); its default 500 is shared by every app.
+  void getDfs({ settings: suite.settings(), limit: 60_000 }).then(result => {
     if (dfsError) changed = true;
     dfsSyncedAt = Date.now(); dfsFailures = 0; dfsRetryAt = 0; dfsError = '';
     // A partial answer (payout tables or the props feed missing) says so beside the data label.
@@ -358,7 +368,7 @@ function feedFailure(error) {
 async function syncLocalApi() {
   const workspace = state, tool = active;
   let result;
-  try { result = await getSnapshot({ settings: suite.settings(), include: sectionsFor(tool), books: offerBooks() }); }
+  try { result = await getSnapshot({ settings: suite.settings(), include: sectionsFor(tool), books: offerBooks(), markets: moreMarkets ? 'all' : 'main' }); }
   catch (error) { throw feedFailure(error); }
   const { snapshot, dropped } = result;
   if (state !== workspace) throw Object.assign(Error('The workspace changed during sync. Try again after your import. Saved prices were kept.'), { retryable: false });
@@ -556,7 +566,7 @@ function render() {
   $('#ev-search').value = search;
   const options = active === 'fantasy'
     ? [['','All props'],...[...new Set(state.dfs.map(item => item.market))].sort().map(value => [value,value])]
-    : [['','All markets'],...[['moneyline','Moneyline'],['spread','Spreads'],['total','Totals'],['prop','Player props'],['alternate','Alternates'],['future','Futures'],['three-way','Match result (1X2)']]
+    : [['','All markets'],...[['moneyline','Moneyline'],['spread','Spreads'],['total','Totals'],['prop','Player props'],['game-prop','Game props'],['alternate','Alternates'],['future','Futures'],['three-way','Match result (1X2)']]
       // Only market types the feed actually has, so no option leads to an always-empty board.
       .filter(([type]) => type === marketType || state.quotes.some(q => q.type === type))];
   $('#ev-market-type').innerHTML = options.map(([value,label]) => `<option value="${esc(value)}">${esc(label)}</option>`).join('');

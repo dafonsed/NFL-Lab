@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sportWizzardConfig, toFeedRecords, sportWizzardSnapshot, mergeSnapshots } from '../lib/odds/sportwizzard.mjs';
 import { normalizeFeed, dfsPicks } from '../lib/odds/normalize.mjs';
+import { marketIdentity, sideNames, stableHash } from '../public/market-identity.js';
 import { withKalshiDepth } from '../lib/odds/kalshi.mjs';
 
 // Two days out, so the fixture game never counts as started.
@@ -53,7 +54,7 @@ test('a book’s ladder keeps only its main line, the one priced closest to even
   assert.deepEqual(records.map(r => [r.side, r.line]), [['home', -0.5], ['away', 0.5]]);
 });
 
-test('other stats filed under the game markets are left out', () => {
+test('other stats filed under the game markets are game props, not the game’s lines', () => {
   const rows = [
     row({ market: 'TOTAL', marketSubtype: 'TOTAL_FIELD_GOAL_YARDS', side: 'OVER', line: 131.5 }),
     row({ market: 'TOTAL', marketSubtype: 'TOTAL_FIELD_GOAL_YARDS', side: 'UNDER', line: 131.5 }),
@@ -62,7 +63,8 @@ test('other stats filed under the game markets are left out', () => {
     row({ market: 'TOTAL', marketSubtype: 'TOTAL_GOALS', side: 'OVER', line: 6 }),
     row({ market: 'TOTAL', marketSubtype: 'TOTAL_GOALS', side: 'UNDER', line: 6 }),
   ];
-  assert.deepEqual(toFeedRecords(rows, new Map([['e1', event]])).records.map(r => [r.market, r.line]), [['total', 6], ['total', 6]]);
+  assert.deepEqual(toFeedRecords(rows, new Map([['e1', event]])).records.map(r => [r.type, r.market, r.line]), [
+    ['game-prop', 'Total Field Goal Yards', 131.5], ['game-prop', 'Total Field Goal Yards', 131.5], ['game-prop', 'Draw No Bet', ''], ['total', 'total', 6], ['total', 'total', 6]]);
 });
 
 test('a book’s main total far from the other books’ (a quarter total tagged full game) is dropped', () => {
@@ -142,14 +144,21 @@ test('a milestone that names its threshold is an Over line; one the book also po
     yards('m', 'PLAYER_MILESTONE', 'PLAYER_RUSH_REC_YARDS', { side: 'YES', selection: 'Alex DeBrincat 90+', priceAmerican: 105 }),
     yards('p', 'PLAYER_TOTAL', 'PLAYER_TOTAL_RUSH_+_REC_YARDS', { side: 'OVER', line: 89.5, priceAmerican: 100 }),
   ], new Map([['e1', event]])).records;
-  assert.deepEqual(second.map(r => [r.id, r.line]).sort(), [['sw:half', 62.5], ['sw:p', 89.5]]);
+  assert.deepEqual(second.map(r => [r.id, r.line]).sort(), [[`sw:${stableHash('half')}`, 62.5], [`sw:${stableHash('p')}`, 89.5]].sort());
+  // Hard Rock writes the line ("Over 1.5"); a row naming only the player can't say which rung it is.
+  const third = toFeedRecords([
+    row({ id: 'hr', sportsbook: 'hardrock', market: 'PLAYER_MILESTONE', marketSubtype: 'PLAYER_TDS', side: 'YES', selection: 'Over 1.5', playerName: 'Alex DeBrincat', priceAmerican: 225 }),
+    row({ id: 'mgm', sportsbook: 'betmgm', market: 'PLAYER_MILESTONE', marketSubtype: 'PLAYER_TDS', side: 'YES', selection: 'Alex DeBrincat', playerName: 'Alex DeBrincat', priceAmerican: 200 }),
+  ], new Map([['e1', event]])).records;
+  assert.deepEqual(third.map(r => [r.id, r.market, r.side, r.line]), [[`sw:${stableHash('hr')}`, 'Anytime TDs', 'over', 1.5]]);
 });
 
-test('futures, partial periods, unreadable milestones, pick’em rows, suspended and finished games are left out', () => {
+test('futures, unnamed periods, unreadable milestones, pick’em rows, suspended, finished and hours-old prices are left out', () => {
   const rows = [
     row({ market: 'CATEGORICAL', marketSubtype: 'CHAMPIONSHIP_WINNER', side: 'YES', marketScope: 'SEASON' }),
-    row({ market: 'SPREAD', marketSubtype: 'SPREAD', side: 'AWAY', line: 0.5, period: '1P' }),
+    row({ market: 'SPREAD', marketSubtype: 'SPREAD', side: 'AWAY', line: 0.5, period: 'PERIOD' }),
     row({ market: 'PLAYER_MILESTONE', marketSubtype: 'PLAYER_GOALS', side: 'YES', selection: 'Yes', playerName: 'Andrew Copp' }),
+    row({ market: 'TOTAL', marketSubtype: 'TOTAL_GOALS', side: 'UNDER', line: 6, updated: new Date(Date.now() - 3 * 3_600_000).toISOString().replace(/\.\d+Z$/, 'Z') }),
     row({ market: 'PLAYER_TOTAL', marketSubtype: 'PLAYER_TOTAL_SHOTS', side: 'OVER', line: 2.5, playerName: 'A', priceAmerican: undefined, dfsMultiplier: 1.8 }),
     row({ market: 'TOTAL', marketSubtype: 'TOTAL_GOALS', side: 'OVER', line: 6, suspended: true }),
   ];
@@ -172,19 +181,144 @@ test('the board pages through every active league, sends the key, and is shared 
   const snapshot = await sportWizzardSnapshot(config, fetcher);
   assert.equal(snapshot.quotes.length, 2);
   assert.ok(seen.every(call => call.league !== 'dota2'), 'unsupported leagues are not fetched');
-  assert.equal(seen.filter(call => call.path.endsWith('/odds')).length, 6, 'game lines, props and milestones are each paged with their cursor');
+  assert.equal(seen.filter(call => call.path.endsWith('/odds')).length, 8, 'game lines, props, milestones and the other markets are each paged with their cursor');
   const again = await sportWizzardSnapshot(config, fetcher);
   assert.equal(again, snapshot, 'a second request within the TTL reuses the board');
 });
 
-test('merging keeps the main feed primary and adds only books it lacks', () => {
-  const primary = { quotes: [{ id: 'a', book: 'DraftKings' }], stale: false };
-  const extra = { quotes: [{ id: 'sw:1', book: 'draftkings' }, { id: 'sw:2', book: 'betparx' }], stale: false };
+test('a failed game-props request leaves the league its main lines; a failed main request still fails the league', async () => {
+  const board = failing => async url => {
+    const body = url.pathname.endsWith('/leagues') ? { success: true, data: ['nhl'] }
+      : url.pathname.endsWith('/events') ? { success: true, data: [event], nextCursor: null }
+      : url.searchParams.get('market')?.includes(failing) ? null
+      : url.searchParams.get('market')?.startsWith('MONEYLINE') ? { success: true, data: [row({ market: 'TOTAL', marketSubtype: 'TOTAL_GOALS', side: 'OVER', line: 6 }), row({ market: 'TOTAL', marketSubtype: 'TOTAL_GOALS', side: 'UNDER', line: 6 })], nextCursor: null }
+      : { success: true, data: [], nextCursor: null };
+    return body ? { ok: true, status: 200, json: async () => body } : { ok: false, status: 504, headers: new Map(), body: null };
+  };
+  const config = { base: new URL('https://api.sportwizzard.com'), apiKey: 'sw_live_test' };
+  const errors = console.error;
+  console.error = () => {};
+  try {
+    assert.equal((await sportWizzardSnapshot(config, board('TEAM_TOTAL'))).quotes.length, 2);
+    await assert.rejects(sportWizzardSnapshot(config, board('MONEYLINE')), /Every SportWizzard league request failed/);
+  } finally { console.error = errors; }
+});
+
+test('a league whose request fails keeps its lines from the previous board for ten minutes, so they don’t drop out between boards', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  const logged = [];
+  t.mock.method(console, 'error', (...args) => logged.push(args.join(' ')));
+  let failing = false;
+  const fetcher = async url => {
+    const body = url.pathname.endsWith('/leagues') ? { success: true, data: ['nhl'] }
+      : url.pathname.endsWith('/events') ? { success: true, data: [event], nextCursor: null }
+      : url.searchParams.get('market')?.startsWith('MONEYLINE') ? (failing ? null : { success: true, data: [row({ market: 'TOTAL', marketSubtype: 'TOTAL_GOALS', side: 'OVER', line: 6 }), row({ market: 'TOTAL', marketSubtype: 'TOTAL_GOALS', side: 'UNDER', line: 6 })], nextCursor: null })
+      : { success: true, data: [], nextCursor: null };
+    return body ? { ok: true, status: 200, json: async () => body } : { ok: false, status: 504, headers: new Map(), body: null };
+  };
+  const config = { base: new URL('https://api.sportwizzard.com'), apiKey: 'sw_live_test' };
+  const first = await sportWizzardSnapshot(config, fetcher);
+  assert.equal(first.quotes.length, 2);
+  failing = true;
+  t.mock.timers.tick(31_000);
+  assert.equal(await sportWizzardSnapshot(config, fetcher), first, 'the last board answers while the next is fetched');
+  await new Promise(resolve => setTimeout(resolve, 1_300));
+  const carried = await sportWizzardSnapshot(config, fetcher);
+  assert.notEqual(carried, first, 'the refresh succeeded');
+  assert.equal(carried.quotes.length, 2, 'the failed request’s lines are still on the board');
+  assert.ok(logged.some(line => /nhl: request failed; keeping its lines from 31 s ago/.test(line)));
+  assert.equal(carried.leagues.get('nhl'), first.leagues.get('nhl'), 'the previous board’s lines, not a copy');
+  t.mock.timers.tick(11 * 60_000);
+  await assert.rejects(sportWizzardSnapshot(config, fetcher), /Every SportWizzard league request failed/, 'lines past ten minutes old are not kept');
+});
+
+test('a league whose game props didn’t come keeps its last full set instead of losing its team totals for a board', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  t.mock.method(console, 'error', () => {});
+  let failing = false;
+  const teamTotal = side => row({ id: `tt:${side}`, market: 'TEAM_TOTAL', marketSubtype: 'TEAM_TOTAL_GOALS', side, line: 3.5, teamSide: 'HOME', teamName: 'DET Red Wings - Inc. OT' });
+  const fetcher = async url => {
+    const market = url.searchParams.get('market') || '';
+    const body = url.pathname.endsWith('/leagues') ? { success: true, data: ['nhl'] }
+      : url.pathname.endsWith('/events') ? { success: true, data: [event], nextCursor: null }
+      : market.startsWith('MONEYLINE') ? { success: true, data: [row({ market: 'TOTAL', marketSubtype: 'TOTAL_GOALS', side: 'OVER', line: 6 }), row({ market: 'TOTAL', marketSubtype: 'TOTAL_GOALS', side: 'UNDER', line: 6 })], nextCursor: null }
+      : market.startsWith('TEAM_TOTAL') ? (failing ? null : { success: true, data: [teamTotal('OVER'), teamTotal('UNDER')], nextCursor: null })
+      : { success: true, data: [], nextCursor: null };
+    return body ? { ok: true, status: 200, json: async () => body } : { ok: false, status: 504, headers: new Map(), body: null };
+  };
+  const config = { base: new URL('https://api.sportwizzard.com'), apiKey: 'sw_live_test' };
+  const first = await sportWizzardSnapshot(config, fetcher);
+  assert.ok(first.quotes.length > 2, 'the team total is on the first board');
+  failing = true;
+  t.mock.timers.tick(31_000);
+  await sportWizzardSnapshot(config, fetcher);
+  await new Promise(resolve => setTimeout(resolve, 1_300));
+  const next = await sportWizzardSnapshot(config, fetcher);
+  assert.notEqual(next, first);
+  assert.deepEqual(next.quotes.map(quote => quote.id), first.quotes.map(quote => quote.id));
+});
+
+test('a board past three minutes is marked stale with one copy, so the merge and normalize caches keep hitting', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  t.mock.method(console, 'error', () => {});
+  let up = true;
+  const fetcher = async url => {
+    if (!up) return { ok: false, status: 503, headers: new Map(), body: null };
+    const body = url.pathname.endsWith('/leagues') ? { success: true, data: ['nhl'] }
+      : url.pathname.endsWith('/events') ? { success: true, data: [event], nextCursor: null }
+      : url.searchParams.get('market')?.startsWith('MONEYLINE') ? { success: true, data: [row({ market: 'TOTAL', marketSubtype: 'TOTAL_GOALS', side: 'OVER', line: 6 }), row({ market: 'TOTAL', marketSubtype: 'TOTAL_GOALS', side: 'UNDER', line: 6 })], nextCursor: null }
+      : { success: true, data: [], nextCursor: null };
+    return { ok: true, status: 200, json: async () => body };
+  };
+  const config = { base: new URL('https://api.sportwizzard.com'), apiKey: 'sw_live_test' };
+  const first = await sportWizzardSnapshot(config, fetcher);
+  up = false;
+  t.mock.timers.tick(4 * 60_000);
+  const stale = await sportWizzardSnapshot(config, fetcher);
+  assert.equal(stale.stale, true);
+  assert.equal(stale.quotes, first.quotes);
+  assert.equal(await sportWizzardSnapshot(config, fetcher), stale, 'the same stale copy every time');
+  await new Promise(resolve => setTimeout(resolve, 1_300));
+});
+
+test('a timed-out page is asked once more before its request fails', async () => {
+  let calls = 0;
+  const fetcher = async url => {
+    if (url.pathname.endsWith('/leagues')) return { ok: true, status: 200, json: async () => ({ success: true, data: ['nhl'] }) };
+    if (url.searchParams.get('market')?.startsWith('MONEYLINE') && ++calls === 1) throw Object.assign(new Error('The operation was aborted due to timeout'), { name: 'TimeoutError' });
+    const body = url.pathname.endsWith('/events') ? { success: true, data: [event], nextCursor: null }
+      : url.searchParams.get('market')?.startsWith('MONEYLINE') ? { success: true, data: [row({ market: 'TOTAL', marketSubtype: 'TOTAL_GOALS', side: 'OVER', line: 6 }), row({ market: 'TOTAL', marketSubtype: 'TOTAL_GOALS', side: 'UNDER', line: 6 })], nextCursor: null }
+      : { success: true, data: [], nextCursor: null };
+    return { ok: true, status: 200, json: async () => body };
+  };
+  const snapshot = await sportWizzardSnapshot({ base: new URL('https://api.sportwizzard.com'), apiKey: 'sw_live_test' }, fetcher);
+  assert.equal(calls, 2);
+  assert.equal(snapshot.quotes.length, 2);
+});
+
+test('merging takes each book’s lines in a sport from the source with more of them, so neither feed wipes out the other’s', () => {
+  const quote = (id, book, sport, extra = {}) => ({ id, book, sport, type: 'total', ...extra });
+  const primary = { quotes: [
+    quote('m-fd', 'fanduel', 'NFL'),
+    ...['1', '2', '3'].map(n => quote(`m-pin${n}`, 'pinnacle', 'NFL')),
+    quote('m-hr', 'hardrock', 'NHL'),
+  ], stale: false };
+  const extra = { quotes: [
+    ...['1', '2'].map(n => quote(`sw-fd${n}`, 'FanDuel', 'nfl')),
+    quote('sw-fdprop', 'FanDuel', 'nfl', { type: 'prop', player: 'Josh Allen' }),
+    quote('sw-pin', 'Pinnacle', 'nfl'),
+    quote('sw-pinprop', 'Pinnacle', 'nfl', { type: 'prop', player: 'Josh Allen' }),
+    quote('sw-hr', 'Hard Rock Bet', 'nhl'),
+    quote('sw-bpx', 'betparx', 'nfl'),
+  ], stale: false };
   const merged = mergeSnapshots(primary, extra);
-  assert.deepEqual(merged.quotes.map(q => q.id), ['a', 'sw:2']);
+  assert.deepEqual(merged.quotes.map(q => q.id).sort(), ['m-hr', 'm-pin1', 'm-pin2', 'm-pin3', 'sw-bpx', 'sw-fd1', 'sw-fd2', 'sw-fdprop', 'sw-pinprop'],
+    'FanDuel NFL lines from SportWizzard (2 beat 1), Pinnacle NFL lines from the main feed (3 beat 1), Hard Rock (the same book by either name) from the main feed on a tie, props and new books added');
   assert.equal(mergeSnapshots(primary, extra), merged, 'the same object while inputs are unchanged');
   assert.equal(mergeSnapshots(null, extra), extra);
   assert.equal(mergeSnapshots(primary, null), primary);
+  const untouched = { quotes: [quote('a', 'DraftKings', 'NFL')], stale: false };
+  assert.equal(mergeSnapshots(untouched, { quotes: [quote('b', 'draftkings', 'NFL')], stale: false }).quotes, untouched.quotes, 'nothing taken, nothing copied');
 });
 
 test('one result market per book: a copy nearest the other books stands, and NHL moneylines beside three-ways survive', () => {
@@ -222,6 +356,16 @@ test('a book SportWizzard rescrapes slowly keeps its latest pass; a price that p
     'FanDuel’s 25-minute-old line missed its last passes; ProphetX is 90 minutes behind');
 });
 
+test('a book that rescrapes game by game keeps a game waiting its turn; a price its game’s last pass missed is stale', () => {
+  const at = minutes => new Date(Date.now() - minutes * 60_000).toISOString().replace(/\.\d+Z$/, 'Z');
+  const prop = (eventId, player, minutes) => ['OVER', 'UNDER'].map(side => row({ id: `${eventId}:${player}:${side}`, eventId, sportsbook: 'betparx', market: 'PLAYER_TOTAL', marketSubtype: 'PLAYER_TOTAL_SHOTS', side, line: 2.5, playerName: player, updated: at(minutes) }));
+  const rows = [...prop('e1', 'Alex DeBrincat', 1), ...prop('e1', 'Dylan Larkin', 22), ...prop('e2', 'Jordan Eberle', 22), ...prop('e2', 'Jared McCann', 23)];
+  const { records } = toFeedRecords(rows, new Map([['e1', event], ['e2', { ...event, id: 'e2' }]]));
+  const feed = normalizeFeed(records, { syncedAt: new Date().toISOString(), price: false });
+  assert.deepEqual([...new Set(feed.quotes.map(q => q.player))].sort(), ['Alex DeBrincat', 'Jared McCann', 'Jordan Eberle'],
+    'the second game hasn’t been rescraped yet; Larkin’s line in the first game was missed by its latest pass');
+});
+
 test('the engine counts a slow-cycle book’s price age from its latest pass too', async () => {
   const { quoteAvailable } = await import('../lib/odds/engine.mjs');
   const quote = { id: 'q', sport: 'NHL', eventId: 'e1', event: 'Seattle Kraken @ Detroit Red Wings', marketId: 'm', market: 'Shots', type: 'prop', player: 'Alex DeBrincat', side: 'over', line: 2.5,
@@ -231,17 +375,106 @@ test('the engine counts a slow-cycle book’s price age from its latest pass too
   assert.equal(quoteAvailable({ ...quote, feedLagSeconds: 18 * 60 }, { pregameMaxAgeSeconds: 60 }), false, 'a stricter setting still applies on top of the lag');
 });
 
-test('every pick’em app SportWizzard carries comes through: per-pick WannaParlay, HotStreak and Boom, Underdog’s adjustments, Betr’s standard lines', () => {
+test('every pick’em app SportWizzard carries comes through: per-pick WannaParlay, HotStreak and Boom, Underdog’s 50/50 lines only, Betr’s standard lines', () => {
   const pick = (book, side, multiplier, line = 1.5) => row({ id: `${book}:${side}:${line}:${multiplier}`, sportsbook: book, market: 'PLAYER_TOTAL', marketSubtype: 'PLAYER_TOTAL_SHOTS',
     side, line, playerName: 'Alex DeBrincat', priceAmerican: undefined, dfsMultiplier: multiplier });
   const rows = [pick('wannaparlay', 'OVER', 1.33), pick('wannaparlay', 'OVER', 1, 0.5), pick('hotstreak', 'OVER', 1.9), pick('hotstreak', 'UNDER', 0.92), pick('boom', 'OVER', 1.7),
-    pick('underdog', 'OVER', 1), pick('underdog', 'UNDER', 0.85), pick('betr', 'OVER', 1),
+    pick('underdog', 'OVER', 1), pick('underdog', 'UNDER', 1), pick('underdog', 'UNDER', 0.85, 2.5), pick('underdog', 'OVER', 1.12, 2.5), pick('underdog', 'OVER', 1, 3.5), pick('betr', 'OVER', 1),
     // Season-long lines name no game: skipped with the other season markets.
     { ...pick('underdog', 'OVER', 1, 86.5), id: 'season', period: 'REG_SEASON', marketScope: 'SEASON' }];
   const { records } = toFeedRecords(rows, new Map([['e1', event]]));
-  assert.deepEqual(records.map(r => [r.book, r.side, r.payoutMultiplier, r.oddsType]), [['WannaParlay', 'over', 1.33, undefined], ['HotStreak', 'over', 1.9, undefined], ['Boom Fantasy', 'over', 1.7, undefined],
-    ['Underdog Fantasy', 'over', undefined, undefined], ['Underdog Fantasy', 'under', 0.85, 'adjusted'], ['Betr Picks', 'over', undefined, undefined]],
-    'a per-pick line paying 1× or less can’t beat its own line');
+  assert.deepEqual(records.map(r => [r.book, r.side, r.line, r.payoutMultiplier, r.oddsType]), [['WannaParlay', 'over', 1.5, 1.33, undefined], ['HotStreak', 'over', 1.5, 1.9, undefined], ['Boom Fantasy', 'over', 1.5, 1.7, undefined],
+    ['Underdog Fantasy', 'over', 1.5, undefined, undefined], ['Underdog Fantasy', 'under', 1.5, undefined, undefined], ['Underdog Fantasy', 'over', 3.5, undefined, undefined], ['Betr Picks', 'over', 1.5, undefined, undefined]],
+    'a per-pick line paying 1× or less can’t beat its own line; an Underdog line paying more or less than 1× is left out');
   const feed = normalizeFeed(records, { syncedAt: new Date().toISOString(), price: false });
+  assert.deepEqual(feed.picks.filter(p => p.book === 'Underdog Fantasy').map(p => [p.side, p.line]), [['over', 1.5], ['under', 1.5]], 'Underdog’s 50/50 lines are the ones it lists both ways');
   assert.equal(feed.picks.length, 6, 'every app is a DFS app, so its lines are picks, not sportsbook quotes');
+});
+
+test('part-game lines are their own markets: named by their part, priced apart from the full game', () => {
+  const lines = (period, home, away, homePrice, awayPrice) => [
+    row({ id: `ml:${period}:h`, market: 'MONEYLINE', marketSubtype: 'MONEYLINE', side: 'HOME', period, priceAmerican: homePrice }),
+    row({ id: `ml:${period}:a`, market: 'MONEYLINE', marketSubtype: 'MONEYLINE', side: 'AWAY', period, priceAmerican: awayPrice }),
+    row({ id: `t:${period}:o`, market: 'TOTAL', marketSubtype: 'TOTAL_GOALS', side: 'OVER', line: home, period }),
+    row({ id: `t:${period}:u`, market: 'TOTAL', marketSubtype: 'TOTAL_GOALS', side: 'UNDER', line: home, period }),
+  ];
+  const { records } = toFeedRecords([...lines('FULL', 6, 0, -125, 105), ...lines('1P', 1.5, 0, -105, -115), ...lines('1INN_5INN', 4.5, 0, -110, -110)], new Map([['e1', event]]));
+  assert.deepEqual([...new Set(records.map(r => r.period || 'full'))], ['full', '1p', 'f5']);
+  assert.equal(records.length, 12, 'a part’s main total isn’t held to the full game’s');
+  const feed = normalizeFeed(records, { syncedAt: new Date().toISOString(), price: false });
+  assert.equal(feed.quotes.length, 12, JSON.stringify(feed.skipped));
+  assert.deepEqual([...new Set(feed.quotes.map(q => q.displayMarket))], ['Moneyline', 'Total', '1st Period Moneyline', '1st Period Total', 'First 5 Innings Moneyline', 'First 5 Innings Total']);
+  assert.equal(new Set(feed.quotes.filter(q => q.type === 'moneyline').map(q => marketIdentity(q))).size, 3);
+});
+
+test('anytime TD, goal and assist are Over 0.5 of the stat; a book’s lone Yes is its main line and pairs with two-sided books', () => {
+  const nfl = { ...event, homeTeamName: 'Philadelphia Eagles', awayTeamName: 'Jacksonville Jaguars', league: 'nfl' };
+  const yes = (book, price, side = 'YES', subtype = 'PLAYER_TO_SCORE_TD') => row({ id: `${book}:${subtype}:${side}`, sportsbook: book, league: 'nfl', market: 'PLAYER_YES_NO', marketSubtype: subtype, side, selection: side === 'YES' ? 'Yes' : 'No', playerName: 'Saquon Barkley', priceAmerican: price });
+  const { records } = toFeedRecords([yes('draftkings', -160), yes('prophetx', -150), yes('prophetx', 125, 'NO'),
+    // DraftKings' 1+ milestone is the same bet as its anytime TD: one price stands.
+    row({ id: 'dk-m', sportsbook: 'draftkings', league: 'nfl', market: 'PLAYER_MILESTONE', marketSubtype: 'PLAYER_TDS', side: 'YES', selection: 'Saquon Barkley 1+', playerName: 'Saquon Barkley', priceAmerican: -160 }),
+    yes('draftkings', 550, 'YES', 'PLAYER_FIRST_TO_SCORE_TD'), row({ id: 'fanatics-first', sportsbook: 'fanatics', league: 'nfl', market: 'PLAYER_FIRST_TO', marketSubtype: 'FIRST_TD_SCORER', side: 'YES', selection: 'Saquon Barkley', playerName: 'Saquon Barkley', priceAmerican: 600 }),
+  ], new Map([['e1', nfl]]));
+  assert.deepEqual(records.map(r => [r.book, r.market, r.side, r.line, Boolean(r.depthOnly)]).sort(), [
+    ['draftkings', 'Anytime TDs', 'over', 0.5, false], ['draftkings', 'First TD Scorer', 'yes', '', false], ['fanatics', 'First TD Scorer', 'yes', '', false],
+    ['prophetx', 'Anytime TDs', 'over', 0.5, false], ['prophetx', 'Anytime TDs', 'under', 0.5, false]]);
+  const feed = normalizeFeed(records, { syncedAt: new Date().toISOString(), price: false });
+  assert.equal(feed.quotes.length, 5, JSON.stringify(feed.skipped));
+  const first = feed.quotes.filter(q => q.market === 'First TD Scorer');
+  assert.equal(new Set(first.map(q => marketIdentity(q))).size, 1, 'two codes for first TD scorer are one market');
+  assert.ok(first.every(q => q.sideVerified && q.selection === 'Yes'));
+  const anytime = feed.quotes.filter(q => q.market === 'Anytime TDs');
+  assert.equal(new Set(anytime.map(q => marketIdentity(q))).size, 1);
+});
+
+test('game props: team totals name the team and keep one main line, yes/no and closed outcome sets can be priced, labels only compare', () => {
+  const gp = (id, market, marketSubtype, side, extra = {}) => row({ id, market, marketSubtype, side, ...extra });
+  const teamTotal = (book, side, line, price, teamSide = 'HOME') => gp(`${book}:tt:${teamSide}:${side}:${line}`, 'TEAM_TOTAL', 'TEAM_TOTAL_GOALS', side, { sportsbook: book, line, priceAmerican: price, teamSide, teamName: teamSide === 'HOME' ? 'DET Red Wings - Inc. OT' : 'SEA Kraken' });
+  const rows = [
+    teamTotal('ballybet', 'OVER', 3.5, 106), teamTotal('ballybet', 'UNDER', 3.5, -143), teamTotal('ballybet', 'OVER', 4.5, 240), teamTotal('ballybet', 'UNDER', 4.5, -360),
+    gp('btts-y', 'YES_NO', 'BOTH_TEAMS_TO_SCORE', 'YES', { priceAmerican: -400 }), gp('btts-n', 'YES_NO', 'BOTH_TEAMS_TO_SCORE', 'NO', { priceAmerican: 250 }),
+    ...['HOME', 'AWAY', 'NEITHER'].map(side => gp(`first:${side}`, 'CATEGORICAL', 'TEAM_TO_SCORE_FIRST_GOAL', side, { priceAmerican: side === 'NEITHER' ? 5000 : -105, teamSide: side === 'NEITHER' ? undefined : side })),
+    // A winning margin only one book labels this way can't be compared; one two books share stays.
+    gp('wm-dk', 'WINNING_MARGIN', 'WINNING_MARGIN', 'RED WINGS TO WIN BY 1', { selection: 'Red Wings to win by 1', priceAmerican: 300 }),
+    gp('wm-fd', 'WINNING_MARGIN', 'WINNING_MARGIN', 'RED WINGS TO WIN BY 1', { sportsbook: 'fanduel', selection: 'Red Wings to win by 1', priceAmerican: 310 }),
+    gp('wm-only', 'WINNING_MARGIN', 'WINNING_MARGIN', 'KRAKEN TO WIN BY 4', { selection: 'Kraken to win by 4', priceAmerican: 2000 }),
+    // "Race to" without its number, and squares, can't be told apart.
+    gp('race', 'RACE_TO', 'RACE_TO', 'HOME', { teamSide: 'HOME', priceAmerican: 100 }), gp('sq', 'CORRECT_SCORE', 'SQUARES_FINAL', 'DET 7-3 SEA', { priceAmerican: 900 }),
+  ];
+  const { records } = toFeedRecords(rows, new Map([['e1', event]]));
+  assert.deepEqual(records.filter(r => r.market.endsWith('Team Total')).map(r => [r.market, r.side, r.line]), [['Detroit Red Wings Team Total', 'over', 3.5], ['Detroit Red Wings Team Total', 'under', 3.5]]);
+  assert.deepEqual(records.filter(r => r.market === 'Team To Score First Goal').map(r => [r.side, r.outcomes]), [['home', 3], ['away', 3], ['neither', 3]]);
+  assert.deepEqual(records.filter(r => r.market === 'Winning Margin').map(r => [r.book, r.side]), [['draftkings', 'red wings to win by 1'], ['fanduel', 'red wings to win by 1']]);
+  assert.ok(!records.some(r => /Race|Squares/.test(r.market)));
+  const feed = normalizeFeed(records, { syncedAt: new Date().toISOString(), price: false });
+  assert.equal(feed.quotes.length, records.length, JSON.stringify(feed.skipped));
+  assert.deepEqual(feed.quotes.filter(q => q.market.endsWith('Team Total')).map(q => [q.selection, q.line]), [['Over', 3.5], ['Under', 3.5]], 'a team total reads as a total: the line is shown once, beside it');
+  const btts = feed.quotes.find(q => q.market === 'Both Teams To Score' && q.side === 'yes');
+  assert.deepEqual(sideNames(btts, feed.quotes.filter(q => q.market === 'Both Teams To Score')), ['yes', 'no']);
+  const margin = feed.quotes.find(q => q.market === 'Winning Margin');
+  assert.deepEqual(sideNames(margin, feed.quotes.filter(q => q.market === 'Winning Margin')), [], 'a labelled market has no known outcome count');
+  const first = feed.quotes.filter(q => q.market === 'Team To Score First Goal');
+  assert.deepEqual(sideNames(first[0], first), ['away', 'home', 'neither']);
+});
+
+test('part-game pick’em lines name their part and are priced by the books’ props for that part only', () => {
+  const nfl = { ...event, homeTeamName: 'Philadelphia Eagles', awayTeamName: 'Jacksonville Jaguars', league: 'nfl' };
+  const prop = (book, side, line, price, period) => row({ id: `${book}:${side}:${line}:${period}`, sportsbook: book, league: 'nfl', market: 'PLAYER_TOTAL', marketSubtype: 'PLAYER_TOTAL_REC_YARDS', side, line, period, playerName: 'A.J. Brown', priceAmerican: price });
+  const { records } = toFeedRecords([
+    prop('draftkings', 'OVER', 32.5, -115, '1H'), prop('draftkings', 'UNDER', 32.5, -105, '1H'),
+    prop('draftkings', 'OVER', 64.5, -110, 'FULL'), prop('draftkings', 'UNDER', 64.5, -110, 'FULL'),
+    row({ id: 'cb-1h', sportsbook: 'chalkboard', league: 'nfl', market: 'PLAYER_TOTAL', marketSubtype: 'PLAYER_TOTAL_REC_YARDS', side: 'OVER', line: 32.5, period: '1H', playerName: 'A.J. Brown', priceAmerican: undefined, dfsMultiplier: 1.8 }),
+  ], new Map([['e1', nfl]]));
+  assert.equal(records.find(r => r.book === 'Chalkboard').market, 'Rec Yards 1H');
+  const feed = normalizeFeed(records, { syncedAt: new Date().toISOString(), price: false });
+  const [pick] = dfsPicks(feed.picks, feed.quotes);
+  assert.equal(pick.market, 'Rec Yards 1H');
+  assert.ok(Math.abs(pick.probability - 0.5108) < 0.002, `priced from the 1H prop, not the full game (${pick.probability})`);
+});
+
+test('a lone one-sided anytime goal travels with More markets; anytime TD and two-sided lines stay with the main markets', () => {
+  const yes = (id, subtype, side = 'YES', book = 'betrivers-kambi') => row({ id, sportsbook: book, market: 'PLAYER_YES_NO', marketSubtype: subtype, side, selection: side === 'YES' ? 'Yes' : 'No', playerName: 'Alex DeBrincat', priceAmerican: side === 'YES' ? 220 : -300 });
+  const { records } = toFeedRecords([yes('g', 'PLAYER_TO_SCORE_GOAL'), yes('a-y', 'PLAYER_TO_ASSIST', 'YES', 'prophetx'), yes('a-n', 'PLAYER_TO_ASSIST', 'NO', 'prophetx')], new Map([['e1', event]]));
+  assert.deepEqual(records.map(r => [r.market, r.side, r.scope ?? 'main']), [['Goals', 'over', 'more'], ['Assists', 'over', 'main'], ['Assists', 'under', 'main']]);
+  assert.equal(normalizeFeed(records, { syncedAt: new Date().toISOString(), price: false }).quotes.find(q => q.market === 'Goals').scope, 'more');
 });

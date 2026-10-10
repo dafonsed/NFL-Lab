@@ -113,7 +113,8 @@ export function sideNames(quote, rows) {
   const side = selection(quote);
   if (['over', 'under'].includes(side)) return ['over', 'under'];
   if (['yes', 'no'].includes(side)) return ['yes', 'no'];
-  const count = valuePresent(quote.outcomes) ? number(quote.outcomes) : kind(quote) === 'three-way' || kind(quote) === '1x2' ? 3 : kind(quote) === 'future' ? NaN : 2;
+  // A game prop's outcomes are only complete when the source says how many there are.
+  const count = valuePresent(quote.outcomes) ? number(quote.outcomes) : kind(quote) === 'three-way' || kind(quote) === '1x2' ? 3 : ['future', 'game-prop'].includes(kind(quote)) ? NaN : 2;
   const supplied = Array.isArray(quote.outcomeSides) ? quote.outcomeSides.map(name) : null;
   const found = [...new Set(supplied || rows.map(selection))].filter(Boolean).sort();
   return Number.isInteger(count) && count >= 2 && found.length === count && found.includes(side) ? found : [];

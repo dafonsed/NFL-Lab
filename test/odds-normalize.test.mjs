@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { repairSelection, matchParticipant, normalizeFeed, markPriceFamilies, knownSport, sportName } from '../lib/odds/normalize.mjs';
+import { repairSelection, matchParticipant, normalizeFeed, normalizeDfsRecords, underdogFiftyFifty, shareStrings, markPriceFamilies, knownSport, sportName } from '../lib/odds/normalize.mjs';
 import { consensusPrice } from '../lib/odds/engine.mjs';
 
 // Shapes copied from the live quote feed's mislabeled records (30 Sep 2026).
@@ -52,7 +52,7 @@ test('the feed pipeline skips and counts bad records instead of failing the snap
   // Ids are stable per selection; the API's own id is kept as feedId.
   assert.deepEqual(quotes.map(q => [q.feedId, q.side, q.line, q.selection]), [['local-api:a', 'away', 3, 'Dallas Cowboys'], ['local-api:b', 'home', -3, 'Houston Texans']]);
   assert.match(quotes[0].id, /^local-api:[a-z0-9]+$/);
-  assert.deepEqual(skipped, { invalid: 1, mislabeled: 1, duplicate: 1, stale: 0, started: 0, inconsistent: 0 });
+  assert.deepEqual(skipped, { invalid: 1, mislabeled: 1, duplicate: 1, stale: 0, started: 0, inconsistent: 0, alone: 0 });
   assert.equal(quotes[0].displayMarket, 'Spread');
 });
 
@@ -91,6 +91,7 @@ test('pick\'em lines from the feed become DFS picks priced from sportsbook props
     prop('fd-o', 'FanDuel', 'over', -115), prop('fd-u', 'FanDuel', 'under', -105),
     prop('pp-o', 'PrizePicks', 'over', undefined, { event: 'Bills @ Dolphins', market: 'Pass Yards' }),
     prop('ud-o', 'Underdog', 'over', undefined, { line: 263.5, selection_name: 'Josh Allen Over 263.5' }),
+    prop('ud-u', 'Underdog', 'under', undefined, { line: 263.5, selection_name: 'Josh Allen Under 263.5' }),
   ], { syncedAt: '2026-09-30T22:00:00.000Z' });
   assert.equal(quotes.some(q => q.book === 'PrizePicks'), false, 'pick\'em lines stay out of the sportsbook tools');
   const pp = dfs.find(pick => pick.app === 'PrizePicks'), ud = dfs.find(pick => pick.app === 'Underdog Fantasy');
@@ -103,6 +104,17 @@ test('pick\'em lines from the feed become DFS picks priced from sportsbook props
   const exact = normalizeFeed([prop('dk-o', 'DraftKings', 'over', -120), prop('dk-u', 'DraftKings', 'under', 100), prop('fd-o', 'FanDuel', 'over', -115), prop('fd-u', 'FanDuel', 'under', -105), prop('pp-o', 'PrizePicks', 'over', undefined)], { syncedAt: '2026-09-30T22:00:00.000Z' }).dfs[0];
   assert.ok(Math.abs(exact.probability - (noVig(-120, 100) * 25 + noVig(-115, -105) * 50) / 75) < 1e-9);
   assert.deepEqual(exact.probabilityBooks.sort(), ['DraftKings', 'FanDuel']);
+});
+
+test('Underdog lines count only when listed both higher and lower (its 50/50 lines); other apps are kept', () => {
+  const pick = (id, app, side, line, market = 'Anytime TD') => ({ id, app, sport: 'nfl', event: '', startTime: '', player: 'Malik Washington', market, line, side, odds_type: 'standard', payout_multiplier: 1, ts: '2026-09-30T21:59:00.000Z' });
+  const records = [
+    pick('a', 'Underdog', 'higher', 0.5), pick('b', 'Underdog', 'higher', 58.5, 'Receiving Yards'), pick('c', 'Underdog', 'lower', 58.5, 'Receiving Yards'),
+    pick('d', 'Underdog', 'higher', 79.5, 'Receiving Yards'), pick('e', 'PrizePicks', 'higher', 0.5),
+  ];
+  const { picks } = normalizeDfsRecords(records, { syncedAt: '2026-09-30T22:00:00.000Z' });
+  assert.equal(picks.length, 5, 'entered lines are read as they are');
+  assert.deepEqual(underdogFiftyFifty(picks).map(p => p.id), ['b', 'c', 'e'], 'a one-way Underdog line (anytime TD, an alternate yardage) pays an adjusted amount');
 });
 
 test('standard pick\'em payouts fill in until a table is saved', async () => {
@@ -558,6 +570,10 @@ test('initials, nicknames and FanDuel ladder names match the pick\'em line', asy
     ['Tyson Bagent', 'Pass Completions', 'Tyson Bagent', 'Completions'],
     ['Jayson Tatum', '3-PT Made', 'Jayson Tatum', 'Jayson Tatum - Made Threes'],
     ['Shai Gilgeous-Alexander', 'Pts+Rebs+Asts', 'Shai Gilgeous-Alexander', 'S Gilgeous-Alexander - Pts + Reb + Ast'],
+    // Anytime TD under the apps' names (Chalkboard and Dabble, Sleeper) and a book's.
+    ['Bijan Robinson', 'Rush + Rec TDs', 'Bijan Robinson', 'Anytime TDs'],
+    ['Bijan Robinson', 'TDs', 'Bijan Robinson', 'Anytime Touchdown Scorer'],
+    ['Bijan Robinson', 'Rush + Rec TDs 1H', 'Bijan Robinson', '1st Half Anytime TD'],
   ];
   for (const [ppPlayer, ppStat, bookPlayer, bookStat] of pairs) {
     const quotes = ['over', 'under'].map(side => ({ book: 'FanDuel', side, odds: -110, player: bookPlayer, market: bookStat, line: 4.5, eventId: 'NFL:book game', ts, startTime: start }));
@@ -844,4 +860,28 @@ test('a pick sent without its game, start or sport takes them from the sportsboo
   const [over] = pricer.price('multiplicative', { now: Date.now() }).filter(p => p.side === 'Over');
   assert.ok(Math.abs(over.probability - 0.5) < 1e-9);
   assert.deepEqual([over.sport, over.event, over.startTime], ['NFL', 'Indianapolis Colts @ Washington Commanders', start]);
+});
+
+test('repeated text fields point at one shared copy; other fields and values are left as they are', () => {
+  const name = n => ['Seattle', 'Kraken'].slice(0, n).join(' ');
+  const items = [{ event: name(2), odds: -110, id: 'a' }, { event: name(2), odds: 120, id: 'b' }, { event: '', id: 'c' }];
+  assert.equal(shareStrings(items, ['event']), items);
+  assert.deepEqual(items.map(item => item.event), ['Seattle Kraken', 'Seattle Kraken', '']);
+  assert.deepEqual(items.map(item => [item.id, item.odds]), [['a', -110], ['b', 120], ['c', undefined]]);
+  assert.ok(!('event' in shareStrings([{ id: 'd' }], ['event'])[0]), 'a missing field stays missing');
+});
+
+test('beside SportWizzard, the main feed’s lines for a game no other book lists are left out', () => {
+  const total = (id, book, event, extra = {}) => [
+    record(`${id}-o`, { book, event, market: 'total', type: 'total', side: 'over', line: 44.5, selection: 'Over 44.5', ...extra }),
+    record(`${id}-u`, { book, event, market: 'total', type: 'total', side: 'under', line: 44.5, selection: 'Under 44.5', ...extra }),
+  ];
+  const board = [...total('sw:dk', 'DraftKings', 'Cowboys @ Texans'), ...total('sw:fa', 'Fanatics', 'Jets @ Bills')];
+  const main = [...total('pin-shared', 'Pinnacle', 'Cowboys @ Texans'), ...total('pin-alone', 'Pinnacle', 'Bears @ Lions')];
+  const { quotes, skipped } = normalizeFeed([...board, ...main], { syncedAt: synced });
+  const games = book => [...new Set(quotes.filter(quote => quote.book === book).map(quote => quote.event))].sort();
+  assert.deepEqual(games('Pinnacle'), ['Cowboys @ Texans'], 'Pinnacle’s game nobody else prices is left out');
+  assert.deepEqual(games('Fanatics'), ['Jets @ Bills'], 'SportWizzard’s own lines are all kept');
+  assert.equal(skipped.alone, 2);
+  assert.equal(normalizeFeed(main, { syncedAt: synced }).quotes.length, 4, 'the main feed on its own keeps every game');
 });

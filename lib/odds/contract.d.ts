@@ -125,7 +125,7 @@ export interface SnapshotMeta {
   counts: {
     records?: number;
     quotes?: number;
-    /** Feed records the normalizer left out, by reason (invalid, mislabeled, duplicate, stale, started, inconsistent). */
+    /** Feed records the normalizer left out, by reason (invalid, mislabeled, duplicate, stale, started, inconsistent, alone). */
     skipped?: Record<string, number>;
     dropped?: number;
   };
@@ -163,7 +163,8 @@ export interface Event {
   quoteCount: number;
 }
 
-export type MarketType = 'moneyline' | 'spread' | 'total' | 'three-way' | 'prop' | 'alternate' | 'future' | 'dfs';
+/** 'game-prop': another market on the game (a team total, both teams to score, a winning margin). */
+export type MarketType = 'moneyline' | 'spread' | 'total' | 'three-way' | 'prop' | 'game-prop' | 'alternate' | 'future' | 'dfs';
 
 /**
  * A market's identity. Quotes carry these fields inline; `marketKey` (a stable hash of event, market,
@@ -176,6 +177,7 @@ export interface Market {
   type: MarketType | (string & {});
   market: string;
   displayMarket: string;
+  /** 'full', or the part of the game ("1h", "1q", "1p", "f5", "reg", "1inn"); a part is its own market. */
   period: string;
   player: string;
   playerId: string;
@@ -221,6 +223,8 @@ export interface Odds extends Market, Selection {
   startTime: string;
   /** Seconds the source trails on this book (it rescrapes the book slowly); a pregame price may be this much older. */
   feedLagSeconds?: number;
+  /** 'more': sent only with markets=all (a lone one-sided player line). */
+  scope?: 'more';
   /** ISO time the price was observed. */
   ts: string;
   source: string;
