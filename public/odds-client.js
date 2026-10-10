@@ -86,8 +86,10 @@ const booksOf = books => Array.isArray(books) && books.length ? [...new Set(book
  *   lines, game props and yes/no player bets to the full-game markets
  * @returns {Promise<Decoded>}
  */
+// A cold server downloads and prices the whole board first (60-90 s on Vercel); 60 s showed "Refresh
+// failed" until a later refresh found it ready.
 export async function getSnapshot({ settings, include = ['pricing', 'markets'], sport, books, markets } = {}) {
-  return request('/api/odds/snapshot', { include: include.join(','), sport, books: booksOf(books), markets: markets === 'all' ? 'all' : undefined, prefs: prefsOf(settings) }, { timeout: 60_000, transform: decodeSnapshot });
+  return request('/api/odds/snapshot', { include: include.join(','), sport, books: booksOf(books), markets: markets === 'all' ? 'all' : undefined, prefs: prefsOf(settings) }, { timeout: 180_000, transform: decodeSnapshot });
 }
 /** A section view: the section's records and only the quotes they name. @param {string} route */
 const section = route => /** @param {SectionOptions} [options] @returns {Promise<OddsSnapshot>} */ async ({ settings, sport, live, minEv, limit, books } = {}) => (await request(`/api/odds/${route}`, { sport, live, minEv, limit, books: booksOf(books), prefs: prefsOf(settings) }, { transform: decodeSnapshot })).snapshot;

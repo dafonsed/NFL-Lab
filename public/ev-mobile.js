@@ -64,7 +64,7 @@ export function installMobileWorkspace() {
       for (let node = input.closest('label'); node && node !== grid; node = node.parentElement) if (node.hidden || getComputedStyle(node).display === 'none') return false;
       return true;
     });
-    const filtered = inputs.filter(input => input.id !== 'ev-sort-mode' && input.type !== 'number' && input.value && !['all','week','200','ev','recommended'].includes(input.value)).length;
+    const filtered = inputs.filter(input => input.id !== 'ev-sort-mode' && input.type !== 'number' && input.value && !['all','week','ev','recommended'].includes(input.value)).length;
     bar.querySelector('[data-mobile-filter-count]').textContent = filtered ? `· ${filtered} active` : '';
     const result = document.querySelector('.wager-results-bar>span,.evb-summary>p,.ev-results-context>div,.ev-arb-demo-note strong span');
     bar.querySelector('[data-mobile-result-count]').textContent = result?.textContent?.split(' from ')[0] || '';

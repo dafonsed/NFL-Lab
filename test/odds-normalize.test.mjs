@@ -885,3 +885,17 @@ test('beside SportWizzard, the main feed’s lines for a game no other book list
   assert.equal(skipped.alone, 2);
   assert.equal(normalizeFeed(main, { syncedAt: synced }).quotes.length, 4, 'the main feed on its own keeps every game');
 });
+
+test('a DFS line priced both ways only at unweighted books still gets a fair probability from them, equally weighted', async () => {
+  const { dfsPicks } = await import('../lib/odds/normalize.mjs');
+  const { fairFromAmerican } = await import('../public/betting-math.js');
+  const ts = new Date().toISOString();
+  const book = (book, side, odds) => ({ book, side, odds, player: 'Jalen Hurts', market: 'Pass Yards', line: 225.5, eventId: 'NFL:eagles', ts });
+  const pick = { book: 'PrizePicks', player: 'Jalen Hurts', market: 'Pass Yards', line: 225.5, side: 'over', eventId: 'NFL:eagles', ts };
+  const [soft] = dfsPicks([pick], [book('Fliff', 'over', -140), book('Fliff', 'under', 118), book('BetWay', 'over', -120), book('BetWay', 'under', 100)], new Map());
+  const expected = (fairFromAmerican([-140, 118]).fair[0] + fairFromAmerican([-120, 100]).fair[0]) / 2;
+  assert.ok(Math.abs(soft.probability - expected) < 1e-12, 'no weighted book: the books pricing both sides count equally');
+  assert.deepEqual(soft.probabilityBooks.sort(), ['BetWay', 'Fliff']);
+  const [sharp] = dfsPicks([pick], [book('Fliff', 'over', -140), book('Fliff', 'under', 118), book('FanDuel', 'over', -120), book('FanDuel', 'under', 100)], new Map());
+  assert.ok(Math.abs(sharp.probability - fairFromAmerican([-120, 100]).fair[0]) < 1e-12, 'a weighted book decides alone, as before');
+});

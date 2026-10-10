@@ -353,7 +353,7 @@ test('alert emails read the feed once per run: baseline first, then each new mat
   assert.equal(loads, 0, 'no feed read when nobody needs it');
 });
 
-test('alert emails match as the page does: member books, member pricing settings, no movement rules', async () => {
+test('alert emails match as the page does: member books, default pricing, no movement rules', async () => {
   const { currentMatches, sportsbookStateFrom, EMAILED_RULE_KINDS } = await import('../lib/accounts/alert-mailer.mjs');
   const { normalizeFeed } = await import('../lib/odds/normalize.mjs');
   const ts = new Date().toISOString(), start = new Date(Date.now() + 86_400_000).toISOString();
@@ -369,8 +369,8 @@ test('alert emails match as the page does: member books, member pricing settings
   assert.deepEqual(books(currentMatches(state, quotes)), ['BetMGM', 'FanDuel'], 'without a state every book counts');
   // Nevada: BetMGM is offered there, FanDuel isn't, and Pinnacle stays a reference although it isn't listed.
   assert.deepEqual(books(currentMatches(state, quotes, { sportsbookState: 'NV' })), ['BetMGM']);
-  // The member's saved settings apply: with four reference books required, three aren't enough.
-  assert.equal(currentMatches({ ...state, suite: { settings: { minSharpBooks: 4 } } }, quotes).length, 0);
+  // Settings saved on the removed Pricing & filters page no longer apply: four reference books required changes nothing.
+  assert.deepEqual(books(currentMatches({ ...state, suite: { settings: { minSharpBooks: 4 } } }, quotes)), ['BetMGM', 'FanDuel']);
   // Movement rules need the price history only the page keeps, so they are never emailed.
   assert.deepEqual(EMAILED_RULE_KINDS, ['price', 'ev', 'fantasy-new']);
   assert.equal(currentMatches({ ...state, alerts: [{ id: 'm', kind: 'movement', threshold: 0.5, enabled: true }] }, quotes).length, 0);

@@ -128,6 +128,19 @@ test('every book posting a pick’s exact line is listed, alternates and one-sid
   assert.deepEqual(pick.bookLines.map(line => line.book).sort(), ['DraftKings', 'FanDuel', 'Fliff']);
 });
 
+test('DraftKings Pick6 lines with their own multiplier and WannaParlay yes/no picks come through', () => {
+  const pick = (book, extra) => row({ id: `${book}:${JSON.stringify(extra)}`, sportsbook: book, market: 'PLAYER_TOTAL', marketSubtype: 'PLAYER_TOTAL_SHOTS', side: 'OVER', line: 2.5, playerName: 'Alex DeBrincat', priceAmerican: undefined, ...extra });
+  const { records } = toFeedRecords([
+    pick('dkpick6', { dfsMultiplier: 3.5 }), pick('dkpick6', { dfsMultiplier: 0.7, line: 0.5 }), pick('dkpick6', { dfsMultiplier: 1, line: 1.5 }),
+    pick('wannaparlay', { market: 'PLAYER_YES_NO', marketSubtype: 'PLAYER_TO_SCORE_GOAL', side: 'YES', line: undefined, dfsMultiplier: 7.94 }),
+    pick('hotstreak', { market: 'PLAYER_FIRST_TO', marketSubtype: 'PLAYER_FIRST_GOAL', side: 'YES', line: undefined, dfsMultiplier: 9 }),
+  ], new Map([['e1', event]]));
+  assert.deepEqual(records.map(r => [r.book, r.market, r.side, r.line, r.oddsType, r.payoutMultiplier]).sort(), [
+    ['DraftKings Pick6', 'Shots', 'over', 0.5, 'adjusted', 0.7], ['DraftKings Pick6', 'Shots', 'over', 1.5, undefined, undefined], ['DraftKings Pick6', 'Shots', 'over', 2.5, 'adjusted', 3.5],
+    ['WannaParlay', 'Goals', 'over', 0.5, undefined, 7.94],
+  ].sort(), 'a first-to pick has no line to compare and stays out');
+});
+
 test('a milestone that names its threshold is an Over line; one the book also posts as a prop gives way to it', () => {
   const milestone = (book, selection, price) => row({ id: `${book}:${selection}`, sportsbook: book, market: 'PLAYER_MILESTONE', marketSubtype: 'PLAYER_SHOTS', side: 'YES', selection, playerName: 'Alex DeBrincat', priceAmerican: price });
   const { records } = toFeedRecords([
