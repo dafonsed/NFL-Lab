@@ -398,6 +398,13 @@ dialog p { font-size: 13px; line-height: 1.7; margin: 10px 0 16px; }
 .result-badge.over { color: var(--accent); background: rgb(var(--accent-rgb) / 0.067); border-color: rgb(var(--accent-rgb) / 0.267); }
 .result-badge.under { color: #ffabba; background: #f86c8e10; border-color: rgb(var(--accent-rgb) / 0.239); }
 .result-badge.push { color: #ead098; background: #eabc5910; border-color: #d8ba673d; }
+/* Source chip: which backend fed the line ("api" = SportWizzard, "vps" = the VPS harvester).
+   lib/odds/sportwizzard.mjs and lib/odds/vpsodds.mjs tag every record; the browser receives it
+   on every quote through QUOTE_DICTIONARY. */
+.source-tag { display: inline-flex; align-items: center; margin-left: 5px; padding: 1px 5px; font: 600 9px/1.3 var(--mono); text-transform: uppercase; letter-spacing: 0.5px; border-radius: 3px; vertical-align: middle; border: 1px solid transparent; }
+.source-tag[data-source="api"] { color: #7fb6ff; background: rgba(79, 142, 240, 0.14); border-color: rgba(79, 142, 240, 0.28); }
+.source-tag[data-source="vps"] { color: #c6abff; background: rgba(154, 118, 240, 0.16); border-color: rgba(154, 118, 240, 0.32); }
+.source-tag[data-source="local-api"], .source-tag[data-source=""], .source-tag:not([data-source]) { display: none; }
 .settlement-values { font-size: 15px !important; }
 .prop-evidence .metric-cell b { font-size: 17px; overflow-wrap: anywhere; }
 .prop-evidence .metric-cell { min-width: 0; }

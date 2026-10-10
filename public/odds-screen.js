@@ -2,7 +2,7 @@
 // screen arranges them (best price per row = the highest current price shown).
 import { decimal, decimalToAmerican } from './betting-math.js';
 import { isCurrent } from './odds-contract.js';
-import { boardIcon, bookLogo, marketLabel as readableMarket } from './ev-board.js?v=7';
+import { boardIcon, bookLogo, marketLabel as readableMarket } from './ev-board.js?v=8-source';
 import { leagueMark, teamLogo } from './sports-identity.js';
 import { periodName } from './sport-names.js';
 
@@ -172,7 +172,7 @@ export function createOddsScreen({ getQuotes, getAnalytics = () => null, now: cl
     const cls = stale ? ' is-stale' : value === row.bestDecimal ? ' is-best' : value === row.worstDecimal ? ' is-worst' : '';
     // Spread sides are grouped by absolute line, so show the signed line when a book differs from the row.
     const line = String(q.line ?? '') !== String(rowLine ?? '') ? `<small>${esc(lineLabel(q))}</small>` : '';
-    return `<td class="os-book-cell${cls}"${stale ? '' : ` data-open-quote="${esc(q.id)}"`} title="${esc(q.book)} · ${stale ? q.live ? 'stale live price' : 'Not currently offered' : price(value)}"><span class="os-px">${line}<b>${price(value)}</b></span></td>`;
+    return `<td class="os-book-cell${cls}"${stale ? '' : ` data-open-quote="${esc(q.id)}"`} title="${esc(q.book)} · ${stale ? q.live ? 'stale live price' : 'Not currently offered' : price(value)}${q.source ? ` · ${q.source}` : ''}"><span class="os-px">${line}<b>${price(value)}</b>${q.source ? `<span class="source-tag" data-source="${esc(q.source)}" title="Feed source">${esc(q.source)}</span>` : ''}</span></td>`;
   };
   // Keep the grid's own scroll position across redraws (collapse, settings, data refresh).
   const redrawKeeping = (resetTop = false) => {
@@ -276,7 +276,7 @@ export function createOddsScreen({ getQuotes, getAnalytics = () => null, now: cl
           const tools = `${best && !best.demo ? `<button type="button" class="os-icon" data-suite-action="track" data-id="${esc(best.id)}" aria-label="Track ${esc(row.selection)} at ${esc(best.book)}" title="Track best price">${boardIcon('track',14)}</button>` : ''}${row.reference ? `<button type="button" class="os-icon" data-line-history="${esc(row.reference.id)}" aria-label="Line history for ${esc(row.selection)}" title="Line history">${trendIcon}</button>` : ''}`;
           return `<tr class="os-row${index === 0 ? ' is-game-start' : ''}${sideIndex === 0 && index > 0 ? ' is-market-start' : ''}${target ? '' : ' is-stale'}" data-os-row="${esc(row.key)}">${time}
             <td class="os-selection"${open}><div class="os-sel">${sideMark({...q,displayEvent:q.displayEvent || q.event},row.name)}<span class="os-sel-copy">${target ? `<button type="button" class="os-sel-name" data-detail="${esc(target.id)}" aria-expanded="false" aria-label="Compare prices and analysis for ${esc(row.selection)}">${esc(row.selection)}</button>` : `<strong>${esc(row.selection)}</strong>`}<small>${esc(marketLabel)}${q.live ? ' · <em>Live</em>' : ''}</small></span><span class="os-row-tools">${tools}</span></div></td>
-            <td class="os-best-cell"${open}>${best ? `<span class="os-best"><strong>${price(row.bestDecimal)}</strong><span class="os-best-logo" title="${esc(best.book)}">${bookLogo(best.book,18)}</span></span><span class="os-sr"> at ${esc(best.book)}</span>` : `<strong>—</strong><span class="os-sr">${row.current.length ? 'No verified current price' : 'No current price'}</span>`}</td>
+            <td class="os-best-cell"${open}>${best ? `<span class="os-best"><strong>${price(row.bestDecimal)}</strong><span class="os-best-logo" title="${esc(best.book)}${best.source ? ` · ${best.source}` : ''}">${bookLogo(best.book,18)}</span>${best.source ? `<span class="source-tag" data-source="${esc(best.source)}" title="Feed source">${esc(best.source)}</span>` : ''}</span><span class="os-sr"> at ${esc(best.book)}</span>` : `<strong>—</strong><span class="os-sr">${row.current.length ? 'No verified current price' : 'No current price'}</span>`}</td>
             <td class="os-average"${open} title="${esc(averageTitle)}"><strong>${price(row.average)}</strong></td>
             ${books.map(book => bookCell(byBook.get(book), row, row.reference?.line)).join('')}
           </tr>`;

@@ -2,7 +2,7 @@
 import {decimal as americanDecimal,decimalToAmerican,kellyFraction} from './betting-math.js';
 import {isCurrent} from './odds-contract.js';
 import {serverNow,getSourceStatus} from './odds-client.js';
-import {hasBetLink} from './ev-board.js?v=7';
+import {hasBetLink} from './ev-board.js?v=8-source';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm = value => String(value ?? '').trim().toLowerCase();
 const cash = value => Number.isFinite(value) ? new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(value) : '—';
